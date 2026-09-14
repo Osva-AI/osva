@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./apps/worker" },
+    { "path": "./packages/contracts" },
+    { "path": "./packages/domain" },
+    { "path": "./packages/db" },
+    { "path": "./packages/orchestration" },
+    { "path": "./packages/runtime-core" },
+    { "path": "./adapters/memory" }
+  ]
+}
