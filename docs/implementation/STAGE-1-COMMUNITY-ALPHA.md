@@ -1,0 +1,29 @@
+# Stage 1 Community Alpha
+
+## Goal
+Ship the first complete OSVA execution loop.
+
+## Build
+
+- registry;
+- immutable AgentVersions;
+- Runs and RunAttempts;
+- BullMQ adapter;
+- ExecutionWorker;
+- trusted TypeScript RuntimeAdapter;
+- manual/API/scheduled Runs;
+- first model adapter;
+- Tool and ToolVersion support;
+- logs and RunSteps;
+- usage/cost;
+- basic evaluations;
+- Run inspector.
+
+## Quality
+
+- JobQueue contract tests;
+- runtime contract tests;
+- PostgreSQL integration tests;
+- Redis/BullMQ integration tests;
+- E2E successful and failed Runs;
+- retry and immutable-binding tests.
