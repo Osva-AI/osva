@@ -39,10 +39,6 @@ export default tseslint.config(
               message: "packages/domain cannot import persistence.",
             },
             {
-              name: "@osva/adapters-memory",
-              message: "packages/domain cannot import adapters.",
-            },
-            {
               name: "@osva/orchestration",
               message: "packages/domain cannot import orchestration.",
             },
@@ -57,6 +53,52 @@ export default tseslint.config(
             {
               name: "@osva/worker",
               message: "packages/domain cannot import apps.",
+            },
+            {
+              name: "@osva/contracts/schemas",
+              message: "packages/domain cannot import runtime Zod schemas.",
+            },
+            {
+              name: "zod",
+              message: "packages/domain cannot depend on Zod.",
+            },
+            {
+              name: "drizzle-orm",
+              message: "packages/domain cannot import persistence libraries.",
+            },
+            {
+              name: "postgres",
+              message: "packages/domain cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/domain cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/domain cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "packages/domain cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "packages/domain cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "packages/domain cannot import adapters.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/domain cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message: "packages/domain cannot import persistence libraries.",
             },
           ],
         },

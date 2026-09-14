@@ -295,6 +295,10 @@ importers:
         version: 5.0.0(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4))
 
   packages/domain:
+    dependencies:
+      '@osva/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
