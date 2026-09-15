@@ -5,7 +5,13 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import postgres from "postgres";
+
 import type { Database } from "../../src/database.js";
+
+const HOST_POSTGRES_READY_ATTEMPTS = 40;
+const HOST_POSTGRES_READY_DELAY_MS = 250;
+const HOST_POSTGRES_CONNECT_TIMEOUT_SECONDS = 2;
 
 const execFileAsync = promisify(execFile);
 
@@ -101,8 +107,10 @@ async function startDockerPostgres(
   try {
     const hostPort = await waitForPublishedPort(dockerBin, containerName);
     await waitForDockerPostgresReady(dockerBin, containerName);
+    const connectionString = `postgres://osva:osva@127.0.0.1:${hostPort}/osva_test`;
+    await waitForHostPostgresReady(connectionString);
     return {
-      connectionString: `postgres://osva:osva@127.0.0.1:${hostPort}/osva_test`,
+      connectionString,
       usingDocker: true,
       containerName,
       dockerBin,
@@ -304,6 +312,43 @@ async function waitForPublishedPort(
   throw new Error(
     `Timed out waiting for published PostgreSQL port on container '${containerName}'.`,
   );
+}
+
+async function waitForHostPostgresReady(
+  connectionString: string,
+): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < HOST_POSTGRES_READY_ATTEMPTS; attempt += 1) {
+    const sql = postgres(connectionString, {
+      max: 1,
+      connect_timeout: HOST_POSTGRES_CONNECT_TIMEOUT_SECONDS,
+    });
+
+    try {
+      await sql`select 1 as ok`;
+      return;
+    } catch (error) {
+      lastError = error;
+    } finally {
+      await sql.end({ timeout: 5 }).catch(() => undefined);
+    }
+
+    await delay(HOST_POSTGRES_READY_DELAY_MS);
+  }
+
+  const detail = formatUnknownError(lastError);
+  throw new Error(
+    `Timed out waiting for host PostgreSQL at 127.0.0.1 after ${String(HOST_POSTGRES_READY_ATTEMPTS)} attempts. Last error: ${detail}`,
+  );
+}
+
+function formatUnknownError(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message.trim();
+  }
+
+  return "unknown error";
 }
 
 async function waitForDockerPostgresReady(
