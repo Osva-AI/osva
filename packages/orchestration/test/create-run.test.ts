@@ -20,7 +20,6 @@ import {
   RUN_INPUT,
   agentId,
   agentVersionId,
-  createBindings,
   createManifest,
   otherAgentId,
   otherAgentVersionId,
@@ -38,7 +37,7 @@ function createCommand() {
     runAttemptId,
     workspaceId,
     agentId,
-    effectiveBindings: createBindings(),
+    agentVersionId,
     input: RUN_INPUT,
     now: NOW,
   };
@@ -51,9 +50,13 @@ describe("CreateRun", () => {
     const inner = new MemoryRunRepository();
     const statuses: string[] = [];
     const runs = wrapRunRepository(inner, {
-      async saveRun(run) {
+      async createRunWithInitialAttempt(run, attempt) {
         statuses.push(run.status);
-        await inner.saveRun(run);
+        await inner.createRunWithInitialAttempt(run, attempt);
+      },
+      async transitionRun(expectedStatus, next) {
+        statuses.push(next.status);
+        return inner.transitionRun(expectedStatus, next);
       },
     });
     const queue = new MemoryJobQueue();
@@ -68,6 +71,10 @@ describe("CreateRun", () => {
     expect(statuses).toEqual(["PENDING", "QUEUED"]);
     expect(result.run.status).toBe("QUEUED");
     expect(result.run.idempotencyKey).toBe("idem-1");
+    expect(result.run.effectiveBindings.agentVersionId).toBe(agentVersionId);
+    expect(result.run.effectiveBindings.modelProfileVersionBindings).toEqual(
+      {},
+    );
     expect(queue.pendingRunAttemptIds()).toEqual([runAttemptId]);
   });
 
@@ -179,7 +186,7 @@ describe("CreateRun", () => {
     await expect(
       createRun.execute({
         ...createCommand(),
-        effectiveBindings: createBindings(otherAgentVersionId),
+        agentVersionId: otherAgentVersionId,
       }),
     ).rejects.toBeInstanceOf(BindingMismatchError);
 
@@ -230,6 +237,9 @@ describe("CreateRun", () => {
     expect(result.run.status).toBe("QUEUED");
     expect(result.run.agentId).toBe(agentId);
     expect(result.run.effectiveBindings.agentVersionId).toBe(agentVersionId);
+    expect(result.run.effectiveBindings.modelProfileVersionBindings).toEqual(
+      {},
+    );
     expect(queue.pendingRunAttemptIds()).toEqual([runAttemptId]);
   });
 });

@@ -26,4 +26,5 @@ green CI run of the latest commit.
 ## Stage 1
 
 - ✅ 1.1 Agent Registry and Version Management
-- ⬜ 1.2 and later slices are out of scope for this entry
+- ✅ 1.2 Run Lifecycle API and Persistence Hardening
+- ⬜ 1.3 and later slices are out of scope for this entry

@@ -15,7 +15,6 @@ import {
   NOW,
   RUN_INPUT,
   agentVersionId,
-  createBindings,
   runAttemptId,
   runId,
   seedAgentGraph,
@@ -48,7 +47,7 @@ describe("in-process walking skeleton", () => {
       runAttemptId,
       workspaceId,
       agentId,
-      effectiveBindings: createBindings(),
+      agentVersionId,
       input: RUN_INPUT,
       now: NOW,
     });
@@ -98,7 +97,7 @@ describe("in-process walking skeleton", () => {
       toolGrants: [],
       timeoutMs: 12_345,
       policyContext: {},
-      modelProfileVersionBindings: createBindings().modelProfileVersionBindings,
+      modelProfileVersionBindings: {},
     });
     expect(Object.isFrozen(request)).toBe(true);
 

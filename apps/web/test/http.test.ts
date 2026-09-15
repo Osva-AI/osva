@@ -1,21 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  MemoryAgentRepository,
-  MemoryWorkspaceRepository,
-} from "@osva/adapters-memory";
-import { createAgentApplication } from "@osva/domain";
 
 import { createWebApplication } from "../src/http.js";
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
-
-function emptyAgents() {
-  return createAgentApplication({
-    agents: new MemoryAgentRepository(),
-    workspaces: new MemoryWorkspaceRepository(),
-    clock: { now: () => new Date("2026-01-15T12:00:00.000Z") },
-    ids: { createId: () => "generated-id" },
-  });
-}
+import { createTestWebApplication } from "./test-web.js";
 
 describe("web HTTP shell", () => {
   const servers: ReturnType<typeof createWebApplication>[] = [];
@@ -29,10 +16,7 @@ describe("web HTTP shell", () => {
   async function listen(
     readinessCheck: () => Promise<boolean> = async () => true,
   ) {
-    const server = createWebApplication({
-      readinessCheck,
-      agents: emptyAgents(),
-    });
+    const { server } = await createTestWebApplication({ readinessCheck });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);
     return { server, origin: `http://127.0.0.1:${String(port)}` };

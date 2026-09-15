@@ -394,11 +394,6 @@ export default tseslint.config(
         {
           paths: [
             {
-              name: "@osva/orchestration",
-              message:
-                "Stage 0 process shells do not import orchestration. Cross-process execution begins in Stage 1.",
-            },
-            {
               name: "@osva/runtime-core",
               message: "Stage 0 process shells do not execute Agent runtimes.",
             },
@@ -460,6 +455,11 @@ export default tseslint.config(
             {
               name: "@osva/web",
               message: "apps/worker cannot import the web process.",
+            },
+            {
+              name: "@osva/orchestration",
+              message:
+                "apps/worker cannot import orchestration. The control plane owns CreateRun.",
             },
           ],
         },

@@ -248,6 +248,9 @@ importers:
       '@osva/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@osva/orchestration':
+        specifier: workspace:*
+        version: link:../../packages/orchestration
     devDependencies:
       '@osva/adapters-memory':
         specifier: workspace:*

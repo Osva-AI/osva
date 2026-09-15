@@ -1,15 +1,16 @@
 import type { JobQueue } from "@osva/contracts";
 import type {
   AgentId,
+  AgentVersionId,
   RunAttemptId,
   RunId,
   WorkspaceId,
 } from "@osva/contracts";
 import {
+  EffectiveRunBindings,
   Run,
   RunAttempt,
   type AgentRepository,
-  type EffectiveRunBindings,
   type RunRepository,
 } from "@osva/domain";
 
@@ -25,7 +26,7 @@ export interface CreateRunCommand {
   readonly runAttemptId: RunAttemptId;
   readonly workspaceId: WorkspaceId;
   readonly agentId: AgentId;
-  readonly effectiveBindings: EffectiveRunBindings;
+  readonly agentVersionId: AgentVersionId;
   readonly input: unknown;
   readonly idempotencyKey?: string;
   readonly now: Date;
@@ -45,17 +46,20 @@ export interface CreateRunResult {
 /**
  * Persist-then-enqueue Run creation.
  *
- * Ordering: save PENDING Run, save first PENDING RunAttempt, transition
- * PENDING → QUEUED, save the QUEUED Run, then enqueue `{ runAttemptId }`.
- * The queue never creates RunAttempts.
+ * Ordering: atomically persist PENDING Run + first PENDING RunAttempt,
+ * transition PENDING → QUEUED with expected-state semantics, then enqueue
+ * `{ runAttemptId }`. The queue never creates RunAttempts.
  *
  * Stage 0 has no transactional outbox. If enqueue fails, durable QUEUED
  * Run + PENDING attempt rows remain so history is recoverable; CreateRun
  * still fails rather than reporting distributed execution as started.
  *
  * Agent/AgentVersion ownership is checked through AgentRepository before
- * any Run or RunAttempt is created or persisted. PostgreSQL foreign keys
- * remain defense-in-depth; they are not the CreateRun validation path.
+ * any Run or RunAttempt is created or persisted. CreateRun then resolves
+ * Stage-0-compatible immutable effective bindings from the requested
+ * AgentVersion. Callers do not supply the internal binding snapshot.
+ * PostgreSQL foreign keys remain defense-in-depth; they are not the
+ * CreateRun validation path.
  */
 export class CreateRun {
   constructor(private readonly deps: CreateRunDependencies) {}
@@ -67,7 +71,7 @@ export class CreateRun {
       id: command.runId,
       workspaceId: command.workspaceId,
       agentId: command.agentId,
-      effectiveBindings: command.effectiveBindings,
+      effectiveBindings: resolveStage0EffectiveBindings(command.agentVersionId),
       input: command.input,
       createdAt: command.now,
       idempotencyKey: command.idempotencyKey,
@@ -78,11 +82,10 @@ export class CreateRun {
       createdAt: command.now,
     });
 
-    await this.deps.runs.saveRun(pending);
-    await this.deps.runs.saveRunAttempt(attempt);
+    await this.deps.runs.createRunWithInitialAttempt(pending, attempt);
 
     const queued = pending.transitionTo("QUEUED", command.now);
-    await this.deps.runs.saveRun(queued);
+    await this.deps.runs.transitionRun("PENDING", queued);
 
     try {
       await this.deps.queue.enqueue(attempt.id);
@@ -105,7 +108,7 @@ export class CreateRun {
       );
     }
 
-    const agentVersionId = command.effectiveBindings.agentVersionId;
+    const agentVersionId = command.agentVersionId;
     const agentVersion =
       await this.deps.agents.findAgentVersionById(agentVersionId);
     if (agentVersion === null) {
@@ -126,4 +129,13 @@ export class CreateRun {
       );
     }
   }
+}
+
+function resolveStage0EffectiveBindings(
+  agentVersionId: AgentVersionId,
+): EffectiveRunBindings {
+  return EffectiveRunBindings.create({
+    agentVersionId,
+    modelProfileVersionBindings: {},
+  });
 }

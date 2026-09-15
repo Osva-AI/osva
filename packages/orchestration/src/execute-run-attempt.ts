@@ -177,8 +177,12 @@ export class ExecuteRunAttempt {
 
     const runningAttempt = attempt.transitionTo("RUNNING", command.now);
     const runningRun = run.transitionTo("RUNNING", command.now);
-    await this.deps.runs.saveRunAttempt(runningAttempt);
-    await this.deps.runs.saveRun(runningRun);
+    await this.deps.runs.transitionRunAndAttempt(
+      run.status,
+      runningRun,
+      attempt.status,
+      runningAttempt,
+    );
 
     const request = createExecutionRequest({
       run: runningRun,
@@ -204,8 +208,12 @@ export class ExecuteRunAttempt {
         command.now,
       );
       const succeededRun = runningRun.transitionTo("SUCCEEDED", command.now);
-      await this.deps.runs.saveRunAttempt(succeededAttempt);
-      await this.deps.runs.saveRun(succeededRun);
+      await this.deps.runs.transitionRunAndAttempt(
+        runningRun.status,
+        succeededRun,
+        runningAttempt.status,
+        succeededAttempt,
+      );
       return {
         outcome: "succeeded",
         result,
@@ -230,8 +238,12 @@ export class ExecuteRunAttempt {
   ): Promise<ExecuteRunAttemptFailed> {
     const failedAttempt = runningAttempt.transitionTo("FAILED", now, { error });
     const failedRun = runningRun.transitionTo("FAILED", now);
-    await this.deps.runs.saveRunAttempt(failedAttempt);
-    await this.deps.runs.saveRun(failedRun);
+    await this.deps.runs.transitionRunAndAttempt(
+      runningRun.status,
+      failedRun,
+      runningAttempt.status,
+      failedAttempt,
+    );
 
     const result: ExecutionFailure = {
       status: "failed",

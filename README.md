@@ -6,7 +6,7 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** pre-alpha. Stage 1 Slice 1.1 adds a control-plane Agent Registry on the Stage 0 foundation.
+> **Status:** pre-alpha. Stage 1 Slice 1.2 exposes the control-plane Run lifecycle API on the Stage 0 foundation.
 
 ## Why OSVA?
 
@@ -193,8 +193,24 @@ Agent Registry:
 IDs, timestamps, and AgentVersion `version` numbers are assigned by the server.
 Creating an Agent or AgentVersion does not execute a Run.
 
+Run lifecycle:
+
+- `POST /v1/runs` — create a Run and its initial RunAttempt through CreateRun
+- `GET /v1/runs` — list Runs with cursor pagination (`createdAt DESC`, `id DESC`)
+- `GET /v1/runs/:runId` — get a persisted Run
+- `GET /v1/runs/:runId/attempts` — list RunAttempts for that Run
+- `GET /v1/runs/:runId/attempts/:runAttemptId` — get a nested RunAttempt
+
+Clients cannot supply Run IDs, RunAttempt IDs, statuses, timestamps, queue
+IDs, or internal `effectiveBindings`. `POST /v1/runs` accepts `workspaceId`,
+`agentId`, `agentVersionId`, `input`, and optional `idempotencyKey`. OSVA
+resolves the immutable `effectiveBindings` snapshot from the requested
+AgentVersion. Run list query parameters are `limit` (default 50, max 100),
+`cursor`, `agentId`, `agentVersionId`, and `status`. There is no public Run
+or RunAttempt mutation API.
+
 The Stage 0 worker is intentionally idle after a successful PostgreSQL check.
-Cross-process Run execution starts in Stage 1 with a real `JobQueue` adapter.
+Cross-process Run execution starts in Stage 1.3 with a real `JobQueue` adapter.
 
 ### Quality commands
 

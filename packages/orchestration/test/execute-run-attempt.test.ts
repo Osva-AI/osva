@@ -63,7 +63,7 @@ async function queuedAttempt(options?: {
     runAttemptId,
     workspaceId,
     agentId,
-    effectiveBindings: createBindings(),
+    agentVersionId,
     input: RUN_INPUT,
     now: NOW,
   });
@@ -190,8 +190,12 @@ describe("ExecuteRunAttempt", () => {
       throw new Error("expected persisted Run and RunAttempt");
     }
 
-    await runs.saveRunAttempt(pending.transitionTo("RUNNING", LATER));
-    await runs.saveRun(queued.transitionTo("RUNNING", LATER));
+    await runs.transitionRunAndAttempt(
+      queued.status,
+      queued.transitionTo("RUNNING", LATER),
+      pending.status,
+      pending.transitionTo("RUNNING", LATER),
+    );
 
     const executeRunAttempt = new ExecuteRunAttempt({
       runs,
@@ -317,7 +321,7 @@ describe("ExecuteRunAttempt", () => {
     );
   });
 
-  it("preserves model-profile bindings and AgentVersion timeout on ExecutionRequest", async () => {
+  it("reconstructs ExecutionRequest timeout and persisted bindings", async () => {
     const received: ExecutionRequest[] = [];
     const { executeRunAttempt } = await queuedAttempt({
       timeoutMs: 9_001,
@@ -330,9 +334,7 @@ describe("ExecuteRunAttempt", () => {
     await executeRunAttempt.execute({ runAttemptId, now: LATER });
 
     expect(received[0]?.timeoutMs).toBe(9_001);
-    expect(received[0]?.modelProfileVersionBindings).toEqual(
-      createBindings().modelProfileVersionBindings,
-    );
+    expect(received[0]?.modelProfileVersionBindings).toEqual({});
     expect(received[0]?.input).toEqual(RUN_INPUT);
   });
 
@@ -493,7 +495,7 @@ async function persistPair(
     throw new Error("expected persisted Run and RunAttempt");
   }
 
-  await runs.saveRunAttempt(
+  await runs.replaceRunAttempt(
     RunAttempt.rehydrate({
       id: existingAttempt.id,
       runId: existingAttempt.runId,
@@ -504,7 +506,7 @@ async function persistPair(
       completedAt: isTerminalRunAttemptState(attemptStatus) ? LATER : undefined,
     }),
   );
-  await runs.saveRun(
+  await runs.replaceRun(
     Run.rehydrate({
       id: existingRun.id,
       workspaceId: existingRun.workspaceId,

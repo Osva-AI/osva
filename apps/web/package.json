@@ -14,7 +14,8 @@
   "dependencies": {
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
-    "@osva/domain": "workspace:*"
+    "@osva/domain": "workspace:*",
+    "@osva/orchestration": "workspace:*"
   },
   "devDependencies": {
     "@osva/adapters-memory": "workspace:*",

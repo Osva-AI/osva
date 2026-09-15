@@ -1,15 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { WorkspaceId } from "@osva/contracts";
-import {
-  MemoryAgentRepository,
-  MemoryWorkspaceRepository,
-} from "@osva/adapters-memory";
-import { Workspace, createAgentApplication } from "@osva/domain";
 
-import { createWebApplication } from "../src/http.js";
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
-
-const NOW = new Date("2026-01-15T12:00:00.000Z");
+import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
 
 const VALID_MANIFEST = {
@@ -27,7 +20,7 @@ const VALID_MANIFEST = {
 };
 
 describe("Agent Registry HTTP API", () => {
-  const servers: ReturnType<typeof createWebApplication>[] = [];
+  const servers: import("node:http").Server[] = [];
 
   afterEach(async () => {
     await Promise.all(
@@ -52,7 +45,7 @@ describe("Agent Registry HTTP API", () => {
       workspaceId: WORKSPACE_ID,
       key: "example-agent",
       name: "Example Agent",
-      createdAt: NOW.toISOString(),
+      createdAt: TEST_NOW.toISOString(),
     });
 
     const loaded = await fetchJson(`${origin}/v1/agents/id-1`);
@@ -92,7 +85,7 @@ describe("Agent Registry HTTP API", () => {
         workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
-        createdAt: NOW.toISOString(),
+        createdAt: TEST_NOW.toISOString(),
       },
     });
     expect(create.status).toBe(400);
@@ -247,29 +240,8 @@ describe("Agent Registry HTTP API", () => {
   });
 
   async function listen() {
-    const workspaces = new MemoryWorkspaceRepository();
-    await workspaces.save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
-
-    let counter = 0;
-    const server = createWebApplication({
-      readinessCheck: async () => true,
-      agents: createAgentApplication({
-        agents: new MemoryAgentRepository(),
-        workspaces,
-        clock: { now: () => NOW },
-        ids: {
-          createId() {
-            counter += 1;
-            return `id-${String(counter)}`;
-          },
-        },
-      }),
+    const { server } = await createTestWebApplication({
+      workspaceId: WORKSPACE_ID,
     });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);

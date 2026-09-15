@@ -131,9 +131,13 @@ export function wrapRunRepository(
   overrides: Partial<RunRepository>,
 ): RunRepository {
   return {
+    createRunWithInitialAttempt:
+      overrides.createRunWithInitialAttempt?.bind(overrides) ??
+      inner.createRunWithInitialAttempt.bind(inner),
     saveRun: overrides.saveRun?.bind(overrides) ?? inner.saveRun.bind(inner),
     findRunById:
       overrides.findRunById?.bind(overrides) ?? inner.findRunById.bind(inner),
+    listRuns: overrides.listRuns?.bind(overrides) ?? inner.listRuns.bind(inner),
     saveRunAttempt:
       overrides.saveRunAttempt?.bind(overrides) ??
       inner.saveRunAttempt.bind(inner),
@@ -145,6 +149,15 @@ export function wrapRunRepository(
       inner.listRunAttempts.bind(inner),
     saveRunStep:
       overrides.saveRunStep?.bind(overrides) ?? inner.saveRunStep.bind(inner),
+    transitionRun:
+      overrides.transitionRun?.bind(overrides) ??
+      inner.transitionRun.bind(inner),
+    transitionRunAttempt:
+      overrides.transitionRunAttempt?.bind(overrides) ??
+      inner.transitionRunAttempt.bind(inner),
+    transitionRunAndAttempt:
+      overrides.transitionRunAndAttempt?.bind(overrides) ??
+      inner.transitionRunAndAttempt.bind(inner),
   };
 }
 

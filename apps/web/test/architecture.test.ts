@@ -55,13 +55,6 @@ function toRepoPath(filePath: string): string {
 
 function forbiddenWebImport(specifier: string): string | undefined {
   if (
-    specifier === "@osva/orchestration" ||
-    specifier.startsWith("@osva/orchestration/")
-  ) {
-    return "@osva/orchestration";
-  }
-
-  if (
     specifier === "@osva/runtime-core" ||
     specifier.startsWith("@osva/runtime-core/")
   ) {
@@ -103,7 +96,7 @@ function forbiddenWebImport(specifier: string): string | undefined {
 }
 
 describe("architecture import restrictions", () => {
-  it("keeps apps/web/src free of orchestration, queues, and the worker app", () => {
+  it("keeps apps/web/src free of runtimes, queues, and the worker app", () => {
     const violations: string[] = [];
 
     for (const file of walkTypeScriptFiles(webSrc)) {

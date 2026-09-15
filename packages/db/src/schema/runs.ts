@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   check,
   foreignKey,
+  index,
   jsonb,
   pgTable,
   text,
@@ -50,6 +51,22 @@ export const runs = pgTable(
     uniqueIndex("runs_workspace_id_idempotency_key_unique")
       .on(table.workspaceId, table.idempotencyKey)
       .where(sql`${table.idempotencyKey} is not null`),
+    index("runs_created_at_id_idx").on(table.createdAt, table.id),
+    index("runs_agent_id_created_at_id_idx").on(
+      table.agentId,
+      table.createdAt,
+      table.id,
+    ),
+    index("runs_agent_version_id_created_at_id_idx").on(
+      table.agentVersionId,
+      table.createdAt,
+      table.id,
+    ),
+    index("runs_status_created_at_id_idx").on(
+      table.status,
+      table.createdAt,
+      table.id,
+    ),
     check(
       "runs_status_check",
       sql`${table.status} in (${sqlTextInList(PERSISTED_RUN_STATES)})`,

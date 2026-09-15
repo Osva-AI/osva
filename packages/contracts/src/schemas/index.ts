@@ -34,6 +34,17 @@ export {
 } from "./agent-registry.js";
 
 export {
+  createRunRequestSchema,
+  createRunResponseSchema,
+  listRunsQuerySchema,
+  runAttemptListResourceSchema,
+  runAttemptResourceSchema,
+  runListCursorPayloadSchema,
+  runListResourceSchema,
+  runResourceSchema,
+} from "./run-lifecycle.js";
+
+export {
   executionFailureSchema,
   executionRequestSchema,
   executionResultSchema,

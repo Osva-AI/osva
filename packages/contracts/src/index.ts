@@ -32,6 +32,16 @@ export type {
   UpdateAgentRequestV1,
 } from "./agent-registry.js";
 
+export type {
+  CreateRunRequestV1,
+  CreateRunResponseV1,
+  RunAttemptListResourceV1,
+  RunAttemptResourceV1,
+  RunListCursorV1,
+  RunListResourceV1,
+  RunResourceV1,
+} from "./run-lifecycle.js";
+
 export {
   RUN_ATTEMPT_STATES,
   RUN_STATES,

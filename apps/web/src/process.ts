@@ -3,12 +3,15 @@ import type { Server } from "node:http";
 import {
   createDatabase,
   PostgresAgentRepository,
+  PostgresRunRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { createAgentApplication } from "@osva/domain";
+import { createAgentApplication, createRunApplication } from "@osva/domain";
+import { CreateRun } from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
+import { DiscardingJobQueue } from "./discarding-job-queue.js";
 import { createWebApplication } from "./http.js";
 import { logEvent } from "./log.js";
 import { postgresReadinessCheck } from "./readiness.js";
@@ -31,14 +34,27 @@ export function createWebProcess(
   const database = databaseFactory(config.databaseUrl);
   const agents = new PostgresAgentRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
+  const runs = new PostgresRunRepository(database);
+  const clock = { now: () => new Date() };
+  const ids = { createId: () => randomUUID() };
   const server = createWebApplication({
     readinessCheck: postgresReadinessCheck(database),
     agents: createAgentApplication({
       agents,
       workspaces,
-      clock: { now: () => new Date() },
-      ids: { createId: () => randomUUID() },
+      clock,
+      ids,
     }),
+    runs: {
+      runs: createRunApplication({ runs }),
+      createRun: new CreateRun({
+        runs,
+        agents,
+        queue: new DiscardingJobQueue(),
+      }),
+      clock,
+      ids,
+    },
   });
 
   let stopping: Promise<void> | undefined;

@@ -1,7 +1,9 @@
 import type {
   AgentId,
   AgentVersionId,
+  RunAttemptId,
   RunAttemptState,
+  RunId,
   RunState,
   WorkspaceId,
 } from "@osva/contracts";
@@ -91,5 +93,42 @@ export class InvalidSubsequentAttemptError extends DomainInvariantError {
         : `A subsequent RunAttempt requires the previous attempt to be FAILED, TIMED_OUT, or CANCELLED. Previous status was ${previousStatus}.`,
     );
     this.previousStatus = previousStatus;
+  }
+}
+
+export class RunNotFoundError extends DomainError {
+  readonly runId: RunId;
+
+  constructor(runId: RunId) {
+    super(`Run ${runId} was not found.`);
+    this.runId = runId;
+  }
+}
+
+export class RunAttemptNotFoundError extends DomainError {
+  readonly runAttemptId: RunAttemptId;
+
+  constructor(runAttemptId: RunAttemptId) {
+    super(`RunAttempt ${runAttemptId} was not found.`);
+    this.runAttemptId = runAttemptId;
+  }
+}
+
+export class LifecycleConflictError extends DomainError {
+  readonly entity: "run" | "runAttempt";
+  readonly id: RunId | RunAttemptId;
+  readonly expectedStatus: RunState | RunAttemptState;
+
+  constructor(
+    entity: "run" | "runAttempt",
+    id: RunId | RunAttemptId,
+    expectedStatus: RunState | RunAttemptState,
+  ) {
+    super(
+      `Persisted ${entity} ${id} was not in expected status ${expectedStatus}.`,
+    );
+    this.entity = entity;
+    this.id = id;
+    this.expectedStatus = expectedStatus;
   }
 }

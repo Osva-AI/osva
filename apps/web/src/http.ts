@@ -4,12 +4,14 @@ import type { AgentApplication } from "@osva/domain";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
 import { sendJson } from "./json.js";
+import { handleRunRequest, type RunHttpServices } from "./run-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
 export interface CreateWebApplicationOptions {
   readonly readinessCheck: ReadinessCheck;
   readonly agents: AgentApplication;
+  readonly runs: RunHttpServices;
 }
 
 export function createWebApplication(
@@ -21,6 +23,7 @@ export function createWebApplication(
       response,
       options.readinessCheck,
       options.agents,
+      options.runs,
     );
   });
 }
@@ -30,9 +33,11 @@ async function handleRequest(
   response: ServerResponse,
   readinessCheck: ReadinessCheck,
   agents: AgentApplication,
+  runs: RunHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
-  const path = requestPath(request);
+  const url = requestUrl(request);
+  const path = url.pathname;
 
   if (path === "/health") {
     if (method !== "GET") {
@@ -76,24 +81,36 @@ async function handleRequest(
     return;
   }
 
-  const handled = await handleAgentRegistryRequest(
+  const handledAgents = await handleAgentRegistryRequest(
     request,
     response,
     method,
     path,
     agents,
   );
-  if (handled) {
+  if (handledAgents) {
+    return;
+  }
+
+  const handledRuns = await handleRunRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    runs,
+  );
+  if (handledRuns) {
     return;
   }
 
   sendJson(response, 404, { status: "not_found" });
 }
 
-function requestPath(request: IncomingMessage): string {
+function requestUrl(request: IncomingMessage): URL {
   try {
-    return new URL(request.url ?? "/", "http://127.0.0.1").pathname;
+    return new URL(request.url ?? "/", "http://127.0.0.1");
   } catch {
-    return "/";
+    return new URL("http://127.0.0.1/");
   }
 }

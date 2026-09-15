@@ -29,6 +29,9 @@ export {
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   InvalidSubsequentAttemptError,
+  LifecycleConflictError,
+  RunAttemptNotFoundError,
+  RunNotFoundError,
   WorkspaceNotFoundError,
 } from "./errors.js";
 
@@ -79,9 +82,15 @@ export type {
   AgentMetadataUpdate,
   AgentRepository,
   AppendAgentVersionInput,
+  ListRunsQuery,
+  ListRunsResult,
+  RunLifecycleTransitionResult,
+  RunListCursor,
   RunRepository,
   WorkspaceRepository,
 } from "./ports/index.js";
+
+export { DEFAULT_RUN_LIST_LIMIT, MAX_RUN_LIST_LIMIT } from "./ports/index.js";
 
 export {
   AppendAgentVersion,
@@ -101,3 +110,14 @@ export {
   type GetAgentVersionCommand,
   type UpdateAgentMetadataCommand,
 } from "./agent-application.js";
+
+export {
+  GetRun,
+  GetRunAttempt,
+  ListRunAttempts,
+  ListRuns,
+  createRunApplication,
+  type GetRunAttemptCommand,
+  type RunApplication,
+  type RunApplicationDependencies,
+} from "./run-application.js";

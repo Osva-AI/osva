@@ -25,6 +25,16 @@ nested `/versions` routes). `Agent` remains stable identity plus mutable `name`.
 is assigned by the server. Creating an Agent or AgentVersion does not execute a
 Run.
 
+Slice 1.2 exposes the Stage 0 CreateRun lifecycle over HTTP (`/v1/runs` and
+nested `/attempts` routes) and hardens Run/RunAttempt persistence. Callers
+request an AgentVersion; OSVA resolves the current Stage-0-compatible
+`effectiveBindings` and stores that immutable snapshot on the Run. Run and the
+initial RunAttempt are created atomically. Lifecycle updates use expected-state
+compare-and-set semantics and cannot overwrite immutable identity, bindings, or
+input. Runs are listed with opaque cursor pagination. Queue payload remains
+exactly `{ runAttemptId }`. This slice does not introduce BullMQ, Valkey, or an
+ExecutionWorker.
+
 ## Quality
 
 - JobQueue contract tests;

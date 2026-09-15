@@ -47,9 +47,11 @@ export function createManifest(
   };
 }
 
-export function createBindings(): EffectiveRunBindings {
+export function createBindings(
+  versionId: AgentVersionId = agentVersionId,
+): EffectiveRunBindings {
   return EffectiveRunBindings.create({
-    agentVersionId,
+    agentVersionId: versionId,
     modelProfileVersionBindings: {
       default: modelProfileVersionId,
     },
