@@ -1,11 +1,13 @@
-import type { AgentId } from "@osva/contracts";
+import type { AgentId, ModelProfileVersionId } from "@osva/contracts";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
   DuplicateAgentKeyError,
+  InvalidModelBindingError,
   Workspace,
   WorkspaceNotFoundError,
   createAgentApplication,
+  createModelProfileApplication,
   type AgentApplication,
   type AgentRepository,
   type WorkspaceRepository,
@@ -13,8 +15,14 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { MemoryAgentRepository } from "../src/memory-agent-repository.js";
+import { MemoryModelProfileRepository } from "../src/memory-model-profile-repository.js";
 import { MemoryWorkspaceRepository } from "../src/memory-workspace-repository.js";
-import { NOW, createManifest, workspaceId } from "./fixtures.js";
+import {
+  NOW,
+  createManifest,
+  otherWorkspaceId,
+  workspaceId,
+} from "./fixtures.js";
 
 describe("Agent Registry application", () => {
   it("creates, reads, lists, and updates Agents", async () => {
@@ -171,23 +179,156 @@ describe("Agent Registry application", () => {
       "updateAgentVersion",
     );
   });
+
+  it("accepts an AgentVersion with a same-workspace model binding", async () => {
+    const { application, modelProfiles, workspaces } = await createHarness();
+    const agent = await application.createAgent.execute({
+      workspaceId,
+      key: "example-agent",
+      name: "Example Agent",
+    });
+    let profileIds = 0;
+    const profiles = createModelProfileApplication({
+      modelProfiles,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          profileIds += 1;
+          return `mp-${String(profileIds)}`;
+        },
+      },
+    });
+    const profile = await profiles.createModelProfile.execute({
+      workspaceId,
+      key: "primary",
+      name: "Primary",
+    });
+    const version = await profiles.appendModelProfileVersion.execute({
+      modelProfileId: profile.id,
+      provider: "OPENAI",
+      model: "gpt-test-snapshot",
+    });
+
+    const agentVersion = await application.appendAgentVersion.execute({
+      agentId: agent.id,
+      manifest: createManifest({
+        models: {
+          primary: { modelProfileVersionId: version.id },
+        },
+      }),
+    });
+
+    expect(agentVersion.manifest.models).toEqual({
+      primary: { modelProfileVersionId: version.id },
+    });
+  });
+
+  it("rejects a missing ModelProfileVersion binding", async () => {
+    const { application } = await createHarness();
+    const agent = await application.createAgent.execute({
+      workspaceId,
+      key: "example-agent",
+      name: "Example Agent",
+    });
+
+    await expect(
+      application.appendAgentVersion.execute({
+        agentId: agent.id,
+        manifest: createManifest({
+          models: {
+            primary: {
+              modelProfileVersionId: "missing-mpv" as ModelProfileVersionId,
+            },
+          },
+        }),
+      }),
+    ).rejects.toBeInstanceOf(InvalidModelBindingError);
+  });
+
+  it("rejects a cross-workspace model binding", async () => {
+    const { application, modelProfiles, workspaces } = await createHarness();
+    await workspaces.save(
+      Workspace.create({
+        id: otherWorkspaceId,
+        name: "Other",
+        createdAt: NOW,
+      }),
+    );
+    let otherIds = 0;
+    const profiles = createModelProfileApplication({
+      modelProfiles,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          otherIds += 1;
+          return `other-${String(otherIds)}`;
+        },
+      },
+    });
+    const otherProfile = await profiles.createModelProfile.execute({
+      workspaceId: otherWorkspaceId,
+      key: "primary",
+      name: "Other Primary",
+    });
+    const otherVersion = await profiles.appendModelProfileVersion.execute({
+      modelProfileId: otherProfile.id,
+      provider: "OPENAI",
+      model: "gpt-other",
+    });
+    const agent = await application.createAgent.execute({
+      workspaceId,
+      key: "example-agent",
+      name: "Example Agent",
+    });
+
+    await expect(
+      application.appendAgentVersion.execute({
+        agentId: agent.id,
+        manifest: createManifest({
+          models: {
+            primary: { modelProfileVersionId: otherVersion.id },
+          },
+        }),
+      }),
+    ).rejects.toBeInstanceOf(InvalidModelBindingError);
+  });
+
+  it("accepts an AgentVersion without model bindings", async () => {
+    const { application } = await createHarness();
+    const agent = await application.createAgent.execute({
+      workspaceId,
+      key: "example-agent",
+      name: "Example Agent",
+    });
+    const version = await application.appendAgentVersion.execute({
+      agentId: agent.id,
+      manifest: createManifest(),
+    });
+    expect(version.manifest.models).toBeUndefined();
+  });
 });
 
 function createEmptyHarness(): {
   application: AgentApplication;
   agents: AgentRepository;
   workspaces: WorkspaceRepository;
+  modelProfiles: MemoryModelProfileRepository;
 } {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
+  const modelProfiles = new MemoryModelProfileRepository();
   let counter = 0;
 
   return {
     agents,
     workspaces,
+    modelProfiles,
     application: createAgentApplication({
       agents,
       workspaces,
+      modelProfiles,
       clock: { now: () => NOW },
       ids: {
         createId() {

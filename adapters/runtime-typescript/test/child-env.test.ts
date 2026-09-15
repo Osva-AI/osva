@@ -16,4 +16,15 @@ describe("createChildEnvironment", () => {
     expect(env.OSVA_VALKEY_URL).toBeUndefined();
     expect(env.NODE_OPTIONS).toBeUndefined();
   });
+
+  it("omits OPENAI_API_KEY from the trusted child environment", () => {
+    const env = createChildEnvironment({
+      PATH: "/usr/bin",
+      OPENAI_API_KEY: "sk-secret-child-must-not-see",
+      OSVA_DATABASE_URL: "postgres://secret@127.0.0.1/osva",
+    });
+
+    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(JSON.stringify(env)).not.toContain("sk-secret");
+  });
 });

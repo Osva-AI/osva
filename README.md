@@ -6,11 +6,12 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** pre-alpha. Stage 1 Slice 1.4 adds a trusted TypeScript
-> RuntimeAdapter. `apps/worker` consumes `osva-execution` through BullMQ when
-> PostgreSQL, Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT` are ready. This runtime
-> executes operator-installed TypeScript modules; it is not an untrusted
-> sandbox.
+> **Status:** pre-alpha. Stage 1 Slice 1.5 adds OSVA's provider-neutral
+> ModelGateway, immutable ModelProfile / ModelProfileVersion registry, and the
+> first OpenAI Responses API adapter. Trusted TypeScript agents call
+> `context.models.generateText(binding, request)` through runtime IPC. The
+> worker still requires PostgreSQL, Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`;
+> `OPENAI_API_KEY` is optional and worker-only.
 
 ## Why OSVA?
 
@@ -156,6 +157,7 @@ environment. Processes do not auto-load `.env`. Required variables:
 - `OSVA_VALKEY_URL`
 - `OSVA_TRUSTED_RUNTIME_ROOT`
 - optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`
+- optional worker-only `OPENAI_API_KEY`
 
 Then start infrastructure, apply committed migrations, and run the apps:
 
@@ -200,8 +202,20 @@ Agent Registry:
 - `GET /v1/agents/:agentId/versions` — list versions for an Agent
 - `GET /v1/agents/:agentId/versions/:agentVersionId` — get a version owned by that Agent
 
-IDs, timestamps, and AgentVersion `version` numbers are assigned by the server.
-Creating an Agent or AgentVersion does not execute a Run.
+ModelProfile registry:
+
+- `POST /v1/model-profiles` — create a ModelProfile (`workspaceId`, `key`, `name`)
+- `GET /v1/model-profiles` — list ModelProfiles
+- `GET /v1/model-profiles/:modelProfileId` — get a ModelProfile
+- `PATCH /v1/model-profiles/:modelProfileId` — update ModelProfile `name`
+- `POST /v1/model-profiles/:modelProfileId/versions` — append an immutable ModelProfileVersion (`provider`, `model`)
+- `GET /v1/model-profiles/:modelProfileId/versions` — list versions for a ModelProfile
+- `GET /v1/model-profiles/:modelProfileId/versions/:modelProfileVersionId` — get a version owned by that ModelProfile
+
+IDs, timestamps, AgentVersion `version` numbers, and ModelProfileVersion
+`version` numbers are assigned by the server. Creating an Agent, AgentVersion,
+ModelProfile, or ModelProfileVersion does not execute a Run. ModelProfileVersion
+stores a provider name and provider model ID; it does not store API keys.
 
 Run lifecycle:
 
@@ -215,7 +229,9 @@ Clients cannot supply Run IDs, RunAttempt IDs, statuses, timestamps, queue
 IDs, or internal `effectiveBindings`. `POST /v1/runs` accepts `workspaceId`,
 `agentId`, `agentVersionId`, `input`, and optional `idempotencyKey`. OSVA
 resolves the immutable `effectiveBindings` snapshot from the requested
-AgentVersion. Run list query parameters are `limit` (default 50, max 100),
+AgentVersion, including that version's logical model bindings. Runtime
+execution reuses the persisted snapshot and does not re-read AgentVersion
+models. Run list query parameters are `limit` (default 50, max 100),
 `cursor`, `agentId`, `agentVersionId`, and `status`. There is no public Run
 or RunAttempt mutation API.
 
@@ -224,7 +240,12 @@ are reachable and `OSVA_TRUSTED_RUNTIME_ROOT` resolves to a readable directory,
 it consumes `osva-execution` through the trusted TypeScript RuntimeAdapter.
 Trusted agent modules are operator-installed files beneath that root. They are
 not uploaded through the HTTP API. `CreateRun` still enqueues `{ runAttemptId }`
-through BullMQ. ModelGateway and ToolGateway are not available to agent code.
+through BullMQ. Agents call models only through `context.models.generateText`.
+They do not receive OpenAI SDK clients, API keys, provider model IDs, or
+ModelProfileVersion IDs. `OPENAI_API_KEY` is read only in the worker process
+when composing the OpenAI provider adapter. If it is absent, the worker still
+starts and model calls fail with `MODEL_PROVIDER_UNAVAILABLE`. ToolGateway is
+not available to agent code.
 
 ### Quality commands
 

@@ -1,9 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import http from "node:http";
-import type { AgentApplication } from "@osva/domain";
+import type { AgentApplication, ModelProfileApplication } from "@osva/domain";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
 import { sendJson } from "./json.js";
+import { handleModelProfileRegistryRequest } from "./model-profile-http.js";
 import { handleRunRequest, type RunHttpServices } from "./run-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
@@ -11,6 +12,7 @@ export type ReadinessCheck = () => Promise<boolean>;
 export interface CreateWebApplicationOptions {
   readonly readinessCheck: ReadinessCheck;
   readonly agents: AgentApplication;
+  readonly modelProfiles: ModelProfileApplication;
   readonly runs: RunHttpServices;
 }
 
@@ -23,6 +25,7 @@ export function createWebApplication(
       response,
       options.readinessCheck,
       options.agents,
+      options.modelProfiles,
       options.runs,
     );
   });
@@ -33,6 +36,7 @@ async function handleRequest(
   response: ServerResponse,
   readinessCheck: ReadinessCheck,
   agents: AgentApplication,
+  modelProfiles: ModelProfileApplication,
   runs: RunHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
@@ -89,6 +93,17 @@ async function handleRequest(
     agents,
   );
   if (handledAgents) {
+    return;
+  }
+
+  const handledModelProfiles = await handleModelProfileRegistryRequest(
+    request,
+    response,
+    method,
+    path,
+    modelProfiles,
+  );
+  if (handledModelProfiles) {
     return;
   }
 

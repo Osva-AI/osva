@@ -5,7 +5,9 @@ import {
   AGENT_EXECUTION_MIN_TIMEOUT_MS,
   AGENT_MANIFEST_SCHEMA_VERSION,
 } from "../agent-manifest.js";
+import { MODEL_BINDING_NAME_PATTERN } from "../model-gateway.js";
 import { jsonSchemaRecordSchema } from "./json-schema.js";
+import { modelProfileVersionIdSchema } from "./ids.js";
 import {
   isRelativeTrustedEntrypoint,
   isSha256IntegrityDigest,
@@ -49,6 +51,18 @@ const agentManifestCapabilitiesSchema = z.strictObject({
   tools: z.array(z.string().min(1)),
 });
 
+const agentManifestModelBindingSchema = z.strictObject({
+  modelProfileVersionId: modelProfileVersionIdSchema,
+});
+
+const agentManifestModelsSchema = z.record(
+  z.string().regex(MODEL_BINDING_NAME_PATTERN, {
+    message:
+      "model binding names must start with a letter and use only letters, digits, '_' or '-'.",
+  }),
+  agentManifestModelBindingSchema,
+);
+
 export const agentManifestSchema = z.strictObject({
   schemaVersion: z.literal(AGENT_MANIFEST_SCHEMA_VERSION),
   key: z.string().min(1),
@@ -58,4 +72,5 @@ export const agentManifestSchema = z.strictObject({
   output: agentManifestIoSchema,
   execution: agentManifestExecutionSchema,
   capabilities: agentManifestCapabilitiesSchema,
+  models: agentManifestModelsSchema.optional(),
 });

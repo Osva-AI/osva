@@ -1,6 +1,8 @@
 import type {
   AgentId,
   AgentVersionId,
+  ModelProfileId,
+  ModelProfileVersionId,
   RunAttemptId,
   RunAttemptState,
   RunId,
@@ -82,6 +84,39 @@ export class DuplicateAgentKeyError extends DomainInvariantError {
     this.key = key;
   }
 }
+
+export class ModelProfileNotFoundError extends DomainError {
+  readonly modelProfileId: ModelProfileId;
+
+  constructor(modelProfileId: ModelProfileId) {
+    super(`ModelProfile ${modelProfileId} was not found.`);
+    this.modelProfileId = modelProfileId;
+  }
+}
+
+export class ModelProfileVersionNotFoundError extends DomainError {
+  readonly modelProfileVersionId: ModelProfileVersionId;
+
+  constructor(modelProfileVersionId: ModelProfileVersionId) {
+    super(`ModelProfileVersion ${modelProfileVersionId} was not found.`);
+    this.modelProfileVersionId = modelProfileVersionId;
+  }
+}
+
+export class DuplicateModelProfileKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `ModelProfile key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class InvalidModelBindingError extends DomainInvariantError {}
 
 export class InvalidSubsequentAttemptError extends DomainInvariantError {
   readonly previousStatus: RunAttemptState;

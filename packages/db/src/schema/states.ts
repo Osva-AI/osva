@@ -23,3 +23,5 @@ export const PERSISTED_RUN_ATTEMPT_STATES = [
   "TIMED_OUT",
   "CANCELLED",
 ] as const;
+
+export const PERSISTED_MODEL_PROVIDERS = ["OPENAI"] as const;

@@ -4,6 +4,7 @@ import {
   createDatabase,
   migrateDatabase,
   PostgresAgentRepository,
+  PostgresModelProfileRepository,
   PostgresRunRepository,
   PostgresWorkspaceRepository,
   type Database,
@@ -149,6 +150,7 @@ describe("PostgreSQL orchestration walking skeleton", () => {
   it("accepts an AgentVersion created through the Agent Registry", async () => {
     const workspaces = new PostgresWorkspaceRepository(database);
     const agents = new PostgresAgentRepository(database);
+    const modelProfiles = new PostgresModelProfileRepository(database);
     const runs = new PostgresRunRepository(database);
     const queue = new MemoryJobQueue();
 
@@ -164,6 +166,7 @@ describe("PostgreSQL orchestration walking skeleton", () => {
     const registry = createAgentApplication({
       agents,
       workspaces,
+      modelProfiles,
       clock: { now: () => NOW },
       ids: {
         createId() {

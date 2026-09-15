@@ -2,6 +2,7 @@ import type {
   AgentId,
   AgentVersionId,
   ExecutionRequest,
+  ModelProfileVersionId,
   RunAttemptId,
   RunId,
   WorkspaceId,
@@ -31,4 +32,10 @@ export function createTrustedRequest(
     policyContext: {},
     ...overrides,
   };
+}
+
+export function modelBindings(
+  bindings: Readonly<Record<string, string>>,
+): Readonly<Record<string, ModelProfileVersionId>> {
+  return bindings as Readonly<Record<string, ModelProfileVersionId>>;
 }

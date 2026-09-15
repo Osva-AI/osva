@@ -44,6 +44,16 @@ export type {
   RunResourceV1,
 } from "./run-lifecycle.js";
 
+export type {
+  CreateModelProfileRequestV1,
+  CreateModelProfileVersionRequestV1,
+  ModelProfileListResourceV1,
+  ModelProfileResourceV1,
+  ModelProfileVersionListResourceV1,
+  ModelProfileVersionResourceV1,
+  UpdateModelProfileRequestV1,
+} from "./model-profile-registry.js";
+
 export {
   RUN_ATTEMPT_STATES,
   RUN_STATES,
@@ -66,6 +76,7 @@ export type {
   AgentManifestCapabilities,
   AgentManifestExecution,
   AgentManifestIO,
+  AgentManifestModelBinding,
   AgentManifestSchemaVersion,
   AgentManifestV1,
   AgentRuntime,
@@ -101,10 +112,31 @@ export type {
   JobQueuePayload,
 } from "./job-queue.js";
 
+export {
+  MODEL_BINDING_NAME_PATTERN,
+  MODEL_ERROR_CODES,
+  MODEL_MAX_OUTPUT_TOKENS_MAX,
+  MODEL_MAX_OUTPUT_TOKENS_MIN,
+  MODEL_PROVIDER_MODEL_ID_MAX_LENGTH,
+  MODEL_PROVIDERS,
+  MODEL_TEXT_CONTENT_MAX_LENGTH,
+  MODEL_TEXT_MAX_MESSAGES,
+  MODEL_TEXT_ROLES,
+  isModelBindingName,
+  isModelErrorCode,
+  isModelProvider,
+} from "./model-gateway.js";
 export type {
+  GenerateTextInput,
+  GenerateTextRequest,
+  GenerateTextResult,
+  ModelErrorCode,
   ModelGateway,
+  ModelProvider,
   ModelRequest,
   ModelResponse,
+  ModelTextMessage,
+  ModelTextRole,
   ModelToolDefinition,
   ModelUsage,
 } from "./model-gateway.js";

@@ -5,6 +5,9 @@ export async function run(context: {
   readonly workspaceId: string;
   readonly agentId: string;
   readonly agentVersionId: string;
+  readonly models?: {
+    readonly generateText: unknown;
+  };
 }): Promise<{
   readonly echoed: unknown;
   readonly ids: {
@@ -18,6 +21,9 @@ export async function run(context: {
   readonly hasJobId: boolean;
   readonly databaseUrl: string | null;
   readonly valkeyUrl: string | null;
+  readonly openaiApiKey: string | null;
+  readonly hasModels: boolean;
+  readonly modelKeys: string[];
 }> {
   return {
     echoed: context.input,
@@ -32,5 +38,11 @@ export async function run(context: {
     hasJobId: "jobId" in context,
     databaseUrl: process.env.OSVA_DATABASE_URL ?? null,
     valkeyUrl: process.env.OSVA_VALKEY_URL ?? null,
+    openaiApiKey: process.env.OPENAI_API_KEY ?? null,
+    hasModels: "models" in context,
+    modelKeys:
+      context.models === undefined
+        ? []
+        : Object.keys(context.models as object).sort(),
   };
 }

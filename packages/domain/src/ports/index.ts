@@ -4,6 +4,11 @@ export type {
   AppendAgentVersionInput,
 } from "./agent-repository.js";
 export type {
+  AppendModelProfileVersionInput,
+  ModelProfileMetadataUpdate,
+  ModelProfileRepository,
+} from "./model-profile-repository.js";
+export type {
   ListRunsQuery,
   ListRunsResult,
   RunLifecycleTransitionResult,

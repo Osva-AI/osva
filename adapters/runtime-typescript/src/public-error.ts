@@ -13,6 +13,9 @@ export function sanitizePublicErrorMessage(
   const redacted = firstLine
     .replace(WINDOWS_ABSOLUTE, "[path]")
     .replace(POSIX_ABSOLUTE, " [path]")
+    .replace(/\bsk-[A-Za-z0-9_-]+/g, "[redacted]")
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/OPENAI_API_KEY[=:]\s*\S+/gi, "OPENAI_API_KEY=[redacted]")
     .trim();
 
   return redacted.length === 0 ? fallback : redacted.slice(0, 500);

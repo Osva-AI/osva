@@ -29,3 +29,4 @@ green CI run of the latest commit.
 - ✅ 1.2 Run Lifecycle API and Persistence Hardening
 - ✅ 1.3 BullMQ + Valkey Queue Adapter and ExecutionWorker
 - ✅ 1.4 Trusted TypeScript Runtime
+- ✅ 1.5 Model Gateway and First Provider

@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { sha256IntegrityOf } from "../src/integrity.js";
 import { RuntimeErrorCode } from "../src/constants.js";
 import { TrustedTypeScriptRuntimeAdapter } from "../src/trusted-typescript-runtime-adapter.js";
-import { createTrustedRequest } from "./execution-request.js";
+import { createTrustedRequest, modelBindings } from "./execution-request.js";
 import { createTrustedRoot, installFixture } from "./temp-root.js";
 
 const PARENT_PID = process.pid;
@@ -52,6 +52,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
             "agentId",
             "agentVersionId",
             "input",
+            "models",
             "runAttemptId",
             "runId",
             "workspaceId",
@@ -59,6 +60,9 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           hasJobId: false,
           databaseUrl: null,
           valkeyUrl: null,
+          openaiApiKey: null,
+          hasModels: true,
+          modelKeys: ["generateText"],
         },
       });
     } finally {
@@ -354,6 +358,217 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
         wrote: false,
         code: "ERR_ACCESS_DENIED",
       });
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("exposes generateText without provider IDs, SDK clients, or OPENAI_API_KEY", async () => {
+    const previous = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "sk-secret-must-not-reach-child";
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-inspect-agent.ts");
+    const { adapter, request } = await adapterFor(
+      root,
+      "model-inspect-agent.ts",
+    );
+
+    try {
+      const result = await adapter.execute(request);
+      expect(result.status).toBe("succeeded");
+      if (result.status !== "succeeded") {
+        return;
+      }
+
+      expect(result.output).toMatchObject({
+        contextKeys: [
+          "agentId",
+          "agentVersionId",
+          "input",
+          "models",
+          "runAttemptId",
+          "runId",
+          "workspaceId",
+        ],
+        modelKeys: ["generateText"],
+        openaiApiKey: null,
+        hasGenerateText: true,
+        hasProvider: false,
+        hasOpenAI: false,
+        hasApiKey: false,
+        hasClient: false,
+        hasModelProfileVersionId: false,
+      });
+      expect(JSON.stringify(result)).not.toContain("sk-secret");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.OPENAI_API_KEY;
+      } else {
+        process.env.OPENAI_API_KEY = previous;
+      }
+      await adapter.close();
+    }
+  });
+
+  it("resolves logical bindings from persisted ExecutionRequest bindings", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-text-agent.ts");
+    const artifact = await fs.readFile(path.join(root, "model-text-agent.ts"));
+    const seen: string[] = [];
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: {
+        async generateText(request) {
+          seen.push(request.modelProfileVersionId);
+          return { text: "normalized from gateway" };
+        },
+      },
+    });
+
+    try {
+      const result = await adapter.execute(
+        createTrustedRequest({
+          timeoutMs: 5_000,
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "model-text-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          modelProfileVersionBindings: modelBindings({
+            primary: "mpv-frozen",
+          }),
+        }),
+      );
+      expect(result).toEqual({
+        status: "succeeded",
+        output: { text: "normalized from gateway" },
+      });
+      expect(seen).toEqual(["mpv-frozen"]);
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("does not re-resolve model bindings from AgentVersion at runtime", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-text-agent.ts");
+    const artifact = await fs.readFile(path.join(root, "model-text-agent.ts"));
+    const seen: string[] = [];
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: {
+        async generateText(request) {
+          seen.push(request.modelProfileVersionId);
+          return { text: "from frozen binding" };
+        },
+      },
+    });
+
+    try {
+      const result = await adapter.execute(
+        createTrustedRequest({
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "model-text-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          modelProfileVersionBindings: modelBindings({
+            primary: "mpv-run-snapshot",
+          }),
+        }),
+      );
+      expect(result.status).toBe("succeeded");
+      expect(seen).toEqual(["mpv-run-snapshot"]);
+      expect(seen).not.toContain("mpv-latest");
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("returns MODEL_BINDING_NOT_FOUND for an unknown logical binding", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-uncaught-agent.ts");
+    const { adapter, request } = await adapterFor(
+      root,
+      "model-uncaught-agent.ts",
+    );
+
+    try {
+      const result = await adapter.execute(request);
+      expect(result).toMatchObject({
+        status: "failed",
+        error: { code: "MODEL_BINDING_NOT_FOUND" },
+      });
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("lets an agent catch a model capability error and still succeed", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-catch-agent.ts");
+    const { adapter, request } = await adapterFor(root, "model-catch-agent.ts");
+
+    try {
+      const result = await adapter.execute(request);
+      expect(result).toEqual({
+        status: "succeeded",
+        output: {
+          caught: true,
+          code: "MODEL_BINDING_NOT_FOUND",
+          ok: true,
+        },
+      });
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("aborts outstanding provider calls when the child times out", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-hang-agent.ts");
+    const artifact = await fs.readFile(path.join(root, "model-hang-agent.ts"));
+    let aborted = false;
+    let releaseStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      releaseStarted = resolve;
+    });
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: {
+        generateText(_request, options) {
+          releaseStarted?.();
+          return new Promise((_, reject) => {
+            options?.signal?.addEventListener("abort", () => {
+              aborted = true;
+              reject(new Error("aborted"));
+            });
+          });
+        },
+      },
+    });
+
+    try {
+      const pending = adapter.execute(
+        createTrustedRequest({
+          timeoutMs: 2_000,
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "model-hang-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          modelProfileVersionBindings: modelBindings({
+            primary: "mpv-hang",
+          }),
+        }),
+      );
+      await started;
+      const result = await pending;
+      expect(result).toMatchObject({
+        status: "failed",
+        error: { code: RuntimeErrorCode.TIMEOUT },
+      });
+      expect(aborted).toBe(true);
     } finally {
       await adapter.close();
     }

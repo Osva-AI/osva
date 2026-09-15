@@ -106,6 +106,135 @@ export default tseslint.config(
     },
   },
   {
+    files: ["packages/model-gateway/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message: "packages/model-gateway cannot import persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "packages/model-gateway cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "packages/model-gateway cannot import runtime-core.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/model-gateway cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/model-gateway cannot import apps.",
+            },
+            {
+              name: "openai",
+              message:
+                "packages/model-gateway cannot import provider SDKs; adapters own those types.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/model-gateway cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/model-gateway cannot import Redis clients.",
+            },
+            {
+              name: "postgres",
+              message:
+                "packages/model-gateway cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "packages/model-gateway cannot import persistence libraries.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message:
+                "packages/model-gateway cannot import adapters; the composition root wires providers.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/model-gateway cannot import provider SDKs.",
+            },
+            {
+              group: ["openai/*"],
+              message: "packages/model-gateway cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "packages/model-gateway cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["adapters/model-openai/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message:
+                "adapters/model-openai stays below ModelGateway and cannot import domain persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "adapters/model-openai cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "adapters/model-openai cannot import runtime-core.",
+            },
+            {
+              name: "@osva/db",
+              message: "adapters/model-openai cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "adapters/model-openai cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "adapters/model-openai cannot import apps.",
+            },
+            {
+              name: "@osva/adapters-memory",
+              message:
+                "adapters/model-openai production code cannot import test adapters.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message:
+                "adapters/model-openai implements only the OpenAI provider.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "adapters/model-openai cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["adapters/bullmq/src/**/*.ts"],
     rules: {
       "no-restricted-imports": [

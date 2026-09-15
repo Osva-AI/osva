@@ -2,11 +2,17 @@ import { pathToFileURL } from "node:url";
 
 import { RuntimeErrorCode, TRUSTED_AGENT_EXPORT_NAME } from "./constants.js";
 import { deepFreezeChildValue, isChildJsonValue } from "./child-json.js";
+import {
+  createTrustedAgentModels,
+  ModelCapabilityError,
+} from "./model-capability.js";
 import { isExecuteChildRequest } from "./protocol.js";
 import { sanitizePublicErrorMessage } from "./public-error.js";
 
 process.on("message", (raw: unknown) => {
-  void handle(raw);
+  if (isExecuteChildRequest(raw)) {
+    void handle(raw);
+  }
 });
 
 async function handle(raw: unknown): Promise<void> {
@@ -30,7 +36,10 @@ async function handle(raw: unknown): Promise<void> {
       return;
     }
 
-    const context = deepFreezeChildValue(raw.context);
+    const context = deepFreezeChildValue({
+      ...raw.context,
+      models: createTrustedAgentModels(),
+    });
     const output: unknown = await run(context);
     if (!isChildJsonValue(output)) {
       sendFailure(
@@ -46,6 +55,11 @@ async function handle(raw: unknown): Promise<void> {
       output,
     });
   } catch (error) {
+    if (error instanceof ModelCapabilityError) {
+      sendFailure(error.code, error.message);
+      return;
+    }
+
     sendFailure(
       RuntimeErrorCode.AGENT_ERROR,
       error instanceof Error

@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@osva/adapters-bullmq": "workspace:*",
+    "@osva/adapters-model-openai": "workspace:*",
     "@osva/adapters-runtime-typescript": "workspace:*",
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
+    "@osva/model-gateway": "workspace:*",
     "@osva/orchestration": "workspace:*"
   },
   "devDependencies": {

@@ -10,7 +10,9 @@ import {
   EffectiveRunBindings,
   Run,
   RunAttempt,
+  modelProfileVersionBindingsFromManifest,
   type AgentRepository,
+  type AgentVersion,
   type RunRepository,
 } from "@osva/domain";
 
@@ -56,8 +58,10 @@ export interface CreateRunResult {
  *
  * Agent/AgentVersion ownership is checked through AgentRepository before
  * any Run or RunAttempt is created or persisted. CreateRun then resolves
- * Stage-0-compatible immutable effective bindings from the requested
- * AgentVersion. Callers do not supply the internal binding snapshot.
+ * immutable effective bindings from the requested AgentVersion, including
+ * that version's declared modelProfileVersionBindings. Callers do not
+ * supply the internal binding snapshot. Runtime execution must reuse the
+ * persisted Run snapshot rather than re-reading AgentVersion.models.
  * PostgreSQL foreign keys remain defense-in-depth; they are not the
  * CreateRun validation path.
  */
@@ -65,13 +69,13 @@ export class CreateRun {
   constructor(private readonly deps: CreateRunDependencies) {}
 
   async execute(command: CreateRunCommand): Promise<CreateRunResult> {
-    await this.assertAgentOwnership(command);
+    const agentVersion = await this.assertAgentOwnership(command);
 
     const pending = Run.create({
       id: command.runId,
       workspaceId: command.workspaceId,
       agentId: command.agentId,
-      effectiveBindings: resolveStage0EffectiveBindings(command.agentVersionId),
+      effectiveBindings: resolveEffectiveBindings(agentVersion),
       input: command.input,
       createdAt: command.now,
       idempotencyKey: command.idempotencyKey,
@@ -96,7 +100,9 @@ export class CreateRun {
     return { run: queued, runAttempt: attempt };
   }
 
-  private async assertAgentOwnership(command: CreateRunCommand): Promise<void> {
+  private async assertAgentOwnership(
+    command: CreateRunCommand,
+  ): Promise<AgentVersion> {
     const agent = await this.deps.agents.findAgentById(command.agentId);
     if (agent === null) {
       throw new AgentNotFoundError(command.agentId);
@@ -128,14 +134,18 @@ export class CreateRun {
         `Effective bindings require AgentVersion ${agentVersionId}, but loaded AgentVersion is ${agentVersion.id}.`,
       );
     }
+
+    return agentVersion;
   }
 }
 
-function resolveStage0EffectiveBindings(
-  agentVersionId: AgentVersionId,
+function resolveEffectiveBindings(
+  agentVersion: AgentVersion,
 ): EffectiveRunBindings {
   return EffectiveRunBindings.create({
-    agentVersionId,
-    modelProfileVersionBindings: {},
+    agentVersionId: agentVersion.id,
+    modelProfileVersionBindings: modelProfileVersionBindingsFromManifest(
+      agentVersion.manifest,
+    ),
   });
 }

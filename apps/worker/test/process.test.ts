@@ -73,6 +73,7 @@ describe("createWorkerProcess", () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       `${os.tmpdir()}/osva-worker-runtime-`,
     );
+    expect(TEST_ENV).not.toHaveProperty("OPENAI_API_KEY");
     const worker = createWorkerProcess(
       {
         ...TEST_ENV,
@@ -83,6 +84,7 @@ describe("createWorkerProcess", () => {
     );
 
     await worker.start();
+    expect(worker.status()).toBe("running");
     expect(queue.consumeCalls).toBe(1);
     await worker.stop();
   });

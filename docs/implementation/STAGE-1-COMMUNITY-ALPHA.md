@@ -47,7 +47,19 @@ RuntimeAdapter. It executes operator-installed TypeScript modules from
 identify the relative entrypoint, SHA-256 digest, and timeout
 (`execution.timeoutMs`). Production workers consume BullMQ jobs when PostgreSQL,
 Valkey, and the trusted runtime root are ready. This is a trusted-code runtime,
-not an untrusted sandbox. ModelGateway and ToolGateway remain later slices.
+not an untrusted sandbox.
+
+Slice 1.5 adds the provider-neutral ModelGateway, an immutable ModelProfile /
+ModelProfileVersion control-plane registry, and the first provider adapter
+using OpenAI's Responses API. AgentVersions may declare named logical model
+bindings. CreateRun freezes those bindings into
+`Run.effectiveBindings.modelProfileVersionBindings`. Trusted TypeScript agents
+call `context.models.generateText(bindingName, request)` through the existing
+runtime IPC channel. The child never receives an SDK client, API key, provider
+model ID, or ModelProfileVersion ID. `OPENAI_API_KEY` is optional and
+worker-only; missing it does not block worker startup. Streaming, tools,
+structured output, usage accounting, and additional providers remain later
+slices.
 
 ## Quality
 
@@ -56,4 +68,6 @@ not an untrusted sandbox. ModelGateway and ToolGateway remain later slices.
 - PostgreSQL integration tests;
 - Redis/BullMQ integration tests;
 - E2E successful and failed Runs;
-- retry and immutable-binding tests.
+- retry and immutable-binding tests;
+- ModelGateway and OpenAI adapter tests against a local fake Responses endpoint;
+- E2E trusted-agent `generateText` without a live paid OpenAI key.

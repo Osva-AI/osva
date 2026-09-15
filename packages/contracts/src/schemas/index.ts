@@ -24,6 +24,16 @@ export { jsonValueSchema } from "./json-value.js";
 export { agentManifestSchema, agentRuntimeSchema } from "./agent-manifest.js";
 
 export {
+  createModelProfileRequestSchema,
+  createModelProfileVersionRequestSchema,
+  modelProfileListResourceSchema,
+  modelProfileResourceSchema,
+  modelProfileVersionListResourceSchema,
+  modelProfileVersionResourceSchema,
+  updateModelProfileRequestSchema,
+} from "./model-profile-registry.js";
+
+export {
   agentListResourceSchema,
   agentResourceSchema,
   agentVersionListResourceSchema,
@@ -61,8 +71,13 @@ export {
 export { jobQueuePayloadSchema } from "./job-queue.js";
 
 export {
+  generateTextInputSchema,
+  generateTextResultSchema,
+  modelProviderModelIdSchema,
+  modelProviderSchema,
   modelRequestSchema,
   modelResponseSchema,
+  modelTextMessageSchema,
   modelUsageSchema,
 } from "./model-gateway.js";
 

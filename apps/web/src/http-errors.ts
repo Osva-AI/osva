@@ -4,9 +4,12 @@ import {
   AgentVersionNotFoundError,
   DomainInvariantError,
   DuplicateAgentKeyError,
+  DuplicateModelProfileKeyError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   LifecycleConflictError,
+  ModelProfileNotFoundError,
+  ModelProfileVersionNotFoundError,
   RunAttemptNotFoundError,
   RunNotFoundError,
   WorkspaceNotFoundError,
@@ -34,6 +37,8 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof WorkspaceNotFoundError ||
     error instanceof RunNotFoundError ||
     error instanceof RunAttemptNotFoundError ||
+    error instanceof ModelProfileNotFoundError ||
+    error instanceof ModelProfileVersionNotFoundError ||
     error instanceof OrchestrationAgentNotFoundError ||
     error instanceof OrchestrationAgentVersionNotFoundError ||
     error instanceof OrchestrationRunNotFoundError ||
@@ -45,6 +50,7 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
 
   if (
     error instanceof DuplicateAgentKeyError ||
+    error instanceof DuplicateModelProfileKeyError ||
     error instanceof LifecycleConflictError
   ) {
     sendJson(response, 409, { status: "conflict" });

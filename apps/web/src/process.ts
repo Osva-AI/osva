@@ -4,11 +4,16 @@ import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
   createDatabase,
   PostgresAgentRepository,
+  PostgresModelProfileRepository,
   PostgresRunRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { createAgentApplication, createRunApplication } from "@osva/domain";
+import {
+  createAgentApplication,
+  createModelProfileApplication,
+  createRunApplication,
+} from "@osva/domain";
 import { CreateRun } from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
@@ -37,6 +42,7 @@ export function createWebProcess(
   const queue = queueFactory(config.valkeyUrl);
   const agents = new PostgresAgentRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
+  const modelProfiles = new PostgresModelProfileRepository(database);
   const runs = new PostgresRunRepository(database);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
@@ -44,6 +50,13 @@ export function createWebProcess(
     readinessCheck: postgresAndValkeyReadinessCheck(database, queue),
     agents: createAgentApplication({
       agents,
+      workspaces,
+      modelProfiles,
+      clock,
+      ids,
+    }),
+    modelProfiles: createModelProfileApplication({
+      modelProfiles,
       workspaces,
       clock,
       ids,

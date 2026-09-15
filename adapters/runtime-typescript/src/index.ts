@@ -8,6 +8,7 @@ export {
 } from "./readiness.js";
 export {
   TrustedTypeScriptRuntimeAdapter,
+  type RuntimeModelGateway,
   type TrustedTypeScriptRuntimeAdapterOptions,
   type TrustedTypeScriptRuntimeLogger,
 } from "./trusted-typescript-runtime-adapter.js";

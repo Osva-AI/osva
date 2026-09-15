@@ -39,10 +39,24 @@ runAttemptId
 workspaceId
 agentId
 agentVersionId
+models.generateText(bindingName, request)
 ```
 
+`models.generateText` accepts a logical binding name from the Run's persisted
+`modelProfileVersionBindings` plus a provider-neutral request:
+
+```text
+messages: [{ role: system|user|assistant, content: string }, ...]
+maxOutputTokens?
+```
+
+It returns `{ text }`. The child does not receive ModelProfileVersion IDs,
+provider names, provider model IDs, API keys, or SDK objects. Parent/child
+model IPC (`model.generate.request` / `succeeded` / `failed`) is an internal
+runtime protocol, not a public HTTP contract.
+
 It does not pass PostgreSQL, Valkey, BullMQ, provider clients, secrets,
-ModelGateway, or ToolGateway objects.
+ModelGateway objects, or ToolGateway objects.
 
 ## Mandatory behavior
 

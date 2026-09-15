@@ -10,9 +10,12 @@ import type { AgentVersion } from "./agent-version.js";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
+  InvalidModelBindingError,
   WorkspaceNotFoundError,
 } from "./errors.js";
+import { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 import type { AgentRepository } from "./ports/agent-repository.js";
+import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 
 export interface AgentApplicationClock {
@@ -26,6 +29,7 @@ export interface AgentApplicationIds {
 export interface AgentApplicationDependencies {
   readonly agents: AgentRepository;
   readonly workspaces: WorkspaceRepository;
+  readonly modelProfiles: ModelProfileRepository;
   readonly clock: AgentApplicationClock;
   readonly ids: AgentApplicationIds;
 }
@@ -116,6 +120,17 @@ export class AppendAgentVersion {
   constructor(private readonly deps: AgentApplicationDependencies) {}
 
   async execute(command: AppendAgentVersionCommand): Promise<AgentVersion> {
+    const agent = await this.deps.agents.findAgentById(command.agentId);
+    if (agent === null) {
+      throw new AgentNotFoundError(command.agentId);
+    }
+
+    await assertModelBindings(
+      this.deps.modelProfiles,
+      agent.workspaceId,
+      command.manifest,
+    );
+
     return this.deps.agents.appendAgentVersion({
       id: this.deps.ids.createId() as AgentVersionId,
       agentId: command.agentId,
@@ -180,4 +195,31 @@ export function createAgentApplication(
     getAgentVersion: new GetAgentVersion(deps),
     listAgentVersions: new ListAgentVersions(deps),
   };
+}
+
+async function assertModelBindings(
+  modelProfiles: ModelProfileRepository,
+  workspaceId: WorkspaceId,
+  manifest: AgentManifestV1,
+): Promise<void> {
+  const bindings = modelProfileVersionBindingsFromManifest(manifest);
+  for (const [name, modelProfileVersionId] of Object.entries(bindings)) {
+    const version = await modelProfiles.findModelProfileVersionById(
+      modelProfileVersionId,
+    );
+    if (version === null) {
+      throw new InvalidModelBindingError(
+        `Model binding '${name}' references unknown ModelProfileVersion '${modelProfileVersionId}'.`,
+      );
+    }
+
+    const profile = await modelProfiles.findModelProfileById(
+      version.modelProfileId,
+    );
+    if (profile === null || profile.workspaceId !== workspaceId) {
+      throw new InvalidModelBindingError(
+        `Model binding '${name}' does not belong to workspace '${workspaceId}'.`,
+      );
+    }
+  }
 }

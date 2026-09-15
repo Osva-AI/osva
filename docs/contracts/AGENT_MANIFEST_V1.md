@@ -62,6 +62,27 @@ If the entrypoint imports other local or package code, dependency immutability
 is an operator responsibility in this Community Alpha slice. The digest covers
 the declared entrypoint artifact only.
 
+## Model bindings
+
+An AgentVersion may declare named logical model bindings:
+
+```yaml
+models:
+  primary:
+    modelProfileVersionId: mpv_...
+```
+
+Binding names start with a letter and may contain letters, digits, `_`, or `-`
+(at most 64 characters). They are OSVA identifiers, not provider model IDs.
+
+AgentVersions without `models` remain valid. CreateRun freezes declared
+bindings into `Run.effectiveBindings.modelProfileVersionBindings`. Runtime
+execution uses that persisted snapshot and does not re-resolve the
+AgentVersion or pick a later ModelProfileVersion.
+
+Appending an AgentVersion validates that each referenced ModelProfileVersion
+exists in the same Workspace. It does not call the external model provider.
+
 ## Rules
 
 - manifest contains no plaintext secrets;

@@ -1,10 +1,19 @@
+import type { ModelProfileId } from "@osva/contracts";
 import {
   MemoryAgentRepository,
   MemoryJobQueue,
+  MemoryModelProfileRepository,
   MemoryRunRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
-import { Agent, Workspace, createAgentApplication } from "@osva/domain";
+import {
+  Agent,
+  AgentVersion,
+  ModelProfile,
+  ModelProfileVersion,
+  Workspace,
+  createAgentApplication,
+} from "@osva/domain";
 import { describe, expect, it } from "vitest";
 
 import { CreateRun } from "../src/create-run.js";
@@ -21,11 +30,13 @@ import {
   agentId,
   agentVersionId,
   createManifest,
+  modelProfileVersionId,
   otherAgentId,
   otherAgentVersionId,
   otherWorkspaceId,
   runAttemptId,
   runId,
+  secondaryModelProfileVersionId,
   seedAgentGraph,
   workspaceId,
   wrapRunRepository,
@@ -212,6 +223,7 @@ describe("CreateRun", () => {
     const registry = createAgentApplication({
       agents,
       workspaces,
+      modelProfiles: new MemoryModelProfileRepository(),
       clock: { now: () => NOW },
       ids: {
         createId() {
@@ -241,5 +253,145 @@ describe("CreateRun", () => {
       {},
     );
     expect(queue.pendingRunAttemptIds()).toEqual([runAttemptId]);
+  });
+
+  it("copies AgentVersion model bindings into immutable Run effectiveBindings", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "agent-key",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest({
+          models: {
+            primary: { modelProfileVersionId },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute(createCommand());
+    expect(result.run.effectiveBindings.modelProfileVersionBindings).toEqual({
+      primary: modelProfileVersionId,
+    });
+
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: otherAgentVersionId,
+        agentId,
+        version: 2,
+        manifest: createManifest({
+          models: {
+            primary: {
+              modelProfileVersionId: secondaryModelProfileVersionId,
+            },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const persisted = await runs.findRunById(runId);
+    expect(persisted?.effectiveBindings.modelProfileVersionBindings).toEqual({
+      primary: modelProfileVersionId,
+    });
+  });
+
+  it("does not change a Run binding when a newer ModelProfileVersion is appended", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const modelProfiles = new MemoryModelProfileRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    const modelProfileId = "model-profile-1" as ModelProfileId;
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "agent-key",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await modelProfiles.saveModelProfile(
+      ModelProfile.create({
+        id: modelProfileId,
+        workspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      }),
+    );
+    await modelProfiles.saveModelProfileVersion(
+      ModelProfileVersion.create({
+        id: modelProfileVersionId,
+        modelProfileId,
+        version: 1,
+        provider: "OPENAI",
+        model: "gpt-one",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest({
+          models: {
+            primary: { modelProfileVersionId },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute(createCommand());
+    expect(result.run.effectiveBindings.modelProfileVersionBindings).toEqual({
+      primary: modelProfileVersionId,
+    });
+
+    const newer = await modelProfiles.appendModelProfileVersion({
+      id: secondaryModelProfileVersionId,
+      modelProfileId,
+      provider: "OPENAI",
+      model: "gpt-two",
+      createdAt: NOW,
+    });
+    expect(newer.version).toBe(2);
+
+    const persisted = await runs.findRunById(runId);
+    expect(persisted?.effectiveBindings.modelProfileVersionBindings).toEqual({
+      primary: modelProfileVersionId,
+    });
   });
 });

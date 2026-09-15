@@ -1,5 +1,9 @@
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
+  OpenAIProviderAdapter,
+  type OpenAIProviderAdapterOptions,
+} from "@osva/adapters-model-openai";
+import {
   assertTrustedTypeScriptRuntimeReady,
   TrustedTypeScriptRuntimeAdapter,
 } from "@osva/adapters-runtime-typescript";
@@ -8,9 +12,11 @@ import {
   checkDatabaseConnection,
   createDatabase,
   PostgresAgentRepository,
+  PostgresModelProfileRepository,
   PostgresRunRepository,
   type Database,
 } from "@osva/db";
+import { ModelGateway } from "@osva/model-gateway";
 import { ExecuteRunAttempt } from "@osva/orchestration";
 
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
@@ -34,6 +40,9 @@ export interface WorkerProcessDependencies {
   readonly queueFactory?: (valkeyUrl: string) => PingableJobQueue;
   readonly runtime?: RuntimeAdapter;
   readonly clock?: { now(): Date };
+  readonly openai?: Omit<OpenAIProviderAdapterOptions, "apiKey"> & {
+    readonly apiKey?: string;
+  };
 }
 
 export function createWorkerProcess(
@@ -81,6 +90,10 @@ export function createWorkerProcess(
             info: logEvent,
             error: logError,
           },
+          modelGateway: new ModelGateway({
+            modelProfiles: new PostgresModelProfileRepository(database),
+            providers: composeOpenAIProviders(env, dependencies.openai),
+          }),
         });
       const executeRunAttempt = new ExecuteRunAttempt({
         runs: new PostgresRunRepository(database),
@@ -118,6 +131,26 @@ export function createWorkerProcess(
       await worker.stop();
       logEvent("worker.shutdown_complete");
     },
+  };
+}
+
+function composeOpenAIProviders(
+  env: NodeJS.ProcessEnv,
+  openai: WorkerProcessDependencies["openai"],
+): ConstructorParameters<typeof ModelGateway>[0]["providers"] {
+  const apiKey = openai?.apiKey ?? env.OPENAI_API_KEY?.trim();
+  if (apiKey === undefined || apiKey.length === 0) {
+    return {};
+  }
+
+  return {
+    OPENAI: new OpenAIProviderAdapter({
+      apiKey,
+      baseURL: openai?.baseURL,
+      fetch: openai?.fetch,
+      maxRetries: openai?.maxRetries,
+      timeout: openai?.timeout,
+    }),
   };
 }
 

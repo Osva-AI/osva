@@ -22,6 +22,8 @@ const STAGE0_TABLES = [
   "deployments",
   "agent_versions",
   "agents",
+  "model_profile_versions",
+  "model_profiles",
   "workspaces",
 ] as const;
 

@@ -3,7 +3,9 @@ export type {
   AgentManifestV1,
   AgentVersionId,
   DeploymentId,
+  ModelProfileId,
   ModelProfileVersionId,
+  ModelProvider,
   RunAttemptId,
   RunAttemptState,
   RunId,
@@ -25,11 +27,15 @@ export {
   DomainError,
   DomainInvariantError,
   DuplicateAgentKeyError,
+  DuplicateModelProfileKeyError,
   InvalidAttemptSequenceError,
+  InvalidModelBindingError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   InvalidSubsequentAttemptError,
   LifecycleConflictError,
+  ModelProfileNotFoundError,
+  ModelProfileVersionNotFoundError,
   RunAttemptNotFoundError,
   RunNotFoundError,
   WorkspaceNotFoundError,
@@ -39,6 +45,12 @@ export { Workspace, type WorkspaceProps } from "./workspace.js";
 export { Agent, type AgentProps } from "./agent.js";
 export { AgentVersion, type AgentVersionProps } from "./agent-version.js";
 export { Deployment, type DeploymentProps } from "./deployment.js";
+export { ModelProfile, type ModelProfileProps } from "./model-profile.js";
+export {
+  ModelProfileVersion,
+  type ModelProfileVersionProps,
+} from "./model-profile-version.js";
+export { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 export {
   EffectiveRunBindings,
   type EffectiveRunBindingsProps,
@@ -82,8 +94,11 @@ export type {
   AgentMetadataUpdate,
   AgentRepository,
   AppendAgentVersionInput,
+  AppendModelProfileVersionInput,
   ListRunsQuery,
   ListRunsResult,
+  ModelProfileMetadataUpdate,
+  ModelProfileRepository,
   RunLifecycleTransitionResult,
   RunListCursor,
   RunRepository,
@@ -121,3 +136,22 @@ export {
   type RunApplication,
   type RunApplicationDependencies,
 } from "./run-application.js";
+
+export {
+  AppendModelProfileVersion,
+  CreateModelProfile,
+  GetModelProfile,
+  GetModelProfileVersion,
+  ListModelProfiles,
+  ListModelProfileVersions,
+  UpdateModelProfileMetadata,
+  createModelProfileApplication,
+  type AppendModelProfileVersionCommand,
+  type CreateModelProfileCommand,
+  type GetModelProfileVersionCommand,
+  type ModelProfileApplication,
+  type ModelProfileApplicationClock,
+  type ModelProfileApplicationDependencies,
+  type ModelProfileApplicationIds,
+  type UpdateModelProfileMetadataCommand,
+} from "./model-profile-application.js";

@@ -1,13 +1,23 @@
-import type { AgentVersionId, RunAttemptId, RunId } from "@osva/contracts";
+import type {
+  AgentVersionId,
+  ModelProfileId,
+  ModelProfileVersionId,
+  RunAttemptId,
+  RunId,
+} from "@osva/contracts";
 import {
   Agent,
   AgentNotFoundError,
   AgentVersion,
   DomainInvariantError,
   DuplicateAgentKeyError,
+  DuplicateModelProfileKeyError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   LifecycleConflictError,
+  ModelProfile,
+  ModelProfileNotFoundError,
+  ModelProfileVersion,
   Run,
   RunAttempt,
   RunNotFoundError,
@@ -16,6 +26,7 @@ import {
 } from "@osva/domain";
 import type {
   AgentRepository,
+  ModelProfileRepository,
   RunRepository,
   WorkspaceRepository,
 } from "@osva/domain";
@@ -30,6 +41,7 @@ import {
   postgresErrorCode,
 } from "../../src/postgres-errors.js";
 import { PostgresAgentRepository } from "../../src/repositories/postgres-agent-repository.js";
+import { PostgresModelProfileRepository } from "../../src/repositories/postgres-model-profile-repository.js";
 import { PostgresRunRepository } from "../../src/repositories/postgres-run-repository.js";
 import { PostgresWorkspaceRepository } from "../../src/repositories/postgres-workspace-repository.js";
 import { deployments } from "../../src/schema/deployments.js";
@@ -55,6 +67,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
   let database: Database;
   let workspaces: WorkspaceRepository;
   let agents: AgentRepository;
+  let modelProfiles: ModelProfileRepository;
   let runs: RunRepository;
   let idCounter = 0;
 
@@ -68,6 +81,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
     await migrateDatabase(database);
     workspaces = new PostgresWorkspaceRepository(database);
     agents = new PostgresAgentRepository(database);
+    modelProfiles = new PostgresModelProfileRepository(database);
     runs = new PostgresRunRepository(database);
   });
 
@@ -1226,6 +1240,149 @@ describe("PostgreSQL Stage 0 repositories", () => {
           }).transitionTo("QUEUED", LATER),
         ),
       ).rejects.toBeInstanceOf(RunNotFoundError);
+    });
+  });
+
+  describe("ModelProfile", () => {
+    it("saves, lists, and renames a ModelProfile without storing credentials", async () => {
+      const { ids } = await seedAgentGraph();
+      const profile = ModelProfile.create({
+        id: `mp_${ids.agentId}` as ModelProfileId,
+        workspaceId: ids.workspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      });
+
+      await modelProfiles.saveModelProfile(profile);
+      const loaded = await modelProfiles.findModelProfileById(profile.id);
+      expect(loaded).toEqual(profile);
+      expect(JSON.stringify(loaded)).not.toContain("sk-");
+
+      const renamed = await modelProfiles.updateModelProfileMetadata(
+        profile.id,
+        { name: "Renamed" },
+      );
+      expect(renamed?.name).toBe("Renamed");
+      expect(renamed?.key).toBe("primary");
+    });
+
+    it("appends immutable ModelProfileVersions with independent numbering", async () => {
+      const { ids } = await seedAgentGraph();
+      const first = ModelProfile.create({
+        id: `mp_${ids.agentId}_a` as ModelProfileId,
+        workspaceId: ids.workspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      });
+      const second = ModelProfile.create({
+        id: `mp_${ids.agentId}_b` as ModelProfileId,
+        workspaceId: ids.workspaceId,
+        key: "secondary",
+        name: "Secondary",
+        createdAt: NOW,
+      });
+      await modelProfiles.saveModelProfile(first);
+      await modelProfiles.saveModelProfile(second);
+
+      const v1 = await modelProfiles.appendModelProfileVersion({
+        id: `mpv_${ids.agentId}_1` as ModelProfileVersionId,
+        modelProfileId: first.id,
+        provider: "OPENAI",
+        model: "gpt-one",
+        createdAt: NOW,
+      });
+      const v2 = await modelProfiles.appendModelProfileVersion({
+        id: `mpv_${ids.agentId}_2` as ModelProfileVersionId,
+        modelProfileId: first.id,
+        provider: "OPENAI",
+        model: "gpt-two",
+        createdAt: LATER,
+      });
+      const other = await modelProfiles.appendModelProfileVersion({
+        id: `mpv_${ids.agentId}_other` as ModelProfileVersionId,
+        modelProfileId: second.id,
+        provider: "OPENAI",
+        model: "gpt-other",
+        createdAt: NOW,
+      });
+
+      expect(v1.version).toBe(1);
+      expect(v2.version).toBe(2);
+      expect(other.version).toBe(1);
+      expect(v1).not.toHaveProperty("apiKey");
+      expect(JSON.stringify(v1)).not.toMatch(/sk-|OPENAI_API_KEY|apiKey/);
+      expect(modelProfiles).not.toHaveProperty("updateModelProfileVersion");
+    });
+
+    it("rejects a duplicate ModelProfile key", async () => {
+      const { ids } = await seedAgentGraph();
+      await modelProfiles.saveModelProfile(
+        ModelProfile.create({
+          id: `mp_${ids.agentId}` as ModelProfileId,
+          workspaceId: ids.workspaceId,
+          key: "primary",
+          name: "Primary",
+          createdAt: NOW,
+        }),
+      );
+      await expect(
+        modelProfiles.saveModelProfile(
+          ModelProfile.create({
+            id: `mp_${ids.otherAgentId}` as ModelProfileId,
+            workspaceId: ids.workspaceId,
+            key: "primary",
+            name: "Duplicate",
+            createdAt: NOW,
+          }),
+        ),
+      ).rejects.toBeInstanceOf(DuplicateModelProfileKeyError);
+    });
+
+    it("rejects appending a version to a missing ModelProfile", async () => {
+      await expect(
+        modelProfiles.appendModelProfileVersion({
+          id: "mpv_missing" as ModelProfileVersionId,
+          modelProfileId: "mp_missing" as ModelProfileId,
+          provider: "OPENAI",
+          model: "gpt-one",
+          createdAt: NOW,
+        }),
+      ).rejects.toBeInstanceOf(ModelProfileNotFoundError);
+    });
+
+    it("rejects replacing an immutable ModelProfileVersion", async () => {
+      const { ids } = await seedAgentGraph();
+      const profile = ModelProfile.create({
+        id: `mp_${ids.agentId}` as ModelProfileId,
+        workspaceId: ids.workspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      });
+      await modelProfiles.saveModelProfile(profile);
+      const version = ModelProfileVersion.create({
+        id: `mpv_${ids.agentId}` as ModelProfileVersionId,
+        modelProfileId: profile.id,
+        version: 1,
+        provider: "OPENAI",
+        model: "gpt-one",
+        createdAt: NOW,
+      });
+      await modelProfiles.saveModelProfileVersion(version);
+      await expect(
+        modelProfiles.saveModelProfileVersion(
+          ModelProfileVersion.create({
+            id: version.id,
+            modelProfileId: profile.id,
+            version: 1,
+            provider: "OPENAI",
+            model: "gpt-two",
+            createdAt: NOW,
+          }),
+        ),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
     });
   });
 });

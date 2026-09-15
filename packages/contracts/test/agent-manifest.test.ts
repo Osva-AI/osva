@@ -47,6 +47,28 @@ describe("Agent Manifest v1", () => {
     expect(parsed.runtime).toEqual(validTrustedRuntime);
   });
 
+  it("parses optional logical model bindings", () => {
+    const parsed = agentManifestSchema.parse({
+      ...validManifest,
+      models: {
+        primary: { modelProfileVersionId: "mpv-1" },
+      },
+    });
+    expect(parsed.models).toEqual({
+      primary: { modelProfileVersionId: "mpv-1" },
+    });
+  });
+
+  it("rejects an invalid model binding name", () => {
+    const parsed = agentManifestSchema.safeParse({
+      ...validManifest,
+      models: {
+        "not a name": { modelProfileVersionId: "mpv-1" },
+      },
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it("rejects an invalid schema version", () => {
     const parsed = agentManifestSchema.safeParse({
       ...validManifest,
