@@ -6,9 +6,11 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** pre-alpha. Stage 1 Slice 1.3 replaces the fake production queue
-> with BullMQ on Valkey and turns `apps/worker` into the ExecutionWorker
-> composition root. Trusted TypeScript Runtime remains Slice 1.4.
+> **Status:** pre-alpha. Stage 1 Slice 1.4 adds a trusted TypeScript
+> RuntimeAdapter. `apps/worker` consumes `osva-execution` through BullMQ when
+> PostgreSQL, Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT` are ready. This runtime
+> executes operator-installed TypeScript modules; it is not an untrusted
+> sandbox.
 
 ## Why OSVA?
 
@@ -152,6 +154,7 @@ environment. Processes do not auto-load `.env`. Required variables:
 
 - `OSVA_DATABASE_URL`
 - `OSVA_VALKEY_URL`
+- `OSVA_TRUSTED_RUNTIME_ROOT`
 - optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`
 
 Then start infrastructure, apply committed migrations, and run the apps:
@@ -217,10 +220,11 @@ AgentVersion. Run list query parameters are `limit` (default 50, max 100),
 or RunAttempt mutation API.
 
 The worker is the ExecutionWorker composition root. After PostgreSQL and Valkey
-are reachable it starts a BullMQ consumer when a `RuntimeAdapter` is composed.
-Production does not attach a Trusted TypeScript Runtime in this slice; queue
-messages wait in Valkey until Slice 1.4. `CreateRun` still enqueues
-`{ runAttemptId }` through BullMQ.
+are reachable and `OSVA_TRUSTED_RUNTIME_ROOT` resolves to a readable directory,
+it consumes `osva-execution` through the trusted TypeScript RuntimeAdapter.
+Trusted agent modules are operator-installed files beneath that root. They are
+not uploaded through the HTTP API. `CreateRun` still enqueues `{ runAttemptId }`
+through BullMQ. ModelGateway and ToolGateway are not available to agent code.
 
 ### Quality commands
 

@@ -1,4 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import type {
   AgentId,
   AgentVersionId,
@@ -165,10 +168,14 @@ describe("worker process BullMQ integration", () => {
   });
 
   it("shuts down without hanging after connecting to Valkey", async () => {
+    const trustedRuntimeRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-worker-runtime-"),
+    );
     const worker = createWorkerProcess(
       {
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
+        OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
       },
       () =>
         createDatabase({

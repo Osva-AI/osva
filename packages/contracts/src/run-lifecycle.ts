@@ -5,6 +5,7 @@ import type {
   RunId,
   WorkspaceId,
 } from "./ids.js";
+import type { JsonValue } from "./json-value.js";
 import type { RunAttemptState, RunState } from "./run-state.js";
 
 export interface CreateRunRequestV1 {
@@ -42,6 +43,7 @@ export interface RunAttemptResourceV1 {
     readonly code: string;
     readonly message: string;
   };
+  readonly output?: JsonValue;
 }
 
 export interface CreateRunResponseV1 {

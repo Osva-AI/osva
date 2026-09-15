@@ -1,4 +1,8 @@
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
+import {
+  assertTrustedTypeScriptRuntimeReady,
+  TrustedTypeScriptRuntimeAdapter,
+} from "@osva/adapters-runtime-typescript";
 import type { RuntimeAdapter } from "@osva/contracts";
 import {
   checkDatabaseConnection,
@@ -54,19 +58,30 @@ export function createWorkerProcess(
   const database = createDatabaseHandle(config.databaseUrl);
   const queue = createQueue(config.valkeyUrl);
   const clock = dependencies.clock ?? { now: () => new Date() };
-  const runtime = dependencies.runtime;
-
+  const injectedRuntime = dependencies.runtime;
+  let runtime: RuntimeAdapter | undefined = injectedRuntime;
   let consumeStarted = false;
+
   const worker: WorkerApplication = createWorkerApplication({
     readinessCheck: async () => {
       await checkDatabaseConnection(database);
       await queue.ping();
+      if (injectedRuntime === undefined) {
+        await assertTrustedTypeScriptRuntimeReady({
+          trustedRuntimeRoot: config.trustedRuntimeRoot ?? "",
+        });
+      }
     },
     onStart: async () => {
-      if (runtime === undefined) {
-        return;
-      }
-
+      runtime =
+        injectedRuntime ??
+        new TrustedTypeScriptRuntimeAdapter({
+          trustedRuntimeRoot: config.trustedRuntimeRoot ?? "",
+          logger: {
+            info: logEvent,
+            error: logError,
+          },
+        });
       const executeRunAttempt = new ExecuteRunAttempt({
         runs: new PostgresRunRepository(database),
         agents: new PostgresAgentRepository(database),
@@ -78,6 +93,9 @@ export function createWorkerProcess(
       consumeStarted = true;
     },
     onClose: async () => {
+      if (runtime !== undefined && isClosableRuntime(runtime)) {
+        await runtime.close();
+      }
       await queue.shutdown();
       await database.close();
     },
@@ -101,4 +119,13 @@ export function createWorkerProcess(
       logEvent("worker.shutdown_complete");
     },
   };
+}
+
+function isClosableRuntime(
+  value: RuntimeAdapter,
+): value is RuntimeAdapter & { close(): Promise<void> } {
+  return (
+    "close" in value &&
+    typeof (value as { close?: unknown }).close === "function"
+  );
 }

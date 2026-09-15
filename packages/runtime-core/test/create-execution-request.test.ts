@@ -98,7 +98,13 @@ describe("createExecutionRequest", () => {
     expect(request).toEqual({
       runId,
       runAttemptId,
+      workspaceId,
+      agentId,
       agentVersionId,
+      runtime: {
+        type: "BUILTIN_PACKAGE",
+        key: "example-agent",
+      },
       input: RUN_INPUT,
       effectiveConfig: {},
       modelProfileVersionBindings:

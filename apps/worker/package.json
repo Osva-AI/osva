@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@osva/adapters-bullmq": "workspace:*",
+    "@osva/adapters-runtime-typescript": "workspace:*",
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/orchestration": "workspace:*"
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@osva/adapters-memory": "workspace:*",
     "@osva/domain": "workspace:*",
+    "@osva/web": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

@@ -67,6 +67,7 @@
 - `adr/ADR-003-bullmq-stage1.md`
 - `adr/ADR-004-durable-workflow-backend.md`
 - `adr/ADR-005-apache2.md`
+- `adr/ADR-006-trusted-typescript-runtime.md`
 
 ## Source-of-truth precedence
 

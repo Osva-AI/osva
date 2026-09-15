@@ -118,6 +118,9 @@ describe("PostgreSQL orchestration walking skeleton", () => {
     expect((await runs.findRunAttemptById(runAttemptId))?.status).toBe(
       "SUCCEEDED",
     );
+    expect((await runs.findRunAttemptById(runAttemptId))?.output).toEqual({
+      ok: true,
+    });
   });
 
   it("rejects a missing Agent before persisting or enqueueing", async () => {

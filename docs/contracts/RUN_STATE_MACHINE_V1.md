@@ -49,7 +49,11 @@ Each attempt records:
 - status;
 - started/completed timestamps;
 - infrastructure metadata;
-- error.
+- error;
+- JSON-compatible `output` after success.
+
+Output is absent until the attempt succeeds. Once terminal, output is
+immutable. Queue redelivery must not overwrite it.
 
 Queue redelivery of the same attempt does not create another RunAttempt.
 

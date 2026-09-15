@@ -138,10 +138,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          export OSVA_TRUSTED_RUNTIME_ROOT="$RUNNER_TEMP/osva-trusted-runtime"
+
           WEB_LOG="$RUNNER_TEMP/osva-web.log"
           WORKER_LOG="$RUNNER_TEMP/osva-worker.log"
           WEB_PID_FILE="$RUNNER_TEMP/osva-web.pid"
           WORKER_PID_FILE="$RUNNER_TEMP/osva-worker.pid"
+
+          mkdir -p "$OSVA_TRUSTED_RUNTIME_ROOT"
 
           dump_logs() {
             echo "::group::web log"
@@ -239,6 +243,10 @@ jobs:
             exit 1
           fi
           echo "worker remained alive after PostgreSQL and Valkey readiness"
+          if ! grep -q '"consuming":true' "$WORKER_LOG"; then
+            echo "worker started but did not consume the execution queue" >&2
+            exit 1
+          fi
 
           node adapters/bullmq/scripts/compose-enqueue-smoke.mjs
 

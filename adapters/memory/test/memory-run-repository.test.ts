@@ -188,7 +188,11 @@ describe("MemoryRunRepository", () => {
     await expect(
       repository.transitionRunAttempt(
         "PENDING",
-        pending.transitionTo("RUNNING", LATER).transitionTo("SUCCEEDED", LATER),
+        pending
+          .transitionTo("RUNNING", LATER)
+          .transitionTo("SUCCEEDED", LATER, {
+            output: { ok: true },
+          }),
       ),
     ).rejects.toBeInstanceOf(InvalidRunAttemptTransitionError);
   });

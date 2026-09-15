@@ -1,0 +1,1 @@
+ALTER TABLE "run_attempts" ADD COLUMN "output" jsonb;

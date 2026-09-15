@@ -5,7 +5,14 @@ import { executionRequestSchema } from "../src/schemas/runtime-protocol.js";
 const validRequest = {
   runId: "run-1",
   runAttemptId: "attempt-1",
+  workspaceId: "ws-1",
+  agentId: "agent-1",
   agentVersionId: "agent-version-1",
+  runtime: {
+    type: "TRUSTED_TYPESCRIPT",
+    entrypoint: "echo-agent.ts",
+    integrity: `sha256:${"b".repeat(64)}`,
+  },
   input: { prompt: "hello" },
   effectiveConfig: {},
   modelProfileVersionBindings: {},
@@ -19,6 +26,9 @@ describe("Runtime Protocol v1 request", () => {
     const parsed = executionRequestSchema.parse(validRequest);
     expect(parsed.runId).toBe("run-1");
     expect(parsed.runAttemptId).toBe("attempt-1");
+    expect(parsed.workspaceId).toBe("ws-1");
+    expect(parsed.agentId).toBe("agent-1");
+    expect(parsed.runtime).toEqual(validRequest.runtime);
   });
 
   it("requires runAttemptId", () => {

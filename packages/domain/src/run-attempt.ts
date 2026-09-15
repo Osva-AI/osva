@@ -6,7 +6,12 @@ import {
   InvalidAttemptSequenceError,
   InvalidSubsequentAttemptError,
 } from "./errors.js";
-import { copyInstant, freezeClone, freezeRecord } from "./internals.js";
+import {
+  copyInstant,
+  copyCanonicalJsonValue,
+  freezeClone,
+  freezeRecord,
+} from "./internals.js";
 import {
   assertLegalRunAttemptTransition,
   isRetryableRunAttemptState,
@@ -43,6 +48,7 @@ export interface RunAttemptRehydrateProps {
   readonly startedAt?: Date;
   readonly completedAt?: Date;
   readonly error?: RunAttemptError;
+  readonly output?: unknown;
   readonly infrastructureMetadata?: InfrastructureMetadata;
 }
 
@@ -55,6 +61,7 @@ export class RunAttempt {
   readonly startedAt: Date | undefined;
   readonly completedAt: Date | undefined;
   readonly error: RunAttemptError | undefined;
+  readonly output: unknown | undefined;
   readonly infrastructureMetadata: InfrastructureMetadata | undefined;
 
   private constructor(props: {
@@ -66,6 +73,7 @@ export class RunAttempt {
     readonly startedAt: Date | undefined;
     readonly completedAt: Date | undefined;
     readonly error: RunAttemptError | undefined;
+    readonly output: unknown | undefined;
     readonly infrastructureMetadata: InfrastructureMetadata | undefined;
   }) {
     this.id = props.id;
@@ -76,6 +84,7 @@ export class RunAttempt {
     this.startedAt = props.startedAt;
     this.completedAt = props.completedAt;
     this.error = props.error;
+    this.output = props.output;
     this.infrastructureMetadata = props.infrastructureMetadata;
   }
 
@@ -89,6 +98,7 @@ export class RunAttempt {
       startedAt: undefined,
       completedAt: undefined,
       error: undefined,
+      output: undefined,
       infrastructureMetadata: props.infrastructureMetadata,
     });
   }
@@ -116,6 +126,7 @@ export class RunAttempt {
       startedAt: undefined,
       completedAt: undefined,
       error: undefined,
+      output: undefined,
       infrastructureMetadata: props.infrastructureMetadata,
     });
   }
@@ -130,6 +141,7 @@ export class RunAttempt {
       startedAt: props.startedAt,
       completedAt: props.completedAt,
       error: props.error,
+      output: props.output,
       infrastructureMetadata: props.infrastructureMetadata,
     });
   }
@@ -139,6 +151,7 @@ export class RunAttempt {
     now: Date,
     options?: {
       readonly error?: RunAttemptError;
+      readonly output?: unknown;
       readonly infrastructureMetadata?: InfrastructureMetadata;
     },
   ): RunAttempt {
@@ -151,6 +164,15 @@ export class RunAttempt {
       : this.completedAt;
     const error =
       target === "SUCCEEDED" ? undefined : (options?.error ?? this.error);
+    const output =
+      target === "SUCCEEDED"
+        ? copyCanonicalJsonValue(
+            options && Object.hasOwn(options, "output")
+              ? options.output
+              : undefined,
+            "RunAttempt.output",
+          )
+        : undefined;
 
     return RunAttempt.instantiate({
       id: this.id,
@@ -161,6 +183,7 @@ export class RunAttempt {
       startedAt,
       completedAt,
       error,
+      output,
       infrastructureMetadata:
         options?.infrastructureMetadata ?? this.infrastructureMetadata,
     });
@@ -175,6 +198,7 @@ export class RunAttempt {
     readonly startedAt: Date | undefined;
     readonly completedAt: Date | undefined;
     readonly error: RunAttemptError | undefined;
+    readonly output: unknown | undefined;
     readonly infrastructureMetadata: InfrastructureMetadata | undefined;
   }): RunAttempt {
     if (!props.id) {
@@ -230,6 +254,10 @@ export class RunAttempt {
         startedAt,
         completedAt,
         error: props.error === undefined ? undefined : freezeClone(props.error),
+        output:
+          props.output === undefined
+            ? undefined
+            : copyCanonicalJsonValue(props.output, "RunAttempt.output"),
         infrastructureMetadata:
           props.infrastructureMetadata === undefined
             ? undefined

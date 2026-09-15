@@ -278,6 +278,7 @@ function toRunAttemptResource(attempt: RunAttempt) {
     startedAt: attempt.startedAt?.toISOString(),
     completedAt: attempt.completedAt?.toISOString(),
     error: attempt.error,
+    ...(attempt.output !== undefined ? { output: attempt.output } : {}),
   });
 }
 

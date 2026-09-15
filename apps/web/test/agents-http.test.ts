@@ -111,6 +111,57 @@ describe("Agent Registry HTTP API", () => {
     expect(version.body).toEqual({ status: "invalid_request" });
   });
 
+  it("accepts a trusted TypeScript runtime descriptor and rejects traversal", async () => {
+    const { origin } = await listen();
+    await fetchJson(`${origin}/v1/agents`, {
+      method: "POST",
+      body: {
+        workspaceId: WORKSPACE_ID,
+        key: "example-agent",
+        name: "Example Agent",
+      },
+    });
+
+    const trusted = await fetchJson(`${origin}/v1/agents/id-1/versions`, {
+      method: "POST",
+      body: {
+        manifest: {
+          ...VALID_MANIFEST,
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "echo-agent.ts",
+            integrity: `sha256:${"a".repeat(64)}`,
+          },
+        },
+      },
+    });
+    expect(trusted.status).toBe(201);
+    expect(trusted.body).toMatchObject({
+      version: 1,
+      manifest: {
+        runtime: {
+          type: "TRUSTED_TYPESCRIPT",
+          entrypoint: "echo-agent.ts",
+        },
+      },
+    });
+
+    const traversal = await fetchJson(`${origin}/v1/agents/id-1/versions`, {
+      method: "POST",
+      body: {
+        manifest: {
+          ...VALID_MANIFEST,
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "../echo-agent.ts",
+            integrity: `sha256:${"a".repeat(64)}`,
+          },
+        },
+      },
+    });
+    expect(traversal.status).toBe(400);
+  });
+
   it("creates, reads, and lists AgentVersions with deterministic numbering", async () => {
     const { origin } = await listen();
     await fetchJson(`${origin}/v1/agents`, {

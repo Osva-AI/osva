@@ -278,6 +278,7 @@ function applyRunAttemptLifecycle(
     startedAt: next.startedAt,
     completedAt: next.completedAt,
     error: next.error,
+    output: next.output,
     infrastructureMetadata: next.infrastructureMetadata,
   });
 }

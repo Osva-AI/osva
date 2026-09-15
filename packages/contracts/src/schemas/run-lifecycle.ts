@@ -10,6 +10,7 @@ import {
 } from "./ids.js";
 import { RUN_ATTEMPT_STATES, RUN_STATES } from "../run-state.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
+import { jsonValueSchema } from "./json-value.js";
 
 const runStateSchema = z.enum(RUN_STATES);
 const runAttemptStateSchema = z.enum(RUN_ATTEMPT_STATES);
@@ -54,6 +55,7 @@ export const runAttemptResourceSchema = z.strictObject({
       message: z.string().min(1),
     })
     .optional(),
+  output: jsonValueSchema.optional(),
 });
 
 export const createRunResponseSchema = z.strictObject({

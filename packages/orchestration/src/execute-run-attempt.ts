@@ -8,6 +8,7 @@ import type {
 import type { RunAttemptId, RunState } from "@osva/contracts";
 import {
   isTerminalRunAttemptState,
+  DomainInvariantError,
   type AgentRepository,
   type Run,
   type RunAttempt,
@@ -203,10 +204,29 @@ export class ExecuteRunAttempt {
     }
 
     if (result.status === "succeeded") {
-      const succeededAttempt = runningAttempt.transitionTo(
-        "SUCCEEDED",
-        command.now,
-      );
+      let succeededAttempt: RunAttempt;
+      try {
+        succeededAttempt = runningAttempt.transitionTo(
+          "SUCCEEDED",
+          command.now,
+          { output: result.output },
+        );
+      } catch (error) {
+        if (error instanceof DomainInvariantError) {
+          return this.persistFailure(
+            runningRun,
+            runningAttempt,
+            command.now,
+            Object.freeze({
+              code: "INVALID_RUNTIME_OUTPUT",
+              message: "Runtime output must be JSON-compatible.",
+            }),
+          );
+        }
+
+        throw error;
+      }
+
       const succeededRun = runningRun.transitionTo("SUCCEEDED", command.now);
       await this.deps.runs.transitionRunAndAttempt(
         runningRun.status,

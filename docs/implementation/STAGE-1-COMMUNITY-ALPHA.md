@@ -39,10 +39,15 @@ a BullMQ `JobQueue` on Valkey. `CreateRun` enqueues `{ runAttemptId }` onto the
 `osva-execution` queue. `apps/worker` is the ExecutionWorker composition root:
 it waits for PostgreSQL and Valkey, then consumes that queue and delegates to
 `ExecuteRunAttempt`. BullMQ job IDs and job names are infrastructure-only.
-PostgreSQL remains the canonical Run/RunAttempt lifecycle store. This slice
-does not introduce the Trusted TypeScript Runtime; production consumption of
-agent execution waits for a composed `RuntimeAdapter` in Slice 1.4. Integration
-tests inject the existing FakeRuntimeAdapter.
+PostgreSQL remains the canonical Run/RunAttempt lifecycle store.
+
+Slice 1.4 adds `@osva/adapters-runtime-typescript`, the first production
+RuntimeAdapter. It executes operator-installed TypeScript modules from
+`OSVA_TRUSTED_RUNTIME_ROOT` in a dedicated child process. AgentVersion manifests
+identify the relative entrypoint, SHA-256 digest, and timeout
+(`execution.timeoutMs`). Production workers consume BullMQ jobs when PostgreSQL,
+Valkey, and the trusted runtime root are ready. This is a trusted-code runtime,
+not an untrusted sandbox. ModelGateway and ToolGateway remain later slices.
 
 ## Quality
 

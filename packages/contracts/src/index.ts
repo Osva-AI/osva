@@ -21,6 +21,8 @@ export type {
 } from "./ids.js";
 
 export type { JsonSchemaRecord } from "./json-schema.js";
+export type { JsonObject, JsonPrimitive, JsonValue } from "./json-value.js";
+export { isCanonicalJsonValue } from "./json-value.js";
 
 export type {
   AgentListResourceV1,
@@ -54,6 +56,9 @@ export type {
 } from "./run-state.js";
 
 export {
+  AGENT_EXECUTION_DEFAULT_TIMEOUT_MS,
+  AGENT_EXECUTION_MAX_TIMEOUT_MS,
+  AGENT_EXECUTION_MIN_TIMEOUT_MS,
   AGENT_MANIFEST_SCHEMA_VERSION,
   AGENT_RUNTIME_TYPES,
 } from "./agent-manifest.js";
@@ -65,7 +70,15 @@ export type {
   AgentManifestV1,
   AgentRuntime,
   AgentRuntimeType,
+  BuiltinPackageRuntime,
+  TrustedTypeScriptRuntime,
 } from "./agent-manifest.js";
+export {
+  SHA256_INTEGRITY_PREFIX,
+  isRelativeTrustedEntrypoint,
+  isSha256IntegrityDigest,
+  sha256IntegrityHex,
+} from "./trusted-runtime.js";
 
 export type {
   ExecutionError,

@@ -518,6 +518,37 @@ describe("PostgreSQL Stage 0 repositories", () => {
       expect(Object.isFrozen(loaded)).toBe(true);
     });
 
+    it("saves and loads successful RunAttempt output", async () => {
+      const { ids } = await seedAgentGraph();
+      await runs.saveRun(
+        Run.create({
+          input: RUN_INPUT,
+          id: ids.runId,
+          workspaceId: ids.workspaceId,
+          agentId: ids.agentId,
+          effectiveBindings: createBindings(
+            ids.agentVersionId,
+            ids.modelProfileVersionId,
+          ),
+          createdAt: NOW,
+        }),
+      );
+
+      const succeeded = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      })
+        .transitionTo("RUNNING", LATER)
+        .transitionTo("SUCCEEDED", EVEN_LATER, { output: { echoed: true } });
+
+      await runs.saveRunAttempt(succeeded);
+
+      const loaded = await runs.findRunAttemptById(ids.runAttemptId);
+      expect(loaded?.status).toBe("SUCCEEDED");
+      expect(loaded?.output).toEqual({ echoed: true });
+    });
+
     it("lists attempts for one Run in ascending sequence without leaking others", async () => {
       const { ids } = await seedAgentGraph();
       await runs.saveRun(
@@ -1067,7 +1098,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
           "PENDING",
           attempt
             .transitionTo("RUNNING", LATER)
-            .transitionTo("SUCCEEDED", LATER),
+            .transitionTo("SUCCEEDED", LATER, { output: { ok: true } }),
         ),
       ).rejects.toBeInstanceOf(InvalidRunAttemptTransitionError);
     });

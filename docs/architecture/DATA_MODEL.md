@@ -69,3 +69,6 @@ A Run owns an immutable JSON-compatible execution input snapshot,
 persisted as `runs.input` JSONB. Retries and ExecutionRequest
 reconstruction reuse that captured value; it is not stored on the
 JobQueue payload.
+
+A RunAttempt owns optional JSON-compatible `output` JSONB. The value is
+null until the attempt succeeds, then remains immutable for that attempt.

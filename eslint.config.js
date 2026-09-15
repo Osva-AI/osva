@@ -158,6 +158,77 @@ export default tseslint.config(
     },
   },
   {
+    files: ["adapters/runtime-typescript/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message:
+                "The trusted TypeScript runtime depends on contracts, not domain persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message:
+                "The trusted TypeScript runtime cannot import orchestration.",
+            },
+            {
+              name: "@osva/db",
+              message:
+                "The trusted TypeScript runtime cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "The trusted TypeScript runtime cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "The trusted TypeScript runtime cannot import apps.",
+            },
+            {
+              name: "bullmq",
+              message: "The trusted TypeScript runtime cannot import BullMQ.",
+            },
+            {
+              name: "ioredis",
+              message:
+                "The trusted TypeScript runtime cannot import Redis clients.",
+            },
+            {
+              name: "postgres",
+              message:
+                "The trusted TypeScript runtime cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "The trusted TypeScript runtime cannot import persistence libraries.",
+            },
+            {
+              name: "openai",
+              message:
+                "The trusted TypeScript runtime cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message:
+                "The trusted TypeScript runtime cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "The trusted TypeScript runtime cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["adapters/memory/**/*.ts"],
     rules: {
       "no-restricted-imports": [

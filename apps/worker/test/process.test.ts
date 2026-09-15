@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import os from "node:os";
 import { describe, expect, it } from "vitest";
 
 import type { Database } from "@osva/db";
@@ -21,6 +23,12 @@ const TEST_ENV = {
   OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
 };
 
+const STUB_RUNTIME = {
+  async execute() {
+    return { status: "succeeded" as const, output: { ok: true } };
+  },
+};
+
 describe("createWorkerProcess", () => {
   it("starts after readiness and stops queue and database resources idempotently", async () => {
     let closeCalls = 0;
@@ -31,12 +39,12 @@ describe("createWorkerProcess", () => {
         fakeDatabase(() => {
           closeCalls += 1;
         }),
-      { queueFactory: () => queue },
+      { queueFactory: () => queue, runtime: STUB_RUNTIME },
     );
 
     await worker.start();
     expect(worker.status()).toBe("running");
-    expect(queue.consumeCalls).toBe(0);
+    expect(queue.consumeCalls).toBe(1);
 
     await worker.stop();
     await worker.stop();
@@ -51,16 +59,45 @@ describe("createWorkerProcess", () => {
       () => fakeDatabase(() => undefined),
       {
         queueFactory: () => queue,
-        runtime: {
-          async execute() {
-            return { status: "succeeded", output: { ok: true } };
-          },
-        },
+        runtime: STUB_RUNTIME,
       },
     );
 
     await worker.start();
     expect(queue.consumeCalls).toBe(1);
+    await worker.stop();
+  });
+
+  it("consumes with the production trusted TypeScript runtime when the root is valid", async () => {
+    const queue = createFakePingableQueue();
+    const trustedRuntimeRoot = await fs.mkdtemp(
+      `${os.tmpdir()}/osva-worker-runtime-`,
+    );
+    const worker = createWorkerProcess(
+      {
+        ...TEST_ENV,
+        OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+      },
+      () => fakeDatabase(() => undefined),
+      { queueFactory: () => queue },
+    );
+
+    await worker.start();
+    expect(queue.consumeCalls).toBe(1);
+    await worker.stop();
+  });
+
+  it("does not enter running when the trusted runtime root is missing", async () => {
+    const worker = createWorkerProcess(
+      TEST_ENV,
+      () => fakeDatabase(() => undefined),
+      { queueFactory: () => createFakePingableQueue() },
+    );
+
+    await expect(worker.start()).rejects.toThrow(
+      "OSVA_TRUSTED_RUNTIME_ROOT is required.",
+    );
+    expect(worker.status()).toBe("created");
     await worker.stop();
   });
 

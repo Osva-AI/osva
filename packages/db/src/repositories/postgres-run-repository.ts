@@ -226,6 +226,7 @@ export class PostgresRunRepository implements RunRepository {
         startedAt: next.startedAt ?? null,
         completedAt: next.completedAt ?? null,
         error: next.error ?? null,
+        output: next.status === "SUCCEEDED" ? (next.output ?? null) : null,
         infrastructureMetadata: next.infrastructureMetadata ?? null,
       })
       .where(
@@ -271,6 +272,10 @@ export class PostgresRunRepository implements RunRepository {
           startedAt: nextAttempt.startedAt ?? null,
           completedAt: nextAttempt.completedAt ?? null,
           error: nextAttempt.error ?? null,
+          output:
+            nextAttempt.status === "SUCCEEDED"
+              ? (nextAttempt.output ?? null)
+              : null,
           infrastructureMetadata: nextAttempt.infrastructureMetadata ?? null,
         })
         .where(

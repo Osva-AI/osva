@@ -20,8 +20,8 @@ export {
 } from "./ids.js";
 
 export { jsonSchemaRecordSchema } from "./json-schema.js";
-
-export { agentManifestSchema } from "./agent-manifest.js";
+export { jsonValueSchema } from "./json-value.js";
+export { agentManifestSchema, agentRuntimeSchema } from "./agent-manifest.js";
 
 export {
   agentListResourceSchema,

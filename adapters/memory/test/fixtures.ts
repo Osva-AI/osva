@@ -66,7 +66,13 @@ export function createExecutionRequest(
   return {
     runId,
     runAttemptId,
+    workspaceId,
+    agentId,
     agentVersionId,
+    runtime: {
+      type: "BUILTIN_PACKAGE",
+      key: "example-agent",
+    },
     input: { prompt: "hello" },
     effectiveConfig: { temperature: 0 },
     modelProfileVersionBindings: {

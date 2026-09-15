@@ -1,6 +1,7 @@
 export interface WorkerConfig {
   readonly databaseUrl: string;
   readonly valkeyUrl: string;
+  readonly trustedRuntimeRoot?: string;
 }
 
 export function loadWorkerConfig(
@@ -8,7 +9,15 @@ export function loadWorkerConfig(
 ): WorkerConfig {
   const databaseUrl = readRequired(env.OSVA_DATABASE_URL, "OSVA_DATABASE_URL");
   const valkeyUrl = readRequired(env.OSVA_VALKEY_URL, "OSVA_VALKEY_URL");
-  return { databaseUrl, valkeyUrl };
+  const trustedRuntimeRoot = env.OSVA_TRUSTED_RUNTIME_ROOT?.trim();
+  return {
+    databaseUrl,
+    valkeyUrl,
+    trustedRuntimeRoot:
+      trustedRuntimeRoot === undefined || trustedRuntimeRoot.length === 0
+        ? undefined
+        : trustedRuntimeRoot,
+  };
 }
 
 function readRequired(value: string | undefined, name: string): string {

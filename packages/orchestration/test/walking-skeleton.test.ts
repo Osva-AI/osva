@@ -105,6 +105,7 @@ describe("in-process walking skeleton", () => {
     const finishedAttempt = await runs.findRunAttemptById(runAttemptId);
     expect(finishedRun?.status).toBe("SUCCEEDED");
     expect(finishedAttempt?.status).toBe("SUCCEEDED");
+    expect(finishedAttempt?.output).toEqual({ ok: true });
     expect(finishedRun?.input).toEqual(RUN_INPUT);
     expect(queue.pendingRunAttemptIds()).toEqual([]);
   });

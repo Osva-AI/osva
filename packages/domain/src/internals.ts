@@ -1,3 +1,5 @@
+import { isCanonicalJsonValue } from "@osva/contracts";
+
 import { DomainInvariantError } from "./errors.js";
 
 export function copyInstant(value: Date): Date {
@@ -87,4 +89,12 @@ export function copyJsonValue(value: unknown, field: string): unknown {
   } catch {
     throw new DomainInvariantError(`${field} must be JSON-compatible.`);
   }
+}
+
+export function copyCanonicalJsonValue(value: unknown, field: string): unknown {
+  if (!isCanonicalJsonValue(value)) {
+    throw new DomainInvariantError(`${field} must be JSON-compatible.`);
+  }
+
+  return freezeClone(value);
 }
