@@ -20,12 +20,16 @@ export {
 } from "@osva/contracts";
 
 export {
+  AgentNotFoundError,
+  AgentVersionNotFoundError,
   DomainError,
   DomainInvariantError,
+  DuplicateAgentKeyError,
   InvalidAttemptSequenceError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   InvalidSubsequentAttemptError,
+  WorkspaceNotFoundError,
 } from "./errors.js";
 
 export { Workspace, type WorkspaceProps } from "./workspace.js";
@@ -72,7 +76,28 @@ export {
 } from "./run-attempt-state-machine.js";
 
 export type {
+  AgentMetadataUpdate,
   AgentRepository,
+  AppendAgentVersionInput,
   RunRepository,
   WorkspaceRepository,
 } from "./ports/index.js";
+
+export {
+  AppendAgentVersion,
+  CreateAgent,
+  GetAgent,
+  GetAgentVersion,
+  ListAgents,
+  ListAgentVersions,
+  UpdateAgentMetadata,
+  createAgentApplication,
+  type AgentApplication,
+  type AgentApplicationClock,
+  type AgentApplicationDependencies,
+  type AgentApplicationIds,
+  type AppendAgentVersionCommand,
+  type CreateAgentCommand,
+  type GetAgentVersionCommand,
+  type UpdateAgentMetadataCommand,
+} from "./agent-application.js";

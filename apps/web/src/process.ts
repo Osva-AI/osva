@@ -1,5 +1,12 @@
+import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
-import { createDatabase, type Database } from "@osva/db";
+import {
+  createDatabase,
+  PostgresAgentRepository,
+  PostgresWorkspaceRepository,
+  type Database,
+} from "@osva/db";
+import { createAgentApplication } from "@osva/domain";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
 import { createWebApplication } from "./http.js";
@@ -22,8 +29,16 @@ export function createWebProcess(
 ): WebProcess {
   const config = loadWebConfig(env);
   const database = databaseFactory(config.databaseUrl);
+  const agents = new PostgresAgentRepository(database);
+  const workspaces = new PostgresWorkspaceRepository(database);
   const server = createWebApplication({
     readinessCheck: postgresReadinessCheck(database),
+    agents: createAgentApplication({
+      agents,
+      workspaces,
+      clock: { now: () => new Date() },
+      ids: { createId: () => randomUUID() },
+    }),
   });
 
   let stopping: Promise<void> | undefined;

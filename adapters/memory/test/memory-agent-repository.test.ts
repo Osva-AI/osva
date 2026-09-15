@@ -1,4 +1,9 @@
-import { Agent, AgentVersion, DomainInvariantError } from "@osva/domain";
+import {
+  Agent,
+  AgentNotFoundError,
+  AgentVersion,
+  DomainInvariantError,
+} from "@osva/domain";
 import type { AgentRepository } from "@osva/domain";
 import { describe, expect, it } from "vitest";
 
@@ -7,6 +12,7 @@ import {
   agentId,
   agentVersionId,
   createManifest,
+  LATER,
   NOW,
   otherAgentId,
   otherAgentVersionId,
@@ -179,5 +185,103 @@ describe("MemoryAgentRepository", () => {
     await expect(
       repository.findAgentVersionById(otherAgentVersionId),
     ).resolves.toBeNull();
+  });
+
+  it("lists Agents in createdAt then id order and updates name only", async () => {
+    const repository: AgentRepository = new MemoryAgentRepository();
+    const first = Agent.create({
+      id: agentId,
+      workspaceId,
+      key: "first-agent",
+      name: "First Agent",
+      createdAt: NOW,
+    });
+    const second = Agent.create({
+      id: otherAgentId,
+      workspaceId,
+      key: "second-agent",
+      name: "Second Agent",
+      createdAt: LATER,
+    });
+
+    await repository.saveAgent(first);
+    await repository.saveAgent(second);
+
+    const updated = await repository.updateAgentMetadata(agentId, {
+      name: "Renamed First",
+    });
+
+    expect(updated?.name).toBe("Renamed First");
+    expect(updated?.key).toBe("first-agent");
+    expect(updated?.createdAt).toEqual(NOW);
+    expect(
+      await repository
+        .listAgents()
+        .then((agents) => agents.map((agent) => agent.id)),
+    ).toEqual([agentId, otherAgentId]);
+    expect(repository).not.toHaveProperty("updateAgentVersion");
+  });
+
+  it("appends versions with per-Agent numbers and lists them in version order", async () => {
+    const repository: AgentRepository = new MemoryAgentRepository();
+    await repository.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "example-agent",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await repository.saveAgent(
+      Agent.create({
+        id: otherAgentId,
+        workspaceId,
+        key: "other-agent",
+        name: "Other Agent",
+        createdAt: NOW,
+      }),
+    );
+
+    const first = await repository.appendAgentVersion({
+      id: agentVersionId,
+      agentId,
+      manifest: createManifest(),
+      createdAt: NOW,
+    });
+    const second = await repository.appendAgentVersion({
+      id: otherAgentVersionId,
+      agentId,
+      manifest: createManifest({ name: "Second Snapshot" }),
+      createdAt: LATER,
+    });
+    const otherFirst = await repository.appendAgentVersion({
+      id: "agent-version-other-1" as typeof otherAgentVersionId,
+      agentId: otherAgentId,
+      manifest: createManifest({ name: "Other First" }),
+      createdAt: NOW,
+    });
+
+    expect(first.version).toBe(1);
+    expect(second.version).toBe(2);
+    expect(otherFirst.version).toBe(1);
+    expect(
+      (await repository.listAgentVersions(agentId)).map(
+        (version) => version.version,
+      ),
+    ).toEqual([1, 2]);
+  });
+
+  it("rejects appending a version for a nonexistent Agent", async () => {
+    const repository: AgentRepository = new MemoryAgentRepository();
+
+    await expect(
+      repository.appendAgentVersion({
+        id: agentVersionId,
+        agentId,
+        manifest: createManifest(),
+        createdAt: NOW,
+      }),
+    ).rejects.toBeInstanceOf(AgentNotFoundError);
   });
 });

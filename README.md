@@ -6,7 +6,7 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** pre-alpha. Stage 0 is establishing contracts, persistence, and process shells before Agent product features.
+> **Status:** pre-alpha. Stage 1 Slice 1.1 adds a control-plane Agent Registry on the Stage 0 foundation.
 
 ## Why OSVA?
 
@@ -179,6 +179,19 @@ Stage 0 application code does not connect to Valkey.
 
 - `GET /health` — process liveness. Does not require PostgreSQL.
 - `GET /ready` — `200` when PostgreSQL is reachable, `503` otherwise.
+
+Agent Registry:
+
+- `POST /v1/agents` — create an Agent (`workspaceId`, `key`, `name`)
+- `GET /v1/agents` — list Agents
+- `GET /v1/agents/:agentId` — get an Agent
+- `PATCH /v1/agents/:agentId` — update Agent `name`
+- `POST /v1/agents/:agentId/versions` — append an immutable AgentVersion
+- `GET /v1/agents/:agentId/versions` — list versions for an Agent
+- `GET /v1/agents/:agentId/versions/:agentVersionId` — get a version owned by that Agent
+
+IDs, timestamps, and AgentVersion `version` numbers are assigned by the server.
+Creating an Agent or AgentVersion does not execute a Run.
 
 The Stage 0 worker is intentionally idle after a successful PostgreSQL check.
 Cross-process Run execution starts in Stage 1 with a real `JobQueue` adapter.

@@ -239,10 +239,19 @@ importers:
 
   apps/web:
     dependencies:
+      '@osva/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@osva/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
     devDependencies:
+      '@osva/adapters-memory':
+        specifier: workspace:*
+        version: link:../../adapters/memory
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4

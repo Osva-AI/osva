@@ -158,11 +158,22 @@ export function wrapAgentRepository(
     findAgentById:
       overrides.findAgentById?.bind(overrides) ??
       inner.findAgentById.bind(inner),
+    listAgents:
+      overrides.listAgents?.bind(overrides) ?? inner.listAgents.bind(inner),
+    updateAgentMetadata:
+      overrides.updateAgentMetadata?.bind(overrides) ??
+      inner.updateAgentMetadata.bind(inner),
     saveAgentVersion:
       overrides.saveAgentVersion?.bind(overrides) ??
       inner.saveAgentVersion.bind(inner),
+    appendAgentVersion:
+      overrides.appendAgentVersion?.bind(overrides) ??
+      inner.appendAgentVersion.bind(inner),
     findAgentVersionById:
       overrides.findAgentVersionById?.bind(overrides) ??
       inner.findAgentVersionById.bind(inner),
+    listAgentVersions:
+      overrides.listAgentVersions?.bind(overrides) ??
+      inner.listAgentVersions.bind(inner),
   };
 }

@@ -1,4 +1,10 @@
-import type { RunAttemptState, RunState } from "@osva/contracts";
+import type {
+  AgentId,
+  AgentVersionId,
+  RunAttemptState,
+  RunState,
+  WorkspaceId,
+} from "@osva/contracts";
 
 export class DomainError extends Error {
   constructor(message: string) {
@@ -34,6 +40,44 @@ export class InvalidRunAttemptTransitionError extends DomainError {
 export class InvalidAttemptSequenceError extends DomainError {
   constructor(message: string) {
     super(message);
+  }
+}
+
+export class AgentNotFoundError extends DomainError {
+  readonly agentId: AgentId;
+
+  constructor(agentId: AgentId) {
+    super(`Agent ${agentId} was not found.`);
+    this.agentId = agentId;
+  }
+}
+
+export class AgentVersionNotFoundError extends DomainError {
+  readonly agentVersionId: AgentVersionId;
+
+  constructor(agentVersionId: AgentVersionId) {
+    super(`AgentVersion ${agentVersionId} was not found.`);
+    this.agentVersionId = agentVersionId;
+  }
+}
+
+export class WorkspaceNotFoundError extends DomainError {
+  readonly workspaceId: WorkspaceId;
+
+  constructor(workspaceId: WorkspaceId) {
+    super(`Workspace ${workspaceId} was not found.`);
+    this.workspaceId = workspaceId;
+  }
+}
+
+export class DuplicateAgentKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(`Agent key '${key}' already exists in workspace '${workspaceId}'.`);
+    this.workspaceId = workspaceId;
+    this.key = key;
   }
 }
 

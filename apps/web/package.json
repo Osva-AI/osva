@@ -12,9 +12,12 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@osva/db": "workspace:*"
+    "@osva/contracts": "workspace:*",
+    "@osva/db": "workspace:*",
+    "@osva/domain": "workspace:*"
   },
   "devDependencies": {
+    "@osva/adapters-memory": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

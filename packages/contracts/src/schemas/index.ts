@@ -24,6 +24,16 @@ export { jsonSchemaRecordSchema } from "./json-schema.js";
 export { agentManifestSchema } from "./agent-manifest.js";
 
 export {
+  agentListResourceSchema,
+  agentResourceSchema,
+  agentVersionListResourceSchema,
+  agentVersionResourceSchema,
+  createAgentRequestSchema,
+  createAgentVersionRequestSchema,
+  updateAgentRequestSchema,
+} from "./agent-registry.js";
+
+export {
   executionFailureSchema,
   executionRequestSchema,
   executionResultSchema,

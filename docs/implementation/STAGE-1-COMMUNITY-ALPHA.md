@@ -19,6 +19,12 @@ Ship the first complete OSVA execution loop.
 - basic evaluations;
 - Run inspector.
 
+Slice 1.1 exposes the control-plane Agent Registry over HTTP (`/v1/agents` and
+nested `/versions` routes). `Agent` remains stable identity plus mutable `name`.
+`AgentVersion` remains an immutable append-only snapshot whose integer `version`
+is assigned by the server. Creating an Agent or AgentVersion does not execute a
+Run.
+
 ## Quality
 
 - JobQueue contract tests;

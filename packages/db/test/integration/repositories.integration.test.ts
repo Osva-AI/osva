@@ -1,8 +1,10 @@
 import type { AgentVersionId, RunAttemptId, RunId } from "@osva/contracts";
 import {
   Agent,
+  AgentNotFoundError,
   AgentVersion,
   DomainInvariantError,
+  DuplicateAgentKeyError,
   Run,
   RunAttempt,
   RunStep,
@@ -153,7 +155,40 @@ describe("PostgreSQL Stage 0 repositories", () => {
             createdAt: NOW,
           }),
         ),
-      ).rejects.toBeInstanceOf(DomainInvariantError);
+      ).rejects.toBeInstanceOf(DuplicateAgentKeyError);
+    });
+
+    it("lists Agents in createdAt then id order", async () => {
+      const first = await seedAgentGraph("list-a");
+      const second = await seedAgentGraph("list-b");
+
+      await agents.updateAgentMetadata(first.ids.agentId, {
+        name: "First Agent",
+      });
+
+      const listed = await agents.listAgents();
+      expect(listed.map((agent) => agent.id)).toEqual([
+        first.ids.agentId,
+        second.ids.agentId,
+      ]);
+      expect(listed[0]?.name).toBe("First Agent");
+    });
+
+    it("updates Agent name without changing identity fields", async () => {
+      const { ids, agent } = await seedAgentGraph();
+
+      const updated = await agents.updateAgentMetadata(ids.agentId, {
+        name: "Renamed Agent",
+      });
+
+      expect(updated?.name).toBe("Renamed Agent");
+      expect(updated?.id).toBe(agent.id);
+      expect(updated?.key).toBe(agent.key);
+      expect(updated?.workspaceId).toBe(agent.workspaceId);
+      expect(updated?.createdAt).toEqual(agent.createdAt);
+      expect(
+        await agents.updateAgentMetadata(ids.otherAgentId, { name: "X" }),
+      ).toBeNull();
     });
   });
 
@@ -221,6 +256,62 @@ describe("PostgreSQL Stage 0 repositories", () => {
           }),
         ),
       ).rejects.toBeInstanceOf(DomainInvariantError);
+    });
+
+    it("appends monotonically increasing versions per Agent", async () => {
+      const { ids } = await seedAgentGraph();
+
+      const second = await agents.appendAgentVersion({
+        id: ids.otherAgentVersionId,
+        agentId: ids.agentId,
+        manifest: createManifest({ name: "Second Snapshot" }),
+        createdAt: LATER,
+      });
+
+      expect(second.version).toBe(2);
+      expect(second.manifest.name).toBe("Second Snapshot");
+
+      const listed = await agents.listAgentVersions(ids.agentId);
+      expect(listed.map((version) => version.version)).toEqual([1, 2]);
+      expect(listed.map((version) => version.id)).toEqual([
+        ids.agentVersionId,
+        ids.otherAgentVersionId,
+      ]);
+    });
+
+    it("numbers versions independently per Agent", async () => {
+      const first = await seedAgentGraph("num-a");
+      const second = await seedAgentGraph("num-b");
+
+      const firstSecond = await agents.appendAgentVersion({
+        id: first.ids.otherAgentVersionId,
+        agentId: first.ids.agentId,
+        manifest: createManifest({ name: "A2" }),
+        createdAt: LATER,
+      });
+      const secondFirst = await agents.findAgentVersionById(
+        second.ids.agentVersionId,
+      );
+
+      expect(firstSecond.version).toBe(2);
+      expect(secondFirst?.version).toBe(1);
+    });
+
+    it("does not expose an AgentVersion mutation operation", () => {
+      expect(agents).not.toHaveProperty("updateAgentVersion");
+    });
+
+    it("rejects appending a version for a nonexistent Agent", async () => {
+      const ids = nextIds();
+
+      await expect(
+        agents.appendAgentVersion({
+          id: ids.agentVersionId,
+          agentId: ids.agentId,
+          manifest: createManifest(),
+          createdAt: NOW,
+        }),
+      ).rejects.toBeInstanceOf(AgentNotFoundError);
     });
   });
 

@@ -22,6 +22,16 @@ export type {
 
 export type { JsonSchemaRecord } from "./json-schema.js";
 
+export type {
+  AgentListResourceV1,
+  AgentResourceV1,
+  AgentVersionListResourceV1,
+  AgentVersionResourceV1,
+  CreateAgentRequestV1,
+  CreateAgentVersionRequestV1,
+  UpdateAgentRequestV1,
+} from "./agent-registry.js";
+
 export {
   RUN_ATTEMPT_STATES,
   RUN_STATES,

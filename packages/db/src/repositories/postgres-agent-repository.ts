@@ -1,11 +1,15 @@
 import type { AgentId, AgentVersionId } from "@osva/contracts";
 import {
+  AgentNotFoundError,
+  AgentVersion,
   DomainInvariantError,
+  DuplicateAgentKeyError,
   type Agent,
+  type AgentMetadataUpdate,
   type AgentRepository,
-  type AgentVersion,
+  type AppendAgentVersionInput,
 } from "@osva/domain";
-import { eq } from "drizzle-orm";
+import { asc, eq, max } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import { agentFromRow, agentToRow } from "../mappers/agent-mapper.js";
@@ -19,7 +23,6 @@ import {
   mapDatabaseError,
   postgresConstraintName,
   postgresErrorCode,
-  withMappedDatabaseErrors,
 } from "../postgres-errors.js";
 import { agentVersions } from "../schema/agent-versions.js";
 import { agents } from "../schema/agents.js";
@@ -30,24 +33,31 @@ export class PostgresAgentRepository implements AgentRepository {
   async saveAgent(agent: Agent): Promise<void> {
     const row = agentToRow(agent);
 
-    await withMappedDatabaseErrors(
-      () =>
-        this.database.db
-          .insert(agents)
-          .values(row)
-          .onConflictDoUpdate({
-            target: agents.id,
-            set: {
-              workspaceId: row.workspaceId,
-              key: row.key,
-              name: row.name,
-              createdAt: row.createdAt,
-            },
-          }),
-      {
+    try {
+      await this.database.db
+        .insert(agents)
+        .values(row)
+        .onConflictDoUpdate({
+          target: agents.id,
+          set: {
+            workspaceId: row.workspaceId,
+            key: row.key,
+            name: row.name,
+            createdAt: row.createdAt,
+          },
+        });
+    } catch (error) {
+      if (
+        postgresErrorCode(error) === POSTGRES_UNIQUE_VIOLATION &&
+        postgresConstraintName(error) === "agents_workspace_id_key_unique"
+      ) {
+        throw new DuplicateAgentKeyError(agent.workspaceId, agent.key);
+      }
+
+      throw mapDatabaseError(error, {
         agents_workspace_id_key_unique: `Agent key '${agent.key}' already exists in workspace '${agent.workspaceId}'.`,
-      },
-    );
+      });
+    }
   }
 
   async findAgentById(id: AgentId): Promise<Agent | null> {
@@ -58,6 +68,34 @@ export class PostgresAgentRepository implements AgentRepository {
       .limit(1);
 
     return row === undefined ? null : agentFromRow(row);
+  }
+
+  async listAgents(): Promise<Agent[]> {
+    const rows = await this.database.db
+      .select()
+      .from(agents)
+      .orderBy(asc(agents.createdAt), asc(agents.id));
+
+    return rows.map(agentFromRow);
+  }
+
+  async updateAgentMetadata(
+    id: AgentId,
+    metadata: AgentMetadataUpdate,
+  ): Promise<Agent | null> {
+    const existing = await this.findAgentById(id);
+    if (existing === null) {
+      return null;
+    }
+
+    const updated = existing.withName(metadata.name);
+
+    await this.database.db
+      .update(agents)
+      .set({ name: updated.name })
+      .where(eq(agents.id, id));
+
+    return updated;
   }
 
   async saveAgentVersion(agentVersion: AgentVersion): Promise<void> {
@@ -108,6 +146,47 @@ export class PostgresAgentRepository implements AgentRepository {
     }
   }
 
+  async appendAgentVersion(
+    input: AppendAgentVersionInput,
+  ): Promise<AgentVersion> {
+    return this.database.db.transaction(async (tx) => {
+      const [agentRow] = await tx
+        .select()
+        .from(agents)
+        .where(eq(agents.id, input.agentId))
+        .for("update")
+        .limit(1);
+
+      if (agentRow === undefined) {
+        throw new AgentNotFoundError(input.agentId);
+      }
+
+      const [aggregate] = await tx
+        .select({ maxVersion: max(agentVersions.version) })
+        .from(agentVersions)
+        .where(eq(agentVersions.agentId, input.agentId));
+
+      const nextVersion = (aggregate?.maxVersion ?? 0) + 1;
+      const agentVersion = AgentVersion.create({
+        id: input.id,
+        agentId: input.agentId,
+        version: nextVersion,
+        manifest: input.manifest,
+        createdAt: input.createdAt,
+      });
+
+      try {
+        await tx.insert(agentVersions).values(agentVersionToRow(agentVersion));
+      } catch (error) {
+        throw mapDatabaseError(error, {
+          agent_versions_agent_id_version_unique: `AgentVersion already exists for agent '${input.agentId}' version ${String(nextVersion)}.`,
+        });
+      }
+
+      return agentVersion;
+    });
+  }
+
   async findAgentVersionById(id: AgentVersionId): Promise<AgentVersion | null> {
     const [row] = await this.database.db
       .select()
@@ -116,5 +195,15 @@ export class PostgresAgentRepository implements AgentRepository {
       .limit(1);
 
     return row === undefined ? null : agentVersionFromRow(row);
+  }
+
+  async listAgentVersions(agentId: AgentId): Promise<AgentVersion[]> {
+    const rows = await this.database.db
+      .select()
+      .from(agentVersions)
+      .where(eq(agentVersions.agentId, agentId))
+      .orderBy(asc(agentVersions.version));
+
+    return rows.map(agentVersionFromRow);
   }
 }

@@ -1,17 +1,27 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import http from "node:http";
+import type { AgentApplication } from "@osva/domain";
+
+import { handleAgentRegistryRequest } from "./agent-http.js";
+import { sendJson } from "./json.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
 export interface CreateWebApplicationOptions {
   readonly readinessCheck: ReadinessCheck;
+  readonly agents: AgentApplication;
 }
 
 export function createWebApplication(
   options: CreateWebApplicationOptions,
 ): http.Server {
   return http.createServer((request, response) => {
-    void handleRequest(request, response, options.readinessCheck);
+    void handleRequest(
+      request,
+      response,
+      options.readinessCheck,
+      options.agents,
+    );
   });
 }
 
@@ -19,6 +29,7 @@ async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
   readinessCheck: ReadinessCheck,
+  agents: AgentApplication,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const path = requestPath(request);
@@ -65,6 +76,17 @@ async function handleRequest(
     return;
   }
 
+  const handled = await handleAgentRegistryRequest(
+    request,
+    response,
+    method,
+    path,
+    agents,
+  );
+  if (handled) {
+    return;
+  }
+
   sendJson(response, 404, { status: "not_found" });
 }
 
@@ -74,19 +96,4 @@ function requestPath(request: IncomingMessage): string {
   } catch {
     return "/";
   }
-}
-
-function sendJson(
-  response: ServerResponse,
-  statusCode: number,
-  body: Readonly<Record<string, unknown>>,
-  headers: Readonly<Record<string, string>> = {},
-): void {
-  const payload = JSON.stringify(body);
-  response.writeHead(statusCode, {
-    "content-type": "application/json; charset=utf-8",
-    "content-length": Buffer.byteLength(payload),
-    ...headers,
-  });
-  response.end(payload);
 }

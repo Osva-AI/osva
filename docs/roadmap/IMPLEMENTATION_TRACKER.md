@@ -23,6 +23,7 @@ green:
 unverified on the implementing machine. Stage 0 is not complete until a fully
 green CI run of the latest commit.
 
-## Later stages
+## Stage 1
 
-Stage 1+ work is out of scope for this tracker until Stage 0 is accepted.
+- ✅ 1.1 Agent Registry and Version Management
+- ⬜ 1.2 and later slices are out of scope for this entry

@@ -8,6 +8,7 @@ import {
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
+import { Workspace, createAgentApplication } from "@osva/domain";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { CreateRun } from "../../src/create-run.js";
@@ -20,6 +21,7 @@ import {
   agentId,
   agentVersionId,
   createBindings,
+  createManifest,
   runAttemptId,
   runId,
   seedAgentGraph,
@@ -140,5 +142,58 @@ describe("PostgreSQL orchestration walking skeleton", () => {
     expect(await runs.findRunById(runId)).toBeNull();
     expect(await runs.findRunAttemptById(runAttemptId)).toBeNull();
     expect(queue.pendingRunAttemptIds()).toEqual([]);
+  });
+
+  it("accepts an AgentVersion created through the Agent Registry", async () => {
+    const workspaces = new PostgresWorkspaceRepository(database);
+    const agents = new PostgresAgentRepository(database);
+    const runs = new PostgresRunRepository(database);
+    const queue = new MemoryJobQueue();
+
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+
+    let counter = 0;
+    const registry = createAgentApplication({
+      agents,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          counter += 1;
+          return counter === 1 ? agentId : agentVersionId;
+        },
+      },
+    });
+
+    await registry.createAgent.execute({
+      workspaceId,
+      key: "agent-key",
+      name: "Example Agent",
+    });
+    await registry.appendAgentVersion.execute({
+      agentId,
+      manifest: createManifest(),
+    });
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute({
+      runId,
+      runAttemptId,
+      workspaceId,
+      agentId,
+      effectiveBindings: createBindings(),
+      input: RUN_INPUT,
+      now: NOW,
+    });
+
+    expect(result.run.status).toBe("QUEUED");
+    expect(result.run.effectiveBindings.agentVersionId).toBe(agentVersionId);
+    expect(queue.pendingRunAttemptIds()).toEqual([runAttemptId]);
   });
 });
