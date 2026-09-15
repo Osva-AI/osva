@@ -137,8 +137,9 @@ history and verify the resulting schema.
 
 GitHub Actions (`.github/workflows/ci.yml`) `verify` job runs the same root
 commands as local development: `format:check`, `lint`, `typecheck`, `test`,
-`build`, and `test:integration`. That job provides PostgreSQL 17 through
-`OSVA_TEST_DATABASE_URL`.
+`build`, and `test:integration`. Integration tests provision a temporary
+`postgres:17-alpine` container through the existing harness when Docker is
+available; they do not use a GitHub Actions PostgreSQL service.
 
 A separate `compose-smoke` job starts the repository Compose topology with
 `pnpm infra:up`, applies committed migrations with `pnpm db:migrate`, and
