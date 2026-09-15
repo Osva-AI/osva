@@ -127,11 +127,13 @@ pnpm dev:web
 pnpm dev:worker
 ```
 
-`pnpm db:migrate` builds `@osva/db` and applies committed SQL from
-`packages/db/drizzle/` using `OSVA_DATABASE_URL`. `drizzle-kit push` is not the
-normal workflow. Generating new migrations (`pnpm --filter @osva/db db:generate`)
-is a developer responsibility; CI does not mutate tracked migration files.
-Integration tests apply the committed history and verify the resulting schema.
+`pnpm db:migrate` runs `turbo run build --filter=@osva/db` so `@osva/contracts`,
+`@osva/domain`, and `@osva/db` are built in dependency order, then applies
+committed SQL from `packages/db/drizzle/` using `OSVA_DATABASE_URL`.
+`drizzle-kit push` is not the normal workflow. Generating new migrations
+(`pnpm --filter @osva/db db:generate`) is a developer responsibility; CI does
+not mutate tracked migration files. Integration tests apply the committed
+history and verify the resulting schema.
 
 GitHub Actions (`.github/workflows/ci.yml`) `verify` job runs the same root
 commands as local development: `format:check`, `lint`, `typecheck`, `test`,
