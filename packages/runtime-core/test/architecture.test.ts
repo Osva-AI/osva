@@ -54,6 +54,14 @@ function toRepoPath(filePath: string): string {
 }
 
 function forbiddenRuntimeCoreImport(specifier: string): string | undefined {
+  if (specifier === "@osva/web" || specifier.startsWith("@osva/web/")) {
+    return "@osva/web";
+  }
+
+  if (specifier === "@osva/worker" || specifier.startsWith("@osva/worker/")) {
+    return "@osva/worker";
+  }
+
   if (specifier === "@osva/db" || specifier.startsWith("@osva/db/")) {
     return "@osva/db";
   }

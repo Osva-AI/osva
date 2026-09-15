@@ -386,4 +386,84 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["apps/web/src/**/*.ts", "apps/worker/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/orchestration",
+              message:
+                "Stage 0 process shells do not import orchestration. Cross-process execution begins in Stage 1.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "Stage 0 process shells do not execute Agent runtimes.",
+            },
+            {
+              name: "bullmq",
+              message: "Stage 0 process shells cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "Stage 0 process shells cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "Stage 0 process shells cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "Stage 0 process shells cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message:
+                "Do not wire MemoryJobQueue or other adapters across web and worker.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "Stage 0 process shells cannot import provider SDKs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/web/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/worker",
+              message: "apps/web cannot import the worker process.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/worker/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/web",
+              message: "apps/worker cannot import the web process.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

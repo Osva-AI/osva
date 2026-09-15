@@ -79,8 +79,33 @@ silently repaired. Full crash recovery while RUNNING is deferred to
 Stage 1.
 
 Default `pnpm test` still excludes PostgreSQL. `pnpm test:integration`
-covers `@osva/db` repositories and a focused orchestration walking
-skeleton against PostgreSQL repositories plus in-memory JobQueue.
+covers `@osva/db` repositories, database connectivity, and a focused
+orchestration walking skeleton against PostgreSQL repositories plus
+in-memory JobQueue.
+
+## Process shells (Slice 0.7)
+
+`apps/web` is the HTTP/control-plane process. It serves `GET /health`
+(liveness, no PostgreSQL) and `GET /ready` (PostgreSQL reachable). There
+are no public Agent or Run APIs in Stage 0.
+
+`apps/worker` is the future execution-worker process shell. After a
+successful PostgreSQL connectivity check it stays idle until SIGTERM or
+SIGINT. It does not consume a JobQueue, execute Runs, or poll PostgreSQL
+for work. Cross-process execution begins in Stage 1 with BullMQ.
+
+Start after build:
+
+```text
+OSVA_DATABASE_URL=postgres://osva@127.0.0.1:5432/osva
+OSVA_WEB_HOST=127.0.0.1
+OSVA_WEB_PORT=3000
+
+pnpm --filter @osva/web start
+pnpm --filter @osva/worker start
+```
+
+Do not apply migrations on process startup. Migrations remain explicit.
 
 ## Exit
 

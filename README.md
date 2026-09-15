@@ -114,6 +114,35 @@ Stage 1 is expected to use:
 
 These are implementation choices, not permanent domain dependencies.
 
+## Stage 0 local processes
+
+`apps/web` is the control-plane HTTP shell. `apps/worker` is the future
+execution-worker shell. They are not connected by a queue in Stage 0.
+
+Required environment:
+
+```text
+OSVA_DATABASE_URL=postgres://osva@127.0.0.1:5432/osva
+```
+
+Optional web bind address (defaults `127.0.0.1:3000`):
+
+```text
+OSVA_WEB_HOST=127.0.0.1
+OSVA_WEB_PORT=3000
+```
+
+```text
+pnpm --filter @osva/web build
+pnpm --filter @osva/web start
+
+pnpm --filter @osva/worker build
+pnpm --filter @osva/worker start
+```
+
+Web endpoints: `GET /health` (process liveness) and `GET /ready`
+(PostgreSQL reachable). The Stage 0 worker does not execute queued work.
+
 ## Contributing
 
 Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md) before substantial changes.

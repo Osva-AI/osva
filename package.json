@@ -13,7 +13,9 @@
     "format:check": "prettier --check .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "test:integration": "turbo run test:integration --concurrency=1"
+    "test:integration": "turbo run test:integration --concurrency=1",
+    "dev:web": "pnpm --filter @osva/web dev",
+    "dev:worker": "pnpm --filter @osva/worker dev"
   },
   "devDependencies": {
     "@types/node": "catalog:",

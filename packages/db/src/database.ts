@@ -14,6 +14,7 @@ export interface CreateDatabaseOptions {
 export interface Database {
   readonly sql: Sql;
   readonly db: PostgresJsDatabase<DatabaseSchema>;
+  ping(): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -26,6 +27,9 @@ export function createDatabase(options: CreateDatabaseOptions): Database {
   return {
     sql,
     db: drizzle(sql, { schema }),
+    async ping() {
+      await sql`select 1 as ok`;
+    },
     async close() {
       await sql.end({ timeout: 5 });
     },

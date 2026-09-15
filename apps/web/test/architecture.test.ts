@@ -9,12 +9,7 @@ const repoRoot = path.resolve(
   "../../..",
 );
 
-const orchestrationSrc = path.join(
-  repoRoot,
-  "packages",
-  "orchestration",
-  "src",
-);
+const webSrc = path.join(repoRoot, "apps", "web", "src");
 
 const IMPORT_SPECIFIER_PATTERN =
   /(?:(?:import|export)(?:\s+type)?(?:[\s\S]*?\sfrom\s*|\s+)|\bimport\s*\()\s*["']([^"']+)["']/g;
@@ -58,17 +53,23 @@ function toRepoPath(filePath: string): string {
   return path.relative(repoRoot, filePath).split(path.sep).join("/");
 }
 
-function forbiddenOrchestrationImport(specifier: string): string | undefined {
-  if (specifier === "@osva/web" || specifier.startsWith("@osva/web/")) {
-    return "@osva/web";
+function forbiddenWebImport(specifier: string): string | undefined {
+  if (
+    specifier === "@osva/orchestration" ||
+    specifier.startsWith("@osva/orchestration/")
+  ) {
+    return "@osva/orchestration";
+  }
+
+  if (
+    specifier === "@osva/runtime-core" ||
+    specifier.startsWith("@osva/runtime-core/")
+  ) {
+    return "@osva/runtime-core";
   }
 
   if (specifier === "@osva/worker" || specifier.startsWith("@osva/worker/")) {
     return "@osva/worker";
-  }
-
-  if (specifier === "@osva/db" || specifier.startsWith("@osva/db/")) {
-    return "@osva/db";
   }
 
   if (
@@ -76,14 +77,6 @@ function forbiddenOrchestrationImport(specifier: string): string | undefined {
     specifier.startsWith("@osva/adapters/")
   ) {
     return "@osva/adapters-*";
-  }
-
-  if (specifier === "drizzle-orm" || specifier.startsWith("drizzle-orm/")) {
-    return "drizzle-orm";
-  }
-
-  if (specifier === "postgres" || specifier.startsWith("postgres/")) {
-    return "postgres";
   }
 
   if (specifier === "bullmq" || specifier.startsWith("bullmq/")) {
@@ -110,14 +103,14 @@ function forbiddenOrchestrationImport(specifier: string): string | undefined {
 }
 
 describe("architecture import restrictions", () => {
-  it("keeps packages/orchestration/src free of concrete adapters and persistence", () => {
+  it("keeps apps/web/src free of orchestration, queues, and the worker app", () => {
     const violations: string[] = [];
 
-    for (const file of walkTypeScriptFiles(orchestrationSrc)) {
+    for (const file of walkTypeScriptFiles(webSrc)) {
       for (const specifier of collectImportSpecifiers(
         fs.readFileSync(file, "utf8"),
       )) {
-        const forbidden = forbiddenOrchestrationImport(specifier);
+        const forbidden = forbiddenWebImport(specifier);
         if (forbidden) {
           violations.push(
             `${toRepoPath(file)} imports forbidden '${specifier}' (${forbidden})`,
