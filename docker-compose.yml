@@ -1,0 +1,42 @@
+# Local development topology only.
+# Credentials and published ports are not production-safe.
+# Stage 0 application code connects to PostgreSQL, not Valkey.
+# Valkey is included so the local topology is ready for Stage 1 JobQueue work.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: osva
+      POSTGRES_USER: osva
+      POSTGRES_PASSWORD: osva
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - osva-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osva -d osva"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: ["valkey-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - osva-valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  osva-postgres-data:
+  osva-valkey-data:

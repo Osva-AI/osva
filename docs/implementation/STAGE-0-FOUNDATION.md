@@ -94,18 +94,57 @@ successful PostgreSQL connectivity check it stays idle until SIGTERM or
 SIGINT. It does not consume a JobQueue, execute Runs, or poll PostgreSQL
 for work. Cross-process execution begins in Stage 1 with BullMQ.
 
-Start after build:
+Start after PostgreSQL is up, committed migrations are applied, and packages
+are built:
 
 ```text
-OSVA_DATABASE_URL=postgres://osva@127.0.0.1:5432/osva
-OSVA_WEB_HOST=127.0.0.1
-OSVA_WEB_PORT=3000
-
-pnpm --filter @osva/web start
-pnpm --filter @osva/worker start
+pnpm infra:up
+pnpm db:migrate
+pnpm build
+pnpm dev:web
+pnpm dev:worker
 ```
 
+`pnpm dev:web` and `pnpm dev:worker` watch compiled `dist/` output. Export
+`OSVA_DATABASE_URL` (and optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`) from the
+environment; processes do not auto-load `.env`.
+
 Do not apply migrations on process startup. Migrations remain explicit.
+
+## Local infrastructure, CI, and acceptance (Slice 0.8)
+
+Root `docker-compose.yml` runs PostgreSQL 17 and Valkey 8. There are no web or
+worker containers in Stage 0. Valkey is present only so the local topology is
+ready for Stage 1; application code must not connect to it.
+
+Contributor sequence:
+
+```text
+pnpm infra:up
+pnpm db:migrate
+pnpm build
+pnpm dev:web
+pnpm dev:worker
+```
+
+`pnpm db:migrate` builds `@osva/db` and applies committed SQL from
+`packages/db/drizzle/` using `OSVA_DATABASE_URL`. `drizzle-kit push` is not the
+normal workflow. Generating new migrations (`pnpm --filter @osva/db db:generate`)
+is a developer responsibility; CI does not mutate tracked migration files.
+Integration tests apply the committed history and verify the resulting schema.
+
+GitHub Actions (`.github/workflows/ci.yml`) `verify` job runs the same root
+commands as local development: `format:check`, `lint`, `typecheck`, `test`,
+`build`, and `test:integration`. That job provides PostgreSQL 17 through
+`OSVA_TEST_DATABASE_URL`.
+
+A separate `compose-smoke` job starts the repository Compose topology with
+`pnpm infra:up`, applies committed migrations with `pnpm db:migrate`, and
+checks web `/health` and `/ready` plus idle worker start/shutdown against that
+PostgreSQL. Valkey is asserted healthy as infrastructure only; Stage 0
+application code does not connect to it.
+
+See `README.md` for the concise contributor setup.
 
 ## Exit
 
