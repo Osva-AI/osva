@@ -52,6 +52,7 @@
 ## Roadmap
 - `roadmap/STAGE_ROADMAP.md`
 - `roadmap/STAGE_COMPONENT_MATRIX.md`
+- `roadmap/IMPLEMENTATION_TRACKER.md`
 - `roadmap/OPEN_SOURCE_RELEASE_PLAN.md`
 
 ## Implementation

@@ -24,6 +24,11 @@ Contributions are welcome, but architectural consistency is more important than 
 
 For large features or contract changes, open an issue or discussion first.
 
+## Local setup
+
+See the Stage 0 Development section in `README.md` for clone, install,
+infrastructure, migrate, and quality commands.
+
 ## Development rules
 
 ### Preserve domain boundaries

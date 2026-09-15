@@ -1,0 +1,469 @@
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
+  {
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/coverage/**",
+      "**/.turbo/**",
+    ],
+  },
+  tseslint.configs.recommended,
+  {
+    files: ["packages/contracts/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@osva/*"],
+              message:
+                "packages/contracts cannot depend on other OSVA packages.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/domain/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message: "packages/domain cannot import persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "packages/domain cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "packages/domain cannot import runtime-core.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/domain cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/domain cannot import apps.",
+            },
+            {
+              name: "@osva/contracts/schemas",
+              message: "packages/domain cannot import runtime Zod schemas.",
+            },
+            {
+              name: "zod",
+              message: "packages/domain cannot depend on Zod.",
+            },
+            {
+              name: "drizzle-orm",
+              message: "packages/domain cannot import persistence libraries.",
+            },
+            {
+              name: "postgres",
+              message: "packages/domain cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/domain cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/domain cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "packages/domain cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "packages/domain cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "packages/domain cannot import adapters.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/domain cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message: "packages/domain cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["adapters/memory/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message:
+                "adapters/memory cannot import persistence infrastructure.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "adapters/memory cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "adapters/memory cannot import runtime-core.",
+            },
+            {
+              name: "@osva/web",
+              message: "adapters/memory cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "adapters/memory cannot import apps.",
+            },
+            {
+              name: "zod",
+              message: "adapters/memory cannot depend on Zod.",
+            },
+            {
+              name: "drizzle-orm",
+              message: "adapters/memory cannot import persistence libraries.",
+            },
+            {
+              name: "postgres",
+              message: "adapters/memory cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "bullmq",
+              message:
+                "adapters/memory cannot import distributed queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "adapters/memory cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "adapters/memory cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "adapters/memory cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message: "adapters/memory cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message: "adapters/memory cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/db/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/orchestration",
+              message: "packages/db cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "packages/db cannot import runtime-core.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/db cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/db cannot import apps.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/db cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/db cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "packages/db cannot import Redis clients.",
+            },
+            {
+              name: "pg",
+              message: "packages/db uses postgres.js, not pg.",
+            },
+            {
+              name: "prisma",
+              message: "packages/db cannot import Prisma.",
+            },
+            {
+              name: "@prisma/client",
+              message: "packages/db cannot import Prisma.",
+            },
+            {
+              name: "typeorm",
+              message: "packages/db cannot import TypeORM.",
+            },
+            {
+              name: "testcontainers",
+              message: "packages/db cannot import Testcontainers.",
+            },
+            {
+              name: "openai",
+              message: "packages/db cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "packages/db cannot import adapters.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/db cannot import provider SDKs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/orchestration/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message:
+                "packages/orchestration cannot import persistence adapters.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/orchestration cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/orchestration cannot import apps.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "packages/orchestration cannot import persistence libraries.",
+            },
+            {
+              name: "postgres",
+              message:
+                "packages/orchestration cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/orchestration cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/orchestration cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "packages/orchestration cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "packages/orchestration cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "packages/orchestration cannot import adapters.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/orchestration cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "packages/orchestration cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/runtime-core/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message: "packages/runtime-core cannot import persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "packages/runtime-core cannot import orchestration.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/runtime-core cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/runtime-core cannot import apps.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "packages/runtime-core cannot import persistence libraries.",
+            },
+            {
+              name: "postgres",
+              message:
+                "packages/runtime-core cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/runtime-core cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/runtime-core cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "packages/runtime-core cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "packages/runtime-core cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "packages/runtime-core cannot import adapters.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/runtime-core cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "packages/runtime-core cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/web/src/**/*.ts", "apps/worker/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/orchestration",
+              message:
+                "Stage 0 process shells do not import orchestration. Cross-process execution begins in Stage 1.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "Stage 0 process shells do not execute Agent runtimes.",
+            },
+            {
+              name: "bullmq",
+              message: "Stage 0 process shells cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "Stage 0 process shells cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "Stage 0 process shells cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "Stage 0 process shells cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message:
+                "Do not wire MemoryJobQueue or other adapters across web and worker.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "Stage 0 process shells cannot import provider SDKs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/web/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/worker",
+              message: "apps/web cannot import the worker process.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/worker/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/web",
+              message: "apps/worker cannot import the web process.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+);

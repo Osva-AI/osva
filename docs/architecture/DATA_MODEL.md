@@ -46,9 +46,26 @@ human_tasks
 
 ## Rules
 
-- UUID primary IDs.
-- UTC timestamps.
+- UTC timestamps (`timestamptz`).
 - immutable version rows.
 - JSONB for flexible snapshots, not for hiding important domain fields.
 - historical Runs are not destructively rewritten.
 - queue-engine tables are infrastructure, not product tables.
+
+## Stage 0 identifier storage
+
+Stage 0 persists OSVA IDs as PostgreSQL `text`, not `uuid`.
+
+Public contracts currently guarantee branded non-empty strings, not
+UUID-formatted identifiers. The persistence layer must not impose a
+stricter identity format than the public contract.
+
+ID generation policy belongs outside the DB adapter. A later stage may
+adopt UUID columns only if the public ID contract is tightened first.
+
+## Stage 0 Run input
+
+A Run owns an immutable JSON-compatible execution input snapshot,
+persisted as `runs.input` JSONB. Retries and ExecutionRequest
+reconstruction reuse that captured value; it is not stored on the
+JobQueue payload.

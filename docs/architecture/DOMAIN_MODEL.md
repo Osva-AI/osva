@@ -13,6 +13,7 @@ Agent
 
 ```text
 Run
+  ├── input (immutable execution snapshot)
   ├── RunAttempt*
   │    └── RunStep*
   ├── RunLog*
@@ -69,5 +70,9 @@ HumanTask
 ## Immutable execution binding
 
 A Run or WorkflowRun persists effective immutable references before execution where they are statically knowable.
+
+A Run owns the immutable JSON-compatible execution `input`. Retries and
+reconstruction must reuse that captured input rather than resolving a
+newer caller payload.
 
 Dynamic selection resolves once for the logical node/operation and remains fixed across retries.

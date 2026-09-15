@@ -6,7 +6,7 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** pre-alpha. The architecture and public contracts are being established before implementation.
+> **Status:** pre-alpha. Stage 0 is establishing contracts, persistence, and process shells before Agent product features.
 
 ## Why OSVA?
 
@@ -113,6 +113,87 @@ Stage 1 is expected to use:
 - separate control-plane and ExecutionWorker processes
 
 These are implementation choices, not permanent domain dependencies.
+
+## Stage 0 Development
+
+Stage 0 is the architectural foundation: public contracts, domain, PostgreSQL
+persistence, a walking orchestration skeleton, and process shells. It is not a
+usable Agent product. Deeper notes live in
+[`docs/implementation/STAGE-0-FOUNDATION.md`](docs/implementation/STAGE-0-FOUNDATION.md)
+and [`docs/roadmap/IMPLEMENTATION_TRACKER.md`](docs/roadmap/IMPLEMENTATION_TRACKER.md).
+
+### Prerequisites
+
+- Node.js 24
+- pnpm 12.4.1 through Corepack (`corepack enable`)
+- Docker Compose for the normal local topology (PostgreSQL 17 plus Valkey)
+
+The Compose credentials (`osva` / `osva` / `osva`) are local-development defaults
+only. They are not production-safe.
+
+If Docker is unavailable, `pnpm test:integration` can still use installed
+PostgreSQL 17 binaries or `OSVA_TEST_DATABASE_URL`. That is a test fallback, not
+the documented contributor path.
+
+### Setup
+
+```text
+git clone <repository-url>
+cd osva
+corepack enable
+pnpm install
+```
+
+Copy `.env.example` to `.env` as a reference, or set the same variables in the
+environment. Stage 0 processes do not auto-load `.env`.
+
+Then start infrastructure, apply committed migrations, and run the apps:
+
+```text
+pnpm infra:up
+pnpm db:migrate
+pnpm build
+pnpm dev:web
+pnpm dev:worker
+```
+
+Required sequence:
+
+```text
+start PostgreSQL
+    ↓
+apply committed migrations
+    ↓
+start applications
+```
+
+Do not auto-migrate during web or worker startup. Do not use `drizzle-kit push`
+as the normal workflow. The committed files under `packages/db/drizzle/` are
+authoritative. Generate new SQL with `pnpm --filter @osva/db db:generate` and
+commit the result.
+
+`pnpm infra:up` also starts Valkey so the local topology is ready for Stage 1.
+Stage 0 application code does not connect to Valkey.
+
+### Endpoints and worker behavior
+
+- `GET /health` — process liveness. Does not require PostgreSQL.
+- `GET /ready` — `200` when PostgreSQL is reachable, `503` otherwise.
+
+The Stage 0 worker is intentionally idle after a successful PostgreSQL check.
+Cross-process Run execution starts in Stage 1 with a real `JobQueue` adapter.
+
+### Quality commands
+
+```text
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm test:integration
+pnpm infra:down
+```
 
 ## Contributing
 
