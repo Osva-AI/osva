@@ -8,6 +8,9 @@ import {
   agentVersionId,
   createManifest,
   NOW,
+  otherAgentId,
+  otherAgentVersionId,
+  otherWorkspaceId,
   workspaceId,
 } from "./fixtures.js";
 
@@ -96,5 +99,85 @@ describe("MemoryAgentRepository", () => {
 
     const stored = await repository.findAgentVersionById(agentVersionId);
     expect(stored?.manifest.name).toBe("Example Agent");
+  });
+
+  it("rejects a duplicate workspace/key pair", async () => {
+    const repository: AgentRepository = new MemoryAgentRepository();
+    await repository.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "example-agent",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+
+    await expect(
+      repository.saveAgent(
+        Agent.create({
+          id: otherAgentId,
+          workspaceId,
+          key: "example-agent",
+          name: "Other Agent",
+          createdAt: NOW,
+        }),
+      ),
+    ).rejects.toThrow(DomainInvariantError);
+  });
+
+  it("allows the same Agent key in a different workspace", async () => {
+    const repository: AgentRepository = new MemoryAgentRepository();
+    await repository.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "example-agent",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+
+    const other = Agent.create({
+      id: otherAgentId,
+      workspaceId: otherWorkspaceId,
+      key: "example-agent",
+      name: "Other Workspace Agent",
+      createdAt: NOW,
+    });
+    await repository.saveAgent(other);
+
+    await expect(repository.findAgentById(otherAgentId)).resolves.toBe(other);
+  });
+
+  it("rejects a second AgentVersion with the same agentId and version", async () => {
+    const repository: AgentRepository = new MemoryAgentRepository();
+    await repository.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest(),
+        createdAt: NOW,
+      }),
+    );
+
+    await expect(
+      repository.saveAgentVersion(
+        AgentVersion.create({
+          id: otherAgentVersionId,
+          agentId,
+          version: 1,
+          manifest: createManifest({ name: "Other Snapshot" }),
+          createdAt: NOW,
+        }),
+      ),
+    ).rejects.toThrow(DomainInvariantError);
+
+    const stored = await repository.findAgentVersionById(agentVersionId);
+    expect(stored?.manifest.name).toBe("Example Agent");
+    await expect(
+      repository.findAgentVersionById(otherAgentVersionId),
+    ).resolves.toBeNull();
   });
 });

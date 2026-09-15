@@ -26,3 +26,6 @@ minimumReleaseAgeExclude:
   - "@turbo/windows-arm64@2.10.13"
   - turbo@2.10.13
   - zod@4.6.5
+
+allowBuilds:
+  esbuild: true

@@ -11,6 +11,18 @@ export class MemoryAgentRepository implements AgentRepository {
   private readonly agentVersions = new Map<AgentVersionId, AgentVersion>();
 
   async saveAgent(agent: Agent): Promise<void> {
+    for (const existing of this.agents.values()) {
+      if (
+        existing.id !== agent.id &&
+        existing.workspaceId === agent.workspaceId &&
+        existing.key === agent.key
+      ) {
+        throw new DomainInvariantError(
+          `Agent key '${agent.key}' already exists in workspace '${agent.workspaceId}'.`,
+        );
+      }
+    }
+
     this.agents.set(agent.id, agent);
   }
 
@@ -25,6 +37,19 @@ export class MemoryAgentRepository implements AgentRepository {
       throw new DomainInvariantError(
         `AgentVersion '${agentVersion.id}' is immutable and cannot be replaced with different content.`,
       );
+    }
+
+    if (!existing) {
+      for (const stored of this.agentVersions.values()) {
+        if (
+          stored.agentId === agentVersion.agentId &&
+          stored.version === agentVersion.version
+        ) {
+          throw new DomainInvariantError(
+            `AgentVersion already exists for agent '${agentVersion.agentId}' version ${String(agentVersion.version)}.`,
+          );
+        }
+      }
     }
 
     this.agentVersions.set(agentVersion.id, existing ?? agentVersion);

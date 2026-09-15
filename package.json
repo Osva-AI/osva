@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "test:integration": "pnpm --filter @osva/db test:integration"
   },
   "devDependencies": {
     "@types/node": "catalog:",

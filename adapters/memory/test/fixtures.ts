@@ -15,8 +15,11 @@ export const NOW = new Date("2026-01-15T12:00:00.000Z");
 export const LATER = new Date("2026-01-15T12:00:01.000Z");
 
 export const workspaceId = "ws-1" as WorkspaceId;
+export const otherWorkspaceId = "ws-2" as WorkspaceId;
 export const agentId = "agent-1" as AgentId;
+export const otherAgentId = "agent-2" as AgentId;
 export const agentVersionId = "agent-version-1" as AgentVersionId;
+export const otherAgentVersionId = "agent-version-2" as AgentVersionId;
 export const runId = "run-1" as RunId;
 export const otherRunId = "run-2" as RunId;
 export const runAttemptId = "run-attempt-1" as RunAttemptId;

@@ -177,4 +177,78 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["packages/db/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/orchestration",
+              message: "packages/db cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "packages/db cannot import runtime-core.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/db cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/db cannot import apps.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/db cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/db cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "packages/db cannot import Redis clients.",
+            },
+            {
+              name: "pg",
+              message: "packages/db uses postgres.js, not pg.",
+            },
+            {
+              name: "prisma",
+              message: "packages/db cannot import Prisma.",
+            },
+            {
+              name: "@prisma/client",
+              message: "packages/db cannot import Prisma.",
+            },
+            {
+              name: "typeorm",
+              message: "packages/db cannot import TypeORM.",
+            },
+            {
+              name: "testcontainers",
+              message: "packages/db cannot import Testcontainers.",
+            },
+            {
+              name: "openai",
+              message: "packages/db cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "packages/db cannot import adapters.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/db cannot import provider SDKs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

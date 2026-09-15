@@ -12,11 +12,21 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:generate": "drizzle-kit generate",
+    "migrate": "node dist/migrate-cli.js"
+  },
+  "dependencies": {
+    "@osva/contracts": "workspace:*",
+    "@osva/domain": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "postgres": "3.4.9"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "drizzle-kit": "0.31.10",
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
