@@ -30,7 +30,15 @@ describe("OpenAIProviderAdapter", () => {
       maxOutputTokens: 64,
     });
 
-    expect(result).toEqual({ text: "normalized text from fake openai" });
+    expect(result).toEqual({
+      text: "normalized text from fake openai",
+      usage: {
+        inputTokens: 120,
+        outputTokens: 15,
+        totalTokens: 135,
+        cachedInputTokens: 8,
+      },
+    });
     expect(server.requests).toHaveLength(1);
     expect(server.requests[0]?.url).toBe("/v1/responses");
     expect(server.requests[0]?.body).toMatchObject({
@@ -53,7 +61,12 @@ describe("OpenAIProviderAdapter", () => {
     });
     expect(JSON.stringify(result)).not.toContain("resp_ok");
     expect(result).not.toHaveProperty("output");
-    expect(result).not.toHaveProperty("usage");
+    expect(result.usage).toEqual({
+      inputTokens: 120,
+      outputTokens: 15,
+      totalTokens: 135,
+      cachedInputTokens: 8,
+    });
   });
 
   it("normalizes authentication, rate-limit, and invalid output errors", async () => {

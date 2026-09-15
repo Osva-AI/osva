@@ -329,18 +329,20 @@ describe("MemoryRunRepository", () => {
   it("stores a RunStep that retains both runId and runAttemptId", async () => {
     const repository = new MemoryRunRepository();
     const port: RunRepository = repository;
-    const step = RunStep.create({
+    const step = RunStep.start({
       id: runStepId,
       runId,
       runAttemptId,
-      type: "model.generate",
-      name: "generate",
+      kind: "MODEL",
+      bindingName: "default",
       startedAt: NOW,
+      modelProfileVersionId:
+        "model-profile-version-1" as import("@osva/contracts").ModelProfileVersionId,
     });
 
-    await port.saveRunStep(step);
+    await port.insertRunningRunStep(step);
 
-    const stored = repository.listRunSteps();
+    const stored = repository.snapshotRunSteps();
     expect(stored).toHaveLength(1);
     expect(stored[0]?.runId).toBe(runId);
     expect(stored[0]?.runAttemptId).toBe(runAttemptId);
@@ -348,6 +350,6 @@ describe("MemoryRunRepository", () => {
     expect(() => {
       (stored as RunStep[]).pop();
     }).toThrow(TypeError);
-    expect(repository.listRunSteps()).toHaveLength(1);
+    expect(repository.snapshotRunSteps()).toHaveLength(1);
   });
 });

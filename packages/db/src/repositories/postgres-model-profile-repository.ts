@@ -183,6 +183,7 @@ export class PostgresModelProfileRepository implements ModelProfileRepository {
         version: nextVersion,
         provider: input.provider,
         model: input.model,
+        pricing: input.pricing,
         createdAt: input.createdAt,
       });
 

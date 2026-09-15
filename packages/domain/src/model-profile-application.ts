@@ -1,6 +1,7 @@
 import type {
   ModelProfileId,
   ModelProfileVersionId,
+  ModelProfileVersionPricing,
   ModelProvider,
   WorkspaceId,
 } from "@osva/contracts";
@@ -45,6 +46,7 @@ export interface AppendModelProfileVersionCommand {
   readonly modelProfileId: ModelProfileId;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly pricing?: ModelProfileVersionPricing;
 }
 
 export interface GetModelProfileVersionCommand {
@@ -125,6 +127,7 @@ export class AppendModelProfileVersion {
       modelProfileId: command.modelProfileId,
       provider: command.provider,
       model: command.model,
+      pricing: command.pricing,
       createdAt: this.deps.clock.now(),
     });
   }

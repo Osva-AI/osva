@@ -31,8 +31,10 @@ export {
   DuplicateAgentKeyError,
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
+  EvaluationNotFoundError,
   InvalidAttemptSequenceError,
   InvalidModelBindingError,
+  InvalidRunAttemptStateError,
   InvalidToolBindingError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
@@ -44,6 +46,7 @@ export {
   ToolVersionNotFoundError,
   RunAttemptNotFoundError,
   RunNotFoundError,
+  RunStepNotFoundError,
   WorkspaceNotFoundError,
 } from "./errors.js";
 
@@ -75,9 +78,13 @@ export {
 } from "./run-attempt.js";
 export {
   RunStep,
-  type RunStepMetadata,
+  type FinalizeRunStepProps,
+  type RunStepIdentityProps,
   type RunStepProps,
 } from "./run-step.js";
+export { Evaluation, type EvaluationProps } from "./evaluation.js";
+export { estimateModelCostUsdMicros } from "./model-cost.js";
+export { jsonValuesEqual } from "./json-equality.js";
 
 export {
   LEGAL_RUN_TRANSITIONS,
@@ -105,19 +112,29 @@ export type {
   AppendAgentVersionInput,
   AppendModelProfileVersionInput,
   AppendToolVersionInput,
+  EvaluationRepository,
+  ListRunStepsQuery,
+  ListRunStepsResult,
   ListRunsQuery,
   ListRunsResult,
   ModelProfileMetadataUpdate,
   ModelProfileRepository,
   ToolMetadataUpdate,
   ToolRepository,
+  RunAttemptUsageSummary,
   RunLifecycleTransitionResult,
   RunListCursor,
+  RunStepListCursor,
   RunRepository,
   WorkspaceRepository,
 } from "./ports/index.js";
 
-export { DEFAULT_RUN_LIST_LIMIT, MAX_RUN_LIST_LIMIT } from "./ports/index.js";
+export {
+  DEFAULT_RUN_LIST_LIMIT,
+  DEFAULT_RUN_STEP_LIST_LIMIT,
+  MAX_RUN_LIST_LIMIT,
+  MAX_RUN_STEP_LIST_LIMIT,
+} from "./ports/index.js";
 
 export {
   AppendAgentVersion,
@@ -148,6 +165,29 @@ export {
   type RunApplication,
   type RunApplicationDependencies,
 } from "./run-application.js";
+
+export {
+  GetRunAttemptUsage,
+  GetRunStep,
+  ListRunSteps,
+  createRunObservabilityApplication,
+  type GetRunStepCommand,
+  type RunObservabilityApplication,
+  type RunObservabilityApplicationDependencies,
+} from "./run-observability-application.js";
+
+export {
+  CreateEvaluation,
+  GetEvaluation,
+  ListEvaluations,
+  createEvaluationApplication,
+  type CreateEvaluationCommand,
+  type EvaluationApplication,
+  type EvaluationApplicationClock,
+  type EvaluationApplicationDependencies,
+  type EvaluationApplicationIds,
+  type GetEvaluationCommand,
+} from "./evaluation-application.js";
 
 export {
   AppendModelProfileVersion,

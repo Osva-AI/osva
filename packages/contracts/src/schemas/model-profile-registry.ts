@@ -9,6 +9,7 @@ import {
   modelProviderModelIdSchema,
   modelProviderSchema,
 } from "./model-gateway.js";
+import { modelProfileVersionPricingSchema } from "./model-pricing.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 
 export const createModelProfileRequestSchema = z.strictObject({
@@ -24,6 +25,7 @@ export const updateModelProfileRequestSchema = z.strictObject({
 export const createModelProfileVersionRequestSchema = z.strictObject({
   provider: modelProviderSchema,
   model: modelProviderModelIdSchema,
+  pricing: modelProfileVersionPricingSchema.optional(),
 });
 
 export const modelProfileResourceSchema = z.strictObject({
@@ -40,6 +42,7 @@ export const modelProfileVersionResourceSchema = z.strictObject({
   version: z.int().positive(),
   provider: modelProviderSchema,
   model: modelProviderModelIdSchema,
+  pricing: modelProfileVersionPricingSchema.optional(),
   createdAt: utcIso8601TimestampSchema,
 });
 

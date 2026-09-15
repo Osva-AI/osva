@@ -1,6 +1,7 @@
 import type {
   ModelProfileId,
   ModelProfileVersionId,
+  ModelProfileVersionPricing,
   ModelProvider,
 } from "@osva/contracts";
 
@@ -16,6 +17,7 @@ export interface AppendModelProfileVersionInput {
   readonly modelProfileId: ModelProfileId;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly pricing?: ModelProfileVersionPricing;
   readonly createdAt: Date;
 }
 

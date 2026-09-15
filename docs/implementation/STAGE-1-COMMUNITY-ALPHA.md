@@ -73,6 +73,15 @@ unchanged and must not be derived from RunAttempt identity. OpenAI function
 calling, MCP, external tools, side-effecting tools, and idempotency persistence
 remain later slices.
 
+Slice 1.7 adds persisted execution observability through OSVA-owned RunSteps,
+normalized model usage, optional immutable ModelProfileVersion pricing snapshots,
+RunAttempt usage/cost summaries, and basic deterministic `JSON_EXACT_MATCH`
+evaluations. Model and tool capability calls create metadata-only RunSteps in
+the parent runtime process; prompts, tool payloads, and provider bodies are not
+duplicated. Estimated model cost is derived from immutable pricing plus
+normalized token usage; unpriced model calls remain explicit. OpenTelemetry,
+dashboards, billing reconciliation, and LLM-as-judge remain later slices.
+
 ## Quality
 
 - JobQueue contract tests;

@@ -10,3 +10,4 @@ export { PostgresAgentRepository } from "./repositories/postgres-agent-repositor
 export { PostgresModelProfileRepository } from "./repositories/postgres-model-profile-repository.js";
 export { PostgresToolRepository } from "./repositories/postgres-tool-repository.js";
 export { PostgresRunRepository } from "./repositories/postgres-run-repository.js";
+export { PostgresEvaluationRepository } from "./repositories/postgres-evaluation-repository.js";

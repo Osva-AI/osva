@@ -27,3 +27,13 @@ export const PERSISTED_RUN_ATTEMPT_STATES = [
 export const PERSISTED_MODEL_PROVIDERS = ["OPENAI"] as const;
 
 export const PERSISTED_TOOL_TYPES = ["INTERNAL"] as const;
+
+export const PERSISTED_RUN_STEP_KINDS = ["MODEL", "TOOL"] as const;
+
+export const PERSISTED_RUN_STEP_STATUSES = [
+  "RUNNING",
+  "SUCCEEDED",
+  "FAILED",
+] as const;
+
+export const PERSISTED_EVALUATOR_TYPES = ["JSON_EXACT_MATCH"] as const;

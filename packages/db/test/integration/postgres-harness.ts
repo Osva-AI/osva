@@ -16,6 +16,7 @@ const HOST_POSTGRES_CONNECT_TIMEOUT_SECONDS = 2;
 const execFileAsync = promisify(execFile);
 
 const STAGE0_TABLES = [
+  "evaluations",
   "run_steps",
   "run_attempts",
   "runs",

@@ -56,6 +56,12 @@ export interface TrustedTypeScriptRuntimeAdapterOptions {
   readonly enablePermissionModel?: boolean;
   readonly modelGateway?: RuntimeModelGateway;
   readonly toolGateway?: RuntimeToolGateway;
+  readonly createScopedModelGateway?: (
+    execution: ExecutionRequest,
+  ) => RuntimeModelGateway | undefined;
+  readonly createScopedToolGateway?: (
+    execution: ExecutionRequest,
+  ) => RuntimeToolGateway | undefined;
 }
 
 /**
@@ -84,6 +90,12 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
   private readonly enablePermissionModel: boolean;
   private readonly modelGateway: RuntimeModelGateway | undefined;
   private readonly toolGateway: RuntimeToolGateway | undefined;
+  private readonly createScopedModelGateway:
+    | ((execution: ExecutionRequest) => RuntimeModelGateway | undefined)
+    | undefined;
+  private readonly createScopedToolGateway:
+    | ((execution: ExecutionRequest) => RuntimeToolGateway | undefined)
+    | undefined;
   private readonly liveExecutions = new Set<LiveExecution>();
   private closed = false;
 
@@ -93,6 +105,8 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
     this.enablePermissionModel = options.enablePermissionModel ?? true;
     this.modelGateway = options.modelGateway;
     this.toolGateway = options.toolGateway;
+    this.createScopedModelGateway = options.createScopedModelGateway;
+    this.createScopedToolGateway = options.createScopedToolGateway;
   }
 
   async execute(request: ExecutionRequest): Promise<ExecutionResult> {
@@ -227,8 +241,10 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
         request: ipcRequest,
         timeoutMs: request.timeoutMs,
         abort,
-        modelGateway: this.modelGateway,
-        toolGateway: this.toolGateway,
+        modelGateway:
+          this.createScopedModelGateway?.(request) ?? this.modelGateway,
+        toolGateway:
+          this.createScopedToolGateway?.(request) ?? this.toolGateway,
         modelBindings: request.modelProfileVersionBindings,
         toolBindings: request.toolVersionBindings,
         execution: request,

@@ -60,7 +60,23 @@ class FakeRunRepository implements RunRepository {
     );
   }
 
-  async saveRunStep(): Promise<void> {
+  async insertRunningRunStep(): Promise<void> {
+    throw new Error("not used");
+  }
+
+  async finalizeRunStep(): Promise<never> {
+    throw new Error("not used");
+  }
+
+  async findRunStepById(): Promise<null> {
+    return null;
+  }
+
+  async listRunSteps(): Promise<{ steps: [] }> {
+    return { steps: [] };
+  }
+
+  async aggregateRunAttemptUsage(): Promise<never> {
     throw new Error("not used");
   }
 

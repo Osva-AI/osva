@@ -735,17 +735,23 @@ describe("PostgreSQL Stage 0 repositories", () => {
         }),
       );
 
-      const step = RunStep.create({
+      const step = RunStep.start({
         id: ids.runStepId,
         runId: ids.runId,
         runAttemptId: ids.runAttemptId,
-        type: "model.generate",
-        name: "generate",
+        kind: "MODEL",
+        bindingName: "default",
         startedAt: NOW,
-        completedAt: LATER,
-        metadata: { tokens: 12 },
+        modelProfileVersionId: ids.modelProfileVersionId,
       });
-      await runs.saveRunStep(step);
+      await runs.insertRunningRunStep(step);
+      await runs.finalizeRunStep(ids.runStepId, {
+        status: "SUCCEEDED",
+        completedAt: LATER,
+        inputTokens: 10,
+        outputTokens: 2,
+        totalTokens: 12,
+      });
 
       const [row] = await database.db
         .select()
@@ -759,7 +765,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       const loaded = runStepFromRow(row);
       expect(loaded.runId).toBe(ids.runId);
       expect(loaded.runAttemptId).toBe(ids.runAttemptId);
-      expect(loaded.metadata).toEqual({ tokens: 12 });
+      expect(loaded.inputTokens).toBe(10);
       expect(loaded.completedAt).toEqual(LATER);
     });
 
@@ -805,14 +811,15 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
 
       await expect(
-        runs.saveRunStep(
-          RunStep.create({
+        runs.insertRunningRunStep(
+          RunStep.start({
             id: ids.runStepId,
             runId: ids.runId,
             runAttemptId: ids.otherAttemptId as RunAttemptId,
-            type: "model.generate",
-            name: "generate",
+            kind: "MODEL",
+            bindingName: "default",
             startedAt: NOW,
+            modelProfileVersionId: ids.modelProfileVersionId,
           }),
         ),
       ).rejects.toBeInstanceOf(DomainInvariantError);

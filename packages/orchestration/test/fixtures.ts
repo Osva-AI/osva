@@ -148,8 +148,20 @@ export function wrapRunRepository(
     listRunAttempts:
       overrides.listRunAttempts?.bind(overrides) ??
       inner.listRunAttempts.bind(inner),
-    saveRunStep:
-      overrides.saveRunStep?.bind(overrides) ?? inner.saveRunStep.bind(inner),
+    insertRunningRunStep:
+      overrides.insertRunningRunStep?.bind(overrides) ??
+      inner.insertRunningRunStep.bind(inner),
+    finalizeRunStep:
+      overrides.finalizeRunStep?.bind(overrides) ??
+      inner.finalizeRunStep.bind(inner),
+    findRunStepById:
+      overrides.findRunStepById?.bind(overrides) ??
+      inner.findRunStepById.bind(inner),
+    listRunSteps:
+      overrides.listRunSteps?.bind(overrides) ?? inner.listRunSteps.bind(inner),
+    aggregateRunAttemptUsage:
+      overrides.aggregateRunAttemptUsage?.bind(overrides) ??
+      inner.aggregateRunAttemptUsage.bind(inner),
     transitionRun:
       overrides.transitionRun?.bind(overrides) ??
       inner.transitionRun.bind(inner),

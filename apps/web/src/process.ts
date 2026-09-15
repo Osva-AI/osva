@@ -12,10 +12,13 @@ import {
 } from "@osva/db";
 import {
   createAgentApplication,
+  createEvaluationApplication,
   createModelProfileApplication,
   createRunApplication,
+  createRunObservabilityApplication,
   createToolApplication,
 } from "@osva/domain";
+import { PostgresEvaluationRepository } from "@osva/db";
 import { CreateRun } from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
@@ -80,6 +83,15 @@ export function createWebProcess(
       }),
       clock,
       ids,
+    },
+    runObservability: {
+      observability: createRunObservabilityApplication({ runs }),
+      evaluations: createEvaluationApplication({
+        runs,
+        evaluations: new PostgresEvaluationRepository(database),
+        clock,
+        ids,
+      }),
     },
   });
 

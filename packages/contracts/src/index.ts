@@ -196,6 +196,31 @@ export type {
 } from "./telemetry.js";
 
 export {
+  RUN_STEP_KINDS,
+  RUN_STEP_STATUSES,
+  isRunStepKind,
+  isRunStepStatus,
+} from "./run-step.js";
+export type { RunStepKind, RunStepStatus } from "./run-step.js";
+
+export { EVALUATOR_TYPES, isEvaluatorType } from "./evaluation.js";
+export type {
+  EvaluatorConfig,
+  EvaluatorType,
+  JsonExactMatchEvaluatorConfig,
+} from "./evaluation.js";
+
+export {
+  MODEL_PRICING_CURRENCIES,
+  MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS,
+  isModelPricingCurrency,
+} from "./model-pricing.js";
+export type {
+  ModelPricingCurrency,
+  ModelProfileVersionPricing,
+} from "./model-pricing.js";
+
+export {
   WORKFLOW_DEFINITION_SCHEMA_VERSION,
   WORKFLOW_NODE_TYPES,
 } from "./workflow-definition.js";

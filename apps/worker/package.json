@@ -19,6 +19,7 @@
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/model-gateway": "workspace:*",
+    "@osva/observability": "workspace:*",
     "@osva/tool-gateway": "workspace:*",
     "@osva/orchestration": "workspace:*"
   },

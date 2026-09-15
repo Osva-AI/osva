@@ -101,6 +101,18 @@ export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIRespon
               ],
             },
           ],
+          usage: {
+            input_tokens: 120,
+            output_tokens: 15,
+            total_tokens: 135,
+            input_tokens_details: {
+              cached_tokens: 8,
+              cache_write_tokens: 0,
+            },
+            output_tokens_details: {
+              reasoning_tokens: 0,
+            },
+          },
         }),
       );
     });

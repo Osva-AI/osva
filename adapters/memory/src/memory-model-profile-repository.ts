@@ -104,6 +104,7 @@ export class MemoryModelProfileRepository implements ModelProfileRepository {
       version: maxVersion + 1,
       provider: input.provider,
       model: input.model,
+      pricing: input.pricing,
       createdAt: input.createdAt,
     });
 

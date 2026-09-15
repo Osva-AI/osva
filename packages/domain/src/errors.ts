@@ -1,6 +1,7 @@
 import type {
   AgentId,
   AgentVersionId,
+  EvaluationId,
   ModelProfileId,
   ModelProfileVersionId,
   ToolId,
@@ -9,6 +10,7 @@ import type {
   RunAttemptState,
   RunId,
   RunState,
+  RunStepId,
   WorkspaceId,
 } from "@osva/contracts";
 
@@ -182,15 +184,52 @@ export class RunAttemptNotFoundError extends DomainError {
   }
 }
 
-export class LifecycleConflictError extends DomainError {
-  readonly entity: "run" | "runAttempt";
-  readonly id: RunId | RunAttemptId;
-  readonly expectedStatus: RunState | RunAttemptState;
+export class RunStepNotFoundError extends DomainError {
+  readonly runStepId: RunStepId;
+
+  constructor(runStepId: RunStepId) {
+    super(`RunStep ${runStepId} was not found.`);
+    this.runStepId = runStepId;
+  }
+}
+
+export class EvaluationNotFoundError extends DomainError {
+  readonly evaluationId: EvaluationId;
+
+  constructor(evaluationId: EvaluationId) {
+    super(`Evaluation ${evaluationId} was not found.`);
+    this.evaluationId = evaluationId;
+  }
+}
+
+export class InvalidRunAttemptStateError extends DomainError {
+  readonly runAttemptId: RunAttemptId;
+  readonly actualStatus: RunAttemptState;
+  readonly requiredStatus: RunAttemptState;
 
   constructor(
-    entity: "run" | "runAttempt",
-    id: RunId | RunAttemptId,
-    expectedStatus: RunState | RunAttemptState,
+    runAttemptId: RunAttemptId,
+    actualStatus: RunAttemptState,
+    requiredStatus: RunAttemptState,
+  ) {
+    super(
+      `RunAttempt ${runAttemptId} is ${actualStatus}, expected ${requiredStatus}.`,
+    );
+    this.runAttemptId = runAttemptId;
+    this.actualStatus = actualStatus;
+    this.requiredStatus = requiredStatus;
+  }
+}
+
+export class LifecycleConflictError extends DomainError {
+  readonly entity: "run" | "runAttempt" | "runStep";
+  readonly id: RunId | RunAttemptId | RunStepId;
+  readonly expectedStatus: RunState | RunAttemptState | "RUNNING";
+
+  constructor(
+    entity: "run" | "runAttempt" | "runStep",
+    id: RunId | RunAttemptId | RunStepId,
+    expectedStatus: RunState | RunAttemptState | "RUNNING",
   ) {
     super(
       `Persisted ${entity} ${id} was not in expected status ${expectedStatus}.`,

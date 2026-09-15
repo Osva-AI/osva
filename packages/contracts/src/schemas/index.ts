@@ -33,6 +33,27 @@ export {
   updateModelProfileRequestSchema,
 } from "./model-profile-registry.js";
 
+export { modelProfileVersionPricingSchema } from "./model-pricing.js";
+
+export {
+  createEvaluationRequestSchema,
+  evaluationListResourceSchema,
+  evaluationResourceSchema,
+  evaluatorConfigSchema,
+  evaluatorTypeSchema,
+  jsonExactMatchEvaluatorSchema,
+} from "./evaluation.js";
+
+export {
+  listRunStepsQuerySchema,
+  runAttemptUsageResourceSchema,
+  runStepKindSchema,
+  runStepListCursorPayloadSchema,
+  runStepListResourceSchema,
+  runStepResourceSchema,
+  runStepStatusSchema,
+} from "./run-step.js";
+
 export {
   createToolRequestSchema,
   createToolVersionRequestSchema,

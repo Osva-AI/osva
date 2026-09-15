@@ -10,6 +10,10 @@ import { handleAgentRegistryRequest } from "./agent-http.js";
 import { sendJson } from "./json.js";
 import { handleModelProfileRegistryRequest } from "./model-profile-http.js";
 import { handleToolRegistryRequest } from "./tool-http.js";
+import {
+  handleRunObservabilityRequest,
+  type RunObservabilityHttpServices,
+} from "./run-observability-http.js";
 import { handleRunRequest, type RunHttpServices } from "./run-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
@@ -20,6 +24,7 @@ export interface CreateWebApplicationOptions {
   readonly modelProfiles: ModelProfileApplication;
   readonly tools: ToolApplication;
   readonly runs: RunHttpServices;
+  readonly runObservability: RunObservabilityHttpServices;
 }
 
 export function createWebApplication(
@@ -34,6 +39,7 @@ export function createWebApplication(
       options.modelProfiles,
       options.tools,
       options.runs,
+      options.runObservability,
     );
   });
 }
@@ -46,6 +52,7 @@ async function handleRequest(
   modelProfiles: ModelProfileApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
+  runObservability: RunObservabilityHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -123,6 +130,18 @@ async function handleRequest(
     tools,
   );
   if (handledTools) {
+    return;
+  }
+
+  const handledObservability = await handleRunObservabilityRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    runObservability,
+  );
+  if (handledObservability) {
     return;
   }
 

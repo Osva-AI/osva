@@ -12,16 +12,22 @@ import {
   RunAttempt,
   RunAttemptNotFoundError,
   RunNotFoundError,
+  RunStepNotFoundError,
   assertLegalRunAttemptTransition,
   assertLegalRunTransition,
 } from "@osva/domain";
 import type {
+  FinalizeRunStepProps,
+  ListRunStepsQuery,
+  ListRunStepsResult,
   ListRunsQuery,
   ListRunsResult,
+  RunAttemptUsageSummary,
   RunLifecycleTransitionResult,
   RunListCursor,
   RunRepository,
   RunStep,
+  RunStepListCursor,
 } from "@osva/domain";
 
 export class MemoryRunRepository implements RunRepository {
@@ -128,8 +134,129 @@ export class MemoryRunRepository implements RunRepository {
       .sort((left, right) => left.sequence - right.sequence);
   }
 
-  async saveRunStep(step: RunStep): Promise<void> {
+  async insertRunningRunStep(step: RunStep): Promise<void> {
+    if (step.status !== "RUNNING") {
+      throw new DomainInvariantError(
+        "insertRunningRunStep requires a RUNNING RunStep.",
+      );
+    }
+
+    if (this.steps.has(step.id)) {
+      throw new DomainInvariantError(
+        `A RunStep with id '${step.id}' already exists.`,
+      );
+    }
+
     this.steps.set(step.id, step);
+  }
+
+  async finalizeRunStep(
+    runStepId: RunStepId,
+    finalize: FinalizeRunStepProps,
+  ): Promise<RunStep> {
+    const existing = this.steps.get(runStepId);
+    if (existing === undefined) {
+      throw new RunStepNotFoundError(runStepId);
+    }
+
+    if (existing.status !== "RUNNING") {
+      throw new LifecycleConflictError("runStep", runStepId, "RUNNING");
+    }
+
+    const finalized = existing.finalize(finalize);
+    this.steps.set(runStepId, finalized);
+    return finalized;
+  }
+
+  async findRunStepById(id: RunStepId): Promise<RunStep | null> {
+    return this.steps.get(id) ?? null;
+  }
+
+  async listRunSteps(query: ListRunStepsQuery): Promise<ListRunStepsResult> {
+    const filtered = [...this.steps.values()].filter((step) => {
+      if (step.runAttemptId !== query.runAttemptId) {
+        return false;
+      }
+
+      if (
+        query.cursor !== undefined &&
+        !isAfterRunStepCursor(step, query.cursor)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    filtered.sort(compareRunStepsStartedAtIdAsc);
+
+    const page = filtered.slice(0, query.limit);
+    const hasMore = filtered.length > query.limit;
+    const last = page[page.length - 1];
+
+    return {
+      steps: page,
+      nextCursor:
+        hasMore && last !== undefined
+          ? { startedAt: last.startedAt, id: last.id }
+          : undefined,
+    };
+  }
+
+  async aggregateRunAttemptUsage(
+    runAttemptId: RunAttemptId,
+  ): Promise<RunAttemptUsageSummary> {
+    const succeeded = [...this.steps.values()].filter(
+      (step) =>
+        step.runAttemptId === runAttemptId && step.status === "SUCCEEDED",
+    );
+
+    let modelCalls = 0;
+    let toolCalls = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let totalTokens = 0;
+    let cachedInputTokens = 0;
+    let estimatedCostUsdMicros = 0;
+    let pricedModelCalls = 0;
+    let unpricedModelCalls = 0;
+    let hasPricedCost = false;
+
+    for (const step of succeeded) {
+      if (step.kind === "TOOL") {
+        toolCalls += 1;
+        continue;
+      }
+
+      modelCalls += 1;
+      inputTokens += step.inputTokens ?? 0;
+      outputTokens += step.outputTokens ?? 0;
+      totalTokens += step.totalTokens ?? 0;
+      cachedInputTokens += step.cachedInputTokens ?? 0;
+
+      if (
+        step.estimatedCostUsdMicros === null ||
+        step.estimatedCostUsdMicros === undefined
+      ) {
+        unpricedModelCalls += 1;
+      } else {
+        pricedModelCalls += 1;
+        hasPricedCost = true;
+        estimatedCostUsdMicros += step.estimatedCostUsdMicros;
+      }
+    }
+
+    return {
+      modelCalls,
+      toolCalls,
+      inputTokens,
+      outputTokens,
+      totalTokens,
+      cachedInputTokens,
+      estimatedCostUsdMicros: hasPricedCost ? estimatedCostUsdMicros : null,
+      pricedModelCalls,
+      unpricedModelCalls,
+    };
   }
 
   async transitionRun(expectedStatus: RunState, next: Run): Promise<Run> {
@@ -219,9 +346,40 @@ export class MemoryRunRepository implements RunRepository {
   /**
    * Test helper: snapshot of stored steps. Not part of RunRepository.
    */
-  listRunSteps(): readonly RunStep[] {
+  snapshotRunSteps(): readonly RunStep[] {
     return Object.freeze([...this.steps.values()]);
   }
+}
+
+function compareRunStepsStartedAtIdAsc(left: RunStep, right: RunStep): number {
+  const startedDelta = left.startedAt.getTime() - right.startedAt.getTime();
+  if (startedDelta !== 0) {
+    return startedDelta;
+  }
+
+  if (left.id < right.id) {
+    return -1;
+  }
+
+  if (left.id > right.id) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function isAfterRunStepCursor(
+  step: RunStep,
+  cursor: RunStepListCursor,
+): boolean {
+  if (step.startedAt.getTime() > cursor.startedAt.getTime()) {
+    return true;
+  }
+
+  return (
+    step.startedAt.getTime() === cursor.startedAt.getTime() &&
+    step.id > cursor.id
+  );
 }
 
 function compareRunsCreatedAtIdDesc(left: Run, right: Run): number {

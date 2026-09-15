@@ -26,6 +26,17 @@ export function requirePositiveInteger(value: number, field: string): number {
   return value;
 }
 
+export function requireNonNegativeInteger(
+  value: number,
+  field: string,
+): number {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new DomainInvariantError(`${field} must be a non-negative integer.`);
+  }
+
+  return value;
+}
+
 export function deepFreeze<T>(value: T): T {
   if (value === null || typeof value !== "object") {
     return value;

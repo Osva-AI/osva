@@ -151,6 +151,7 @@ async function dispatchModelProfileRoute(
         modelProfileId: route.modelProfileId,
         provider: parsed.data.provider,
         model: parsed.data.model,
+        pricing: parsed.data.pricing,
       });
       sendJson(response, 201, toModelProfileVersionResource(created));
       return;
@@ -249,6 +250,7 @@ function toModelProfileVersionResource(version: ModelProfileVersion) {
     version: version.version,
     provider: version.provider,
     model: version.model,
+    pricing: version.pricing,
     createdAt: version.createdAt.toISOString(),
   });
 }

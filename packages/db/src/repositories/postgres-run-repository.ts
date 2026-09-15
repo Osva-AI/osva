@@ -3,25 +3,31 @@ import type {
   RunAttemptState,
   RunId,
   RunState,
+  RunStepId,
 } from "@osva/contracts";
 import {
   DomainInvariantError,
   LifecycleConflictError,
   RunAttemptNotFoundError,
   RunNotFoundError,
+  RunStepNotFoundError,
   assertLegalRunAttemptTransition,
   assertLegalRunTransition,
 } from "@osva/domain";
 import type {
+  FinalizeRunStepProps,
+  ListRunStepsQuery,
+  ListRunStepsResult,
   ListRunsQuery,
   ListRunsResult,
   Run,
   RunAttempt,
+  RunAttemptUsageSummary,
   RunLifecycleTransitionResult,
   RunRepository,
   RunStep,
 } from "@osva/domain";
-import { and, asc, desc, eq, lt, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt, or, sql, type SQL } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import {
@@ -29,7 +35,7 @@ import {
   runAttemptToRow,
 } from "../mappers/run-attempt-mapper.js";
 import { runFromRow, runToRow } from "../mappers/run-mapper.js";
-import { runStepToRow } from "../mappers/run-step-mapper.js";
+import { runStepFromRow, runStepToRow } from "../mappers/run-step-mapper.js";
 import { withMappedDatabaseErrors } from "../postgres-errors.js";
 import { runAttempts } from "../schema/run-attempts.js";
 import { runSteps } from "../schema/run-steps.js";
@@ -177,7 +183,13 @@ export class PostgresRunRepository implements RunRepository {
     return rows.map(runAttemptFromRow);
   }
 
-  async saveRunStep(step: RunStep): Promise<void> {
+  async insertRunningRunStep(step: RunStep): Promise<void> {
+    if (step.status !== "RUNNING") {
+      throw new DomainInvariantError(
+        "insertRunningRunStep requires a RUNNING RunStep.",
+      );
+    }
+
     const row = runStepToRow(step);
 
     await withMappedDatabaseErrors(
@@ -185,8 +197,134 @@ export class PostgresRunRepository implements RunRepository {
       {
         run_steps_run_attempt_same_run_fk:
           "RunStep must reference a RunAttempt that belongs to the same Run.",
+        run_steps_pkey: `A RunStep with id '${step.id}' already exists.`,
       },
     );
+  }
+
+  async finalizeRunStep(
+    runStepId: RunStepId,
+    finalize: FinalizeRunStepProps,
+  ): Promise<RunStep> {
+    const existing = await this.findRunStepById(runStepId);
+    if (existing === null) {
+      throw new RunStepNotFoundError(runStepId);
+    }
+
+    const finalized = existing.finalize(finalize);
+    const row = runStepToRow(finalized);
+
+    const [updated] = await this.database.db
+      .update(runSteps)
+      .set({
+        status: row.status,
+        completedAt: row.completedAt,
+        inputTokens: row.inputTokens,
+        outputTokens: row.outputTokens,
+        totalTokens: row.totalTokens,
+        cachedInputTokens: row.cachedInputTokens,
+        estimatedCostUsdMicros: row.estimatedCostUsdMicros,
+        errorCode: row.errorCode,
+      })
+      .where(and(eq(runSteps.id, runStepId), eq(runSteps.status, "RUNNING")))
+      .returning();
+
+    if (updated !== undefined) {
+      return runStepFromRow(updated);
+    }
+
+    const current = await this.findRunStepById(runStepId);
+    if (current === null) {
+      throw new RunStepNotFoundError(runStepId);
+    }
+
+    throw new LifecycleConflictError("runStep", runStepId, "RUNNING");
+  }
+
+  async findRunStepById(id: RunStepId): Promise<RunStep | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(runSteps)
+      .where(eq(runSteps.id, id))
+      .limit(1);
+
+    return row === undefined ? null : runStepFromRow(row);
+  }
+
+  async listRunSteps(query: ListRunStepsQuery): Promise<ListRunStepsResult> {
+    const conditions: SQL[] = [eq(runSteps.runAttemptId, query.runAttemptId)];
+
+    if (query.cursor !== undefined) {
+      const cursorCondition = or(
+        gt(runSteps.startedAt, query.cursor.startedAt),
+        and(
+          eq(runSteps.startedAt, query.cursor.startedAt),
+          gt(runSteps.id, query.cursor.id),
+        ),
+      );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
+    }
+
+    const rows = await this.database.db
+      .select()
+      .from(runSteps)
+      .where(and(...conditions))
+      .orderBy(asc(runSteps.startedAt), asc(runSteps.id))
+      .limit(query.limit + 1);
+
+    const hasMore = rows.length > query.limit;
+    const page = hasMore ? rows.slice(0, query.limit) : rows;
+    const last = page[page.length - 1];
+
+    return {
+      steps: page.map(runStepFromRow),
+      nextCursor:
+        hasMore && last !== undefined
+          ? {
+              startedAt: last.startedAt,
+              id: last.id as RunStepId,
+            }
+          : undefined,
+    };
+  }
+
+  async aggregateRunAttemptUsage(
+    runAttemptId: RunAttemptId,
+  ): Promise<RunAttemptUsageSummary> {
+    const [row] = await this.database.db
+      .select({
+        modelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED')`,
+        toolCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'TOOL' and ${runSteps.status} = 'SUCCEEDED')`,
+        inputTokens: sql<number>`coalesce(sum(${runSteps.inputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        outputTokens: sql<number>`coalesce(sum(${runSteps.outputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        totalTokens: sql<number>`coalesce(sum(${runSteps.totalTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        cachedInputTokens: sql<number>`coalesce(sum(${runSteps.cachedInputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        estimatedCostUsdMicros: sql<
+          number | null
+        >`sum(${runSteps.estimatedCostUsdMicros}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is not null)`,
+        pricedModelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is not null)`,
+        unpricedModelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is null)`,
+      })
+      .from(runSteps)
+      .where(eq(runSteps.runAttemptId, runAttemptId));
+
+    return {
+      modelCalls: Number(row?.modelCalls ?? 0),
+      toolCalls: Number(row?.toolCalls ?? 0),
+      inputTokens: Number(row?.inputTokens ?? 0),
+      outputTokens: Number(row?.outputTokens ?? 0),
+      totalTokens: Number(row?.totalTokens ?? 0),
+      cachedInputTokens: Number(row?.cachedInputTokens ?? 0),
+      estimatedCostUsdMicros:
+        row?.estimatedCostUsdMicros === null ||
+        row?.estimatedCostUsdMicros === undefined
+          ? null
+          : Number(row.estimatedCostUsdMicros),
+      pricedModelCalls: Number(row?.pricedModelCalls ?? 0),
+      unpricedModelCalls: Number(row?.unpricedModelCalls ?? 0),
+    };
   }
 
   async transitionRun(expectedStatus: RunState, next: Run): Promise<Run> {

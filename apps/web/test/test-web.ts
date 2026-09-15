@@ -1,6 +1,7 @@
 import type { WorkspaceId } from "@osva/contracts";
 import {
   MemoryAgentRepository,
+  MemoryEvaluationRepository,
   MemoryJobQueue,
   MemoryModelProfileRepository,
   MemoryToolRepository,
@@ -10,8 +11,10 @@ import {
 import {
   Workspace,
   createAgentApplication,
+  createEvaluationApplication,
   createModelProfileApplication,
   createRunApplication,
+  createRunObservabilityApplication,
   createToolApplication,
 } from "@osva/domain";
 import { CreateRun } from "@osva/orchestration";
@@ -82,6 +85,15 @@ export async function createTestWebApplication(options?: {
       ids,
     }),
     runs: runServices,
+    runObservability: {
+      observability: createRunObservabilityApplication({ runs }),
+      evaluations: createEvaluationApplication({
+        runs,
+        evaluations: new MemoryEvaluationRepository(),
+        clock,
+        ids,
+      }),
+    },
   });
 
   return { server, workspaces, agents, modelProfiles, tools, runs, queue };

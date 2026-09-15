@@ -13,6 +13,7 @@ import type {
   ModelGatewayGenerateTextOptions,
   ModelProviderAdapter,
 } from "./provider-adapter.js";
+import type { ProviderGenerateTextResult } from "./usage.js";
 
 export interface ModelGatewayDependencies {
   readonly modelProfiles: ModelProfileRepository;
@@ -35,6 +36,14 @@ export class ModelGateway implements ModelGatewayPort {
     request: GenerateTextRequest,
     options?: ModelGatewayGenerateTextOptions,
   ): Promise<GenerateTextResult> {
+    const outcome = await this.generateTextOutcome(request, options);
+    return { text: outcome.text };
+  }
+
+  async generateTextOutcome(
+    request: GenerateTextRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): Promise<ProviderGenerateTextResult> {
     const parsed = generateTextInputSchema.safeParse({
       messages: request.messages,
       maxOutputTokens: request.maxOutputTokens,

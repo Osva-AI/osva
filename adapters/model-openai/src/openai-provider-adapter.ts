@@ -1,12 +1,17 @@
-import type { GenerateTextResult, ModelTextMessage } from "@osva/contracts";
+import type { ModelTextMessage } from "@osva/contracts";
 import { MODEL_ERROR_CODES } from "@osva/contracts";
 import {
   ModelGatewayError,
   type ModelProviderAdapter,
+  type NormalizedModelUsage,
+  type ProviderGenerateTextResult,
   type ResolvedProviderGenerateTextRequest,
 } from "@osva/model-gateway";
 import OpenAI from "openai";
-import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
+import type {
+  ResponseCreateParamsNonStreaming,
+  ResponseUsage,
+} from "openai/resources/responses/responses";
 
 /**
  * Official OpenAI Node SDK default maxRetries is 2. Those retries stay inside
@@ -38,14 +43,17 @@ export class OpenAIProviderAdapter implements ModelProviderAdapter {
 
   async generateText(
     request: ResolvedProviderGenerateTextRequest,
-  ): Promise<GenerateTextResult> {
+  ): Promise<ProviderGenerateTextResult> {
     const params = toResponsesCreateParams(request);
 
     try {
       const response = await this.client.responses.create(params, {
         signal: request.signal,
       });
-      return normalizeOutputText(response.output_text);
+      return {
+        text: normalizeOutputText(response.output_text),
+        usage: normalizeUsage(response.usage),
+      };
     } catch (error) {
       throw mapOpenAIError(error);
     }
@@ -92,9 +100,7 @@ function toResponseInputMessage(message: ModelTextMessage): {
   };
 }
 
-function normalizeOutputText(outputText: string | null | undefined): {
-  readonly text: string;
-} {
+function normalizeOutputText(outputText: string | null | undefined): string {
   if (typeof outputText !== "string" || outputText.trim().length === 0) {
     throw new ModelGatewayError(
       MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
@@ -102,7 +108,25 @@ function normalizeOutputText(outputText: string | null | undefined): {
     );
   }
 
-  return { text: outputText };
+  return outputText;
+}
+
+function normalizeUsage(
+  usage: ResponseUsage | undefined,
+): NormalizedModelUsage | undefined {
+  if (usage === undefined) {
+    return undefined;
+  }
+
+  return {
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    totalTokens: usage.total_tokens,
+    cachedInputTokens:
+      usage.input_tokens_details.cached_tokens > 0
+        ? usage.input_tokens_details.cached_tokens
+        : undefined,
+  };
 }
 
 function mapOpenAIError(error: unknown): ModelGatewayError {

@@ -2,11 +2,13 @@ import { sql } from "drizzle-orm";
 import {
   check,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
+import type { ModelProfileVersionPricing } from "@osva/contracts";
 
 import { modelProfiles } from "./model-profiles.js";
 import { sqlTextInList } from "./sql.js";
@@ -22,6 +24,7 @@ export const modelProfileVersions = pgTable(
     version: integer("version").notNull(),
     provider: text("provider").notNull(),
     model: text("model").notNull(),
+    pricing: jsonb("pricing").$type<ModelProfileVersionPricing>(),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",

@@ -1,14 +1,21 @@
 import type {
   ModelProfileId,
   ModelProfileVersionId,
+  ModelProfileVersionPricing,
   ModelProvider,
 } from "@osva/contracts";
-import { isModelProvider } from "@osva/contracts";
+import {
+  isModelPricingCurrency,
+  isModelProvider,
+  MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS,
+} from "@osva/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import {
   copyInstant,
+  deepFreeze,
   requireNonEmptyString,
+  requireNonNegativeInteger,
   requirePositiveInteger,
 } from "./internals.js";
 
@@ -18,6 +25,7 @@ export interface ModelProfileVersionProps {
   readonly version: number;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly pricing?: ModelProfileVersionPricing;
   readonly createdAt: Date;
 }
 
@@ -27,6 +35,7 @@ export class ModelProfileVersion {
   readonly version: number;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly pricing: ModelProfileVersionPricing | undefined;
   readonly createdAt: Date;
 
   private constructor(props: ModelProfileVersionProps) {
@@ -35,6 +44,7 @@ export class ModelProfileVersion {
     this.version = props.version;
     this.provider = props.provider;
     this.model = props.model;
+    this.pricing = props.pricing;
     this.createdAt = props.createdAt;
   }
 
@@ -55,6 +65,9 @@ export class ModelProfileVersion {
       );
     }
 
+    const pricing =
+      props.pricing === undefined ? undefined : validatePricing(props.pricing);
+
     return Object.freeze(
       new ModelProfileVersion({
         id: props.id,
@@ -65,8 +78,45 @@ export class ModelProfileVersion {
         ),
         provider: props.provider,
         model: requireNonEmptyString(props.model, "ModelProfileVersion.model"),
+        pricing,
         createdAt: copyInstant(props.createdAt),
       }),
     );
   }
+}
+
+function validatePricing(
+  pricing: ModelProfileVersionPricing,
+): ModelProfileVersionPricing {
+  if (!isModelPricingCurrency(pricing.currency)) {
+    throw new DomainInvariantError(
+      "ModelProfileVersion.pricing.currency must be USD.",
+    );
+  }
+
+  const inputUsdMicrosPerMillionTokens = requireNonNegativeInteger(
+    pricing.inputUsdMicrosPerMillionTokens,
+    "ModelProfileVersion.pricing.inputUsdMicrosPerMillionTokens",
+  );
+  const outputUsdMicrosPerMillionTokens = requireNonNegativeInteger(
+    pricing.outputUsdMicrosPerMillionTokens,
+    "ModelProfileVersion.pricing.outputUsdMicrosPerMillionTokens",
+  );
+
+  if (
+    inputUsdMicrosPerMillionTokens >
+      MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS ||
+    outputUsdMicrosPerMillionTokens >
+      MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS
+  ) {
+    throw new DomainInvariantError(
+      "ModelProfileVersion.pricing rates exceed supported bounds.",
+    );
+  }
+
+  return deepFreeze({
+    currency: pricing.currency,
+    inputUsdMicrosPerMillionTokens,
+    outputUsdMicrosPerMillionTokens,
+  });
 }

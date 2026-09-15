@@ -13,3 +13,7 @@ export type {
   ModelProviderAdapter,
   ResolvedProviderGenerateTextRequest,
 } from "./provider-adapter.js";
+export type {
+  NormalizedModelUsage,
+  ProviderGenerateTextResult,
+} from "./usage.js";

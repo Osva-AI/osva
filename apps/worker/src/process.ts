@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
   OpenAIProviderAdapter,
@@ -18,6 +20,7 @@ import {
   type Database,
 } from "@osva/db";
 import { ModelGateway } from "@osva/model-gateway";
+import { createRunStepRecorder } from "@osva/observability";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
 import { ExecuteRunAttempt } from "@osva/orchestration";
 
@@ -84,6 +87,16 @@ export function createWorkerProcess(
       }
     },
     onStart: async () => {
+      const modelProfiles = new PostgresModelProfileRepository(database);
+      const runsRepository = new PostgresRunRepository(database);
+      const modelGateway = new ModelGateway({
+        modelProfiles,
+        providers: composeOpenAIProviders(env, dependencies.openai),
+      });
+      const toolGateway = new ToolGateway({
+        tools: new PostgresToolRepository(database),
+        policy: new DefaultToolPolicy(),
+      });
       runtime =
         injectedRuntime ??
         new TrustedTypeScriptRuntimeAdapter({
@@ -92,17 +105,33 @@ export function createWorkerProcess(
             info: logEvent,
             error: logError,
           },
-          modelGateway: new ModelGateway({
-            modelProfiles: new PostgresModelProfileRepository(database),
-            providers: composeOpenAIProviders(env, dependencies.openai),
-          }),
-          toolGateway: new ToolGateway({
-            tools: new PostgresToolRepository(database),
-            policy: new DefaultToolPolicy(),
-          }),
+          modelGateway,
+          toolGateway,
+          createScopedModelGateway: (execution) =>
+            createRunStepRecorder(execution, {
+              runs: runsRepository,
+              modelProfiles,
+              clock,
+              ids: { createId: () => randomUUID() },
+              logger: {
+                info: logEvent,
+                error: logError,
+              },
+            }).wrapModelGateway(modelGateway),
+          createScopedToolGateway: (execution) =>
+            createRunStepRecorder(execution, {
+              runs: runsRepository,
+              modelProfiles,
+              clock,
+              ids: { createId: () => randomUUID() },
+              logger: {
+                info: logEvent,
+                error: logError,
+              },
+            }).wrapToolGateway(toolGateway),
         });
       const executeRunAttempt = new ExecuteRunAttempt({
-        runs: new PostgresRunRepository(database),
+        runs: runsRepository,
         agents: new PostgresAgentRepository(database),
         runtime,
       });

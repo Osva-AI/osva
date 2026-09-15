@@ -132,7 +132,15 @@ describe("model gateway end-to-end", () => {
         `${origin}/v1/model-profiles/${modelProfileId}/versions`,
         {
           method: "POST",
-          body: { provider: "OPENAI", model: "gpt-test-snapshot" },
+          body: {
+            provider: "OPENAI",
+            model: "gpt-test-snapshot",
+            pricing: {
+              currency: "USD",
+              inputUsdMicrosPerMillionTokens: 1_000_000,
+              outputUsdMicrosPerMillionTokens: 2_000_000,
+            },
+          },
         },
       );
       expect(version.status).toBe(201);
@@ -244,12 +252,74 @@ describe("model gateway end-to-end", () => {
         ).effectiveBindings.modelProfileVersionBindings.primary,
       ).toBe(modelProfileVersionId);
 
+      const steps = await fetchJson(
+        `${origin}/v1/runs/${runId}/attempts/${runAttemptId}/steps`,
+      );
+      expect(steps.status).toBe(200);
+      const stepList = (steps.body as { steps: Array<Record<string, unknown>> })
+        .steps;
+      expect(stepList).toHaveLength(1);
+      expect(stepList[0]).toMatchObject({
+        kind: "MODEL",
+        bindingName: "primary",
+        status: "SUCCEEDED",
+        modelProfileVersionId,
+        inputTokens: 120,
+        outputTokens: 15,
+        totalTokens: 135,
+        cachedInputTokens: 8,
+        estimatedCostUsdMicros: 150,
+      });
+      expect(stepList[0]).not.toHaveProperty("messages");
+      expect(stepList[0]).not.toHaveProperty("text");
+
+      const usage = await fetchJson(
+        `${origin}/v1/runs/${runId}/attempts/${runAttemptId}/usage`,
+      );
+      expect(usage.status).toBe(200);
+      expect(usage.body).toEqual({
+        modelCalls: 1,
+        toolCalls: 0,
+        inputTokens: 120,
+        outputTokens: 15,
+        totalTokens: 135,
+        cachedInputTokens: 8,
+        estimatedCostUsdMicros: 150,
+        pricedModelCalls: 1,
+        unpricedModelCalls: 0,
+      });
+
+      const evaluation = await fetchJson(
+        `${origin}/v1/runs/${runId}/attempts/${runAttemptId}/evaluations`,
+        {
+          method: "POST",
+          body: {
+            evaluator: {
+              type: "JSON_EXACT_MATCH",
+              expected: { text: "normalized text from fake openai" },
+            },
+          },
+        },
+      );
+      expect(evaluation.status).toBe(201);
+      expect(evaluation.body).toMatchObject({
+        evaluatorType: "JSON_EXACT_MATCH",
+        passed: true,
+        score: 1,
+      });
+
       const producer = new BullMqJobQueue({ url: valkey.url });
       try {
         await producer.enqueue(runAttemptId);
         await delay(500);
         expect(fakeOpenAI.requests).toHaveLength(1);
         expect(await inspector.countActiveJobs()).toBe(0);
+        const stepsAfterRedelivery = await fetchJson(
+          `${origin}/v1/runs/${runId}/attempts/${runAttemptId}/steps`,
+        );
+        expect(
+          (stepsAfterRedelivery.body as { steps: unknown[] }).steps,
+        ).toHaveLength(1);
       } finally {
         await producer.shutdown();
       }

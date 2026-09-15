@@ -1,4 +1,6 @@
-import type { GenerateTextResult, ModelTextMessage } from "@osva/contracts";
+import type { ModelTextMessage } from "@osva/contracts";
+
+import type { ProviderGenerateTextResult } from "./usage.js";
 
 /**
  * Provider-neutral request after ModelGateway has loaded the immutable
@@ -23,5 +25,5 @@ export interface ModelGatewayGenerateTextOptions {
 export interface ModelProviderAdapter {
   generateText(
     request: ResolvedProviderGenerateTextRequest,
-  ): Promise<GenerateTextResult>;
+  ): Promise<ProviderGenerateTextResult>;
 }
