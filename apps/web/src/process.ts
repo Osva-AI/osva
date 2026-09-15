@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
+import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
   createDatabase,
   PostgresAgentRepository,
@@ -11,10 +12,9 @@ import { createAgentApplication, createRunApplication } from "@osva/domain";
 import { CreateRun } from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
-import { DiscardingJobQueue } from "./discarding-job-queue.js";
 import { createWebApplication } from "./http.js";
 import { logEvent } from "./log.js";
-import { postgresReadinessCheck } from "./readiness.js";
+import { postgresAndValkeyReadinessCheck } from "./readiness.js";
 import { closeHttpServer, listenHttpServer } from "./server.js";
 
 export interface WebProcess {
@@ -29,16 +29,19 @@ export function createWebProcess(
   databaseFactory: (connectionString: string) => Database = (
     connectionString,
   ) => createDatabase({ connectionString }),
+  queueFactory: (valkeyUrl: string) => PingableJobQueue = (valkeyUrl) =>
+    new BullMqJobQueue({ url: valkeyUrl }),
 ): WebProcess {
   const config = loadWebConfig(env);
   const database = databaseFactory(config.databaseUrl);
+  const queue = queueFactory(config.valkeyUrl);
   const agents = new PostgresAgentRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
   const runs = new PostgresRunRepository(database);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
   const server = createWebApplication({
-    readinessCheck: postgresReadinessCheck(database),
+    readinessCheck: postgresAndValkeyReadinessCheck(database, queue),
     agents: createAgentApplication({
       agents,
       workspaces,
@@ -50,7 +53,7 @@ export function createWebProcess(
       createRun: new CreateRun({
         runs,
         agents,
-        queue: new DiscardingJobQueue(),
+        queue,
       }),
       clock,
       ids,
@@ -75,6 +78,7 @@ export function createWebProcess(
       stopping = (async () => {
         logEvent("web.shutting_down");
         await closeHttpServer(server);
+        await queue.shutdown();
         await database.close();
         logEvent("web.shutdown_complete");
       })();

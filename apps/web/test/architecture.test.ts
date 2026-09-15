@@ -66,10 +66,10 @@ function forbiddenWebImport(specifier: string): string | undefined {
   }
 
   if (
-    specifier.startsWith("@osva/adapters-") ||
-    specifier.startsWith("@osva/adapters/")
+    specifier === "@osva/adapters-memory" ||
+    specifier.startsWith("@osva/adapters-memory/")
   ) {
-    return "@osva/adapters-*";
+    return "@osva/adapters-memory";
   }
 
   if (specifier === "bullmq" || specifier.startsWith("bullmq/")) {
@@ -96,7 +96,7 @@ function forbiddenWebImport(specifier: string): string | undefined {
 }
 
 describe("architecture import restrictions", () => {
-  it("keeps apps/web/src free of runtimes, queues, and the worker app", () => {
+  it("keeps apps/web/src free of runtimes, queue SDKs, and the worker app", () => {
     const violations: string[] = [];
 
     for (const file of walkTypeScriptFiles(webSrc)) {

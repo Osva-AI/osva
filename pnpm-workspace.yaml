@@ -16,6 +16,7 @@ catalog:
 onlyBuiltDependencies:
   - esbuild
   - turbo
+  - msgpackr-extract
 
 minimumReleaseAgeExclude:
   - "@turbo/darwin-64@2.10.13"
@@ -29,3 +30,4 @@ minimumReleaseAgeExclude:
 
 allowBuilds:
   esbuild: true
+  msgpackr-extract: true

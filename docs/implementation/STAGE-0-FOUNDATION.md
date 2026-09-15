@@ -106,16 +106,16 @@ pnpm dev:worker
 ```
 
 `pnpm dev:web` and `pnpm dev:worker` watch compiled `dist/` output. Export
-`OSVA_DATABASE_URL` (and optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`) from the
-environment; processes do not auto-load `.env`.
+`OSVA_DATABASE_URL`, `OSVA_VALKEY_URL`, and optional `OSVA_WEB_HOST` /
+`OSVA_WEB_PORT` from the environment; processes do not auto-load `.env`.
 
 Do not apply migrations on process startup. Migrations remain explicit.
 
 ## Local infrastructure, CI, and acceptance (Slice 0.8)
 
-Root `docker-compose.yml` runs PostgreSQL 17 and Valkey 8. There are no web or
-worker containers in Stage 0. Valkey is present only so the local topology is
-ready for Stage 1; application code must not connect to it.
+Root `docker-compose.yml` runs PostgreSQL 17 and Valkey 8.1.10. There are no web
+or worker containers. Slice 0.8 added Valkey so the topology was ready for Stage
+1; Slice 1.3 is when web and worker began connecting to it.
 
 Contributor sequence:
 
@@ -143,9 +143,9 @@ available; they do not use a GitHub Actions PostgreSQL service.
 
 A separate `compose-smoke` job starts the repository Compose topology with
 `pnpm infra:up`, applies committed migrations with `pnpm db:migrate`, and
-checks web `/health` and `/ready` plus idle worker start/shutdown against that
-PostgreSQL. Valkey is asserted healthy as infrastructure only; Stage 0
-application code does not connect to it.
+checks web `/health` and `/ready` plus worker start/shutdown. Slice 1.3 extends
+that job so applications use `OSVA_VALKEY_URL` and prove a BullMQ enqueue
+against Compose Valkey.
 
 See `README.md` for the concise contributor setup.
 

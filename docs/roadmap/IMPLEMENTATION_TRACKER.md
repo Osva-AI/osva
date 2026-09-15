@@ -27,4 +27,5 @@ green CI run of the latest commit.
 
 - ✅ 1.1 Agent Registry and Version Management
 - ✅ 1.2 Run Lifecycle API and Persistence Hardening
-- ⬜ 1.3 and later slices are out of scope for this entry
+- ✅ 1.3 BullMQ + Valkey Queue Adapter and ExecutionWorker
+- ⬜ 1.4 and later slices are out of scope for this entry

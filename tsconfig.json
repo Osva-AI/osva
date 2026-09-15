@@ -9,6 +9,7 @@
     { "path": "./packages/db" },
     { "path": "./packages/orchestration" },
     { "path": "./packages/runtime-core" },
-    { "path": "./adapters/memory" }
+    { "path": "./adapters/memory" },
+    { "path": "./adapters/bullmq" }
   ]
 }

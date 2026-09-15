@@ -76,6 +76,7 @@ jobs:
     timeout-minutes: 15
     env:
       OSVA_DATABASE_URL: postgres://osva:osva@127.0.0.1:5432/osva
+      OSVA_VALKEY_URL: redis://127.0.0.1:6379
       OSVA_WEB_HOST: 127.0.0.1
       OSVA_WEB_PORT: 3000
     steps:
@@ -237,7 +238,9 @@ jobs:
             echo "worker exited after logging startup" >&2
             exit 1
           fi
-          echo "worker remained alive after PostgreSQL readiness"
+          echo "worker remained alive after PostgreSQL and Valkey readiness"
+
+          node adapters/bullmq/scripts/compose-enqueue-smoke.mjs
 
           stop_gracefully "$WORKER_PID" "worker"
           stop_gracefully "$WEB_PID" "web"

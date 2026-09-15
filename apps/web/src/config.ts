@@ -1,5 +1,6 @@
 export interface WebConfig {
   readonly databaseUrl: string;
+  readonly valkeyUrl: string;
   readonly host: string;
   readonly port: number;
 }
@@ -9,10 +10,11 @@ const DEFAULT_PORT = 3000;
 
 export function loadWebConfig(env: NodeJS.ProcessEnv = process.env): WebConfig {
   const databaseUrl = readRequired(env.OSVA_DATABASE_URL, "OSVA_DATABASE_URL");
+  const valkeyUrl = readRequired(env.OSVA_VALKEY_URL, "OSVA_VALKEY_URL");
   const host = readOptional(env.OSVA_WEB_HOST) ?? DEFAULT_HOST;
   const port = parsePort(env.OSVA_WEB_PORT, DEFAULT_PORT);
 
-  return { databaseUrl, host, port };
+  return { databaseUrl, valkeyUrl, host, port };
 }
 
 function readRequired(value: string | undefined, name: string): string {

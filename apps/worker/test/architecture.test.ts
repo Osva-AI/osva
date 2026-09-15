@@ -55,13 +55,6 @@ function toRepoPath(filePath: string): string {
 
 function forbiddenWorkerImport(specifier: string): string | undefined {
   if (
-    specifier === "@osva/orchestration" ||
-    specifier.startsWith("@osva/orchestration/")
-  ) {
-    return "@osva/orchestration";
-  }
-
-  if (
     specifier === "@osva/runtime-core" ||
     specifier.startsWith("@osva/runtime-core/")
   ) {
@@ -73,10 +66,10 @@ function forbiddenWorkerImport(specifier: string): string | undefined {
   }
 
   if (
-    specifier.startsWith("@osva/adapters-") ||
-    specifier.startsWith("@osva/adapters/")
+    specifier === "@osva/adapters-memory" ||
+    specifier.startsWith("@osva/adapters-memory/")
   ) {
-    return "@osva/adapters-*";
+    return "@osva/adapters-memory";
   }
 
   if (specifier === "bullmq" || specifier.startsWith("bullmq/")) {
@@ -103,7 +96,7 @@ function forbiddenWorkerImport(specifier: string): string | undefined {
 }
 
 describe("architecture import restrictions", () => {
-  it("keeps apps/worker/src free of orchestration, queues, and the web app", () => {
+  it("keeps apps/worker/src free of queue SDKs, test runtimes, and the web app", () => {
     const violations: string[] = [];
 
     for (const file of walkTypeScriptFiles(workerSrc)) {

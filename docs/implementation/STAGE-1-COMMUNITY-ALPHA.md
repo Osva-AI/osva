@@ -32,8 +32,17 @@ request an AgentVersion; OSVA resolves the current Stage-0-compatible
 initial RunAttempt are created atomically. Lifecycle updates use expected-state
 compare-and-set semantics and cannot overwrite immutable identity, bindings, or
 input. Runs are listed with opaque cursor pagination. Queue payload remains
-exactly `{ runAttemptId }`. This slice does not introduce BullMQ, Valkey, or an
-ExecutionWorker.
+exactly `{ runAttemptId }`.
+
+Slice 1.3 replaces production `DiscardingJobQueue` with `@osva/adapters-bullmq`,
+a BullMQ `JobQueue` on Valkey. `CreateRun` enqueues `{ runAttemptId }` onto the
+`osva-execution` queue. `apps/worker` is the ExecutionWorker composition root:
+it waits for PostgreSQL and Valkey, then consumes that queue and delegates to
+`ExecuteRunAttempt`. BullMQ job IDs and job names are infrastructure-only.
+PostgreSQL remains the canonical Run/RunAttempt lifecycle store. This slice
+does not introduce the Trusted TypeScript Runtime; production consumption of
+agent execution waits for a composed `RuntimeAdapter` in Slice 1.4. Integration
+tests inject the existing FakeRuntimeAdapter.
 
 ## Quality
 

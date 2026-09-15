@@ -46,14 +46,27 @@ describe("createWorkerApplication", () => {
     expect(closeCalls).toBe(1);
   });
 
-  it("does not expose an execution hook or process Runs", () => {
+  it("exposes only start, status, and stop on the process shell", () => {
     const worker = createWorkerApplication({
       readinessCheck: async () => undefined,
     });
 
     expect(worker).not.toHaveProperty("execute");
-    expect(worker).not.toHaveProperty("consume");
     expect(Object.keys(worker).sort()).toEqual(["start", "status", "stop"]);
+  });
+
+  it("runs onStart after readiness succeeds", async () => {
+    let started = false;
+    const worker = createWorkerApplication({
+      readinessCheck: async () => undefined,
+      onStart: async () => {
+        started = true;
+      },
+    });
+
+    await worker.start();
+    expect(started).toBe(true);
+    expect(worker.status()).toBe("running");
   });
 });
 
@@ -62,5 +75,13 @@ describe("loadWorkerConfig", () => {
     expect(() => loadWorkerConfig({})).toThrow(
       "OSVA_DATABASE_URL is required.",
     );
+  });
+
+  it("requires OSVA_VALKEY_URL", () => {
+    expect(() =>
+      loadWorkerConfig({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+      }),
+    ).toThrow("OSVA_VALKEY_URL is required.");
   });
 });

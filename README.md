@@ -6,7 +6,9 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** pre-alpha. Stage 1 Slice 1.2 exposes the control-plane Run lifecycle API on the Stage 0 foundation.
+> **Status:** pre-alpha. Stage 1 Slice 1.3 replaces the fake production queue
+> with BullMQ on Valkey and turns `apps/worker` into the ExecutionWorker
+> composition root. Trusted TypeScript Runtime remains Slice 1.4.
 
 ## Why OSVA?
 
@@ -132,8 +134,9 @@ The Compose credentials (`osva` / `osva` / `osva`) are local-development default
 only. They are not production-safe.
 
 If Docker is unavailable, `pnpm test:integration` can still use installed
-PostgreSQL 17 binaries or `OSVA_TEST_DATABASE_URL`. That is a test fallback, not
-the documented contributor path.
+PostgreSQL 17 binaries or `OSVA_TEST_DATABASE_URL`, and a real Valkey URL via
+`OSVA_TEST_VALKEY_URL`. Those are test fallbacks, not the documented contributor
+path.
 
 ### Setup
 
@@ -145,7 +148,11 @@ pnpm install
 ```
 
 Copy `.env.example` to `.env` as a reference, or set the same variables in the
-environment. Stage 0 processes do not auto-load `.env`.
+environment. Processes do not auto-load `.env`. Required variables:
+
+- `OSVA_DATABASE_URL`
+- `OSVA_VALKEY_URL`
+- optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`
 
 Then start infrastructure, apply committed migrations, and run the apps:
 
@@ -160,7 +167,7 @@ pnpm dev:worker
 Required sequence:
 
 ```text
-start PostgreSQL
+start PostgreSQL and Valkey
     ↓
 apply committed migrations
     ↓
@@ -172,13 +179,13 @@ as the normal workflow. The committed files under `packages/db/drizzle/` are
 authoritative. Generate new SQL with `pnpm --filter @osva/db db:generate` and
 commit the result.
 
-`pnpm infra:up` also starts Valkey so the local topology is ready for Stage 1.
-Stage 0 application code does not connect to Valkey.
+`pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web and worker both
+require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
 
 ### Endpoints and worker behavior
 
-- `GET /health` — process liveness. Does not require PostgreSQL.
-- `GET /ready` — `200` when PostgreSQL is reachable, `503` otherwise.
+- `GET /health` — process liveness. Does not require PostgreSQL or Valkey.
+- `GET /ready` — `200` when PostgreSQL and Valkey are reachable, `503` otherwise.
 
 Agent Registry:
 
@@ -209,8 +216,11 @@ AgentVersion. Run list query parameters are `limit` (default 50, max 100),
 `cursor`, `agentId`, `agentVersionId`, and `status`. There is no public Run
 or RunAttempt mutation API.
 
-The Stage 0 worker is intentionally idle after a successful PostgreSQL check.
-Cross-process Run execution starts in Stage 1.3 with a real `JobQueue` adapter.
+The worker is the ExecutionWorker composition root. After PostgreSQL and Valkey
+are reachable it starts a BullMQ consumer when a `RuntimeAdapter` is composed.
+Production does not attach a Trusted TypeScript Runtime in this slice; queue
+messages wait in Valkey until Slice 1.4. `CreateRun` still enqueues
+`{ runAttemptId }` through BullMQ.
 
 ### Quality commands
 

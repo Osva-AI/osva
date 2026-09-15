@@ -40,6 +40,13 @@ Keep payload minimal:
 
 Execution state is loaded from OSVA storage.
 
+## Production adapter (Stage 1.3)
+
+`@osva/adapters-bullmq` is the production `JobQueue`. It stores only
+`{ runAttemptId }` on the `osva-execution` queue. BullMQ job IDs are
+infrastructure details and are not OSVA identity. `MemoryJobQueue` remains the
+in-process test adapter.
+
 ## Required adapter tests
 
 - enqueue/consume;

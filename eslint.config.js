@@ -106,6 +106,58 @@ export default tseslint.config(
     },
   },
   {
+    files: ["adapters/bullmq/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message:
+                "adapters/bullmq cannot import domain types; JobQueue stays in contracts.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "adapters/bullmq cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "adapters/bullmq cannot import runtime-core.",
+            },
+            {
+              name: "@osva/db",
+              message: "adapters/bullmq cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "adapters/bullmq cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "adapters/bullmq cannot import apps.",
+            },
+            {
+              name: "@osva/adapters-memory",
+              message:
+                "adapters/bullmq production code cannot import test adapters.",
+            },
+            {
+              name: "openai",
+              message: "adapters/bullmq cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message: "adapters/bullmq cannot import provider SDKs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["adapters/memory/**/*.ts"],
     rules: {
       "no-restricted-imports": [
@@ -395,34 +447,35 @@ export default tseslint.config(
           paths: [
             {
               name: "@osva/runtime-core",
-              message: "Stage 0 process shells do not execute Agent runtimes.",
+              message: "Stage 1 process shells do not execute Agent runtimes.",
             },
             {
               name: "bullmq",
-              message: "Stage 0 process shells cannot import queue libraries.",
+              message:
+                "Process shells must use @osva/adapters-bullmq, not BullMQ directly.",
             },
             {
               name: "ioredis",
-              message: "Stage 0 process shells cannot import Redis clients.",
+              message: "Process shells cannot import Redis/Valkey clients.",
             },
             {
               name: "redis",
-              message: "Stage 0 process shells cannot import Redis clients.",
+              message: "Process shells cannot import Redis clients.",
             },
             {
               name: "openai",
-              message: "Stage 0 process shells cannot import provider SDKs.",
+              message: "Process shells cannot import provider SDKs.",
             },
           ],
           patterns: [
             {
-              group: ["@osva/adapters-*"],
+              group: ["@osva/adapters-memory", "@osva/adapters-memory/*"],
               message:
-                "Do not wire MemoryJobQueue or other adapters across web and worker.",
+                "Do not wire MemoryJobQueue or FakeRuntimeAdapter into production process shells.",
             },
             {
               group: ["@anthropic-ai/*"],
-              message: "Stage 0 process shells cannot import provider SDKs.",
+              message: "Process shells cannot import provider SDKs.",
             },
           ],
         },
@@ -455,11 +508,6 @@ export default tseslint.config(
             {
               name: "@osva/web",
               message: "apps/worker cannot import the web process.",
-            },
-            {
-              name: "@osva/orchestration",
-              message:
-                "apps/worker cannot import orchestration. The control plane owns CreateRun.",
             },
           ],
         },

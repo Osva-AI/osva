@@ -1,7 +1,7 @@
 # Local development topology only.
 # Credentials and published ports are not production-safe.
-# Stage 0 application code connects to PostgreSQL, not Valkey.
-# Valkey is included so the local topology is ready for Stage 1 JobQueue work.
+# Web and worker processes connect to PostgreSQL and Valkey.
+# Application containers are not part of this Compose file; run them with pnpm.
 
 services:
   postgres:
@@ -23,7 +23,7 @@ services:
       start_period: 10s
 
   valkey:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:8.1.10-alpine
     restart: unless-stopped
     command: ["valkey-server", "--appendonly", "yes"]
     ports:

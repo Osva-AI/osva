@@ -11,6 +11,8 @@
   "references": [
     { "path": "../../packages/contracts" },
     { "path": "../../packages/domain" },
-    { "path": "../../packages/db" }
+    { "path": "../../packages/db" },
+    { "path": "../../packages/orchestration" },
+    { "path": "../../adapters/bullmq" }
   ]
 }
