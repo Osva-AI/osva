@@ -2,6 +2,7 @@ import type {
   AgentId,
   AgentVersionId,
   ModelProfileVersionId,
+  ToolVersionId,
   RunId,
   RunState,
   WorkspaceId,
@@ -22,6 +23,7 @@ export function runToRow(run: Run) {
     agentVersionId: run.effectiveBindings.agentVersionId,
     modelProfileVersionBindings:
       run.effectiveBindings.modelProfileVersionBindings,
+    toolVersionBindings: run.effectiveBindings.toolVersionBindings,
     input: run.input,
     idempotencyKey: run.idempotencyKey ?? null,
     createdAt: run.createdAt,
@@ -40,6 +42,7 @@ export function runFromRow(row: RunRow): Run {
       modelProfileVersionBindings: toModelProfileVersionBindings(
         row.modelProfileVersionBindings,
       ),
+      toolVersionBindings: toToolVersionBindings(row.toolVersionBindings),
     }),
     input: row.input,
     createdAt: toDomainDate(row.createdAt),
@@ -67,6 +70,30 @@ function toModelProfileVersionBindings(
     }
 
     bindings[key] = binding as ModelProfileVersionId;
+  }
+
+  return bindings;
+}
+
+function toToolVersionBindings(
+  value: unknown,
+): Readonly<Record<string, ToolVersionId>> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new DomainInvariantError(
+      "Persisted toolVersionBindings must be a map.",
+    );
+  }
+
+  const bindings: Record<string, ToolVersionId> = {};
+
+  for (const [key, binding] of Object.entries(value)) {
+    if (typeof binding !== "string" || binding.length === 0) {
+      throw new DomainInvariantError(
+        "Persisted toolVersionBindings values must be non-empty strings.",
+      );
+    }
+
+    bindings[key] = binding as ToolVersionId;
   }
 
   return bindings;

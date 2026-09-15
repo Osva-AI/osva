@@ -12,6 +12,8 @@ export type {
   RunState,
   RunStepId,
   TerminalRunState,
+  ToolId,
+  ToolVersionId,
   WorkspaceId,
 } from "@osva/contracts";
 
@@ -28,14 +30,18 @@ export {
   DomainInvariantError,
   DuplicateAgentKeyError,
   DuplicateModelProfileKeyError,
+  DuplicateToolKeyError,
   InvalidAttemptSequenceError,
   InvalidModelBindingError,
+  InvalidToolBindingError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   InvalidSubsequentAttemptError,
   LifecycleConflictError,
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
+  ToolNotFoundError,
+  ToolVersionNotFoundError,
   RunAttemptNotFoundError,
   RunNotFoundError,
   WorkspaceNotFoundError,
@@ -46,11 +52,14 @@ export { Agent, type AgentProps } from "./agent.js";
 export { AgentVersion, type AgentVersionProps } from "./agent-version.js";
 export { Deployment, type DeploymentProps } from "./deployment.js";
 export { ModelProfile, type ModelProfileProps } from "./model-profile.js";
+export { Tool, type ToolProps } from "./tool.js";
 export {
   ModelProfileVersion,
   type ModelProfileVersionProps,
 } from "./model-profile-version.js";
+export { ToolVersion, type ToolVersionProps } from "./tool-version.js";
 export { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
+export { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 export {
   EffectiveRunBindings,
   type EffectiveRunBindingsProps,
@@ -95,10 +104,13 @@ export type {
   AgentRepository,
   AppendAgentVersionInput,
   AppendModelProfileVersionInput,
+  AppendToolVersionInput,
   ListRunsQuery,
   ListRunsResult,
   ModelProfileMetadataUpdate,
   ModelProfileRepository,
+  ToolMetadataUpdate,
+  ToolRepository,
   RunLifecycleTransitionResult,
   RunListCursor,
   RunRepository,
@@ -155,3 +167,22 @@ export {
   type ModelProfileApplicationIds,
   type UpdateModelProfileMetadataCommand,
 } from "./model-profile-application.js";
+
+export {
+  AppendToolVersion,
+  CreateTool,
+  GetTool,
+  GetToolVersion,
+  ListTools,
+  ListToolVersions,
+  UpdateToolMetadata,
+  createToolApplication,
+  type AppendToolVersionCommand,
+  type CreateToolCommand,
+  type GetToolVersionCommand,
+  type ToolApplication,
+  type ToolApplicationClock,
+  type ToolApplicationDependencies,
+  type ToolApplicationIds,
+  type UpdateToolMetadataCommand,
+} from "./tool-application.js";

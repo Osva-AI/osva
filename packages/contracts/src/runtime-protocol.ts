@@ -1,7 +1,7 @@
 import type { AgentId, AgentVersionId, RunAttemptId, RunId } from "./ids.js";
 import type { WorkspaceId } from "./ids.js";
 import type { AgentRuntime } from "./agent-manifest.js";
-import type { ModelProfileVersionId } from "./ids.js";
+import type { ModelProfileVersionId, ToolVersionId } from "./ids.js";
 import type { ToolGrant } from "./tool.js";
 
 export interface ExecutionRequest {
@@ -16,6 +16,7 @@ export interface ExecutionRequest {
   readonly modelProfileVersionBindings: Readonly<
     Record<string, ModelProfileVersionId>
   >;
+  readonly toolVersionBindings: Readonly<Record<string, ToolVersionId>>;
   readonly toolGrants: readonly ToolGrant[];
   readonly timeoutMs: number;
   readonly policyContext: Readonly<Record<string, unknown>>;

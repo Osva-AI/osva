@@ -34,6 +34,22 @@ export {
 } from "./model-profile-registry.js";
 
 export {
+  createToolRequestSchema,
+  createToolVersionRequestSchema,
+  toolListResourceSchema,
+  toolResourceSchema,
+  toolVersionListResourceSchema,
+  toolVersionResourceSchema,
+  updateToolRequestSchema,
+} from "./tool-registry.js";
+
+export {
+  internalToolImplementationIdSchema,
+  toolBindingNameSchema,
+  toolTypeSchema,
+} from "./tool-gateway.js";
+
+export {
   agentListResourceSchema,
   agentResourceSchema,
   agentVersionListResourceSchema,

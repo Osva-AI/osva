@@ -1,4 +1,4 @@
-import type { ModelProfileVersionId } from "./ids.js";
+import type { ModelProfileVersionId, ToolVersionId } from "./ids.js";
 import type { JsonSchemaRecord } from "./json-schema.js";
 
 export const AGENT_MANIFEST_SCHEMA_VERSION = "1" as const;
@@ -58,6 +58,10 @@ export interface AgentManifestModelBinding {
   readonly modelProfileVersionId: ModelProfileVersionId;
 }
 
+export interface AgentManifestToolBinding {
+  readonly toolVersionId: ToolVersionId;
+}
+
 /**
  * Executable contract of an AgentVersion.
  * The document has no plaintext-secret field; secret values are SecretReferences elsewhere.
@@ -76,4 +80,9 @@ export interface AgentManifestV1 {
    * on CreateRun. Binding names are identifiers, not provider model IDs.
    */
   readonly models?: Readonly<Record<string, AgentManifestModelBinding>>;
+  /**
+   * Optional logical tool bindings. Absent or empty maps freeze as `{}`
+   * on CreateRun. Binding names are identifiers, not implementation IDs.
+   */
+  readonly tools?: Readonly<Record<string, AgentManifestToolBinding>>;
 }

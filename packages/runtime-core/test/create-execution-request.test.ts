@@ -41,6 +41,7 @@ function createBindings(
       default: modelProfileVersionId,
       "tool.summarize": secondaryModelProfileVersionId,
     },
+    toolVersionBindings: {},
   });
 }
 
@@ -109,6 +110,7 @@ describe("createExecutionRequest", () => {
       effectiveConfig: {},
       modelProfileVersionBindings:
         run.effectiveBindings.modelProfileVersionBindings,
+      toolVersionBindings: run.effectiveBindings.toolVersionBindings,
       toolGrants: [],
       timeoutMs: 45_000,
       policyContext: {},

@@ -6,8 +6,9 @@ import {
   AGENT_MANIFEST_SCHEMA_VERSION,
 } from "../agent-manifest.js";
 import { MODEL_BINDING_NAME_PATTERN } from "../model-gateway.js";
+import { TOOL_BINDING_NAME_PATTERN } from "../tool-gateway.js";
 import { jsonSchemaRecordSchema } from "./json-schema.js";
-import { modelProfileVersionIdSchema } from "./ids.js";
+import { modelProfileVersionIdSchema, toolVersionIdSchema } from "./ids.js";
 import {
   isRelativeTrustedEntrypoint,
   isSha256IntegrityDigest,
@@ -63,6 +64,18 @@ const agentManifestModelsSchema = z.record(
   agentManifestModelBindingSchema,
 );
 
+const agentManifestToolBindingSchema = z.strictObject({
+  toolVersionId: toolVersionIdSchema,
+});
+
+const agentManifestToolsSchema = z.record(
+  z.string().regex(TOOL_BINDING_NAME_PATTERN, {
+    message:
+      "tool binding names must start with a letter and use only letters, digits, '_' or '-'.",
+  }),
+  agentManifestToolBindingSchema,
+);
+
 export const agentManifestSchema = z.strictObject({
   schemaVersion: z.literal(AGENT_MANIFEST_SCHEMA_VERSION),
   key: z.string().min(1),
@@ -73,4 +86,5 @@ export const agentManifestSchema = z.strictObject({
   execution: agentManifestExecutionSchema,
   capabilities: agentManifestCapabilitiesSchema,
   models: agentManifestModelsSchema.optional(),
+  tools: agentManifestToolsSchema.optional(),
 });

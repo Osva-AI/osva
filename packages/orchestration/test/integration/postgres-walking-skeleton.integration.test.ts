@@ -5,6 +5,7 @@ import {
   migrateDatabase,
   PostgresAgentRepository,
   PostgresModelProfileRepository,
+  PostgresToolRepository,
   PostgresRunRepository,
   PostgresWorkspaceRepository,
   type Database,
@@ -111,6 +112,7 @@ describe("PostgreSQL orchestration walking skeleton", () => {
       input: RUN_INPUT,
       timeoutMs: 12_345,
       effectiveConfig: {},
+      toolVersionBindings: {},
       toolGrants: [],
       policyContext: {},
     });
@@ -167,6 +169,7 @@ describe("PostgreSQL orchestration walking skeleton", () => {
       agents,
       workspaces,
       modelProfiles,
+      tools: new PostgresToolRepository(database),
       clock: { now: () => NOW },
       ids: {
         createId() {

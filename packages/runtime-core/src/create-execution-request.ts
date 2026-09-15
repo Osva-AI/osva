@@ -44,6 +44,7 @@ export function createExecutionRequest(
     effectiveConfig: Object.freeze({}),
     modelProfileVersionBindings:
       source.run.effectiveBindings.modelProfileVersionBindings,
+    toolVersionBindings: source.run.effectiveBindings.toolVersionBindings,
     toolGrants: Object.freeze([]),
     timeoutMs: source.agentVersion.manifest.execution.timeoutMs,
     policyContext: Object.freeze({}),

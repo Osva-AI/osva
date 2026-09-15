@@ -54,6 +54,7 @@ describe("Run HTTP API", () => {
         effectiveBindings: {
           agentVersionId: registered.agentVersionId,
           modelProfileVersionBindings: {},
+          toolVersionBindings: {},
         },
         input: { prompt: "hello" },
         createdAt: TEST_NOW.toISOString(),

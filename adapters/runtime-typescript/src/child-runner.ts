@@ -6,6 +6,10 @@ import {
   createTrustedAgentModels,
   ModelCapabilityError,
 } from "./model-capability.js";
+import {
+  createTrustedAgentTools,
+  ToolCapabilityError,
+} from "./tool-capability.js";
 import { isExecuteChildRequest } from "./protocol.js";
 import { sanitizePublicErrorMessage } from "./public-error.js";
 
@@ -39,6 +43,7 @@ async function handle(raw: unknown): Promise<void> {
     const context = deepFreezeChildValue({
       ...raw.context,
       models: createTrustedAgentModels(),
+      tools: createTrustedAgentTools(),
     });
     const output: unknown = await run(context);
     if (!isChildJsonValue(output)) {
@@ -56,6 +61,11 @@ async function handle(raw: unknown): Promise<void> {
     });
   } catch (error) {
     if (error instanceof ModelCapabilityError) {
+      sendFailure(error.code, error.message);
+      return;
+    }
+
+    if (error instanceof ToolCapabilityError) {
       sendFailure(error.code, error.message);
       return;
     }

@@ -11,6 +11,7 @@ import {
   Run,
   RunAttempt,
   modelProfileVersionBindingsFromManifest,
+  toolVersionBindingsFromManifest,
   type AgentRepository,
   type AgentVersion,
   type RunRepository,
@@ -147,5 +148,6 @@ function resolveEffectiveBindings(
     modelProfileVersionBindings: modelProfileVersionBindingsFromManifest(
       agentVersion.manifest,
     ),
+    toolVersionBindings: toolVersionBindingsFromManifest(agentVersion.manifest),
   });
 }

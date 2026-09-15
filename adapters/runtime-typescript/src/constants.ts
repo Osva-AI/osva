@@ -46,6 +46,22 @@ export function isModelBindingName(value: string): boolean {
   return MODEL_BINDING_NAME_PATTERN.test(value);
 }
 
+export const ToolErrorCode = {
+  TOOL_BINDING_NOT_FOUND: "TOOL_BINDING_NOT_FOUND",
+  TOOL_VERSION_NOT_FOUND: "TOOL_VERSION_NOT_FOUND",
+  TOOL_NOT_AUTHORIZED: "TOOL_NOT_AUTHORIZED",
+  TOOL_IMPLEMENTATION_NOT_FOUND: "TOOL_IMPLEMENTATION_NOT_FOUND",
+  INVALID_TOOL_INPUT: "INVALID_TOOL_INPUT",
+  TOOL_EXECUTION_ERROR: "TOOL_EXECUTION_ERROR",
+  INVALID_TOOL_OUTPUT: "INVALID_TOOL_OUTPUT",
+} as const;
+
+export type ToolErrorCode = (typeof ToolErrorCode)[keyof typeof ToolErrorCode];
+
+export function isToolBindingName(value: string): boolean {
+  return MODEL_BINDING_NAME_PATTERN.test(value);
+}
+
 export const CHILD_ENV_ALLOWLIST = [
   "PATH",
   "PATHEXT",

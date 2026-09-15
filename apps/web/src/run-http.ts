@@ -260,6 +260,7 @@ function toRunResource(run: Run) {
       agentVersionId: run.effectiveBindings.agentVersionId,
       modelProfileVersionBindings:
         run.effectiveBindings.modelProfileVersionBindings,
+      toolVersionBindings: run.effectiveBindings.toolVersionBindings,
     },
     input: run.input,
     createdAt: run.createdAt.toISOString(),

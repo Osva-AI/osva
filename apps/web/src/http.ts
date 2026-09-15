@@ -1,10 +1,15 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import http from "node:http";
-import type { AgentApplication, ModelProfileApplication } from "@osva/domain";
+import type {
+  AgentApplication,
+  ModelProfileApplication,
+  ToolApplication,
+} from "@osva/domain";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
 import { sendJson } from "./json.js";
 import { handleModelProfileRegistryRequest } from "./model-profile-http.js";
+import { handleToolRegistryRequest } from "./tool-http.js";
 import { handleRunRequest, type RunHttpServices } from "./run-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
@@ -13,6 +18,7 @@ export interface CreateWebApplicationOptions {
   readonly readinessCheck: ReadinessCheck;
   readonly agents: AgentApplication;
   readonly modelProfiles: ModelProfileApplication;
+  readonly tools: ToolApplication;
   readonly runs: RunHttpServices;
 }
 
@@ -26,6 +32,7 @@ export function createWebApplication(
       options.readinessCheck,
       options.agents,
       options.modelProfiles,
+      options.tools,
       options.runs,
     );
   });
@@ -37,6 +44,7 @@ async function handleRequest(
   readinessCheck: ReadinessCheck,
   agents: AgentApplication,
   modelProfiles: ModelProfileApplication,
+  tools: ToolApplication,
   runs: RunHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
@@ -104,6 +112,17 @@ async function handleRequest(
     modelProfiles,
   );
   if (handledModelProfiles) {
+    return;
+  }
+
+  const handledTools = await handleToolRegistryRequest(
+    request,
+    response,
+    method,
+    path,
+    tools,
+  );
+  if (handledTools) {
     return;
   }
 

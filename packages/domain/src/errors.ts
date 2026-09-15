@@ -3,6 +3,8 @@ import type {
   AgentVersionId,
   ModelProfileId,
   ModelProfileVersionId,
+  ToolId,
+  ToolVersionId,
   RunAttemptId,
   RunAttemptState,
   RunId,
@@ -117,6 +119,37 @@ export class DuplicateModelProfileKeyError extends DomainInvariantError {
 }
 
 export class InvalidModelBindingError extends DomainInvariantError {}
+
+export class ToolNotFoundError extends DomainError {
+  readonly toolId: ToolId;
+
+  constructor(toolId: ToolId) {
+    super(`Tool ${toolId} was not found.`);
+    this.toolId = toolId;
+  }
+}
+
+export class ToolVersionNotFoundError extends DomainError {
+  readonly toolVersionId: ToolVersionId;
+
+  constructor(toolVersionId: ToolVersionId) {
+    super(`ToolVersion ${toolVersionId} was not found.`);
+    this.toolVersionId = toolVersionId;
+  }
+}
+
+export class DuplicateToolKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(`Tool key '${key}' already exists in workspace '${workspaceId}'.`);
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class InvalidToolBindingError extends DomainInvariantError {}
 
 export class InvalidSubsequentAttemptError extends DomainInvariantError {
   readonly previousStatus: RunAttemptState;

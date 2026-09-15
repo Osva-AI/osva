@@ -5,6 +5,7 @@ import {
   createDatabase,
   PostgresAgentRepository,
   PostgresModelProfileRepository,
+  PostgresToolRepository,
   PostgresRunRepository,
   PostgresWorkspaceRepository,
   type Database,
@@ -13,6 +14,7 @@ import {
   createAgentApplication,
   createModelProfileApplication,
   createRunApplication,
+  createToolApplication,
 } from "@osva/domain";
 import { CreateRun } from "@osva/orchestration";
 
@@ -43,6 +45,7 @@ export function createWebProcess(
   const agents = new PostgresAgentRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
   const modelProfiles = new PostgresModelProfileRepository(database);
+  const tools = new PostgresToolRepository(database);
   const runs = new PostgresRunRepository(database);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
@@ -52,11 +55,18 @@ export function createWebProcess(
       agents,
       workspaces,
       modelProfiles,
+      tools,
       clock,
       ids,
     }),
     modelProfiles: createModelProfileApplication({
       modelProfiles,
+      workspaces,
+      clock,
+      ids,
+    }),
+    tools: createToolApplication({
+      tools,
       workspaces,
       clock,
       ids,

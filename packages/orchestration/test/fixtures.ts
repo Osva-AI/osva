@@ -65,6 +65,7 @@ export function createBindings(
       default: modelProfileVersionId,
       "tool.summarize": secondaryModelProfileVersionId,
     },
+    toolVersionBindings: {},
   });
 }
 

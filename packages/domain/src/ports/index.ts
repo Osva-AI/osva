@@ -9,6 +9,11 @@ export type {
   ModelProfileRepository,
 } from "./model-profile-repository.js";
 export type {
+  AppendToolVersionInput,
+  ToolMetadataUpdate,
+  ToolRepository,
+} from "./tool-repository.js";
+export type {
   ListRunsQuery,
   ListRunsResult,
   RunLifecycleTransitionResult,

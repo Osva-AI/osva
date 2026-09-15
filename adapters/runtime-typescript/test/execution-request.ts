@@ -27,6 +27,7 @@ export function createTrustedRequest(
     input: { prompt: "hello from trusted runtime" },
     effectiveConfig: {},
     modelProfileVersionBindings: {},
+    toolVersionBindings: {},
     toolGrants: [],
     timeoutMs: 5_000,
     policyContext: {},
@@ -38,4 +39,10 @@ export function modelBindings(
   bindings: Readonly<Record<string, string>>,
 ): Readonly<Record<string, ModelProfileVersionId>> {
   return bindings as Readonly<Record<string, ModelProfileVersionId>>;
+}
+
+export function toolBindings(
+  bindings: Readonly<Record<string, string>>,
+): ExecutionRequest["toolVersionBindings"] {
+  return bindings as ExecutionRequest["toolVersionBindings"];
 }

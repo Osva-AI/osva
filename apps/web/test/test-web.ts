@@ -3,6 +3,7 @@ import {
   MemoryAgentRepository,
   MemoryJobQueue,
   MemoryModelProfileRepository,
+  MemoryToolRepository,
   MemoryRunRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
@@ -11,6 +12,7 @@ import {
   createAgentApplication,
   createModelProfileApplication,
   createRunApplication,
+  createToolApplication,
 } from "@osva/domain";
 import { CreateRun } from "@osva/orchestration";
 
@@ -27,6 +29,7 @@ export async function createTestWebApplication(options?: {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
   const modelProfiles = new MemoryModelProfileRepository();
+  const tools = new MemoryToolRepository();
   const runs = new MemoryRunRepository();
   const queue = new MemoryJobQueue();
   const clock = { now: () => TEST_NOW };
@@ -62,6 +65,7 @@ export async function createTestWebApplication(options?: {
       agents,
       workspaces,
       modelProfiles,
+      tools,
       clock,
       ids,
     }),
@@ -71,8 +75,14 @@ export async function createTestWebApplication(options?: {
       clock,
       ids,
     }),
+    tools: createToolApplication({
+      tools,
+      workspaces,
+      clock,
+      ids,
+    }),
     runs: runServices,
   });
 
-  return { server, workspaces, agents, modelProfiles, runs, queue };
+  return { server, workspaces, agents, modelProfiles, tools, runs, queue };
 }

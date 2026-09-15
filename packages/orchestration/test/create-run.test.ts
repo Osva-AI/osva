@@ -1,8 +1,9 @@
-import type { ModelProfileId } from "@osva/contracts";
+import type { ModelProfileId, ToolVersionId } from "@osva/contracts";
 import {
   MemoryAgentRepository,
   MemoryJobQueue,
   MemoryModelProfileRepository,
+  MemoryToolRepository,
   MemoryRunRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
@@ -224,6 +225,7 @@ describe("CreateRun", () => {
       agents,
       workspaces,
       modelProfiles: new MemoryModelProfileRepository(),
+      tools: new MemoryToolRepository(),
       clock: { now: () => NOW },
       ids: {
         createId() {
@@ -392,6 +394,68 @@ describe("CreateRun", () => {
     const persisted = await runs.findRunById(runId);
     expect(persisted?.effectiveBindings.modelProfileVersionBindings).toEqual({
       primary: modelProfileVersionId,
+    });
+  });
+
+  it("copies AgentVersion tool bindings into immutable Run effectiveBindings", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    const toolVersionId = "tool-version-1" as ToolVersionId;
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "agent-key",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest({
+          tools: {
+            echo: { toolVersionId },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute(createCommand());
+    expect(result.run.effectiveBindings.toolVersionBindings).toEqual({
+      echo: toolVersionId,
+    });
+
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: otherAgentVersionId,
+        agentId,
+        version: 2,
+        manifest: createManifest({
+          tools: {
+            echo: { toolVersionId: "tool-version-2" as ToolVersionId },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const persisted = await runs.findRunById(runId);
+    expect(persisted?.effectiveBindings.toolVersionBindings).toEqual({
+      echo: toolVersionId,
     });
   });
 });

@@ -16,6 +16,7 @@ const validRequest = {
   input: { prompt: "hello" },
   effectiveConfig: {},
   modelProfileVersionBindings: {},
+  toolVersionBindings: {},
   toolGrants: [],
   timeoutMs: 30_000,
   policyContext: {},

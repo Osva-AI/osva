@@ -11,11 +11,14 @@ import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
   InvalidModelBindingError,
+  InvalidToolBindingError,
   WorkspaceNotFoundError,
 } from "./errors.js";
 import { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
+import { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 import type { AgentRepository } from "./ports/agent-repository.js";
 import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
+import type { ToolRepository } from "./ports/tool-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 
 export interface AgentApplicationClock {
@@ -30,6 +33,7 @@ export interface AgentApplicationDependencies {
   readonly agents: AgentRepository;
   readonly workspaces: WorkspaceRepository;
   readonly modelProfiles: ModelProfileRepository;
+  readonly tools: ToolRepository;
   readonly clock: AgentApplicationClock;
   readonly ids: AgentApplicationIds;
 }
@@ -130,6 +134,11 @@ export class AppendAgentVersion {
       agent.workspaceId,
       command.manifest,
     );
+    await assertToolBindings(
+      this.deps.tools,
+      agent.workspaceId,
+      command.manifest,
+    );
 
     return this.deps.agents.appendAgentVersion({
       id: this.deps.ids.createId() as AgentVersionId,
@@ -219,6 +228,29 @@ async function assertModelBindings(
     if (profile === null || profile.workspaceId !== workspaceId) {
       throw new InvalidModelBindingError(
         `Model binding '${name}' does not belong to workspace '${workspaceId}'.`,
+      );
+    }
+  }
+}
+
+async function assertToolBindings(
+  tools: ToolRepository,
+  workspaceId: WorkspaceId,
+  manifest: AgentManifestV1,
+): Promise<void> {
+  const bindings = toolVersionBindingsFromManifest(manifest);
+  for (const [name, toolVersionId] of Object.entries(bindings)) {
+    const version = await tools.findToolVersionById(toolVersionId);
+    if (version === null) {
+      throw new InvalidToolBindingError(
+        `Tool binding '${name}' references unknown ToolVersion '${toolVersionId}'.`,
+      );
+    }
+
+    const tool = await tools.findToolById(version.toolId);
+    if (tool === null || tool.workspaceId !== workspaceId) {
+      throw new InvalidToolBindingError(
+        `Tool binding '${name}' does not belong to workspace '${workspaceId}'.`,
       );
     }
   }

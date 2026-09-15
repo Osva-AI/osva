@@ -61,6 +61,18 @@ worker-only; missing it does not block worker startup. Streaming, tools,
 structured output, usage accounting, and additional providers remain later
 slices.
 
+Slice 1.6 adds the provider-neutral ToolGateway, immutable Tool / ToolVersion
+control-plane registry (`/v1/tools`), and the first allowlisted internal tools
+`OSVA_ECHO_V1` and `OSVA_CLOCK_NOW_V1`. AgentVersions may declare named logical
+tool bindings. CreateRun freezes them into
+`Run.effectiveBindings.toolVersionBindings`. Trusted TypeScript agents call
+`context.tools.invoke(bindingName, input, options?)` through runtime IPC.
+Every ToolGateway invocation passes through ToolPolicy. Prompts cannot grant
+tool permissions. Optional caller-supplied idempotency keys pass through
+unchanged and must not be derived from RunAttempt identity. OpenAI function
+calling, MCP, external tools, side-effecting tools, and idempotency persistence
+remain later slices.
+
 ## Quality
 
 - JobQueue contract tests;

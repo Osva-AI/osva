@@ -24,6 +24,7 @@ export interface RunResourceV1 {
   readonly effectiveBindings: {
     readonly agentVersionId: AgentVersionId;
     readonly modelProfileVersionBindings: Readonly<Record<string, string>>;
+    readonly toolVersionBindings: Readonly<Record<string, string>>;
   };
   readonly input: unknown;
   readonly createdAt: string;

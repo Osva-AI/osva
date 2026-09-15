@@ -13,10 +13,12 @@ import {
   createDatabase,
   PostgresAgentRepository,
   PostgresModelProfileRepository,
+  PostgresToolRepository,
   PostgresRunRepository,
   type Database,
 } from "@osva/db";
 import { ModelGateway } from "@osva/model-gateway";
+import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
 import { ExecuteRunAttempt } from "@osva/orchestration";
 
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
@@ -93,6 +95,10 @@ export function createWorkerProcess(
           modelGateway: new ModelGateway({
             modelProfiles: new PostgresModelProfileRepository(database),
             providers: composeOpenAIProviders(env, dependencies.openai),
+          }),
+          toolGateway: new ToolGateway({
+            tools: new PostgresToolRepository(database),
+            policy: new DefaultToolPolicy(),
           }),
         });
       const executeRunAttempt = new ExecuteRunAttempt({

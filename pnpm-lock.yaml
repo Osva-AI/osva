@@ -375,6 +375,9 @@ importers:
       '@osva/orchestration':
         specifier: workspace:*
         version: link:../../packages/orchestration
+      '@osva/tool-gateway':
+        specifier: workspace:*
+        version: link:../../packages/tool-gateway
     devDependencies:
       '@osva/adapters-memory':
         specifier: workspace:*
@@ -532,6 +535,31 @@ importers:
         specifier: workspace:*
         version: link:../domain
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.4
+      eslint:
+        specifier: 'catalog:'
+        version: 10.10.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.0(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/tool-gateway:
+    dependencies:
+      '@osva/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      '@osva/adapters-memory':
+        specifier: workspace:*
+        version: link:../../adapters/memory
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4

@@ -6,11 +6,14 @@ import type {
   ExecutionResult,
   GenerateTextRequest,
   GenerateTextResult,
+  JsonValue,
   RuntimeAdapter,
+  ToolInvokeRequest,
   TrustedTypeScriptRuntime,
 } from "@osva/contracts";
 import {
   MODEL_ERROR_CODES,
+  TOOL_ERROR_CODES,
   isCanonicalJsonValue,
   isSha256IntegrityDigest,
   sha256IntegrityHex,
@@ -27,8 +30,10 @@ import {
 import {
   isChildResultMessage,
   isModelGenerateRequestMessage,
+  isToolInvokeRequestMessage,
   type ExecuteChildRequest,
   type ModelGenerateRequestMessage,
+  type ToolInvokeRequestMessage,
 } from "./protocol.js";
 import {
   childPermissionExecArgv,
@@ -50,6 +55,7 @@ export interface TrustedTypeScriptRuntimeAdapterOptions {
   readonly logger?: TrustedTypeScriptRuntimeLogger;
   readonly enablePermissionModel?: boolean;
   readonly modelGateway?: RuntimeModelGateway;
+  readonly toolGateway?: RuntimeToolGateway;
 }
 
 /**
@@ -63,6 +69,10 @@ export interface RuntimeModelGateway {
   ): Promise<GenerateTextResult>;
 }
 
+export interface RuntimeToolGateway {
+  invoke(request: ToolInvokeRequest): Promise<JsonValue>;
+}
+
 interface LiveExecution {
   readonly child: ChildProcess;
   readonly abort: AbortController;
@@ -73,6 +83,7 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
   private readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
   private readonly enablePermissionModel: boolean;
   private readonly modelGateway: RuntimeModelGateway | undefined;
+  private readonly toolGateway: RuntimeToolGateway | undefined;
   private readonly liveExecutions = new Set<LiveExecution>();
   private closed = false;
 
@@ -81,6 +92,7 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
     this.logger = options.logger;
     this.enablePermissionModel = options.enablePermissionModel ?? true;
     this.modelGateway = options.modelGateway;
+    this.toolGateway = options.toolGateway;
   }
 
   async execute(request: ExecutionRequest): Promise<ExecutionResult> {
@@ -216,7 +228,10 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
         timeoutMs: request.timeoutMs,
         abort,
         modelGateway: this.modelGateway,
-        bindings: request.modelProfileVersionBindings,
+        toolGateway: this.toolGateway,
+        modelBindings: request.modelProfileVersionBindings,
+        toolBindings: request.toolVersionBindings,
+        execution: request,
         logger: this.logger,
       });
     } finally {
@@ -239,11 +254,24 @@ function waitForChildResult(options: {
   readonly timeoutMs: number;
   readonly abort: AbortController;
   readonly modelGateway: RuntimeModelGateway | undefined;
-  readonly bindings: ExecutionRequest["modelProfileVersionBindings"];
+  readonly toolGateway: RuntimeToolGateway | undefined;
+  readonly modelBindings: ExecutionRequest["modelProfileVersionBindings"];
+  readonly toolBindings: ExecutionRequest["toolVersionBindings"];
+  readonly execution: ExecutionRequest;
   readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
 }): Promise<ExecutionResult> {
-  const { child, request, timeoutMs, abort, modelGateway, bindings, logger } =
-    options;
+  const {
+    child,
+    request,
+    timeoutMs,
+    abort,
+    modelGateway,
+    toolGateway,
+    modelBindings,
+    toolBindings,
+    execution,
+    logger,
+  } = options;
 
   return new Promise((resolve) => {
     let settled = false;
@@ -278,7 +306,21 @@ function waitForChildResult(options: {
           message: raw,
           abort,
           modelGateway,
-          bindings,
+          bindings: modelBindings,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isToolInvokeRequestMessage(raw)) {
+        void handleToolInvokeRequest({
+          child,
+          message: raw,
+          abort,
+          toolGateway,
+          bindings: toolBindings,
+          execution,
           logger,
           isSettled: () => settled,
         });
@@ -428,6 +470,119 @@ async function handleModelGenerateRequest(options: {
     const mapped = mapModelGatewayFailure(error);
     sendFailure(mapped.code, mapped.message);
   }
+}
+
+async function handleToolInvokeRequest(options: {
+  readonly child: ChildProcess;
+  readonly message: ToolInvokeRequestMessage;
+  readonly abort: AbortController;
+  readonly toolGateway: RuntimeToolGateway | undefined;
+  readonly bindings: ExecutionRequest["toolVersionBindings"];
+  readonly execution: ExecutionRequest;
+  readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
+  readonly isSettled: () => boolean;
+}): Promise<void> {
+  const {
+    child,
+    message,
+    toolGateway,
+    bindings,
+    execution,
+    logger,
+    isSettled,
+  } = options;
+
+  const sendFailure = (code: string, errorMessage: string) => {
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "tool.invoke.failed",
+      callId: message.callId,
+      error: {
+        code,
+        message: sanitizePublicErrorMessage(
+          errorMessage,
+          "Tool invocation failed.",
+        ),
+      },
+    });
+  };
+
+  const toolVersionId = bindings[message.binding];
+  if (toolVersionId === undefined) {
+    sendFailure(
+      TOOL_ERROR_CODES.TOOL_BINDING_NOT_FOUND,
+      "Tool binding was not found.",
+    );
+    return;
+  }
+
+  if (toolGateway === undefined) {
+    sendFailure(
+      TOOL_ERROR_CODES.TOOL_EXECUTION_ERROR,
+      "Tool capability is unavailable.",
+    );
+    return;
+  }
+
+  try {
+    const output = await toolGateway.invoke({
+      toolVersionId,
+      input: message.input,
+      idempotencyKey: message.idempotencyKey,
+      authorization: {
+        workspaceId: execution.workspaceId,
+        agentId: execution.agentId,
+        runId: execution.runId,
+        runAttemptId: execution.runAttemptId,
+        bindingName: message.binding,
+        toolVersionId,
+      },
+    });
+
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "tool.invoke.succeeded",
+      callId: message.callId,
+      output,
+    });
+  } catch (error) {
+    logger?.error("runtime.tool_invoke_failed", error);
+    const mapped = mapToolGatewayFailure(error);
+    sendFailure(mapped.code, mapped.message);
+  }
+}
+
+function mapToolGatewayFailure(error: unknown): {
+  readonly code: string;
+  readonly message: string;
+} {
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.length > 0
+  ) {
+    const message =
+      error instanceof Error ? error.message : "Tool invocation failed.";
+    return {
+      code: error.code,
+      message: sanitizePublicErrorMessage(message, "Tool invocation failed."),
+    };
+  }
+
+  return {
+    code: TOOL_ERROR_CODES.TOOL_EXECUTION_ERROR,
+    message: "Tool invocation failed.",
+  };
 }
 
 function mapModelGatewayFailure(error: unknown): {

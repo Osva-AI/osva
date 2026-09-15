@@ -14,6 +14,7 @@ runtime
 input
 effectiveConfig
 modelProfileVersionBindings
+toolVersionBindings
 toolGrants
 timeoutMs
 policyContext
@@ -40,6 +41,7 @@ workspaceId
 agentId
 agentVersionId
 models.generateText(bindingName, request)
+tools.invoke(bindingName, input, options?)
 ```
 
 `models.generateText` accepts a logical binding name from the Run's persisted
@@ -54,6 +56,13 @@ It returns `{ text }`. The child does not receive ModelProfileVersion IDs,
 provider names, provider model IDs, API keys, or SDK objects. Parent/child
 model IPC (`model.generate.request` / `succeeded` / `failed`) is an internal
 runtime protocol, not a public HTTP contract.
+
+`tools.invoke` accepts a logical binding name from the Run's persisted
+`toolVersionBindings`, JSON-compatible input, and an optional caller-supplied
+`idempotencyKey`. It returns JSON-compatible output. The child does not receive
+ToolVersion IDs or implementation identifiers. Parent/child tool IPC
+(`tool.invoke.request` / `succeeded` / `failed`) is an internal runtime
+protocol, not a public HTTP contract.
 
 It does not pass PostgreSQL, Valkey, BullMQ, provider clients, secrets,
 ModelGateway objects, or ToolGateway objects.

@@ -2,12 +2,17 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { isCanonicalJsonValue } from "@osva/contracts";
 import { describe, expect, it } from "vitest";
 
 import { sha256IntegrityOf } from "../src/integrity.js";
 import { RuntimeErrorCode } from "../src/constants.js";
 import { TrustedTypeScriptRuntimeAdapter } from "../src/trusted-typescript-runtime-adapter.js";
-import { createTrustedRequest, modelBindings } from "./execution-request.js";
+import {
+  createTrustedRequest,
+  modelBindings,
+  toolBindings,
+} from "./execution-request.js";
 import { createTrustedRoot, installFixture } from "./temp-root.js";
 
 const PARENT_PID = process.pid;
@@ -55,6 +60,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
             "models",
             "runAttemptId",
             "runId",
+            "tools",
             "workspaceId",
           ],
           hasJobId: false,
@@ -63,6 +69,8 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           openaiApiKey: null,
           hasModels: true,
           modelKeys: ["generateText"],
+          hasTools: true,
+          toolKeys: ["invoke"],
         },
       });
     } finally {
@@ -388,6 +396,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           "models",
           "runAttemptId",
           "runId",
+          "tools",
           "workspaceId",
         ],
         modelKeys: ["generateText"],
@@ -519,6 +528,140 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           ok: true,
         },
       });
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("invokes a bound internal tool through context.tools.invoke", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "tool-echo-agent.ts");
+    const artifact = await fs.readFile(path.join(root, "tool-echo-agent.ts"));
+    const seen: Array<{
+      readonly toolVersionId: string;
+      readonly input: unknown;
+    }> = [];
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      toolGateway: {
+        async invoke(request) {
+          seen.push({
+            toolVersionId: request.toolVersionId,
+            input: request.input,
+          });
+          if (
+            request.input === null ||
+            typeof request.input !== "object" ||
+            Array.isArray(request.input)
+          ) {
+            throw new Error("Tool input must be an object.");
+          }
+
+          const record = request.input as Record<string, unknown>;
+          if (!("value" in record) || !isCanonicalJsonValue(record.value)) {
+            throw new Error("Tool input must include a JSON-compatible value.");
+          }
+
+          return { value: record.value };
+        },
+      },
+    });
+
+    try {
+      const result = await adapter.execute(
+        createTrustedRequest({
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "tool-echo-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          input: { hello: "tool" },
+          toolVersionBindings: toolBindings({ echo: "tv-frozen" }),
+        }),
+      );
+      expect(result).toEqual({
+        status: "succeeded",
+        output: {
+          echoed: { hello: "tool" },
+          toolResult: { value: { hello: "tool" } },
+          contextKeys: [
+            "agentId",
+            "agentVersionId",
+            "input",
+            "models",
+            "runAttemptId",
+            "runId",
+            "tools",
+            "workspaceId",
+          ],
+          hasToolVersionId: false,
+          hasImplementationId: false,
+        },
+      });
+      expect(seen).toEqual([
+        { toolVersionId: "tv-frozen", input: { value: { hello: "tool" } } },
+      ]);
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("returns TOOL_BINDING_NOT_FOUND for an unknown logical tool binding", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "tool-catch-agent.ts");
+    const { adapter, request } = await adapterFor(root, "tool-catch-agent.ts");
+
+    try {
+      const result = await adapter.execute({
+        ...request,
+        toolVersionBindings: toolBindings({}),
+      });
+      expect(result).toEqual({
+        status: "succeeded",
+        output: {
+          caught: true,
+          code: "TOOL_BINDING_NOT_FOUND",
+          ok: true,
+        },
+      });
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("does not derive tool idempotencyKey from RunAttemptId", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "tool-idempotency-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "tool-idempotency-agent.ts"),
+    );
+    const seenKeys: Array<string | undefined> = [];
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      toolGateway: {
+        async invoke(request) {
+          seenKeys.push(request.idempotencyKey);
+          return { value: true };
+        },
+      },
+    });
+
+    try {
+      const result = await adapter.execute(
+        createTrustedRequest({
+          runAttemptId:
+            "run-attempt-fixed" as import("@osva/contracts").RunAttemptId,
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "tool-idempotency-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          toolVersionBindings: toolBindings({ echo: "tv-frozen" }),
+        }),
+      );
+      expect(result.status).toBe("succeeded");
+      expect(seenKeys).toEqual(["caller-supplied-key"]);
+      expect(seenKeys[0]).not.toBe("run-attempt-fixed");
     } finally {
       await adapter.close();
     }

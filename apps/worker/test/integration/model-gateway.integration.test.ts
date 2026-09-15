@@ -191,6 +191,7 @@ describe("model gateway end-to-end", () => {
       const frozenBindings = {
         agentVersionId: (agentVersion.body as { id: string }).id,
         modelProfileVersionBindings: { primary: modelProfileVersionId },
+        toolVersionBindings: {},
       };
       expect(
         (created.body as { run: { effectiveBindings: unknown } }).run

@@ -12,6 +12,7 @@ import {
   MODEL_TEXT_ROLES,
   TRUSTED_RUNTIME_IPC_VERSION,
   isModelBindingName,
+  isToolBindingName,
 } from "./constants.js";
 
 export interface TrustedAgentContext {
@@ -74,6 +75,35 @@ export interface ModelGenerateFailedMessage {
 
 export type ParentToChildModelMessage =
   ModelGenerateSucceededMessage | ModelGenerateFailedMessage;
+
+export interface ToolInvokeRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "tool.invoke.request";
+  readonly callId: string;
+  readonly binding: string;
+  readonly input: unknown;
+  readonly idempotencyKey?: string;
+}
+
+export interface ToolInvokeSucceededMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "tool.invoke.succeeded";
+  readonly callId: string;
+  readonly output: JsonValue;
+}
+
+export interface ToolInvokeFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "tool.invoke.failed";
+  readonly callId: string;
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+  };
+}
+
+export type ParentToChildToolMessage =
+  ToolInvokeSucceededMessage | ToolInvokeFailedMessage;
 
 export function isExecuteChildRequest(
   value: unknown,
@@ -180,6 +210,87 @@ export function isParentToChildModelMessage(
   return (
     isModelGenerateSucceededMessage(value) ||
     isModelGenerateFailedMessage(value)
+  );
+}
+
+export function isToolInvokeRequestMessage(
+  value: unknown,
+): value is ToolInvokeRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    record.type !== "tool.invoke.request" ||
+    !isNonEmptyString(record.callId) ||
+    typeof record.binding !== "string" ||
+    !isToolBindingName(record.binding)
+  ) {
+    return false;
+  }
+
+  for (const key of Object.keys(record)) {
+    if (
+      key !== "v" &&
+      key !== "type" &&
+      key !== "callId" &&
+      key !== "binding" &&
+      key !== "input" &&
+      key !== "idempotencyKey"
+    ) {
+      return false;
+    }
+  }
+
+  if (
+    record.idempotencyKey !== undefined &&
+    !isNonEmptyString(record.idempotencyKey)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isToolInvokeSucceededMessage(
+  value: unknown,
+): value is ToolInvokeSucceededMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "tool.invoke.succeeded" &&
+    isNonEmptyString(record.callId) &&
+    "output" in record
+  );
+}
+
+export function isToolInvokeFailedMessage(
+  value: unknown,
+): value is ToolInvokeFailedMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "tool.invoke.failed" &&
+    isNonEmptyString(record.callId) &&
+    isNamedError(record.error)
+  );
+}
+
+export function isParentToChildToolMessage(
+  value: unknown,
+): value is ParentToChildToolMessage {
+  return (
+    isToolInvokeSucceededMessage(value) || isToolInvokeFailedMessage(value)
   );
 }
 

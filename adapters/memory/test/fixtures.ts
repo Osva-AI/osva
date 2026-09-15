@@ -55,6 +55,7 @@ export function createBindings(
     modelProfileVersionBindings: {
       default: modelProfileVersionId,
     },
+    toolVersionBindings: {},
   });
 }
 
@@ -78,6 +79,7 @@ export function createExecutionRequest(
     modelProfileVersionBindings: {
       default: modelProfileVersionId,
     },
+    toolVersionBindings: {},
     toolGrants: [],
     timeoutMs: 30_000,
     policyContext: {},

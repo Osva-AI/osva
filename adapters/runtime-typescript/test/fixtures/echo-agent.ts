@@ -8,6 +8,9 @@ export async function run(context: {
   readonly models?: {
     readonly generateText: unknown;
   };
+  readonly tools?: {
+    readonly invoke: unknown;
+  };
 }): Promise<{
   readonly echoed: unknown;
   readonly ids: {
@@ -24,6 +27,8 @@ export async function run(context: {
   readonly openaiApiKey: string | null;
   readonly hasModels: boolean;
   readonly modelKeys: string[];
+  readonly hasTools: boolean;
+  readonly toolKeys: string[];
 }> {
   return {
     echoed: context.input,
@@ -44,5 +49,10 @@ export async function run(context: {
       context.models === undefined
         ? []
         : Object.keys(context.models as object).sort(),
+    hasTools: "tools" in context,
+    toolKeys:
+      context.tools === undefined
+        ? []
+        : Object.keys(context.tools as object).sort(),
   };
 }

@@ -25,3 +25,5 @@ export const PERSISTED_RUN_ATTEMPT_STATES = [
 ] as const;
 
 export const PERSISTED_MODEL_PROVIDERS = ["OPENAI"] as const;
+
+export const PERSISTED_TOOL_TYPES = ["INTERNAL"] as const;

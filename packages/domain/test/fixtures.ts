@@ -61,6 +61,7 @@ export function createBindings(): EffectiveRunBindings {
     modelProfileVersionBindings: {
       default: modelProfileVersionId,
     },
+    toolVersionBindings: {},
   });
 }
 

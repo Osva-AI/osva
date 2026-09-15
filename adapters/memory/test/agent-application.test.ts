@@ -1,13 +1,19 @@
-import type { AgentId, ModelProfileVersionId } from "@osva/contracts";
+import type {
+  AgentId,
+  ModelProfileVersionId,
+  ToolVersionId,
+} from "@osva/contracts";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
   DuplicateAgentKeyError,
   InvalidModelBindingError,
+  InvalidToolBindingError,
   Workspace,
   WorkspaceNotFoundError,
   createAgentApplication,
   createModelProfileApplication,
+  createToolApplication,
   type AgentApplication,
   type AgentRepository,
   type WorkspaceRepository,
@@ -16,6 +22,7 @@ import { describe, expect, it } from "vitest";
 
 import { MemoryAgentRepository } from "../src/memory-agent-repository.js";
 import { MemoryModelProfileRepository } from "../src/memory-model-profile-repository.js";
+import { MemoryToolRepository } from "../src/memory-tool-repository.js";
 import { MemoryWorkspaceRepository } from "../src/memory-workspace-repository.js";
 import {
   NOW,
@@ -308,6 +315,65 @@ describe("Agent Registry application", () => {
     });
     expect(version.manifest.models).toBeUndefined();
   });
+
+  it("accepts an AgentVersion with a valid tool binding", async () => {
+    const { application, tools, workspaces } = await createHarness();
+    let counter = 0;
+    const toolApp = createToolApplication({
+      tools,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          counter += 1;
+          return `tool-${String(counter)}`;
+        },
+      },
+    });
+    const tool = await toolApp.createTool.execute({
+      workspaceId,
+      key: "echo",
+      name: "Echo",
+    });
+    const toolVersion = await toolApp.appendToolVersion.execute({
+      toolId: tool.id,
+      type: "INTERNAL",
+      implementation: "OSVA_ECHO_V1",
+    });
+    const agent = await application.createAgent.execute({
+      workspaceId,
+      key: "tool-agent",
+      name: "Tool Agent",
+    });
+    const version = await application.appendAgentVersion.execute({
+      agentId: agent.id,
+      manifest: createManifest({
+        tools: {
+          echo: { toolVersionId: toolVersion.id },
+        },
+      }),
+    });
+    expect(version.manifest.tools?.echo?.toolVersionId).toBe(toolVersion.id);
+  });
+
+  it("rejects a missing ToolVersion binding", async () => {
+    const { application } = await createHarness();
+    const agent = await application.createAgent.execute({
+      workspaceId,
+      key: "tool-agent",
+      name: "Tool Agent",
+    });
+    await expect(
+      application.appendAgentVersion.execute({
+        agentId: agent.id,
+        manifest: createManifest({
+          tools: {
+            echo: { toolVersionId: "missing-tv" as ToolVersionId },
+          },
+        }),
+      }),
+    ).rejects.toBeInstanceOf(InvalidToolBindingError);
+  });
 });
 
 function createEmptyHarness(): {
@@ -315,20 +381,24 @@ function createEmptyHarness(): {
   agents: AgentRepository;
   workspaces: WorkspaceRepository;
   modelProfiles: MemoryModelProfileRepository;
+  tools: MemoryToolRepository;
 } {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
   const modelProfiles = new MemoryModelProfileRepository();
+  const tools = new MemoryToolRepository();
   let counter = 0;
 
   return {
     agents,
     workspaces,
     modelProfiles,
+    tools,
     application: createAgentApplication({
       agents,
       workspaces,
       modelProfiles,
+      tools,
       clock: { now: () => NOW },
       ids: {
         createId() {

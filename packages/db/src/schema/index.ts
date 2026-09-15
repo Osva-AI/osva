@@ -7,8 +7,11 @@ export { runAttempts } from "./run-attempts.js";
 export { runSteps } from "./run-steps.js";
 export { modelProfiles } from "./model-profiles.js";
 export { modelProfileVersions } from "./model-profile-versions.js";
+export { tools } from "./tools.js";
+export { toolVersions } from "./tool-versions.js";
 export {
   PERSISTED_MODEL_PROVIDERS,
+  PERSISTED_TOOL_TYPES,
   PERSISTED_RUN_ATTEMPT_STATES,
   PERSISTED_RUN_STATES,
 } from "./states.js";

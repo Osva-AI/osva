@@ -12,6 +12,7 @@ describe("EffectiveRunBindings immutability", () => {
     const bindings = EffectiveRunBindings.create({
       agentVersionId,
       modelProfileVersionBindings: input,
+      toolVersionBindings: {},
     });
 
     input.other = "model-profile-version-2" as ModelProfileVersionId;

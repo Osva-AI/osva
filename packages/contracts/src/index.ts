@@ -54,6 +54,16 @@ export type {
   UpdateModelProfileRequestV1,
 } from "./model-profile-registry.js";
 
+export type {
+  CreateToolRequestV1,
+  CreateToolVersionRequestV1,
+  ToolListResourceV1,
+  ToolResourceV1,
+  ToolVersionListResourceV1,
+  ToolVersionResourceV1,
+  UpdateToolRequestV1,
+} from "./tool-registry.js";
+
 export {
   RUN_ATTEMPT_STATES,
   RUN_STATES,
@@ -77,6 +87,7 @@ export type {
   AgentManifestExecution,
   AgentManifestIO,
   AgentManifestModelBinding,
+  AgentManifestToolBinding,
   AgentManifestSchemaVersion,
   AgentManifestV1,
   AgentRuntime,
@@ -153,6 +164,28 @@ export type {
   ToolSuccess,
   ToolVersionDefinition,
 } from "./tool.js";
+
+export {
+  INTERNAL_TOOL_IMPLEMENTATIONS,
+  TOOL_BINDING_NAME_PATTERN,
+  TOOL_EFFECT_CLASSIFICATIONS,
+  TOOL_ERROR_CODES,
+  TOOL_TYPES,
+  isInternalToolImplementationId,
+  isToolBindingName,
+  isToolErrorCode,
+  isToolType,
+} from "./tool-gateway.js";
+export type {
+  InternalToolImplementationId,
+  ToolAuthorizationContext,
+  ToolEffectClassification,
+  ToolErrorCode,
+  ToolGateway,
+  ToolInvokeRequest,
+  ToolPolicy,
+  ToolType,
+} from "./tool-gateway.js";
 
 export type { SecretReference, SecretResolver } from "./secret-resolver.js";
 

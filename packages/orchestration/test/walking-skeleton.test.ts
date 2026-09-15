@@ -94,6 +94,7 @@ describe("in-process walking skeleton", () => {
       agentVersionId,
       input: RUN_INPUT,
       effectiveConfig: {},
+      toolVersionBindings: {},
       toolGrants: [],
       timeoutMs: 12_345,
       policyContext: {},
