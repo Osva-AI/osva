@@ -251,4 +251,139 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["packages/orchestration/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message:
+                "packages/orchestration cannot import persistence adapters.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/orchestration cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/orchestration cannot import apps.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "packages/orchestration cannot import persistence libraries.",
+            },
+            {
+              name: "postgres",
+              message:
+                "packages/orchestration cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/orchestration cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/orchestration cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "packages/orchestration cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "packages/orchestration cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "packages/orchestration cannot import adapters.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/orchestration cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "packages/orchestration cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/runtime-core/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message: "packages/runtime-core cannot import persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "packages/runtime-core cannot import orchestration.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/runtime-core cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/runtime-core cannot import apps.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "packages/runtime-core cannot import persistence libraries.",
+            },
+            {
+              name: "postgres",
+              message:
+                "packages/runtime-core cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/runtime-core cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/runtime-core cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "packages/runtime-core cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "packages/runtime-core cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "packages/runtime-core cannot import adapters.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/runtime-core cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "packages/runtime-core cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

@@ -56,6 +56,8 @@ export function createBindings(): EffectiveRunBindings {
   });
 }
 
+export const RUN_INPUT = { prompt: "hello" };
+
 export function createExecutionRequest(
   overrides: Partial<ExecutionRequest> = {},
 ): ExecutionRequest {

@@ -33,6 +33,7 @@ export class PostgresRunRepository implements RunRepository {
               status: row.status,
               agentVersionId: row.agentVersionId,
               modelProfileVersionBindings: row.modelProfileVersionBindings,
+              input: row.input,
               idempotencyKey: row.idempotencyKey,
               createdAt: row.createdAt,
               updatedAt: row.updatedAt,

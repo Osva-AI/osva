@@ -3,7 +3,11 @@ import type { RunState } from "@osva/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { EffectiveRunBindings } from "./effective-run-bindings.js";
-import { copyInstant, requireNonEmptyString } from "./internals.js";
+import {
+  copyInstant,
+  copyJsonValue,
+  requireNonEmptyString,
+} from "./internals.js";
 import { assertLegalRunTransition, isRunState } from "./run-state-machine.js";
 
 export interface RunCreateProps {
@@ -11,6 +15,7 @@ export interface RunCreateProps {
   readonly workspaceId: WorkspaceId;
   readonly agentId: AgentId;
   readonly effectiveBindings: EffectiveRunBindings;
+  readonly input: unknown;
   readonly createdAt: Date;
   readonly idempotencyKey?: string;
 }
@@ -21,6 +26,7 @@ export interface RunRehydrateProps {
   readonly agentId: AgentId;
   readonly status: RunState;
   readonly effectiveBindings: EffectiveRunBindings;
+  readonly input: unknown;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly idempotencyKey?: string;
@@ -32,6 +38,7 @@ export class Run {
   readonly agentId: AgentId;
   readonly status: RunState;
   readonly effectiveBindings: EffectiveRunBindings;
+  readonly input: unknown;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly idempotencyKey: string | undefined;
@@ -42,6 +49,7 @@ export class Run {
     readonly agentId: AgentId;
     readonly status: RunState;
     readonly effectiveBindings: EffectiveRunBindings;
+    readonly input: unknown;
     readonly createdAt: Date;
     readonly updatedAt: Date;
     readonly idempotencyKey: string | undefined;
@@ -51,6 +59,7 @@ export class Run {
     this.agentId = props.agentId;
     this.status = props.status;
     this.effectiveBindings = props.effectiveBindings;
+    this.input = props.input;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.idempotencyKey = props.idempotencyKey;
@@ -63,6 +72,7 @@ export class Run {
       agentId: props.agentId,
       status: "PENDING",
       effectiveBindings: props.effectiveBindings,
+      input: props.input,
       createdAt: props.createdAt,
       updatedAt: props.createdAt,
       idempotencyKey: props.idempotencyKey,
@@ -76,6 +86,7 @@ export class Run {
       agentId: props.agentId,
       status: props.status,
       effectiveBindings: props.effectiveBindings,
+      input: props.input,
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
       idempotencyKey: props.idempotencyKey,
@@ -91,6 +102,7 @@ export class Run {
       agentId: this.agentId,
       status: target,
       effectiveBindings: this.effectiveBindings,
+      input: this.input,
       createdAt: this.createdAt,
       updatedAt: now,
       idempotencyKey: this.idempotencyKey,
@@ -103,6 +115,7 @@ export class Run {
     readonly agentId: AgentId;
     readonly status: RunState;
     readonly effectiveBindings: EffectiveRunBindings;
+    readonly input: unknown;
     readonly createdAt: Date;
     readonly updatedAt: Date;
     readonly idempotencyKey: string | undefined;
@@ -145,6 +158,7 @@ export class Run {
         agentId: props.agentId,
         status: props.status,
         effectiveBindings: props.effectiveBindings,
+        input: copyJsonValue(props.input, "Run.input"),
         createdAt,
         updatedAt,
         idempotencyKey:

@@ -22,6 +22,7 @@ export function runToRow(run: Run) {
     agentVersionId: run.effectiveBindings.agentVersionId,
     modelProfileVersionBindings:
       run.effectiveBindings.modelProfileVersionBindings,
+    input: run.input,
     idempotencyKey: run.idempotencyKey ?? null,
     createdAt: run.createdAt,
     updatedAt: run.updatedAt,
@@ -40,6 +41,7 @@ export function runFromRow(row: RunRow): Run {
         row.modelProfileVersionBindings,
       ),
     }),
+    input: row.input,
     createdAt: toDomainDate(row.createdAt),
     updatedAt: toDomainDate(row.updatedAt),
     idempotencyKey: row.idempotencyKey ?? undefined,

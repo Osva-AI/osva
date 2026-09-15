@@ -35,6 +35,7 @@ import {
   createBindings,
   createIds,
   createManifest,
+  RUN_INPUT,
 } from "./fixtures.js";
 import {
   resetStage0Tables,
@@ -231,6 +232,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
         ids.modelProfileVersionId,
       );
       const run = Run.create({
+        input: RUN_INPUT,
         id: ids.runId,
         workspaceId: ids.workspaceId,
         agentId: ids.agentId,
@@ -249,12 +251,14 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
       expect(loaded?.createdAt).toEqual(NOW);
       expect(loaded?.updatedAt).toEqual(NOW);
+      expect(loaded?.input).toEqual(RUN_INPUT);
       expect(Object.isFrozen(loaded)).toBe(true);
     });
 
     it("replaces a Run with a later valid domain snapshot", async () => {
       const { ids } = await seedAgentGraph();
       const pending = Run.create({
+        input: RUN_INPUT,
         id: ids.runId,
         workspaceId: ids.workspaceId,
         agentId: ids.agentId,
@@ -285,6 +289,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -312,6 +317,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
 
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -321,6 +327,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.otherRunId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -342,6 +349,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
 
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -354,6 +362,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       await expect(
         runs.saveRun(
           Run.create({
+            input: RUN_INPUT,
             id: ids.otherRunId,
             workspaceId: ids.workspaceId,
             agentId: ids.agentId,
@@ -371,6 +380,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       const { ids } = await seedAgentGraph();
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -417,6 +427,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       const { ids } = await seedAgentGraph();
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -429,6 +440,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.otherRunId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -476,6 +488,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       const { ids } = await seedAgentGraph();
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -515,6 +528,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -524,6 +538,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.otherRunId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -561,6 +576,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       const { ids } = await seedAgentGraph();
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -615,6 +631,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.runId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -624,6 +641,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
       await runs.saveRun(
         Run.create({
+          input: RUN_INPUT,
           id: ids.otherRunId,
           workspaceId: ids.workspaceId,
           agentId: ids.agentId,
@@ -669,6 +687,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       await expect(
         runs.saveRun(
           Run.create({
+            input: RUN_INPUT,
             id: home.ids.runId,
             workspaceId: home.ids.workspaceId,
             agentId: other.ids.agentId,
@@ -689,6 +708,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       await expect(
         runs.saveRun(
           Run.create({
+            input: RUN_INPUT,
             id: home.ids.runId,
             workspaceId: home.ids.workspaceId,
             agentId: home.ids.agentId,

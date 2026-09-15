@@ -76,3 +76,15 @@ export function freezeRecord<V>(
 ): Readonly<Record<string, V>> {
   return Object.freeze({ ...record });
 }
+
+export function copyJsonValue(value: unknown, field: string): unknown {
+  if (value === undefined) {
+    throw new DomainInvariantError(`${field} is required.`);
+  }
+
+  try {
+    return freezeClone(JSON.parse(JSON.stringify(value)));
+  } catch {
+    throw new DomainInvariantError(`${field} must be JSON-compatible.`);
+  }
+}

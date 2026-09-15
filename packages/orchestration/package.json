@@ -12,10 +12,18 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@osva/contracts": "workspace:*",
+    "@osva/domain": "workspace:*",
+    "@osva/runtime-core": "workspace:*"
   },
   "devDependencies": {
+    "@osva/adapters-memory": "workspace:*",
+    "@osva/db": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

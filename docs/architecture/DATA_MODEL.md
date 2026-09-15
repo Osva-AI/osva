@@ -62,3 +62,10 @@ stricter identity format than the public contract.
 
 ID generation policy belongs outside the DB adapter. A later stage may
 adopt UUID columns only if the public ID contract is tightened first.
+
+## Stage 0 Run input
+
+A Run owns an immutable JSON-compatible execution input snapshot,
+persisted as `runs.input` JSONB. Retries and ExecutionRequest
+reconstruction reuse that captured value; it is not stored on the
+JobQueue payload.

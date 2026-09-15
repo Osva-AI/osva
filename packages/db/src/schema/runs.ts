@@ -25,6 +25,7 @@ export const runs = pgTable(
     modelProfileVersionBindings: jsonb("model_profile_version_bindings")
       .$type<Readonly<Record<string, string>>>()
       .notNull(),
+    input: jsonb("input").notNull(),
     idempotencyKey: text("idempotency_key"),
     createdAt: timestamp("created_at", {
       withTimezone: true,

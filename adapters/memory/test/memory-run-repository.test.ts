@@ -10,6 +10,7 @@ import {
   LATER,
   NOW,
   otherRunId,
+  RUN_INPUT,
   runAttemptId,
   runId,
   runStepId,
@@ -23,6 +24,7 @@ function createRun(id: RunId = runId): Run {
     workspaceId,
     agentId,
     effectiveBindings: createBindings(),
+    input: RUN_INPUT,
     createdAt: NOW,
   });
 }
@@ -40,6 +42,7 @@ describe("MemoryRunRepository", () => {
     expect(stored?.status).toBe("QUEUED");
     expect(stored?.updatedAt.getTime()).toBe(LATER.getTime());
     expect(stored?.createdAt.getTime()).toBe(NOW.getTime());
+    expect(stored?.input).toEqual(RUN_INPUT);
   });
 
   it("allows legitimate RunAttempt state progression", async () => {

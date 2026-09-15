@@ -11,6 +11,7 @@ import {
   createBindings,
   deploymentId,
   NOW,
+  RUN_INPUT,
   runId,
   workspaceId,
 } from "./fixtures.js";
@@ -63,13 +64,28 @@ describe("Stage 0 identity entities", () => {
       workspaceId,
       agentId,
       effectiveBindings: createBindings(),
+      input: RUN_INPUT,
       createdAt: NOW,
     });
 
     expect(run.status).toBe("PENDING");
+    expect(run.input).toEqual(RUN_INPUT);
     expect(run.effectiveBindings.agentVersionId).toBe(agentVersionId);
     expect(run).not.toHaveProperty("setStatus");
     expect(Object.isFrozen(run)).toBe(true);
+  });
+
+  it("rejects non-JSON-compatible Run input", () => {
+    expect(() =>
+      Run.create({
+        id: runId,
+        workspaceId,
+        agentId,
+        effectiveBindings: createBindings(),
+        input: () => "nope",
+        createdAt: NOW,
+      }),
+    ).toThrow(DomainInvariantError);
   });
 
   it("rejects a blank Agent key", () => {

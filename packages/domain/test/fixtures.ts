@@ -63,3 +63,5 @@ export function createBindings(): EffectiveRunBindings {
     },
   });
 }
+
+export const RUN_INPUT = { prompt: "hello" };

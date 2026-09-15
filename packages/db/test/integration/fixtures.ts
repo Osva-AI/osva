@@ -51,6 +51,8 @@ export function createManifest(
   };
 }
 
+export const RUN_INPUT = { prompt: "hello" };
+
 export function createBindings(
   agentVersionId: AgentVersionId,
   modelProfileVersionId: ModelProfileVersionId,

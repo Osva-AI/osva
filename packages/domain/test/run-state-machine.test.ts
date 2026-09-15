@@ -13,6 +13,7 @@ import {
   createBindings,
   LATER,
   NOW,
+  RUN_INPUT,
   runId,
   workspaceId,
 } from "./fixtures.js";
@@ -28,6 +29,7 @@ function runInState(status: RunState): Run {
     agentId,
     status,
     effectiveBindings: createBindings(),
+    input: RUN_INPUT,
     createdAt: NOW,
     updatedAt: NOW,
     idempotencyKey: "idem-1",
@@ -87,6 +89,7 @@ describe("Run state machine", () => {
       workspaceId,
       agentId,
       effectiveBindings: createBindings(),
+      input: RUN_INPUT,
       createdAt: NOW,
     });
     const queued = run.transitionTo("QUEUED", LATER);
@@ -96,6 +99,7 @@ describe("Run state machine", () => {
     expect(queued.updatedAt.getTime()).toBe(LATER.getTime());
     expect(run.createdAt.getTime()).toBe(NOW.getTime());
     expect(run.updatedAt.getTime()).toBe(NOW.getTime());
+    expect(queued.input).toEqual(RUN_INPUT);
   });
 });
 

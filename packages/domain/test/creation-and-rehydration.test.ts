@@ -9,6 +9,7 @@ import {
   LATER,
   LATER_STILL,
   NOW,
+  RUN_INPUT,
   runAttemptId,
   runId,
   workspaceId,
@@ -21,11 +22,13 @@ describe("Run creation vs rehydration", () => {
       workspaceId,
       agentId,
       effectiveBindings: createBindings(),
+      input: RUN_INPUT,
       createdAt: NOW,
       idempotencyKey: "idem-1",
     });
 
     expect(run.status).toBe("PENDING");
+    expect(run.input).toEqual(RUN_INPUT);
     expect(run.createdAt.getTime()).toBe(NOW.getTime());
     expect(run.updatedAt.getTime()).toBe(NOW.getTime());
   });
@@ -37,12 +40,14 @@ describe("Run creation vs rehydration", () => {
       agentId,
       status: "RUNNING",
       effectiveBindings: createBindings(),
+      input: RUN_INPUT,
       createdAt: NOW,
       updatedAt: LATER,
       idempotencyKey: "idem-1",
     });
 
     expect(run.status).toBe("RUNNING");
+    expect(run.input).toEqual(RUN_INPUT);
     expect(run.createdAt.getTime()).toBe(NOW.getTime());
     expect(run.updatedAt.getTime()).toBe(LATER.getTime());
   });
@@ -54,6 +59,7 @@ describe("Run creation vs rehydration", () => {
       agentId,
       status: "SUCCEEDED",
       effectiveBindings: createBindings(),
+      input: RUN_INPUT,
       createdAt: NOW,
       updatedAt: LATER,
     });
