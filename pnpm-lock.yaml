@@ -216,6 +216,13 @@ importers:
         version: 5.0.0(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4))
 
   adapters/memory:
+    dependencies:
+      '@osva/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

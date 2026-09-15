@@ -105,4 +105,76 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["adapters/memory/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message:
+                "adapters/memory cannot import persistence infrastructure.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "adapters/memory cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "adapters/memory cannot import runtime-core.",
+            },
+            {
+              name: "@osva/web",
+              message: "adapters/memory cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "adapters/memory cannot import apps.",
+            },
+            {
+              name: "zod",
+              message: "adapters/memory cannot depend on Zod.",
+            },
+            {
+              name: "drizzle-orm",
+              message: "adapters/memory cannot import persistence libraries.",
+            },
+            {
+              name: "postgres",
+              message: "adapters/memory cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "bullmq",
+              message:
+                "adapters/memory cannot import distributed queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "adapters/memory cannot import Redis clients.",
+            },
+            {
+              name: "redis",
+              message: "adapters/memory cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "adapters/memory cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message: "adapters/memory cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message: "adapters/memory cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );
