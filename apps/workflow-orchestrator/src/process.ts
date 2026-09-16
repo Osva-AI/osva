@@ -1,11 +1,17 @@
 import { randomUUID } from "node:crypto";
 
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
-import type { RunAttemptId, RunId, WorkflowNodeRunId } from "@osva/contracts";
+import type {
+  ApprovalRequestId,
+  RunAttemptId,
+  RunId,
+  WorkflowNodeRunId,
+} from "@osva/contracts";
 import {
   checkDatabaseConnection,
   createDatabase,
   PostgresAgentRepository,
+  PostgresApprovalRequestRepository,
   PostgresRunRepository,
   PostgresWorkflowRepository,
   PostgresWorkflowRunRepository,
@@ -68,10 +74,12 @@ export function createWorkflowOrchestratorProcess(
   const agents = new PostgresAgentRepository(database);
   const workflows = new PostgresWorkflowRepository(database);
   const workflowRuns = new PostgresWorkflowRunRepository(database);
+  const approvalRequests = new PostgresApprovalRequestRepository(database);
   const createRun = new CreateRun({ runs, agents, queue });
   const reconcile = new ReconcileWorkflowRun({
     workflows,
     workflowRuns,
+    approvalRequests,
     agents,
     runs,
     createRun,
@@ -102,6 +110,7 @@ export function createWorkflowOrchestratorProcess(
           createRunId: () => randomUUID() as RunId,
           createRunAttemptId: () => randomUUID() as RunAttemptId,
           createWorkflowNodeRunId: () => randomUUID() as WorkflowNodeRunId,
+          createApprovalRequestId: () => randomUUID() as ApprovalRequestId,
         });
       },
       onClose: async () => {

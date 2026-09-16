@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import {
+  WORKFLOW_APPROVAL_DESCRIPTION_MAX_LENGTH,
+  WORKFLOW_APPROVAL_TITLE_MAX_LENGTH,
   WORKFLOW_DEFINITION_SCHEMA_VERSION,
   WORKFLOW_DEFINITION_SCHEMA_VERSION_V2,
   WORKFLOW_EXECUTABLE_NODE_TYPES,
@@ -63,11 +65,23 @@ export const workflowDefinitionJoinNodeV2Schema = z.strictObject({
   type: z.literal("JOIN"),
 });
 
+export const workflowDefinitionApprovalNodeV2Schema = z.strictObject({
+  key: z.string().min(1),
+  type: z.literal("APPROVAL"),
+  title: z.string().min(1).max(WORKFLOW_APPROVAL_TITLE_MAX_LENGTH),
+  description: z
+    .string()
+    .min(1)
+    .max(WORKFLOW_APPROVAL_DESCRIPTION_MAX_LENGTH)
+    .optional(),
+});
+
 export const workflowDefinitionV2NodeSchema = z.discriminatedUnion("type", [
   workflowDefinitionAgentNodeV2Schema,
   workflowDefinitionBranchNodeV2Schema,
   workflowDefinitionParallelNodeV2Schema,
   workflowDefinitionJoinNodeV2Schema,
+  workflowDefinitionApprovalNodeV2Schema,
 ]);
 
 export const workflowDefinitionV2Schema = z.strictObject({

@@ -187,6 +187,7 @@ async function handleRequest(
     method,
     path,
     workflows,
+    url.searchParams,
   );
   if (handledWorkflows) {
     return;

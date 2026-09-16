@@ -9,11 +9,13 @@
 - ✅ Slice 2.2: branch/parallel/join DAG orchestration
   (`schemaVersion: "2"`, durable `SKIPPED`, skip propagation,
   concurrent ready AGENT nodes, process-level workflow-orchestrator E2E);
+- ✅ Slice 2.3: multi-agent composition and durable APPROVAL
+  (different AGENT nodes bind different immutable AgentVersions; human
+  approval is a workflow orchestration primitive with ApprovalRequest;
+  no direct agent-to-agent runtime API);
 - Node SDK;
 - Python SDK;
 - HTTP runtime;
-- multi-agent composition;
-- approval primitive;
 - additional providers;
 - MCP client;
 - connectors;
@@ -78,3 +80,28 @@ sibling Runs and cannot be overwritten by later sibling success.
 Slice 2.2 does not implement approvals, pause/resume, cancellation,
 workflow retries, loops, expression languages, TOOL/HTTP/MCP nodes, or a
 visual builder.
+
+## Slice 2.3
+
+Stage 2.3 formalizes OSVA multi-agent behavior as workflow composition and
+adds a durable `APPROVAL` orchestration node.
+
+Different AGENT nodes on one immutable WorkflowVersion may reference
+different immutable AgentVersions. Handoff, routing, fan-out, fan-in, and
+human gates happen only through WorkflowRun / WorkflowNodeRun. The trusted
+runtime does not expose agent invocation, spawning, or messaging APIs.
+
+When an APPROVAL node is ready, PostgreSQL records one ApprovalRequest and
+the WorkflowNodeRun becomes `WAITING_FOR_APPROVAL`. BullMQ is not used as
+the waiting mechanism. Humans decide through
+`POST /v1/approval-requests/:id/decision`. The API persists `APPROVED` or
+`REJECTED` only; `apps/workflow-orchestrator` reconciles the decision.
+Approved nodes pass input through unchanged. Rejected nodes fail the
+WorkflowRun with `APPROVAL_REJECTED`. `WAITING_FOR_APPROVAL` on the
+WorkflowRun means human input is the actual remaining blocker.
+
+`decidedBy` is omitted because OSVA has no durable principal identity yet.
+
+Slice 2.3 does not implement approval expiration, assignment, quorum,
+rejection branches, revision loops, tool-call approval, Node/Python/HTTP
+runtimes, MCP, or a visual builder.

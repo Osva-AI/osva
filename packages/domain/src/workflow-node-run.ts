@@ -186,6 +186,13 @@ export class WorkflowNodeRun {
     });
   }
 
+  markWaitingForApproval(now: Date): WorkflowNodeRun {
+    return this.transitionTo("WAITING_FOR_APPROVAL", {
+      now,
+      startedAt: this.startedAt ?? now,
+    });
+  }
+
   markSucceeded(
     now: Date,
     output: unknown,

@@ -1,6 +1,7 @@
 import type {
   AgentId,
   AgentVersionId,
+  ApprovalRequestState,
   WorkflowDefinitionV1,
   WorkflowId,
   WorkflowVersionId,
@@ -15,7 +16,9 @@ import {
   DomainInvariantError,
   WorkspaceNotFoundError,
 } from "../src/errors.js";
+import type { ApprovalRequest } from "../src/approval-request.js";
 import type { AgentRepository } from "../src/ports/agent-repository.js";
+import type { ApprovalRequestRepository } from "../src/ports/approval-request-repository.js";
 import type { WorkflowRepository } from "../src/ports/workflow-repository.js";
 import type { WorkflowRunRepository } from "../src/ports/workflow-run-repository.js";
 import type { WorkspaceRepository } from "../src/ports/workspace-repository.js";
@@ -160,6 +163,7 @@ describe("workflow application", () => {
     const app = createWorkflowApplication({
       workflows: new InMemoryWorkflowRepository(),
       workflowRuns: new InMemoryWorkflowRunRepository(),
+      approvalRequests: new InMemoryApprovalRequestRepository(),
       agents,
       workspaces,
       clock: { now: () => NOW },
@@ -231,6 +235,7 @@ async function createApp(options?: { readonly seedWorkspace?: boolean }) {
   return createWorkflowApplication({
     workflows: new InMemoryWorkflowRepository(),
     workflowRuns: new InMemoryWorkflowRunRepository(),
+    approvalRequests: new InMemoryApprovalRequestRepository(),
     agents,
     workspaces,
     clock: { now: () => NOW },
@@ -410,6 +415,33 @@ class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
     _expectedStatus: import("../src/workflow-node-run.js").WorkflowNodeRun["status"],
     next: import("../src/workflow-node-run.js").WorkflowNodeRun,
   ): Promise<import("../src/workflow-node-run.js").WorkflowNodeRun> {
+    return next;
+  }
+}
+
+class InMemoryApprovalRequestRepository implements ApprovalRequestRepository {
+  async saveApprovalRequest(): Promise<void> {}
+
+  async findApprovalRequestById(): Promise<null> {
+    return null;
+  }
+
+  async findApprovalRequestByWorkspaceAndId(): Promise<null> {
+    return null;
+  }
+
+  async findApprovalRequestByWorkflowNodeRunId(): Promise<null> {
+    return null;
+  }
+
+  async listApprovalRequestsByWorkflowRunId(): Promise<readonly never[]> {
+    return [];
+  }
+
+  async saveApprovalRequestTransition(
+    _expectedStatus: ApprovalRequestState,
+    next: ApprovalRequest,
+  ): Promise<ApprovalRequest> {
     return next;
   }
 }

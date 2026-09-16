@@ -1,5 +1,7 @@
 import type {
   AgentVersionId,
+  ApprovalDecision,
+  ApprovalRequestId,
   WorkflowDefinition,
   WorkflowId,
   WorkflowRunId,
@@ -7,15 +9,20 @@ import type {
   WorkspaceId,
 } from "@osva/contracts";
 
+import { ApprovalRequest } from "./approval-request.js";
+import { isTerminalApprovalRequestState } from "./approval-request-state-machine.js";
 import {
   AgentVersionNotFoundError,
+  ApprovalRequestNotFoundError,
   DomainInvariantError,
+  LifecycleConflictError,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
   WorkflowVersionNotFoundError,
   WorkspaceNotFoundError,
 } from "./errors.js";
 import type { AgentRepository } from "./ports/agent-repository.js";
+import type { ApprovalRequestRepository } from "./ports/approval-request-repository.js";
 import type { WorkflowRepository } from "./ports/workflow-repository.js";
 import type { WorkflowRunRepository } from "./ports/workflow-run-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
@@ -36,6 +43,7 @@ export interface WorkflowApplicationIds {
 export interface WorkflowApplicationDependencies {
   readonly workflows: WorkflowRepository;
   readonly workflowRuns: WorkflowRunRepository;
+  readonly approvalRequests: ApprovalRequestRepository;
   readonly agents: AgentRepository;
   readonly workspaces: WorkspaceRepository;
   readonly clock: WorkflowApplicationClock;
@@ -68,6 +76,19 @@ export interface CreateWorkflowRunCommand {
 export interface WorkflowRunView {
   readonly workflowRun: WorkflowRun;
   readonly nodeRuns: readonly WorkflowNodeRun[];
+  readonly approvalRequests: readonly ApprovalRequest[];
+}
+
+export interface GetApprovalRequestCommand {
+  readonly workspaceId: WorkspaceId;
+  readonly approvalRequestId: ApprovalRequestId;
+}
+
+export interface DecideApprovalRequestCommand {
+  readonly workspaceId: WorkspaceId;
+  readonly approvalRequestId: ApprovalRequestId;
+  readonly decision: ApprovalDecision;
+  readonly comment?: string;
 }
 
 export class CreateWorkflow {
@@ -228,8 +249,94 @@ export class GetWorkflowRun {
 
     const nodeRuns =
       await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRunId);
+    const approvalRequests =
+      await this.deps.approvalRequests.listApprovalRequestsByWorkflowRunId(
+        workflowRunId,
+      );
 
-    return { workflowRun, nodeRuns };
+    return { workflowRun, nodeRuns, approvalRequests };
+  }
+}
+
+export class GetApprovalRequest {
+  constructor(private readonly deps: WorkflowApplicationDependencies) {}
+
+  async execute(command: GetApprovalRequestCommand): Promise<ApprovalRequest> {
+    const request =
+      await this.deps.approvalRequests.findApprovalRequestByWorkspaceAndId(
+        command.workspaceId,
+        command.approvalRequestId,
+      );
+    if (request === null) {
+      throw new ApprovalRequestNotFoundError(command.approvalRequestId);
+    }
+
+    return request;
+  }
+}
+
+export class DecideApprovalRequest {
+  constructor(private readonly deps: WorkflowApplicationDependencies) {}
+
+  async execute(
+    command: DecideApprovalRequestCommand,
+  ): Promise<ApprovalRequest> {
+    const existing =
+      await this.deps.approvalRequests.findApprovalRequestByWorkspaceAndId(
+        command.workspaceId,
+        command.approvalRequestId,
+      );
+    if (existing === null) {
+      throw new ApprovalRequestNotFoundError(command.approvalRequestId);
+    }
+
+    if (isTerminalApprovalRequestState(existing.status)) {
+      if (existing.status === command.decision) {
+        return existing;
+      }
+
+      throw new LifecycleConflictError(
+        "approvalRequest",
+        existing.id,
+        existing.status,
+      );
+    }
+
+    const now = this.deps.clock.now();
+    const next =
+      command.decision === "APPROVED"
+        ? existing.markApproved(now, command.comment)
+        : existing.markRejected(now, command.comment);
+
+    try {
+      return await this.deps.approvalRequests.saveApprovalRequestTransition(
+        "PENDING",
+        next,
+      );
+    } catch (error) {
+      if (!(error instanceof LifecycleConflictError)) {
+        throw error;
+      }
+
+      const reloaded =
+        await this.deps.approvalRequests.findApprovalRequestByWorkspaceAndId(
+          command.workspaceId,
+          command.approvalRequestId,
+        );
+      if (reloaded === null) {
+        throw new ApprovalRequestNotFoundError(command.approvalRequestId);
+      }
+
+      if (reloaded.status === command.decision) {
+        return reloaded;
+      }
+
+      throw new LifecycleConflictError(
+        "approvalRequest",
+        reloaded.id,
+        reloaded.status,
+      );
+    }
   }
 }
 
@@ -242,6 +349,8 @@ export interface WorkflowApplication {
   readonly listWorkflowVersions: ListWorkflowVersions;
   readonly createWorkflowRun: CreateWorkflowRun;
   readonly getWorkflowRun: GetWorkflowRun;
+  readonly getApprovalRequest: GetApprovalRequest;
+  readonly decideApprovalRequest: DecideApprovalRequest;
 }
 
 export function createWorkflowApplication(
@@ -256,6 +365,8 @@ export function createWorkflowApplication(
     listWorkflowVersions: new ListWorkflowVersions(deps),
     createWorkflowRun: new CreateWorkflowRun(deps),
     getWorkflowRun: new GetWorkflowRun(deps),
+    getApprovalRequest: new GetApprovalRequest(deps),
+    decideApprovalRequest: new DecideApprovalRequest(deps),
   };
 }
 

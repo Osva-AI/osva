@@ -15,3 +15,4 @@ export { MemoryToolRepository } from "./memory-tool-repository.js";
 export { MemoryScheduleRepository } from "./memory-schedule-repository.js";
 export { MemoryWorkflowRepository } from "./memory-workflow-repository.js";
 export { MemoryWorkflowRunRepository } from "./memory-workflow-run-repository.js";
+export { MemoryApprovalRequestRepository } from "./memory-approval-request-repository.js";

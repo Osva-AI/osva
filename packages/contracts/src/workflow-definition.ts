@@ -18,6 +18,7 @@ export type WorkflowDefinitionSchemaVersionV2 =
  * Conceptual node types for the pre-1.0 Workflow Definition.
  * Slice 2.1 executes AGENT-only linear graphs (schemaVersion 1).
  * Slice 2.2 executes AGENT + BRANCH + PARALLEL + JOIN DAGs (schemaVersion 2).
+ * Slice 2.3 adds APPROVAL as an OSVA orchestration node (schemaVersion 2).
  */
 export const WORKFLOW_NODE_TYPES = [
   "AGENT",
@@ -44,6 +45,7 @@ export const WORKFLOW_V2_NODE_TYPES = [
   "BRANCH",
   "PARALLEL",
   "JOIN",
+  "APPROVAL",
 ] as const;
 
 export type WorkflowV2NodeType = (typeof WORKFLOW_V2_NODE_TYPES)[number];
@@ -52,6 +54,7 @@ export const WORKFLOW_V2_ORCHESTRATION_NODE_TYPES = [
   "BRANCH",
   "PARALLEL",
   "JOIN",
+  "APPROVAL",
 ] as const;
 
 export type WorkflowV2OrchestrationNodeType =
@@ -113,11 +116,22 @@ export interface WorkflowDefinitionJoinNodeV2 {
   readonly type: "JOIN";
 }
 
+export const WORKFLOW_APPROVAL_TITLE_MAX_LENGTH = 200;
+export const WORKFLOW_APPROVAL_DESCRIPTION_MAX_LENGTH = 2000;
+
+export interface WorkflowDefinitionApprovalNodeV2 {
+  readonly key: string;
+  readonly type: "APPROVAL";
+  readonly title: string;
+  readonly description?: string;
+}
+
 export type WorkflowDefinitionNodeV2 =
   | WorkflowDefinitionAgentNodeV2
   | WorkflowDefinitionBranchNodeV2
   | WorkflowDefinitionParallelNodeV2
-  | WorkflowDefinitionJoinNodeV2;
+  | WorkflowDefinitionJoinNodeV2
+  | WorkflowDefinitionApprovalNodeV2;
 
 export type WorkflowDefinitionEdgeV2 = WorkflowDefinitionEdgeV1;
 
@@ -125,8 +139,9 @@ export type WorkflowDefinitionEdgeV2 = WorkflowDefinitionEdgeV1;
  * Stage 2.2 DAG WorkflowVersion definition.
  *
  * V1 sequential graphs remain valid and executable. V2 adds BRANCH, PARALLEL,
- * and JOIN orchestration nodes. AGENT remains the only node that creates a
- * canonical Run.
+ * JOIN, and APPROVAL orchestration nodes. AGENT remains the only node that
+ * creates a canonical Run. Cross-agent execution is created only by workflow
+ * orchestration.
  */
 export interface WorkflowDefinitionV2 {
   readonly schemaVersion: WorkflowDefinitionSchemaVersionV2;
@@ -152,4 +167,10 @@ export function isWorkflowAgentNode(
   node: WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2,
 ): node is WorkflowDefinitionNodeV1 | WorkflowDefinitionAgentNodeV2 {
   return node.type === "AGENT";
+}
+
+export function isWorkflowApprovalNode(
+  node: WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2,
+): node is WorkflowDefinitionApprovalNodeV2 {
+  return node.type === "APPROVAL";
 }

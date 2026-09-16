@@ -42,6 +42,26 @@ describe("WorkflowNodeRun SKIPPED lifecycle", () => {
     );
   });
 
+  it("allows PENDING to WAITING_FOR_APPROVAL without a child Run", () => {
+    const pending = WorkflowNodeRun.create({
+      id: nodeRunId,
+      workspaceId,
+      workflowRunId,
+      workflowNodeKey: "review",
+      sequence: 2,
+      input: { campaign: "launch" },
+      createdAt: NOW,
+    });
+    const waiting = pending.markWaitingForApproval(LATER);
+    expect(waiting.status).toBe("WAITING_FOR_APPROVAL");
+    expect(waiting.childRunId).toBeUndefined();
+    expect(waiting.startedAt).toEqual(LATER);
+
+    const succeeded = waiting.markSucceeded(LATER, waiting.input);
+    expect(succeeded.status).toBe("SUCCEEDED");
+    expect(succeeded.output).toEqual({ campaign: "launch" });
+  });
+
   it("persists a BRANCH selectedTargetKey on success", () => {
     const pending = WorkflowNodeRun.create({
       id: nodeRunId,

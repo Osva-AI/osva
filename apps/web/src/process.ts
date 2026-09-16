@@ -10,6 +10,7 @@ import {
   PostgresScheduleRepository,
   PostgresWorkflowRepository,
   PostgresWorkflowRunRepository,
+  PostgresApprovalRequestRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
@@ -58,6 +59,9 @@ export function createWebProcess(
   const scheduleRepository = new PostgresScheduleRepository(database);
   const workflowRepository = new PostgresWorkflowRepository(database);
   const workflowRunRepository = new PostgresWorkflowRunRepository(database);
+  const approvalRequestRepository = new PostgresApprovalRequestRepository(
+    database,
+  );
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
   const server = createWebApplication({
@@ -115,6 +119,7 @@ export function createWebProcess(
     workflows: createWorkflowApplication({
       workflows: workflowRepository,
       workflowRuns: workflowRunRepository,
+      approvalRequests: approvalRequestRepository,
       agents,
       workspaces,
       clock,

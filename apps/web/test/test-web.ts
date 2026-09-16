@@ -9,6 +9,7 @@ import {
   MemoryScheduleRepository,
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
+  MemoryApprovalRequestRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import {
@@ -42,6 +43,7 @@ export async function createTestWebApplication(options?: {
   const schedules = new MemoryScheduleRepository();
   const workflowRepository = new MemoryWorkflowRepository();
   const workflowRunRepository = new MemoryWorkflowRunRepository();
+  const approvalRequestRepository = new MemoryApprovalRequestRepository();
   const queue = new MemoryJobQueue();
   const clock = { now: () => TEST_NOW };
   let counter = 0;
@@ -116,6 +118,7 @@ export async function createTestWebApplication(options?: {
     workflows: createWorkflowApplication({
       workflows: workflowRepository,
       workflowRuns: workflowRunRepository,
+      approvalRequests: approvalRequestRepository,
       agents,
       workspaces,
       clock,
@@ -133,6 +136,7 @@ export async function createTestWebApplication(options?: {
     schedules,
     workflows: workflowRepository,
     workflowRuns: workflowRunRepository,
+    approvalRequests: approvalRequestRepository,
     queue,
   };
 }

@@ -8,6 +8,8 @@ import type {
   WorkflowBranchEqualsValue,
 } from "@osva/contracts";
 import {
+  WORKFLOW_APPROVAL_DESCRIPTION_MAX_LENGTH,
+  WORKFLOW_APPROVAL_TITLE_MAX_LENGTH,
   WORKFLOW_EXECUTABLE_NODE_TYPES,
   WORKFLOW_V2_NODE_TYPES,
   isValidJsonPointer,
@@ -393,7 +395,7 @@ function assertV2Node(node: WorkflowDefinitionNodeV2): void {
 
   if (!V2_NODE_TYPE_SET.has(node.type)) {
     throw new InvalidWorkflowDefinitionError(
-      `Workflow node '${node.key}' has unsupported type '${String(node.type)}'. Slice 2.2 supports AGENT, BRANCH, PARALLEL, and JOIN.`,
+      `Workflow node '${node.key}' has unsupported type '${String(node.type)}'. Slice 2.3 supports AGENT, BRANCH, PARALLEL, JOIN, and APPROVAL.`,
     );
   }
 
@@ -410,6 +412,10 @@ function assertV2Node(node: WorkflowDefinitionNodeV2): void {
 
   if (node.type === "BRANCH") {
     assertBranchNode(node);
+  }
+
+  if (node.type === "APPROVAL") {
+    assertApprovalNode(node);
   }
 }
 
@@ -465,6 +471,32 @@ function assertBranchNode(
   }
 }
 
+function assertApprovalNode(
+  node: Extract<WorkflowDefinitionNodeV2, { type: "APPROVAL" }>,
+): void {
+  if (
+    typeof node.title !== "string" ||
+    node.title.trim().length === 0 ||
+    node.title.length > WORKFLOW_APPROVAL_TITLE_MAX_LENGTH
+  ) {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow APPROVAL '${node.key}' must declare a non-empty title of at most ${String(WORKFLOW_APPROVAL_TITLE_MAX_LENGTH)} characters.`,
+    );
+  }
+
+  if (node.description !== undefined) {
+    if (
+      typeof node.description !== "string" ||
+      node.description.trim().length === 0 ||
+      node.description.length > WORKFLOW_APPROVAL_DESCRIPTION_MAX_LENGTH
+    ) {
+      throw new InvalidWorkflowDefinitionError(
+        `Workflow APPROVAL '${node.key}' description must be a non-empty string of at most ${String(WORKFLOW_APPROVAL_DESCRIPTION_MAX_LENGTH)} characters.`,
+      );
+    }
+  }
+}
+
 function assertV2NodeTopology(
   node: WorkflowDefinitionNodeV2,
   inCount: number,
@@ -473,16 +505,16 @@ function assertV2NodeTopology(
   isTerminal: boolean,
   outgoingTargets: readonly string[],
 ): void {
-  if (node.type === "AGENT") {
+  if (node.type === "AGENT" || node.type === "APPROVAL") {
     if (isEntry ? inCount !== 0 : inCount !== 1) {
       throw new InvalidWorkflowDefinitionError(
-        `Workflow AGENT '${node.key}' cannot have implicit fan-in.`,
+        `Workflow ${node.type} '${node.key}' cannot have implicit fan-in.`,
       );
     }
 
     if (isTerminal ? outCount !== 0 : outCount !== 1) {
       throw new InvalidWorkflowDefinitionError(
-        `Workflow AGENT '${node.key}' cannot have implicit fan-out.`,
+        `Workflow ${node.type} '${node.key}' cannot have implicit fan-out.`,
       );
     }
 

@@ -16,6 +16,7 @@ const HOST_POSTGRES_CONNECT_TIMEOUT_SECONDS = 2;
 const execFileAsync = promisify(execFile);
 
 const STAGE0_TABLES = [
+  "approval_requests",
   "workflow_node_runs",
   "workflow_runs",
   "workflow_versions",

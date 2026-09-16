@@ -1,6 +1,7 @@
 export const WORKFLOW_RUN_STATES = [
   "PENDING",
   "RUNNING",
+  "WAITING_FOR_APPROVAL",
   "SUCCEEDED",
   "FAILED",
 ] as const;
@@ -15,6 +16,7 @@ export type TerminalWorkflowRunState =
 export const WORKFLOW_NODE_RUN_STATES = [
   "PENDING",
   "RUNNING",
+  "WAITING_FOR_APPROVAL",
   "SUCCEEDED",
   "FAILED",
   "SKIPPED",

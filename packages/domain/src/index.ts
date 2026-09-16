@@ -2,6 +2,8 @@ export type {
   AgentId,
   AgentManifestV1,
   AgentVersionId,
+  ApprovalRequestId,
+  ApprovalRequestState,
   DeploymentId,
   ModelProfileId,
   ModelProfileVersionId,
@@ -26,8 +28,11 @@ export type {
 } from "@osva/contracts";
 
 export {
+  APPROVAL_REJECTED_ERROR_CODE,
+  APPROVAL_REQUEST_STATES,
   RUN_ATTEMPT_STATES,
   RUN_STATES,
+  TERMINAL_APPROVAL_REQUEST_STATES,
   TERMINAL_RUN_STATES,
   TERMINAL_WORKFLOW_NODE_RUN_STATES,
   TERMINAL_WORKFLOW_RUN_STATES,
@@ -38,6 +43,7 @@ export {
 export {
   AgentNotFoundError,
   AgentVersionNotFoundError,
+  ApprovalRequestNotFoundError,
   DomainError,
   DomainInvariantError,
   DuplicateAgentKeyError,
@@ -46,6 +52,7 @@ export {
   DuplicateScheduleKeyError,
   DuplicateWorkflowKeyError,
   EvaluationNotFoundError,
+  InvalidApprovalRequestTransitionError,
   InvalidAttemptSequenceError,
   InvalidModelBindingError,
   InvalidRunAttemptStateError,
@@ -135,6 +142,11 @@ export {
   type WorkflowNodeRunRehydrateProps,
 } from "./workflow-node-run.js";
 export {
+  ApprovalRequest,
+  type ApprovalRequestCreateProps,
+  type ApprovalRequestRehydrateProps,
+} from "./approval-request.js";
+export {
   assertDagWorkflowDefinition,
   assertSequentialWorkflowDefinition,
   assertWorkflowDefinition,
@@ -150,6 +162,7 @@ export {
   inputForNode,
   isNodeReady,
   isNodeSkippable,
+  isWorkflowBlockedOnApproval,
   nodeRunsByKey,
 } from "./workflow-readiness.js";
 export {
@@ -191,10 +204,18 @@ export {
   isTerminalWorkflowNodeRunState,
   isWorkflowNodeRunState,
 } from "./workflow-node-run-state-machine.js";
+export {
+  LEGAL_APPROVAL_REQUEST_TRANSITIONS,
+  assertLegalApprovalRequestTransition,
+  isApprovalRequestState,
+  isLegalApprovalRequestTransition,
+  isTerminalApprovalRequestState,
+} from "./approval-request-state-machine.js";
 
 export type {
   AgentMetadataUpdate,
   AgentRepository,
+  ApprovalRequestRepository,
   AppendAgentVersionInput,
   AppendModelProfileVersionInput,
   AppendToolVersionInput,
@@ -347,6 +368,8 @@ export {
   AppendWorkflowVersion,
   CreateWorkflow,
   CreateWorkflowRun,
+  DecideApprovalRequest,
+  GetApprovalRequest,
   GetWorkflow,
   GetWorkflowRun,
   GetWorkflowVersion,
@@ -356,6 +379,8 @@ export {
   type AppendWorkflowVersionCommand,
   type CreateWorkflowCommand,
   type CreateWorkflowRunCommand,
+  type DecideApprovalRequestCommand,
+  type GetApprovalRequestCommand,
   type GetWorkflowVersionCommand,
   type WorkflowApplication,
   type WorkflowApplicationClock,

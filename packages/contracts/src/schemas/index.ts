@@ -1,6 +1,7 @@
 export {
   agentIdSchema,
   agentVersionIdSchema,
+  approvalRequestIdSchema,
   artifactIdSchema,
   deploymentIdSchema,
   evaluationIdSchema,
@@ -124,6 +125,7 @@ export { toolGrantSchema, toolInvocationSchema } from "./tool.js";
 
 export {
   workflowDefinitionAgentNodeV2Schema,
+  workflowDefinitionApprovalNodeV2Schema,
   workflowDefinitionBranchCaseSchema,
   workflowDefinitionBranchNodeV2Schema,
   workflowDefinitionEdgeSchema,
@@ -137,9 +139,13 @@ export {
 } from "./workflow-definition.js";
 
 export {
+  approvalDecisionSchema,
+  approvalRequestResourceSchema,
+  approvalRequestStateSchema,
   createWorkflowRequestSchema,
   createWorkflowRunRequestSchema,
   createWorkflowVersionRequestSchema,
+  decideApprovalRequestSchema,
   workflowListResourceSchema,
   workflowNodeRunResourceSchema,
   workflowNodeRunStateSchema,

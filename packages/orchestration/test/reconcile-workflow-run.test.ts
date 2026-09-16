@@ -11,6 +11,7 @@ import {
   MemoryRunRepository,
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
+  MemoryApprovalRequestRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import { createWorkflowApplication } from "@osva/domain";
@@ -215,6 +216,7 @@ interface TestHarness {
     createRunId(): RunId;
     createRunAttemptId(): RunAttemptId;
     createWorkflowNodeRunId(): WorkflowNodeRunId;
+    createApprovalRequestId(): import("@osva/contracts").ApprovalRequestId;
   };
 }
 
@@ -233,6 +235,7 @@ async function createHarness(options?: {
   });
   const workflows = new MemoryWorkflowRepository();
   const workflowRuns = new MemoryWorkflowRunRepository();
+  const approvalRequests = new MemoryApprovalRequestRepository();
   const queue = new MemoryJobQueue();
   let attemptCounter = 0;
   let nodeCounter = 0;
@@ -259,6 +262,7 @@ async function createHarness(options?: {
   const reconcile = new ReconcileWorkflowRun({
     workflows,
     workflowRuns,
+    approvalRequests,
     agents,
     runs,
     createRun,
@@ -271,6 +275,7 @@ async function createHarness(options?: {
   const app = createWorkflowApplication({
     workflows,
     workflowRuns,
+    approvalRequests,
     agents,
     workspaces,
     clock: { now: () => NOW },
@@ -302,6 +307,10 @@ async function createHarness(options?: {
       createWorkflowNodeRunId: () => {
         nodeCounter += 1;
         return `node-run-${String(nodeCounter)}` as WorkflowNodeRunId;
+      },
+      createApprovalRequestId: () => {
+        nodeCounter += 1;
+        return `approval-${String(nodeCounter)}` as import("@osva/contracts").ApprovalRequestId;
       },
     },
   };

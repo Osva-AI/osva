@@ -22,11 +22,15 @@
 20. WorkflowVersion is immutable and a WorkflowRun always executes one WorkflowVersion.
 21. Workflow definitions reference immutable AgentVersions.
 22. WorkflowNodeRun is canonical identity for one workflow-node execution.
-23. One AGENT WorkflowNodeRun maps to one canonical child Run. BRANCH, PARALLEL, and JOIN are OSVA orchestration nodes and never create Runs.
+23. One AGENT WorkflowNodeRun maps to one canonical child Run. BRANCH, PARALLEL, JOIN, and APPROVAL are OSVA orchestration nodes and never create Runs.
 24. Workflow orchestration state belongs to PostgreSQL; BullMQ is never workflow lifecycle authority.
-25. Workflow Definition V1 remains backward-compatible; V2 is an immutable DAG of AGENT, BRANCH, PARALLEL, and JOIN.
+25. Workflow Definition V1 remains backward-compatible; V2 is an immutable DAG of AGENT, BRANCH, PARALLEL, JOIN, and APPROVAL.
 26. DAG execution state is derived from durable PostgreSQL WorkflowRun and WorkflowNodeRun rows.
 27. Branch decisions are deterministic and durable; inactive paths become durably SKIPPED.
 28. Explicit PARALLEL owns fan-out; explicit JOIN owns fan-in; JOIN aggregation is deterministic.
 29. Multiple ready AGENT nodes may execute concurrently; reconciliation is idempotent and multi-orchestrator safe.
 30. Already-started parallel child Runs cannot resurrect a FAILED WorkflowRun.
+31. Multi-agent execution is Workflow composition. An agent cannot directly create another agent execution; cross-agent execution is created only by workflow orchestration.
+32. APPROVAL is an OSVA orchestration primitive. One APPROVAL WorkflowNodeRun maps to one ApprovalRequest. Approval waiting state is durable PostgreSQL state and never creates a Run or RunAttempt.
+33. ApprovalRequest decisions are immutable after resolution. The approval API persists decisions; the workflow reconciler advances execution.
+34. Rejected approval fails the WorkflowRun in Slice 2.3. WAITING_FOR_APPROVAL means human input is the actual blocker for workflow progress.

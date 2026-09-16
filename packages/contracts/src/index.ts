@@ -2,6 +2,7 @@ export type {
   AgentId,
   AgentVersionId,
   ArtifactId,
+  ApprovalRequestId,
   DeploymentId,
   EvaluationId,
   EventId,
@@ -223,6 +224,8 @@ export type {
 } from "./model-pricing.js";
 
 export {
+  WORKFLOW_APPROVAL_DESCRIPTION_MAX_LENGTH,
+  WORKFLOW_APPROVAL_TITLE_MAX_LENGTH,
   WORKFLOW_DEFINITION_SCHEMA_VERSION,
   WORKFLOW_DEFINITION_SCHEMA_VERSION_V2,
   WORKFLOW_DEFINITION_SCHEMA_VERSIONS,
@@ -231,6 +234,7 @@ export {
   WORKFLOW_V2_NODE_TYPES,
   WORKFLOW_V2_ORCHESTRATION_NODE_TYPES,
   isWorkflowAgentNode,
+  isWorkflowApprovalNode,
   isWorkflowDefinitionV1,
   isWorkflowDefinitionV2,
 } from "./workflow-definition.js";
@@ -238,6 +242,7 @@ export type {
   WorkflowBranchEqualsValue,
   WorkflowDefinition,
   WorkflowDefinitionAgentNodeV2,
+  WorkflowDefinitionApprovalNodeV2,
   WorkflowDefinitionBranchCaseV2,
   WorkflowDefinitionBranchNodeV2,
   WorkflowDefinitionEdgeV1,
@@ -260,6 +265,19 @@ export { isValidJsonPointer, resolveJsonPointer } from "./json-pointer.js";
 export type { JsonPointerResolution } from "./json-pointer.js";
 
 export {
+  APPROVAL_DECISIONS,
+  APPROVAL_DECISION_COMMENT_MAX_LENGTH,
+  APPROVAL_REJECTED_ERROR_CODE,
+  APPROVAL_REQUEST_STATES,
+  TERMINAL_APPROVAL_REQUEST_STATES,
+} from "./approval.js";
+export type {
+  ApprovalDecision,
+  ApprovalRequestState,
+  TerminalApprovalRequestState,
+} from "./approval.js";
+
+export {
   TERMINAL_WORKFLOW_NODE_RUN_STATES,
   TERMINAL_WORKFLOW_RUN_STATES,
   WORKFLOW_NODE_RUN_STATES,
@@ -273,9 +291,11 @@ export type {
 } from "./workflow-state.js";
 
 export type {
+  ApprovalRequestResourceV1,
   CreateWorkflowRequestV1,
   CreateWorkflowRunRequestV1,
   CreateWorkflowVersionRequestV1,
+  DecideApprovalRequestV1,
   WorkflowListResourceV1,
   WorkflowNodeRunResourceV1,
   WorkflowResourceV1,

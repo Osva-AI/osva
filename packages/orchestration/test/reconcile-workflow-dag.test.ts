@@ -13,6 +13,7 @@ import {
   MemoryRunRepository,
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
+  MemoryApprovalRequestRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import { createWorkflowApplication } from "@osva/domain";
@@ -586,6 +587,7 @@ interface TestHarness {
   readonly runs: MemoryRunRepository;
   readonly workflows: MemoryWorkflowRepository;
   readonly workflowRuns: MemoryWorkflowRunRepository;
+  readonly approvalRequests: MemoryApprovalRequestRepository;
   readonly queue: MemoryJobQueue;
   tick: WorkflowOrchestratorTick;
   readonly execute: ExecuteRunAttempt;
@@ -595,6 +597,7 @@ interface TestHarness {
     createRunId(): RunId;
     createRunAttemptId(): RunAttemptId;
     createWorkflowNodeRunId(): WorkflowNodeRunId;
+    createApprovalRequestId(): import("@osva/contracts").ApprovalRequestId;
   };
   nextWorkflowKey(): number;
   replaceTick(tick: WorkflowOrchestratorTick): void;
@@ -606,6 +609,7 @@ function createTick(harness: TestHarness): WorkflowOrchestratorTick {
     reconcile: new ReconcileWorkflowRun({
       workflows: harness.workflows,
       workflowRuns: harness.workflowRuns,
+      approvalRequests: harness.approvalRequests,
       agents: harness.agents,
       runs: harness.runs,
       createRun: harness.createRun,
@@ -629,10 +633,12 @@ async function createHarness(options?: {
   });
   const workflows = new MemoryWorkflowRepository();
   const workflowRuns = new MemoryWorkflowRunRepository();
+  const approvalRequests = new MemoryApprovalRequestRepository();
   const queue = new MemoryJobQueue();
   let runCounter = 0;
   let attemptCounter = 0;
   let nodeCounter = 0;
+  let approvalCounter = 0;
   let workflowCounter = 0;
   let workflowKey = 0;
   const createRun = new CreateRun({ runs, agents, queue });
@@ -661,6 +667,7 @@ async function createHarness(options?: {
   const app = createWorkflowApplication({
     workflows,
     workflowRuns,
+    approvalRequests,
     agents,
     workspaces,
     clock: { now: () => NOW },
@@ -679,6 +686,7 @@ async function createHarness(options?: {
     runs: innerRuns,
     workflows,
     workflowRuns,
+    approvalRequests,
     queue,
     tick: undefined as unknown as WorkflowOrchestratorTick,
     execute,
@@ -705,6 +713,10 @@ async function createHarness(options?: {
       createWorkflowNodeRunId: () => {
         nodeCounter += 1;
         return `node-run-${String(nodeCounter)}` as WorkflowNodeRunId;
+      },
+      createApprovalRequestId: () => {
+        approvalCounter += 1;
+        return `approval-${String(approvalCounter)}` as import("@osva/contracts").ApprovalRequestId;
       },
     },
   };

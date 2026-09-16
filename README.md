@@ -6,13 +6,15 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** Community Beta in progress (Stage 2 Slice 2.1 complete). OSVA
+> **Status:** Community Beta in progress (Stage 2 Slice 2.3 complete). OSVA
 > supports Agent registry, immutable AgentVersions, Run lifecycle, BullMQ
 > execution transport, trusted TypeScript runtime, ModelGateway, ToolGateway,
-> RunSteps, usage/cost, JSON_EXACT_MATCH evaluation, recurring scheduling, and
-> versioned sequential Workflows. Requires PostgreSQL, Valkey, and
-> `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`, `worker`, `scheduler`, and
-> `workflow-orchestrator`. `OPENAI_API_KEY` is optional and worker-only.
+> RunSteps, usage/cost, JSON_EXACT_MATCH evaluation, recurring scheduling,
+> versioned sequential Workflows, DAG orchestration (BRANCH / PARALLEL /
+> JOIN), multi-agent workflow composition, and durable human APPROVAL gates.
+> Requires PostgreSQL, Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`,
+> `worker`, `scheduler`, and `workflow-orchestrator`. `OPENAI_API_KEY` is
+> optional and worker-only.
 
 ## Why OSVA?
 
@@ -277,13 +279,21 @@ Workflow API:
 - `GET /v1/workflows/:workflowId/versions/:workflowVersionId` — get a version
 - `POST /v1/workflow-runs` — create a PENDING WorkflowRun
   (`workspaceId`, `workflowVersionId`, `input`)
-- `GET /v1/workflow-runs/:workflowRunId` — get a WorkflowRun and its node runs
+- `GET /v1/workflow-runs/:workflowRunId` — get a WorkflowRun, node runs, and
+  ApprovalRequests
+- `GET /v1/approval-requests/:id?workspaceId=...` — get a workspace-scoped
+  ApprovalRequest
+- `POST /v1/approval-requests/:id/decision` — persist `APPROVED` or `REJECTED`
+  (`workspaceId`, `decision`, optional `comment`); does not advance the workflow
 
 Creating a WorkflowRun does not execute the workflow inside the HTTP request.
 `apps/workflow-orchestrator` reconciles PostgreSQL WorkflowRun state, materializes
-sequential WorkflowNodeRuns, and creates canonical child Runs through CreateRun.
-Slice 2.1 executes only linear AGENT graphs. Node N output becomes node N+1
-input. A failed child Run fails the WorkflowRun and later nodes do not start.
+WorkflowNodeRuns, and creates canonical child Runs for AGENT nodes through
+CreateRun. V1 linear AGENT graphs remain executable. V2 adds BRANCH, PARALLEL,
+JOIN, and APPROVAL. Node output follows the DAG; APPROVAL is pass-through.
+A failed child Run or rejected approval fails the WorkflowRun and later nodes
+do not start. Agents cannot invoke other agents; multi-agent execution is
+workflow composition only.
 
 ### Community Alpha quickstart (no paid model key)
 
@@ -307,9 +317,9 @@ RunAttempts, BullMQ transport, trusted TypeScript runtime, ModelGateway,
 OpenAI provider, ToolGateway, internal tools, RunSteps, usage/cost estimation,
 JSON_EXACT_MATCH evaluation, and recurring scheduling.
 
-Slice 2.1 adds versioned sequential Workflows. Community Beta does not yet
-include branch/parallel execution, human approvals, MCP, additional runtimes,
-OpenTelemetry, public SDKs, or a hosted control plane.
+Slice 2.1–2.3 add versioned sequential Workflows, DAG orchestration, multi-agent
+composition, and durable APPROVAL gates. Community Beta does not yet include
+MCP, additional runtimes, OpenTelemetry, public SDKs, or a hosted control plane.
 
 Community Alpha does not yet include auth/RBAC, untrusted sandboxing,
 side-effecting external tools, deployment objects, automatic logical retries,

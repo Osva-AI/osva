@@ -1,4 +1,5 @@
 import type {
+  ApprovalRequestId,
   WorkflowId,
   WorkflowNodeRunId,
   WorkflowRunId,
@@ -11,6 +12,7 @@ import type {
   WorkflowNodeRunState,
   WorkflowRunState,
 } from "./workflow-state.js";
+import type { ApprovalDecision, ApprovalRequestState } from "./approval.js";
 
 export interface CreateWorkflowRequestV1 {
   readonly workspaceId: WorkspaceId;
@@ -93,4 +95,23 @@ export interface WorkflowRunResourceV1 {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly nodeRuns: readonly WorkflowNodeRunResourceV1[];
+  readonly approvalRequests: readonly ApprovalRequestResourceV1[];
+}
+
+export interface ApprovalRequestResourceV1 {
+  readonly id: ApprovalRequestId;
+  readonly workspaceId: WorkspaceId;
+  readonly workflowRunId: WorkflowRunId;
+  readonly workflowNodeRunId: WorkflowNodeRunId;
+  readonly status: ApprovalRequestState;
+  readonly decisionComment?: string;
+  readonly decidedAt?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface DecideApprovalRequestV1 {
+  readonly workspaceId: WorkspaceId;
+  readonly decision: ApprovalDecision;
+  readonly comment?: string;
 }

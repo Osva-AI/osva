@@ -11,10 +11,13 @@ export const LEGAL_WORKFLOW_NODE_RUN_TRANSITIONS: ReadonlyArray<
   readonly [WorkflowNodeRunState, WorkflowNodeRunState]
 > = [
   ["PENDING", "RUNNING"],
+  ["PENDING", "WAITING_FOR_APPROVAL"],
   ["PENDING", "FAILED"],
   ["PENDING", "SKIPPED"],
   ["RUNNING", "SUCCEEDED"],
   ["RUNNING", "FAILED"],
+  ["WAITING_FOR_APPROVAL", "SUCCEEDED"],
+  ["WAITING_FOR_APPROVAL", "FAILED"],
 ];
 
 const LEGAL_WORKFLOW_NODE_RUN_TRANSITION_KEYS = new Set(

@@ -52,3 +52,4 @@ export type {
   WorkflowRepository,
 } from "./workflow-repository.js";
 export type { WorkflowRunRepository } from "./workflow-run-repository.js";
+export type { ApprovalRequestRepository } from "./approval-request-repository.js";

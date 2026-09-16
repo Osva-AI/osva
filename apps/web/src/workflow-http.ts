@@ -1,20 +1,25 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type {
+  ApprovalRequestId,
   WorkflowId,
   WorkflowRunId,
   WorkflowVersionId,
+  WorkspaceId,
 } from "@osva/contracts";
 import {
   createWorkflowRequestSchema,
   createWorkflowRunRequestSchema,
   createWorkflowVersionRequestSchema,
+  decideApprovalRequestSchema,
   workflowListResourceSchema,
   workflowResourceSchema,
   workflowRunResourceSchema,
   workflowVersionListResourceSchema,
   workflowVersionResourceSchema,
+  approvalRequestResourceSchema,
 } from "@osva/contracts/schemas";
 import type {
+  ApprovalRequest,
   Workflow,
   WorkflowApplication,
   WorkflowNodeRun,
@@ -32,6 +37,7 @@ export async function handleWorkflowRequest(
   method: string,
   path: string,
   workflows: WorkflowApplication,
+  searchParams: URLSearchParams = new URLSearchParams(),
 ): Promise<boolean> {
   const route = matchWorkflowRoute(path);
   if (route === undefined) {
@@ -39,7 +45,14 @@ export async function handleWorkflowRequest(
   }
 
   try {
-    await dispatchWorkflowRoute(request, response, method, route, workflows);
+    await dispatchWorkflowRoute(
+      request,
+      response,
+      method,
+      route,
+      workflows,
+      searchParams,
+    );
   } catch (error) {
     sendHttpError(response, error);
   }
@@ -57,7 +70,15 @@ type WorkflowRoute =
       readonly workflowVersionId: WorkflowVersionId;
     }
   | { readonly kind: "runs" }
-  | { readonly kind: "run"; readonly workflowRunId: WorkflowRunId };
+  | { readonly kind: "run"; readonly workflowRunId: WorkflowRunId }
+  | {
+      readonly kind: "approval";
+      readonly approvalRequestId: ApprovalRequestId;
+    }
+  | {
+      readonly kind: "approvalDecision";
+      readonly approvalRequestId: ApprovalRequestId;
+    };
 
 async function dispatchWorkflowRoute(
   request: IncomingMessage,
@@ -65,6 +86,7 @@ async function dispatchWorkflowRoute(
   method: string,
   route: WorkflowRoute,
   workflows: WorkflowApplication,
+  searchParams: URLSearchParams,
 ): Promise<void> {
   if (route.kind === "collection") {
     if (method === "GET") {
@@ -170,8 +192,61 @@ async function dispatchWorkflowRoute(
       sendJson(
         response,
         201,
-        toWorkflowRunResource({ workflowRun: created, nodeRuns: [] }),
+        toWorkflowRunResource({
+          workflowRun: created,
+          nodeRuns: [],
+          approvalRequests: [],
+        }),
       );
+      return;
+    }
+
+    sendJson(
+      response,
+      405,
+      { status: "method_not_allowed" },
+      { allow: "POST" },
+    );
+    return;
+  }
+
+  if (route.kind === "approval") {
+    if (method === "GET") {
+      const workspaceId = searchParams.get("workspaceId");
+      if (workspaceId === null || workspaceId.length === 0) {
+        sendJson(response, 400, { status: "invalid_request" });
+        return;
+      }
+
+      const approvalRequest = await workflows.getApprovalRequest.execute({
+        workspaceId: workspaceId as WorkspaceId,
+        approvalRequestId: route.approvalRequestId,
+      });
+      sendJson(response, 200, toApprovalRequestResource(approvalRequest));
+      return;
+    }
+
+    sendJson(response, 405, { status: "method_not_allowed" }, { allow: "GET" });
+    return;
+  }
+
+  if (route.kind === "approvalDecision") {
+    if (method === "POST") {
+      const parsed = decideApprovalRequestSchema.safeParse(
+        await readJsonBody(request),
+      );
+      if (!parsed.success) {
+        sendJson(response, 400, { status: "invalid_request" });
+        return;
+      }
+
+      const decided = await workflows.decideApprovalRequest.execute({
+        workspaceId: parsed.data.workspaceId,
+        approvalRequestId: route.approvalRequestId,
+        decision: parsed.data.decision,
+        comment: parsed.data.comment,
+      });
+      sendJson(response, 200, toApprovalRequestResource(decided));
       return;
     }
 
@@ -194,6 +269,34 @@ async function dispatchWorkflowRoute(
 }
 
 function matchWorkflowRoute(path: string): WorkflowRoute | undefined {
+  if (path.startsWith("/v1/approval-requests/")) {
+    const segments = path
+      .slice("/v1/approval-requests/".length)
+      .split("/")
+      .filter((segment) => segment.length > 0)
+      .map((segment) => decodeURIComponent(segment));
+
+    if (segments.length === 1 && segments[0] !== undefined) {
+      return {
+        kind: "approval",
+        approvalRequestId: segments[0] as ApprovalRequestId,
+      };
+    }
+
+    if (
+      segments.length === 2 &&
+      segments[0] !== undefined &&
+      segments[1] === "decision"
+    ) {
+      return {
+        kind: "approvalDecision",
+        approvalRequestId: segments[0] as ApprovalRequestId,
+      };
+    }
+
+    return undefined;
+  }
+
   if (path === "/v1/workflow-runs" || path === "/v1/workflow-runs/") {
     return { kind: "runs" };
   }
@@ -308,6 +411,7 @@ function toWorkflowRunResource(view: WorkflowRunView) {
   return workflowRunResourceSchema.parse({
     ...toWorkflowRunFields(view.workflowRun),
     nodeRuns: view.nodeRuns.map(toWorkflowNodeRunFields),
+    approvalRequests: view.approvalRequests.map(toApprovalRequestFields),
   });
 }
 
@@ -346,4 +450,22 @@ function toWorkflowNodeRunFields(nodeRun: WorkflowNodeRun) {
     createdAt: nodeRun.createdAt.toISOString(),
     updatedAt: nodeRun.updatedAt.toISOString(),
   };
+}
+
+function toApprovalRequestFields(request: ApprovalRequest) {
+  return {
+    id: request.id,
+    workspaceId: request.workspaceId,
+    workflowRunId: request.workflowRunId,
+    workflowNodeRunId: request.workflowNodeRunId,
+    status: request.status,
+    decisionComment: request.decisionComment,
+    decidedAt: request.decidedAt?.toISOString(),
+    createdAt: request.createdAt.toISOString(),
+    updatedAt: request.updatedAt.toISOString(),
+  };
+}
+
+function toApprovalRequestResource(request: ApprovalRequest) {
+  return approvalRequestResourceSchema.parse(toApprovalRequestFields(request));
 }

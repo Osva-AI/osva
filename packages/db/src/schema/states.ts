@@ -41,6 +41,7 @@ export const PERSISTED_EVALUATOR_TYPES = ["JSON_EXACT_MATCH"] as const;
 export const PERSISTED_WORKFLOW_RUN_STATES = [
   "PENDING",
   "RUNNING",
+  "WAITING_FOR_APPROVAL",
   "SUCCEEDED",
   "FAILED",
 ] as const;
@@ -48,7 +49,14 @@ export const PERSISTED_WORKFLOW_RUN_STATES = [
 export const PERSISTED_WORKFLOW_NODE_RUN_STATES = [
   "PENDING",
   "RUNNING",
+  "WAITING_FOR_APPROVAL",
   "SUCCEEDED",
   "FAILED",
   "SKIPPED",
+] as const;
+
+export const PERSISTED_APPROVAL_REQUEST_STATES = [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
 ] as const;

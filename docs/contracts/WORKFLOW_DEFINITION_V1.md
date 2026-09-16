@@ -64,7 +64,8 @@ Slice 2.1:
 - SUBWORKFLOW
 
 Slice 2.2 executes BRANCH, PARALLEL, and JOIN on `schemaVersion: "2"`
-definitions. See [`WORKFLOW_DEFINITION_V2.md`](WORKFLOW_DEFINITION_V2.md).
+definitions. Slice 2.3 adds APPROVAL as an OSVA orchestration node on the
+same V2 schema. See [`WORKFLOW_DEFINITION_V2.md`](WORKFLOW_DEFINITION_V2.md).
 V1 sequential AGENT graphs remain valid and executable without semantic
 changes.
 

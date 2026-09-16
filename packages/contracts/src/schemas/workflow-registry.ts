@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { jsonValueSchema } from "./json-value.js";
 import {
+  approvalRequestIdSchema,
   workflowIdSchema,
   workflowNodeRunIdSchema,
   workflowRunIdSchema,
@@ -10,10 +11,12 @@ import {
 } from "./ids.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 import { workflowDefinitionSchema } from "./workflow-definition.js";
+import { APPROVAL_DECISION_COMMENT_MAX_LENGTH } from "../approval.js";
 
 export const workflowRunStateSchema = z.enum([
   "PENDING",
   "RUNNING",
+  "WAITING_FOR_APPROVAL",
   "SUCCEEDED",
   "FAILED",
 ]);
@@ -21,10 +24,19 @@ export const workflowRunStateSchema = z.enum([
 export const workflowNodeRunStateSchema = z.enum([
   "PENDING",
   "RUNNING",
+  "WAITING_FOR_APPROVAL",
   "SUCCEEDED",
   "FAILED",
   "SKIPPED",
 ]);
+
+export const approvalRequestStateSchema = z.enum([
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+]);
+
+export const approvalDecisionSchema = z.enum(["APPROVED", "REJECTED"]);
 
 export const createWorkflowRequestSchema = z.strictObject({
   workspaceId: workspaceIdSchema,
@@ -93,6 +105,22 @@ export const workflowNodeRunResourceSchema = z.strictObject({
   updatedAt: utcIso8601TimestampSchema,
 });
 
+export const approvalRequestResourceSchema = z.strictObject({
+  id: approvalRequestIdSchema,
+  workspaceId: workspaceIdSchema,
+  workflowRunId: workflowRunIdSchema,
+  workflowNodeRunId: workflowNodeRunIdSchema,
+  status: approvalRequestStateSchema,
+  decisionComment: z
+    .string()
+    .min(1)
+    .max(APPROVAL_DECISION_COMMENT_MAX_LENGTH)
+    .optional(),
+  decidedAt: utcIso8601TimestampSchema.optional(),
+  createdAt: utcIso8601TimestampSchema,
+  updatedAt: utcIso8601TimestampSchema,
+});
+
 export const workflowRunResourceSchema = z.strictObject({
   id: workflowRunIdSchema,
   workspaceId: workspaceIdSchema,
@@ -107,4 +135,15 @@ export const workflowRunResourceSchema = z.strictObject({
   createdAt: utcIso8601TimestampSchema,
   updatedAt: utcIso8601TimestampSchema,
   nodeRuns: z.array(workflowNodeRunResourceSchema),
+  approvalRequests: z.array(approvalRequestResourceSchema),
+});
+
+export const decideApprovalRequestSchema = z.strictObject({
+  workspaceId: workspaceIdSchema,
+  decision: approvalDecisionSchema,
+  comment: z
+    .string()
+    .min(1)
+    .max(APPROVAL_DECISION_COMMENT_MAX_LENGTH)
+    .optional(),
 });

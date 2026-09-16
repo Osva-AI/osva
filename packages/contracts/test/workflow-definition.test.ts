@@ -127,6 +127,50 @@ describe("Workflow Definition v2 schema", () => {
     ).toBe(false);
   });
 
+  it("parses a valid APPROVAL node and rejects missing titles", () => {
+    const parsed = workflowDefinitionSchema.parse({
+      schemaVersion: "2",
+      nodes: [
+        {
+          key: "review",
+          type: "APPROVAL",
+          title: "Approve campaign launch",
+          description: "Review the proposed campaign before publishing.",
+        },
+      ],
+      edges: [],
+    });
+    expect(parsed.schemaVersion).toBe("2");
+    expect(parsed.nodes[0]).toMatchObject({
+      key: "review",
+      type: "APPROVAL",
+      title: "Approve campaign launch",
+    });
+
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "2",
+        nodes: [{ key: "review", type: "APPROVAL" }],
+        edges: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "2",
+        nodes: [
+          {
+            key: "review",
+            type: "APPROVAL",
+            title: "Approve",
+            extra: true,
+          },
+        ],
+        edges: [],
+      }).success,
+    ).toBe(false);
+  });
+
   it("does not change V1 rejection of BRANCH nodes", () => {
     expect(
       workflowDefinitionSchema.safeParse({

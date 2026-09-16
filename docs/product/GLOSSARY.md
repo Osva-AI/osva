@@ -18,6 +18,10 @@
 
 **WorkflowNodeRun**: execution state for one node in a WorkflowRun.
 
+**ApprovalRequest**: durable human decision requested for one APPROVAL
+WorkflowNodeRun. One APPROVAL WorkflowNodeRun maps to exactly one
+ApprovalRequest. Decisions are immutable after `APPROVED` or `REJECTED`.
+
 **Tool**: logical executable capability available to Agents or Workflows.
 
 **ToolVersion**: immutable Tool definition.

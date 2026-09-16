@@ -133,6 +133,46 @@ export function hasFailedNode(
   return undefined;
 }
 
+export function isWorkflowBlockedOnApproval(
+  graph: WorkflowGraph,
+  nodeRuns: ReadonlyMap<string, WorkflowNodeRun>,
+): boolean {
+  let waiting = false;
+
+  for (const [nodeKey, node] of graph.nodesByKey) {
+    const existing = nodeRuns.get(nodeKey);
+    if (existing?.status === "WAITING_FOR_APPROVAL") {
+      waiting = true;
+      continue;
+    }
+
+    if (
+      existing !== undefined &&
+      isTerminalWorkflowNodeRunState(existing.status)
+    ) {
+      continue;
+    }
+
+    if (node.type === "APPROVAL") {
+      if (existing !== undefined || isNodeReady(graph, nodeKey, nodeRuns)) {
+        return false;
+      }
+
+      continue;
+    }
+
+    if (existing?.status === "PENDING" || existing?.status === "RUNNING") {
+      return false;
+    }
+
+    if (isNodeReady(graph, nodeKey, nodeRuns)) {
+      return false;
+    }
+  }
+
+  return waiting;
+}
+
 function predecessorActivity(
   graph: WorkflowGraph,
   predecessorKey: string,

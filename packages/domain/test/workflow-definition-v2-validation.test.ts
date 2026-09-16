@@ -279,6 +279,111 @@ describe("V2 DAG workflow definition validation", () => {
     ).toThrow(/JSON Pointer/);
   });
 
+  it("accepts APPROVAL as a pass-through gate, including entry and terminal", () => {
+    expect(() =>
+      assertDagWorkflowDefinition({
+        schemaVersion: "2",
+        nodes: [
+          { key: "a", type: "AGENT", agentVersionId: agentA },
+          {
+            key: "review",
+            type: "APPROVAL",
+            title: "Approve campaign launch",
+            description: "Review before publishing.",
+          },
+          { key: "b", type: "AGENT", agentVersionId: agentB },
+        ],
+        edges: [
+          { from: "a", to: "review" },
+          { from: "review", to: "b" },
+        ],
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      assertDagWorkflowDefinition({
+        schemaVersion: "2",
+        nodes: [
+          {
+            key: "review",
+            type: "APPROVAL",
+            title: "Start with approval",
+          },
+          { key: "a", type: "AGENT", agentVersionId: agentA },
+        ],
+        edges: [{ from: "review", to: "a" }],
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      assertDagWorkflowDefinition({
+        schemaVersion: "2",
+        nodes: [
+          {
+            key: "review",
+            type: "APPROVAL",
+            title: "Approve only",
+          },
+        ],
+        edges: [],
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects APPROVAL fan-in, fan-out, and missing titles", () => {
+    expect(() =>
+      assertDagWorkflowDefinition({
+        schemaVersion: "2",
+        nodes: [
+          { key: "fanout", type: "PARALLEL" },
+          { key: "a", type: "AGENT", agentVersionId: agentA },
+          { key: "b", type: "AGENT", agentVersionId: agentB },
+          { key: "review", type: "APPROVAL", title: "Approve" },
+        ],
+        edges: [
+          { from: "fanout", to: "a" },
+          { from: "fanout", to: "b" },
+          { from: "a", to: "review" },
+          { from: "b", to: "review" },
+        ],
+      }),
+    ).toThrow(/fan-in/);
+
+    expect(() =>
+      assertDagWorkflowDefinition({
+        schemaVersion: "2",
+        nodes: [
+          { key: "a", type: "AGENT", agentVersionId: agentA },
+          { key: "review", type: "APPROVAL", title: "Approve" },
+          { key: "b", type: "AGENT", agentVersionId: agentB },
+          { key: "c", type: "AGENT", agentVersionId: agentA },
+          { key: "join", type: "JOIN" },
+        ],
+        edges: [
+          { from: "a", to: "review" },
+          { from: "review", to: "b" },
+          { from: "review", to: "c" },
+          { from: "b", to: "join" },
+          { from: "c", to: "join" },
+        ],
+      }),
+    ).toThrow(/fan-out/);
+
+    expect(() =>
+      assertDagWorkflowDefinition({
+        schemaVersion: "2",
+        nodes: [
+          {
+            key: "review",
+            type: "APPROVAL",
+            title: "  ",
+          } as WorkflowDefinitionV2["nodes"][number],
+        ],
+        edges: [],
+      }),
+    ).toThrow(/title/);
+  });
+
   it("rejects a node that cannot reach the terminal", () => {
     expect(() =>
       assertDagWorkflowDefinition({

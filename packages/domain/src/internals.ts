@@ -18,6 +18,21 @@ export function requireNonEmptyString(value: string, field: string): string {
   return value;
 }
 
+export function requireBoundedNonEmptyString(
+  value: string,
+  field: string,
+  maxLength: number,
+): string {
+  const normalized = requireNonEmptyString(value, field);
+  if (normalized.length > maxLength) {
+    throw new DomainInvariantError(
+      `${field} must be at most ${maxLength} characters.`,
+    );
+  }
+
+  return normalized;
+}
+
 export function requirePositiveInteger(value: number, field: string): number {
   if (!Number.isInteger(value) || value < 1) {
     throw new DomainInvariantError(`${field} must be a positive integer.`);

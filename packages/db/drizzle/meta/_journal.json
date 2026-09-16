@@ -78,6 +78,13 @@
       "when": 1789503000000,
       "tag": "0010_workflow_dag_slice",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789504000000,
+      "tag": "0011_workflow_approval_slice",
+      "breakpoints": true
     }
   ]
 }

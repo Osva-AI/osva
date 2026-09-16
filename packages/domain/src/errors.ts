@@ -19,6 +19,8 @@ import type {
   WorkflowRunState,
   WorkflowVersionId,
   WorkspaceId,
+  ApprovalRequestId,
+  ApprovalRequestState,
 } from "@osva/contracts";
 
 export class DomainError extends Error {
@@ -299,6 +301,15 @@ export class WorkflowNodeRunNotFoundError extends DomainError {
   }
 }
 
+export class ApprovalRequestNotFoundError extends DomainError {
+  readonly approvalRequestId: ApprovalRequestId;
+
+  constructor(approvalRequestId: ApprovalRequestId) {
+    super(`ApprovalRequest ${approvalRequestId} was not found.`);
+    this.approvalRequestId = approvalRequestId;
+  }
+}
+
 export class InvalidWorkflowRunTransitionError extends DomainError {
   readonly from: WorkflowRunState;
   readonly to: WorkflowRunState;
@@ -321,29 +332,63 @@ export class InvalidWorkflowNodeRunTransitionError extends DomainError {
   }
 }
 
+export class InvalidApprovalRequestTransitionError extends DomainError {
+  readonly from: ApprovalRequestState;
+  readonly to: ApprovalRequestState;
+
+  constructor(from: ApprovalRequestState, to: ApprovalRequestState) {
+    super(`Invalid approval request transition from ${from} to ${to}.`);
+    this.from = from;
+    this.to = to;
+  }
+}
+
 export class InvalidWorkflowDefinitionError extends DomainInvariantError {}
 
 export class LifecycleConflictError extends DomainError {
   readonly entity:
-    "run" | "runAttempt" | "runStep" | "workflowRun" | "workflowNodeRun";
+    | "run"
+    | "runAttempt"
+    | "runStep"
+    | "workflowRun"
+    | "workflowNodeRun"
+    | "approvalRequest";
   readonly id:
-    RunId | RunAttemptId | RunStepId | WorkflowRunId | WorkflowNodeRunId;
+    | RunId
+    | RunAttemptId
+    | RunStepId
+    | WorkflowRunId
+    | WorkflowNodeRunId
+    | ApprovalRequestId;
   readonly expectedStatus:
     | RunState
     | RunAttemptState
     | WorkflowRunState
     | WorkflowNodeRunState
+    | ApprovalRequestState
     | "RUNNING";
 
   constructor(
     entity:
-      "run" | "runAttempt" | "runStep" | "workflowRun" | "workflowNodeRun",
-    id: RunId | RunAttemptId | RunStepId | WorkflowRunId | WorkflowNodeRunId,
+      | "run"
+      | "runAttempt"
+      | "runStep"
+      | "workflowRun"
+      | "workflowNodeRun"
+      | "approvalRequest",
+    id:
+      | RunId
+      | RunAttemptId
+      | RunStepId
+      | WorkflowRunId
+      | WorkflowNodeRunId
+      | ApprovalRequestId,
     expectedStatus:
       | RunState
       | RunAttemptState
       | WorkflowRunState
       | WorkflowNodeRunState
+      | ApprovalRequestState
       | "RUNNING",
   ) {
     super(

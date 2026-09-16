@@ -125,6 +125,13 @@ export class WorkflowRun {
     });
   }
 
+  markWaitingForApproval(now: Date): WorkflowRun {
+    return this.transitionTo("WAITING_FOR_APPROVAL", {
+      now,
+      startedAt: this.startedAt ?? now,
+    });
+  }
+
   markSucceeded(now: Date, output: unknown): WorkflowRun {
     return this.transitionTo("SUCCEEDED", {
       now,

@@ -14,6 +14,7 @@ import {
   InvalidRunTransitionError,
   InvalidWorkflowNodeRunTransitionError,
   InvalidWorkflowRunTransitionError,
+  InvalidApprovalRequestTransitionError,
   LifecycleConflictError,
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
@@ -24,6 +25,7 @@ import {
   RunStepNotFoundError,
   ScheduleNotFoundError,
   WorkspaceNotFoundError,
+  ApprovalRequestNotFoundError,
   WorkflowNotFoundError,
   WorkflowNodeRunNotFoundError,
   WorkflowRunNotFoundError,
@@ -63,6 +65,7 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof WorkflowVersionNotFoundError ||
     error instanceof WorkflowRunNotFoundError ||
     error instanceof WorkflowNodeRunNotFoundError ||
+    error instanceof ApprovalRequestNotFoundError ||
     error instanceof OrchestrationAgentNotFoundError ||
     error instanceof OrchestrationAgentVersionNotFoundError ||
     error instanceof OrchestrationRunNotFoundError ||
@@ -91,7 +94,8 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof InvalidRunTransitionError ||
     error instanceof InvalidRunAttemptTransitionError ||
     error instanceof InvalidWorkflowRunTransitionError ||
-    error instanceof InvalidWorkflowNodeRunTransitionError
+    error instanceof InvalidWorkflowNodeRunTransitionError ||
+    error instanceof InvalidApprovalRequestTransitionError
   ) {
     sendJson(response, 400, { status: "invalid_request" });
     return;

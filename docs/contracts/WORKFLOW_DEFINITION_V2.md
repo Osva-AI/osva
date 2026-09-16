@@ -2,7 +2,8 @@
 
 **Status:** Pre-1.0 contract
 
-Slice 2.2 adds an immutable DAG schema for WorkflowVersion definitions.
+Slice 2.2 added an immutable DAG schema for WorkflowVersion definitions.
+Slice 2.3 adds `APPROVAL` on the same `schemaVersion: "2"` contract.
 `schemaVersion: "1"` remains valid and executable. V2 does not change V1
 semantics.
 
@@ -32,16 +33,23 @@ semantics.
 
 ## Node types
 
-Slice 2.2 supports exactly four node types:
+V2 supports these node types:
 
 - `AGENT` — the only executable agent node. It references an immutable
   `agentVersionId` and creates one canonical child Run.
 - `BRANCH` — deterministic route selection. OSVA orchestration state only.
 - `PARALLEL` — explicit fan-out. OSVA orchestration state only.
 - `JOIN` — explicit fan-in. OSVA orchestration state only.
+- `APPROVAL` — durable human gate. OSVA orchestration state only.
 
-`BRANCH`, `PARALLEL`, and `JOIN` never create Runs, RunAttempts, or invoke
-agent code.
+`BRANCH`, `PARALLEL`, `JOIN`, and `APPROVAL` never create Runs, RunAttempts,
+or invoke agent, model, tool, or runtime code.
+
+Different AGENT nodes may bind different immutable AgentVersions. Multi-agent
+execution is therefore workflow composition: sequential handoff, branch
+routing, parallel agents, JOIN aggregation, and human approval gates. Agents
+cannot directly create another agent execution. There is no agent-to-agent
+invoke API, messaging bus, or multi-agent session abstraction.
 
 ## Topology
 
@@ -60,6 +68,7 @@ Global V2 rules:
 Node-type constraints:
 
 - `AGENT`: incoming 0 iff entry, else 1; outgoing 0 iff terminal, else 1
+- `APPROVAL`: incoming 0 iff entry, else 1; outgoing 0 iff terminal, else 1
 - `PARALLEL`: incoming ≤ 1; outgoing ≥ 2
 - `JOIN`: incoming ≥ 2; outgoing ≤ 1
 - `BRANCH`: incoming ≤ 1; outgoing ≥ 2
@@ -97,6 +106,63 @@ predecessor is terminal (`SUCCEEDED`, `SKIPPED`, or `FAILED`).
   order and includes only `SUCCEEDED` predecessors
 - `JOIN.output = JOIN.input`
 
+## APPROVAL
+
+APPROVAL is a pass-through human gate, not a BRANCH.
+
+```json
+{
+  "key": "launch-review",
+  "type": "APPROVAL",
+  "title": "Approve campaign launch",
+  "description": "Review the proposed campaign before publishing."
+}
+```
+
+`title` is required, non-empty, and at most 200 characters. `description` is
+optional, non-empty when present, and at most 2000 characters. Titles and
+descriptions are literal; there is no interpolation, JSONPath, or
+node-output templating.
+
+When an APPROVAL node becomes ready, the reconciler materializes one
+WorkflowNodeRun, transitions it to `WAITING_FOR_APPROVAL`, and creates
+exactly one `ApprovalRequest`. It does not enqueue BullMQ work.
+
+`APPROVAL.input` is the predecessor output. On approval,
+`APPROVAL.output = APPROVAL.input`. The successor receives that exact value.
+
+An ApprovalRequest is a first-class workspace-scoped record:
+
+```text
+PENDING → APPROVED
+PENDING → REJECTED
+```
+
+Decisions are immutable. Repeating the same decision is idempotent.
+Conflicting second decisions fail. Concurrent submitters are serialized by
+PostgreSQL compare-and-set; the first durable decision wins.
+
+The decision API (`POST /v1/approval-requests/:id/decision`) persists only
+the decision. The workflow reconciler later observes `APPROVED` or
+`REJECTED` and advances the WorkflowNodeRun. `APPROVED` continues the DAG.
+`REJECTED` fails the APPROVAL node and the WorkflowRun with domain code
+`APPROVAL_REJECTED`. Slice 2.3 does not implement rejection branches,
+revision loops, expiration, assignment, or quorum.
+
+`decidedBy` is omitted: OSVA does not yet have a durable authenticated
+principal identity, and Slice 2.3 does not invent User/RBAC entities.
+
+This is workflow-progression approval. It is not tool-call authorization and
+does not change ToolGateway permission flow.
+
+WorkflowRun becomes `WAITING_FOR_APPROVAL` only when at least one APPROVAL
+node is waiting and no non-approval work can make independent progress. A
+parallel agent still running keeps WorkflowRun `RUNNING`.
+
+Inactive APPROVAL paths are durably `SKIPPED` and do not create an
+ApprovalRequest. Activation vs skip is compare-and-set: a node already
+`WAITING_FOR_APPROVAL` is not skipped.
+
 ## SKIPPED
 
 `SKIPPED` is a durable WorkflowNodeRun status. Absence of a row is not used
@@ -111,9 +177,9 @@ run concurrently. Multiple orchestrator instances are correctness-safe via
 PostgreSQL uniqueness, compare-and-set transitions, and Run idempotency
 keys of the form `workflow:${workflowRunId}:${workflowNodeKey}`.
 
-If any active AGENT path fails, `WorkflowRun` becomes `FAILED`. Already
-started sibling Runs may finish; their completion cannot resurrect a failed
-workflow. Cancellation, approval, retries, loops, and expression languages
-are out of scope for Slice 2.2.
+If any active AGENT path fails, or an APPROVAL is rejected, `WorkflowRun`
+becomes `FAILED`. Already started sibling Runs may finish; their completion
+cannot resurrect a failed workflow. Cancellation, retries, loops, rejection
+branches, approval expiration, and expression languages remain out of scope.
 
 `WorkflowRun.output` remains the terminal node output.

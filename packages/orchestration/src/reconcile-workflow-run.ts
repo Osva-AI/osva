@@ -1,5 +1,6 @@
 import type {
   AgentVersionId,
+  ApprovalRequestId,
   JobQueue,
   RunAttemptId,
   RunId,
@@ -8,6 +9,8 @@ import type {
   WorkflowNodeRunId,
 } from "@osva/contracts";
 import {
+  APPROVAL_REJECTED_ERROR_CODE,
+  ApprovalRequest,
   DomainInvariantError,
   LifecycleConflictError,
   WorkflowNodeRun,
@@ -19,9 +22,11 @@ import {
   isTerminalRunState,
   isTerminalWorkflowNodeRunState,
   isTerminalWorkflowRunState,
+  isWorkflowBlockedOnApproval,
   nodeRunsByKey,
   selectBranchTarget,
   type AgentRepository,
+  type ApprovalRequestRepository,
   type Run,
   type RunAttempt,
   type RunRepository,
@@ -41,6 +46,7 @@ export interface ReconcileWorkflowRunIds {
   createRunId(): RunId;
   createRunAttemptId(): RunAttemptId;
   createWorkflowNodeRunId(): WorkflowNodeRunId;
+  createApprovalRequestId(): ApprovalRequestId;
 }
 
 export interface ReconcileWorkflowRunCommand {
@@ -52,6 +58,7 @@ export interface ReconcileWorkflowRunCommand {
 export interface ReconcileWorkflowRunDependencies {
   readonly workflows: WorkflowRepository;
   readonly workflowRuns: WorkflowRunRepository;
+  readonly approvalRequests: ApprovalRequestRepository;
   readonly agents: AgentRepository;
   readonly runs: RunRepository;
   readonly createRun: CreateRun;
@@ -103,10 +110,43 @@ export class ReconcileWorkflowRun {
       return;
     }
 
-    await this.ensureWorkflowRunning(workflowRun, command.now);
+    await this.observeApprovalDecisions(graph, command);
+
+    workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (
+      workflowRun === null ||
+      isTerminalWorkflowRunState(workflowRun.status)
+    ) {
+      return;
+    }
+
+    const failedAfterApproval = hasFailedNode(
+      nodeRunsByKey(
+        await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
+      ),
+    );
+    if (failedAfterApproval !== undefined) {
+      await this.failWorkflow(
+        workflowRun,
+        failedAfterApproval.error ??
+          childRunFailedError(failedAfterApproval.childRunId),
+        command.now,
+      );
+      return;
+    }
+
+    workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (
+      workflowRun === null ||
+      isTerminalWorkflowRunState(workflowRun.status)
+    ) {
+      return;
+    }
+
     await this.propagateSkips(graph, command);
     await this.resolveOrchestrationNodes(graph, command);
     await this.propagateSkips(graph, command);
+    await this.materializeReadyApprovals(graph, command);
     await this.startReadyAgents(graph, version, command);
 
     workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
@@ -149,7 +189,15 @@ export class ReconcileWorkflowRun {
         },
         command.now,
       );
+      return;
     }
+
+    await this.deriveActiveWorkflowStatus(
+      graph,
+      workflowRun,
+      nodeRuns,
+      command.now,
+    );
   }
 
   private async loadVersion(
@@ -261,7 +309,11 @@ export class ReconcileWorkflowRun {
         await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
       );
       const ready = [...graph.nodesByKey.entries()].filter(([key, node]) => {
-        return node.type !== "AGENT" && isNodeReady(graph, key, nodeRuns);
+        return (
+          node.type !== "AGENT" &&
+          node.type !== "APPROVAL" &&
+          isNodeReady(graph, key, nodeRuns)
+        );
       });
 
       if (ready.length === 0) {
@@ -666,19 +718,179 @@ export class ReconcileWorkflowRun {
     }
   }
 
-  private async ensureWorkflowRunning(
-    workflowRun: WorkflowRun,
-    now: Date,
+  private async observeApprovalDecisions(
+    graph: WorkflowGraph,
+    command: ReconcileWorkflowRunCommand,
   ): Promise<void> {
-    if (workflowRun.status !== "PENDING") {
+    const nodeRuns = await this.deps.workflowRuns.listWorkflowNodeRuns(
+      command.workflowRun.id,
+    );
+
+    await Promise.all(
+      nodeRuns.map(async (nodeRun) => {
+        const node = graph.nodesByKey.get(nodeRun.workflowNodeKey);
+        if (
+          node?.type !== "APPROVAL" ||
+          nodeRun.status !== "WAITING_FOR_APPROVAL"
+        ) {
+          return;
+        }
+
+        const request =
+          await this.deps.approvalRequests.findApprovalRequestByWorkflowNodeRunId(
+            nodeRun.id,
+          );
+        if (request === null || request.status === "PENDING") {
+          return;
+        }
+
+        if (request.status === "APPROVED") {
+          await this.transitionNode(
+            nodeRun,
+            nodeRun.markSucceeded(command.now, nodeRun.input),
+          );
+          return;
+        }
+
+        await this.transitionNode(
+          nodeRun,
+          nodeRun.markFailed(command.now, approvalRejectedError()),
+        );
+      }),
+    );
+  }
+
+  private async materializeReadyApprovals(
+    graph: WorkflowGraph,
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
+    const workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (
+      workflowRun === null ||
+      isTerminalWorkflowRunState(workflowRun.status)
+    ) {
       return;
     }
 
-    try {
-      await this.deps.workflowRuns.transitionWorkflowRun(
-        "PENDING",
-        workflowRun.markRunning(now),
+    const nodeRuns = nodeRunsByKey(
+      await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
+    );
+    const ready = [...graph.nodesByKey.entries()].filter(([key, node]) => {
+      return node.type === "APPROVAL" && isNodeReady(graph, key, nodeRuns);
+    });
+
+    await Promise.all(
+      ready.map(async ([nodeKey]) => {
+        const nodeRun =
+          nodeRuns.get(nodeKey) ??
+          (await this.materializeNodeRun({
+            workflowRun,
+            nodeKey,
+            sequence: graph.sequenceByKey.get(nodeKey) ?? 1,
+            input: inputForNode(graph, nodeKey, nodeRuns, workflowRun.input),
+            now: command.now,
+            ids: command.ids,
+            skipped: false,
+          }));
+
+        if (isTerminalWorkflowNodeRunState(nodeRun.status)) {
+          return;
+        }
+
+        await this.activateApprovalNode(nodeRun, command);
+      }),
+    );
+  }
+
+  private async activateApprovalNode(
+    nodeRun: WorkflowNodeRun,
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
+    let current = nodeRun;
+    if (current.status === "PENDING") {
+      const waiting = await this.transitionNode(
+        current,
+        current.markWaitingForApproval(command.now),
       );
+      if (waiting === null) {
+        return;
+      }
+
+      current = waiting;
+    }
+
+    if (current.status !== "WAITING_FOR_APPROVAL") {
+      return;
+    }
+
+    await this.ensureApprovalRequest(current, command);
+  }
+
+  private async ensureApprovalRequest(
+    nodeRun: WorkflowNodeRun,
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
+    const existing =
+      await this.deps.approvalRequests.findApprovalRequestByWorkflowNodeRunId(
+        nodeRun.id,
+      );
+    if (existing !== null) {
+      return;
+    }
+
+    const request = ApprovalRequest.create({
+      id: command.ids.createApprovalRequestId(),
+      workspaceId: nodeRun.workspaceId,
+      workflowRunId: nodeRun.workflowRunId,
+      workflowNodeRunId: nodeRun.id,
+      createdAt: command.now,
+    });
+
+    try {
+      await this.deps.approvalRequests.saveApprovalRequest(request);
+    } catch (error) {
+      if (
+        error instanceof DomainInvariantError &&
+        error.message.includes("already exists")
+      ) {
+        const recovered =
+          await this.deps.approvalRequests.findApprovalRequestByWorkflowNodeRunId(
+            nodeRun.id,
+          );
+        if (recovered !== null) {
+          return;
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  private async deriveActiveWorkflowStatus(
+    graph: WorkflowGraph,
+    workflowRun: WorkflowRun,
+    nodeRuns: ReadonlyMap<string, WorkflowNodeRun>,
+    now: Date,
+  ): Promise<void> {
+    const latest = await this.reloadWorkflowRun(workflowRun.id);
+    if (latest === null || isTerminalWorkflowRunState(latest.status)) {
+      return;
+    }
+
+    const target = isWorkflowBlockedOnApproval(graph, nodeRuns)
+      ? "WAITING_FOR_APPROVAL"
+      : "RUNNING";
+    if (latest.status === target) {
+      return;
+    }
+
+    const next =
+      target === "WAITING_FOR_APPROVAL"
+        ? latest.markWaitingForApproval(now)
+        : latest.markRunning(now);
+
+    try {
+      await this.deps.workflowRuns.transitionWorkflowRun(latest.status, next);
     } catch (error) {
       if (!(error instanceof LifecycleConflictError)) {
         throw error;
@@ -712,13 +924,16 @@ export class ReconcileWorkflowRun {
       }
     }
 
-    if (current.status !== "RUNNING") {
+    if (
+      current.status !== "RUNNING" &&
+      current.status !== "WAITING_FOR_APPROVAL"
+    ) {
       return;
     }
 
     try {
       await this.deps.workflowRuns.transitionWorkflowRun(
-        "RUNNING",
+        current.status,
         current.markSucceeded(now, output),
       );
     } catch (error) {
@@ -738,29 +953,31 @@ export class ReconcileWorkflowRun {
       return;
     }
 
-    let current = latest;
+    const current = latest;
     if (current.status === "PENDING") {
       try {
-        current = await this.deps.workflowRuns.transitionWorkflowRun(
+        await this.deps.workflowRuns.transitionWorkflowRun(
           "PENDING",
-          current.markRunning(now),
+          current.markFailed(now, error),
         );
       } catch (caught) {
-        if (caught instanceof LifecycleConflictError) {
-          return;
+        if (!(caught instanceof LifecycleConflictError)) {
+          throw caught;
         }
-
-        throw caught;
       }
+      return;
     }
 
-    if (current.status !== "RUNNING") {
+    if (
+      current.status !== "RUNNING" &&
+      current.status !== "WAITING_FOR_APPROVAL"
+    ) {
       return;
     }
 
     try {
       await this.deps.workflowRuns.transitionWorkflowRun(
-        "RUNNING",
+        current.status,
         current.markFailed(now, error),
       );
     } catch (caught) {
@@ -787,6 +1004,13 @@ export class ReconcileWorkflowRun {
       throw error;
     }
   }
+}
+
+function approvalRejectedError(): WorkflowRunError {
+  return {
+    code: APPROVAL_REJECTED_ERROR_CODE,
+    message: "The approval was rejected.",
+  };
 }
 
 function childRunFailedError(

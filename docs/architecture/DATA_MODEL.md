@@ -21,6 +21,7 @@ workflows
 workflow_versions
 workflow_runs
 workflow_node_runs
+approval_requests
 
 tools
 tool_versions
@@ -76,8 +77,24 @@ workflow_node_runs
 `workflow_node_runs` is unique on `(workflow_run_id, workflow_node_key)` and
 may attach at most one canonical child `runs.id`. Slice 2.2 adds durable
 `SKIPPED` status and optional `selected_target_key` for BRANCH routing
-decisions. Orchestration state remains these node-run rows plus the
+decisions. Slice 2.3 adds `WAITING_FOR_APPROVAL` on both `workflow_runs` and
+`workflow_node_runs`, plus `approval_requests` with unique
+`(workflow_node_run_id)`. Orchestration state remains these rows plus the
 immutable WorkflowVersion graph; there is no edge-execution table.
+
+## Stage 2 Slice 2.3 tables
+
+Implemented:
+
+```text
+approval_requests
+```
+
+`approval_requests` is workspace-owned with unique `(workspace_id, id)` and
+exactly one row per APPROVAL `workflow_node_run_id`. Status is `PENDING`,
+`APPROVED`, or `REJECTED`. Decision comment and `decided_at` are recorded
+on resolution and then immutable. `decided_by` is not persisted because
+OSVA has no durable principal identity yet.
 
 ## Rules
 
