@@ -17,14 +17,14 @@
   (ExecutionWorker dispatches through RuntimeDispatcher; trusted TypeScript
   remains one RuntimeAdapter; remote HTTP is synchronous Protocol V1 with
   executionId = RunAttemptId and an OSVA capability bridge);
-- Node SDK;
-- Python SDK;
+- ✅ Slice 2.5: Node SDK, Python SDK, CLI, and public SDK surface
+  (`@osva/sdk`, `@osva/cli`, `osva-sdk`; control-plane clients over `/v1`;
+  Runtime Protocol V1 runtime helpers; shared fixtures; Python CI);
 - additional providers;
 - MCP client;
 - connectors;
 - memory namespaces;
 - OpenTelemetry;
-- CLI/public SDK;
 - EvaluationSuites;
 - basic AI Office entities.
 

@@ -6,22 +6,28 @@ Planned public monorepo:
 apps/
   web/
   worker/
-  cli/
+  scheduler/
+  workflow-orchestrator/
 
 packages/
   domain/
   contracts/
   db/
-  api/
   orchestration/
   runtime-core/
+  runtime-protocol/
   model-gateway/
   tool-gateway/
-  evaluation/
   observability/
-  policy-core/
   sdk/
-  shared/
+  cli/
+
+sdks/
+  python/
+
+examples/
+  remote-runtime-node/
+  remote-runtime-python/
 
 adapters/
   queue-bullmq/

@@ -1,0 +1,8 @@
+{
+  "protocolVersion": "1",
+  "executionId": "run-attempt-fixture-1",
+  "bindingName": "primary",
+  "input": {
+    "messages": [{ "role": "user", "content": "hello" }]
+  }
+}

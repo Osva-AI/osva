@@ -29,6 +29,7 @@
   "devDependencies": {
     "@osva/adapters-memory": "workspace:*",
     "@osva/domain": "workspace:*",
+    "@osva/sdk": "workspace:*",
     "@osva/web": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",

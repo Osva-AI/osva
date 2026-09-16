@@ -2,6 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
   - "adapters/*"
+  - "examples/*"
 
 catalog:
   "@types/node": 24.13.4

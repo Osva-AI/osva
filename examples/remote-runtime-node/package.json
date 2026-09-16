@@ -1,0 +1,8 @@
+{
+  "name": "remote-runtime-node-example",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@osva/sdk": "workspace:*"
+  }
+}

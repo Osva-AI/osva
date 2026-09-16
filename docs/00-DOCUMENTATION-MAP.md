@@ -48,6 +48,7 @@
 - `engineering/NON_FUNCTIONAL_REQUIREMENTS.md`
 - `engineering/TESTING_STRATEGY.md`
 - `engineering/REPOSITORY_STRUCTURE.md`
+- `engineering/SDK.md`
 - `engineering/OSS_LICENSE_STRATEGY.md`
 
 ## Roadmap

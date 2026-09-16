@@ -54,6 +54,7 @@ export async function fetchWithPinnedConnection(
       headers: {
         ...init.headers,
         host: url.host,
+        "content-length": String(Buffer.byteLength(init.body, "utf8")),
       },
       ...(isHttps
         ? {

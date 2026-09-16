@@ -6,7 +6,7 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** Community Beta in progress (Stage 2 Slice 2.4 complete). OSVA
+> **Status:** Community Beta in progress (Stage 2 Slice 2.5 complete). OSVA
 > supports Agent registry, immutable AgentVersions, Run lifecycle, BullMQ
 > execution transport, trusted TypeScript runtime, Remote HTTP runtime via
 > Runtime Protocol V1, ModelGateway, ToolGateway, RunSteps, usage/cost,
@@ -196,6 +196,34 @@ commit the result.
 
 `pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web, worker, scheduler,
 and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
+
+### SDK and CLI (Stage 2.5)
+
+Publish-ready packages (not yet published externally):
+
+- `@osva/sdk` — TypeScript control-plane client (`OsvaClient`) and Runtime Protocol V1 helpers (`@osva/sdk/runtime`)
+- `@osva/cli` — `osva` CLI built on the Node SDK
+- `osva-sdk` — Python package (`import osva`) for Python >= 3.11
+
+See [`docs/engineering/SDK.md`](docs/engineering/SDK.md).
+
+```text
+export OSVA_BASE_URL=http://127.0.0.1:3000
+export OSVA_WORKSPACE_ID=ws-dev
+pnpm --filter @osva/cli build
+node packages/cli/dist/bin/osva.js agents list
+```
+
+Python checks from `sdks/python`:
+
+```text
+pip install -e ".[dev]"
+ruff format --check .
+ruff check .
+mypy src
+pytest
+python -m build
+```
 
 ### Endpoints and worker behavior
 

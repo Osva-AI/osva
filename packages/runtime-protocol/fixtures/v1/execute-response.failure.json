@@ -1,0 +1,9 @@
+{
+  "protocolVersion": "1",
+  "executionId": "run-attempt-fixture-1",
+  "outcome": "FAILED",
+  "error": {
+    "code": "AGENT_EXECUTION_FAILED",
+    "message": "Agent execution failed."
+  }
+}
