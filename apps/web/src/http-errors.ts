@@ -6,6 +6,7 @@ import {
   DuplicateAgentKeyError,
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
+  DuplicateScheduleKeyError,
   EvaluationNotFoundError,
   InvalidRunAttemptStateError,
   InvalidRunAttemptTransitionError,
@@ -18,6 +19,7 @@ import {
   RunAttemptNotFoundError,
   RunNotFoundError,
   RunStepNotFoundError,
+  ScheduleNotFoundError,
   WorkspaceNotFoundError,
 } from "@osva/domain";
 import {
@@ -49,6 +51,7 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof ToolVersionNotFoundError ||
     error instanceof RunStepNotFoundError ||
     error instanceof EvaluationNotFoundError ||
+    error instanceof ScheduleNotFoundError ||
     error instanceof OrchestrationAgentNotFoundError ||
     error instanceof OrchestrationAgentVersionNotFoundError ||
     error instanceof OrchestrationRunNotFoundError ||
@@ -62,6 +65,7 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof DuplicateAgentKeyError ||
     error instanceof DuplicateModelProfileKeyError ||
     error instanceof DuplicateToolKeyError ||
+    error instanceof DuplicateScheduleKeyError ||
     error instanceof LifecycleConflictError ||
     error instanceof InvalidRunAttemptStateError
   ) {

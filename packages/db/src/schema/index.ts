@@ -10,6 +10,8 @@ export { modelProfiles } from "./model-profiles.js";
 export { modelProfileVersions } from "./model-profile-versions.js";
 export { tools } from "./tools.js";
 export { toolVersions } from "./tool-versions.js";
+export { schedules } from "./schedules.js";
+export { scheduleOccurrences } from "./schedule-occurrences.js";
 export {
   PERSISTED_EVALUATOR_TYPES,
   PERSISTED_MODEL_PROVIDERS,

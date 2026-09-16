@@ -6,12 +6,12 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** pre-alpha. Stage 1 Slice 1.5 adds OSVA's provider-neutral
-> ModelGateway, immutable ModelProfile / ModelProfileVersion registry, and the
-> first OpenAI Responses API adapter. Trusted TypeScript agents call
-> `context.models.generateText(binding, request)` through runtime IPC. The
-> worker still requires PostgreSQL, Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`;
-> `OPENAI_API_KEY` is optional and worker-only.
+> **Status:** Community Alpha (Stage 1 complete). OSVA supports Agent registry,
+> immutable AgentVersions, Run lifecycle, BullMQ execution transport, trusted
+> TypeScript runtime, ModelGateway, ToolGateway, RunSteps, usage/cost,
+> JSON_EXACT_MATCH evaluation, and recurring scheduling. Requires PostgreSQL,
+> Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`, `worker`, and
+> `scheduler`. `OPENAI_API_KEY` is optional and worker-only.
 
 ## Why OSVA?
 
@@ -167,6 +167,7 @@ pnpm db:migrate
 pnpm build
 pnpm dev:web
 pnpm dev:worker
+pnpm dev:scheduler
 ```
 
 Required sequence:
@@ -246,6 +247,50 @@ ModelProfileVersion IDs. `OPENAI_API_KEY` is read only in the worker process
 when composing the OpenAI provider adapter. If it is absent, the worker still
 starts and model calls fail with `MODEL_PROVIDER_UNAVAILABLE`. ToolGateway is
 not available to agent code.
+
+Schedule API:
+
+- `POST /v1/schedules` — create a recurring Schedule (`workspaceId`, `key`,
+  `name`, `agentId`, `agentVersionId`, `cronExpression`, `timezone`, `input`,
+  optional `enabled`)
+- `GET /v1/schedules?workspaceId=...` — list Schedules with cursor pagination
+- `GET /v1/schedules/:scheduleId` — get a Schedule
+- `PATCH /v1/schedules/:scheduleId` — update mutable Schedule fields
+- `GET /v1/schedules/:scheduleId/occurrences` — list materialized occurrences
+
+Schedules use five-field cron evaluated in the configured IANA timezone.
+PostgreSQL owns scheduling state. `apps/scheduler` materializes due occurrences
+and dispatches canonical Runs through CreateRun; BullMQ repeatable jobs are not
+the schedule authority. Community Alpha misfire policy is `COALESCE_ONE`: after
+downtime at most one overdue occurrence is materialized per Schedule.
+
+### Community Alpha quickstart (no paid model key)
+
+Use the trusted echo agent fixture path:
+
+1. `pnpm infra:up` and `pnpm db:migrate`
+2. Set `OSVA_DATABASE_URL`, `OSVA_VALKEY_URL`, and `OSVA_TRUSTED_RUNTIME_ROOT`
+   to a directory containing a trusted TypeScript agent entrypoint
+3. Start `pnpm dev:web`, `pnpm dev:worker`, and `pnpm dev:scheduler`
+4. `POST /v1/agents` and `POST /v1/agents/:id/versions` with a trusted runtime
+   manifest (for example the echo agent under
+   `adapters/runtime-typescript/test/fixtures/echo-agent.ts`)
+5. `POST /v1/schedules` targeting that AgentVersion with cron such as `* * * * *`
+   and timezone `UTC`
+6. Inspect `GET /v1/schedules/:id/occurrences` and resulting Runs under
+   `/v1/runs`
+
+Community Alpha includes Agent registry, immutable AgentVersions, Runs,
+RunAttempts, BullMQ transport, trusted TypeScript runtime, ModelGateway,
+OpenAI provider, ToolGateway, internal tools, RunSteps, usage/cost estimation,
+JSON_EXACT_MATCH evaluation, and recurring scheduling.
+
+Community Alpha does not yet include auth/RBAC, untrusted sandboxing, workflow
+engine, multi-agent workflows, human approvals, MCP, side-effecting external
+tools, deployment objects, automatic logical retries, Run cancellation,
+OpenTelemetry backend, dashboards, LLM-as-judge, evaluation datasets,
+billing/invoicing, budgets, multi-provider production support, or a hosted
+control plane.
 
 ### Quality commands
 

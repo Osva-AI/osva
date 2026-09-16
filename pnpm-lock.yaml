@@ -167,6 +167,9 @@ catalogs:
     '@types/node':
       specifier: 24.13.4
       version: 24.13.4
+    cron-parser:
+      specifier: 5.4.0
+      version: 5.4.0
     eslint:
       specifier: 10.10.0
       version: 10.10.0
@@ -305,6 +308,49 @@ importers:
         specifier: workspace:*
         version: link:../../packages/contracts
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.4
+      eslint:
+        specifier: 'catalog:'
+        version: 10.10.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.0(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
+
+  apps/scheduler:
+    dependencies:
+      '@osva/adapters-bullmq':
+        specifier: workspace:*
+        version: link:../../adapters/bullmq
+      '@osva/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@osva/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@osva/orchestration':
+        specifier: workspace:*
+        version: link:../../packages/orchestration
+    devDependencies:
+      '@osva/adapters-memory':
+        specifier: workspace:*
+        version: link:../../adapters/memory
+      '@osva/adapters-runtime-typescript':
+        specifier: workspace:*
+        version: link:../../adapters/runtime-typescript
+      '@osva/web':
+        specifier: workspace:*
+        version: link:../web
+      '@osva/worker':
+        specifier: workspace:*
+        version: link:../worker
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4
@@ -459,6 +505,9 @@ importers:
       '@osva/contracts':
         specifier: workspace:*
         version: link:../contracts
+      cron-parser:
+        specifier: 'catalog:'
+        version: 5.4.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1441,6 +1490,10 @@ packages:
     resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
     engines: {node: '>=12.0.0'}
     deprecated: v4 is no longer maintained, upgrade to v5
+
+  cron-parser@5.4.0:
+    resolution: {integrity: sha512-HxYB8vTvnQFx4dLsZpGRa0uHp6X3qIzS3ZJgJ9v6l/5TJMgeWQbLkR5yiJ5hOxGbc9+jCADDnydIe15ReLZnJA==}
+    engines: {node: '>=18'}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -2709,6 +2762,10 @@ snapshots:
   cluster-key-slot@1.1.2: {}
 
   cron-parser@4.9.0:
+    dependencies:
+      luxon: 3.7.2
+
+  cron-parser@5.4.0:
     dependencies:
       luxon: 3.7.2
 

@@ -6,6 +6,7 @@ import type {
   RunId,
   RunState,
   RunStepId,
+  WorkspaceId,
 } from "@osva/contracts";
 
 import type { Run } from "../run.js";
@@ -73,6 +74,10 @@ export interface RunRepository {
   createRunWithInitialAttempt(run: Run, attempt: RunAttempt): Promise<void>;
   saveRun(run: Run): Promise<void>;
   findRunById(id: RunId): Promise<Run | null>;
+  findRunByWorkspaceIdempotencyKey(
+    workspaceId: WorkspaceId,
+    idempotencyKey: string,
+  ): Promise<Run | null>;
   listRuns(query: ListRunsQuery): Promise<ListRunsResult>;
   saveRunAttempt(attempt: RunAttempt): Promise<void>;
   findRunAttemptById(id: RunAttemptId): Promise<RunAttempt | null>;

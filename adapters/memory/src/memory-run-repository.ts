@@ -4,6 +4,7 @@ import type {
   RunId,
   RunState,
   RunStepId,
+  WorkspaceId,
 } from "@osva/contracts";
 import {
   DomainInvariantError,
@@ -34,6 +35,7 @@ export class MemoryRunRepository implements RunRepository {
   private readonly runs = new Map<RunId, Run>();
   private readonly attempts = new Map<RunAttemptId, RunAttempt>();
   private readonly steps = new Map<RunStepId, RunStep>();
+  private readonly runsByWorkspaceIdempotencyKey = new Map<string, RunId>();
 
   async createRunWithInitialAttempt(
     run: Run,
@@ -59,6 +61,7 @@ export class MemoryRunRepository implements RunRepository {
 
     this.runs.set(run.id, run);
     this.attempts.set(attempt.id, attempt);
+    indexRunIdempotencyKey(this.runsByWorkspaceIdempotencyKey, run);
   }
 
   async saveRun(run: Run): Promise<void> {
@@ -69,10 +72,25 @@ export class MemoryRunRepository implements RunRepository {
     }
 
     this.runs.set(run.id, run);
+    indexRunIdempotencyKey(this.runsByWorkspaceIdempotencyKey, run);
   }
 
   async findRunById(id: RunId): Promise<Run | null> {
     return this.runs.get(id) ?? null;
+  }
+
+  async findRunByWorkspaceIdempotencyKey(
+    workspaceId: WorkspaceId,
+    idempotencyKey: string,
+  ): Promise<Run | null> {
+    const runId = this.runsByWorkspaceIdempotencyKey.get(
+      workspaceIdempotencyKey(workspaceId, idempotencyKey),
+    );
+    if (runId === undefined) {
+      return null;
+    }
+
+    return this.runs.get(runId) ?? null;
   }
 
   async listRuns(query: ListRunsQuery): Promise<ListRunsResult> {
@@ -379,6 +397,24 @@ function isAfterRunStepCursor(
   return (
     step.startedAt.getTime() === cursor.startedAt.getTime() &&
     step.id > cursor.id
+  );
+}
+
+function workspaceIdempotencyKey(
+  workspaceId: WorkspaceId,
+  idempotencyKey: string,
+): string {
+  return `${workspaceId}:${idempotencyKey}`;
+}
+
+function indexRunIdempotencyKey(index: Map<string, RunId>, run: Run): void {
+  if (run.idempotencyKey === undefined) {
+    return;
+  }
+
+  index.set(
+    workspaceIdempotencyKey(run.workspaceId, run.idempotencyKey),
+    run.id,
   );
 }
 

@@ -4,6 +4,7 @@ import type {
   EvaluationId,
   ModelProfileId,
   ModelProfileVersionId,
+  ScheduleId,
   ToolId,
   ToolVersionId,
   RunAttemptId,
@@ -148,6 +149,28 @@ export class DuplicateToolKeyError extends DomainInvariantError {
     super(`Tool key '${key}' already exists in workspace '${workspaceId}'.`);
     this.workspaceId = workspaceId;
     this.key = key;
+  }
+}
+
+export class DuplicateScheduleKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `Schedule key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class ScheduleNotFoundError extends DomainError {
+  readonly scheduleId: ScheduleId;
+
+  constructor(scheduleId: ScheduleId) {
+    super(`Schedule ${scheduleId} was not found.`);
+    this.scheduleId = scheduleId;
   }
 }
 

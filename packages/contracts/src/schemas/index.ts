@@ -10,6 +10,8 @@ export {
   runAttemptIdSchema,
   runIdSchema,
   runStepIdSchema,
+  scheduleIdSchema,
+  scheduleOccurrenceIdSchema,
   toolIdSchema,
   toolVersionIdSchema,
   workflowIdSchema,
@@ -121,3 +123,14 @@ export {
 export { toolGrantSchema, toolInvocationSchema } from "./tool.js";
 
 export { workflowDefinitionSchema } from "./workflow-definition.js";
+
+export {
+  createScheduleRequestSchema,
+  listScheduleOccurrencesQuerySchema,
+  listSchedulesQuerySchema,
+  scheduleListResourceSchema,
+  scheduleOccurrenceListResourceSchema,
+  scheduleOccurrenceResourceSchema,
+  scheduleResourceSchema,
+  updateScheduleRequestSchema,
+} from "./schedule-registry.js";

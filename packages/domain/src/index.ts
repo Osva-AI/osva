@@ -11,6 +11,8 @@ export type {
   RunId,
   RunState,
   RunStepId,
+  ScheduleId,
+  ScheduleOccurrenceId,
   TerminalRunState,
   ToolId,
   ToolVersionId,
@@ -31,6 +33,7 @@ export {
   DuplicateAgentKeyError,
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
+  DuplicateScheduleKeyError,
   EvaluationNotFoundError,
   InvalidAttemptSequenceError,
   InvalidModelBindingError,
@@ -47,6 +50,7 @@ export {
   RunAttemptNotFoundError,
   RunNotFoundError,
   RunStepNotFoundError,
+  ScheduleNotFoundError,
   WorkspaceNotFoundError,
 } from "./errors.js";
 
@@ -85,6 +89,22 @@ export {
 export { Evaluation, type EvaluationProps } from "./evaluation.js";
 export { estimateModelCostUsdMicros } from "./model-cost.js";
 export { jsonValuesEqual } from "./json-equality.js";
+export {
+  Schedule,
+  type CreateScheduleProps,
+  type ScheduleProps,
+  type UpdateScheduleProps,
+} from "./schedule.js";
+export {
+  ScheduleOccurrence,
+  type CreateScheduleOccurrenceProps,
+  type ScheduleOccurrenceProps,
+} from "./schedule-occurrence.js";
+export {
+  assertValidFiveFieldCronExpression,
+  assertValidIanaTimezone,
+  nextCronInstantAfter,
+} from "./schedule-cron.js";
 
 export {
   LEGAL_RUN_TRANSITIONS,
@@ -126,6 +146,13 @@ export type {
   RunListCursor,
   RunStepListCursor,
   RunRepository,
+  ScheduleListCursor,
+  ScheduleOccurrenceListCursor,
+  ScheduleRepository,
+  ListScheduleOccurrencesQuery,
+  ListScheduleOccurrencesResult,
+  ListSchedulesQuery,
+  ListSchedulesResult,
   WorkspaceRepository,
 } from "./ports/index.js";
 
@@ -134,6 +161,10 @@ export {
   DEFAULT_RUN_STEP_LIST_LIMIT,
   MAX_RUN_LIST_LIMIT,
   MAX_RUN_STEP_LIST_LIMIT,
+  DEFAULT_SCHEDULE_LIST_LIMIT,
+  DEFAULT_SCHEDULE_OCCURRENCE_LIST_LIMIT,
+  MAX_SCHEDULE_LIST_LIMIT,
+  MAX_SCHEDULE_OCCURRENCE_LIST_LIMIT,
 } from "./ports/index.js";
 
 export {
@@ -226,3 +257,19 @@ export {
   type ToolApplicationIds,
   type UpdateToolMetadataCommand,
 } from "./tool-application.js";
+
+export {
+  CreateSchedule,
+  GetSchedule,
+  ListScheduleOccurrences,
+  ListSchedules,
+  UpdateSchedule,
+  createScheduleApplication,
+  type CreateScheduleCommand,
+  type ListScheduleOccurrencesCommand,
+  type ScheduleApplication,
+  type ScheduleApplicationClock,
+  type ScheduleApplicationDependencies,
+  type ScheduleApplicationIds,
+  type UpdateScheduleCommand,
+} from "./schedule-application.js";

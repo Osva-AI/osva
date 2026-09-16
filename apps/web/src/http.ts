@@ -15,6 +15,10 @@ import {
   type RunObservabilityHttpServices,
 } from "./run-observability-http.js";
 import { handleRunRequest, type RunHttpServices } from "./run-http.js";
+import {
+  handleScheduleRequest,
+  type ScheduleHttpServices,
+} from "./schedule-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
@@ -25,6 +29,7 @@ export interface CreateWebApplicationOptions {
   readonly tools: ToolApplication;
   readonly runs: RunHttpServices;
   readonly runObservability: RunObservabilityHttpServices;
+  readonly schedules: ScheduleHttpServices;
 }
 
 export function createWebApplication(
@@ -40,6 +45,7 @@ export function createWebApplication(
       options.tools,
       options.runs,
       options.runObservability,
+      options.schedules,
     );
   });
 }
@@ -53,6 +59,7 @@ async function handleRequest(
   tools: ToolApplication,
   runs: RunHttpServices,
   runObservability: RunObservabilityHttpServices,
+  schedules: ScheduleHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -154,6 +161,18 @@ async function handleRequest(
     runs,
   );
   if (handledRuns) {
+    return;
+  }
+
+  const handledSchedules = await handleScheduleRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    schedules,
+  );
+  if (handledSchedules) {
     return;
   }
 

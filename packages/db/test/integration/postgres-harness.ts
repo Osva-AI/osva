@@ -20,6 +20,8 @@ const STAGE0_TABLES = [
   "run_steps",
   "run_attempts",
   "runs",
+  "schedule_occurrences",
+  "schedules",
   "deployments",
   "agent_versions",
   "agents",

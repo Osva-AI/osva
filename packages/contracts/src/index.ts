@@ -11,6 +11,8 @@ export type {
   RunAttemptId,
   RunId,
   RunStepId,
+  ScheduleId,
+  ScheduleOccurrenceId,
   ToolId,
   ToolVersionId,
   WorkflowId,

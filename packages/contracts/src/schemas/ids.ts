@@ -13,6 +13,9 @@ export const deploymentIdSchema = osvaIdSchema<"DeploymentId">();
 export const runIdSchema = osvaIdSchema<"RunId">();
 export const runAttemptIdSchema = osvaIdSchema<"RunAttemptId">();
 export const runStepIdSchema = osvaIdSchema<"RunStepId">();
+export const scheduleIdSchema = osvaIdSchema<"ScheduleId">();
+export const scheduleOccurrenceIdSchema =
+  osvaIdSchema<"ScheduleOccurrenceId">();
 export const workflowIdSchema = osvaIdSchema<"WorkflowId">();
 export const workflowVersionIdSchema = osvaIdSchema<"WorkflowVersionId">();
 export const workflowRunIdSchema = osvaIdSchema<"WorkflowRunId">();

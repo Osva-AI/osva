@@ -15,6 +15,17 @@ export {
   type ExecuteRunAttemptSucceeded,
 } from "./execute-run-attempt.js";
 export {
+  DispatchScheduleOccurrence,
+  type DispatchScheduleOccurrenceCommand,
+  type DispatchScheduleOccurrenceDependencies,
+} from "./dispatch-schedule-occurrence.js";
+export {
+  SchedulerTick,
+  type SchedulerTickDependencies,
+  type SchedulerTickIds,
+} from "./scheduler-tick.js";
+export { scheduleOccurrenceRunIdempotencyKey } from "./schedule-idempotency.js";
+export {
   AgentNotFoundError,
   AgentVersionNotFoundError,
   BindingMismatchError,

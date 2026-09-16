@@ -40,6 +40,10 @@ class FakeRunRepository implements RunRepository {
     return this.runs.get(id) ?? null;
   }
 
+  async findRunByWorkspaceIdempotencyKey(): Promise<Run | null> {
+    return null;
+  }
+
   async listRuns(query: ListRunsQuery): Promise<ListRunsResult> {
     return {
       runs: [...this.runs.values()].slice(0, query.limit),

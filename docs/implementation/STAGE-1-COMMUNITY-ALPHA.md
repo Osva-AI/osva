@@ -82,6 +82,20 @@ duplicated. Estimated model cost is derived from immutable pricing plus
 normalized token usage; unpriced model calls remain explicit. OpenTelemetry,
 dashboards, billing reconciliation, and LLM-as-judge remain later slices.
 
+Slice 1.8 completes Stage 1 as OSVA Community Alpha by adding OSVA-owned
+recurring scheduling and a separate scheduler process. PostgreSQL owns
+`Schedule` and `ScheduleOccurrence` state; BullMQ does not own recurring
+schedule definitions. Schedules target an Agent plus immutable AgentVersion,
+use five-field cron with an explicit IANA timezone, and materialize immutable
+occurrences that snapshot execution intent. Due occurrences create canonical
+Runs through the existing CreateRun pipeline with deterministic workspace
+idempotency keys. The fixed Community Alpha misfire policy is `COALESCE_ONE`:
+after downtime at most one overdue occurrence is materialized per Schedule.
+Enqueue failure after Run persistence is recoverable and reuses the same Run
+and initial RunAttemptId. HTTP exposes `/v1/schedules` and nested
+`/occurrences`. `apps/scheduler` polls PostgreSQL, materializes due occurrences,
+and dispatches pending occurrences outside the materialization transaction.
+
 ## Quality
 
 - JobQueue contract tests;
@@ -92,3 +106,4 @@ dashboards, billing reconciliation, and LLM-as-judge remain later slices.
 - retry and immutable-binding tests;
 - ModelGateway and OpenAI adapter tests against a local fake Responses endpoint;
 - E2E trusted-agent `generateText` without a live paid OpenAI key.
+- scheduler materialization, dispatch recovery, and scheduled Run E2E tests.

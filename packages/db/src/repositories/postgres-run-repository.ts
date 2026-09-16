@@ -4,6 +4,7 @@ import type {
   RunId,
   RunState,
   RunStepId,
+  WorkspaceId,
 } from "@osva/contracts";
 import {
   DomainInvariantError,
@@ -102,6 +103,24 @@ export class PostgresRunRepository implements RunRepository {
       .select()
       .from(runs)
       .where(eq(runs.id, id))
+      .limit(1);
+
+    return row === undefined ? null : runFromRow(row);
+  }
+
+  async findRunByWorkspaceIdempotencyKey(
+    workspaceId: WorkspaceId,
+    idempotencyKey: string,
+  ): Promise<Run | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(runs)
+      .where(
+        and(
+          eq(runs.workspaceId, workspaceId),
+          eq(runs.idempotencyKey, idempotencyKey),
+        ),
+      )
       .limit(1);
 
     return row === undefined ? null : runFromRow(row);

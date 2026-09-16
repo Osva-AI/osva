@@ -138,6 +138,9 @@ export function wrapRunRepository(
     saveRun: overrides.saveRun?.bind(overrides) ?? inner.saveRun.bind(inner),
     findRunById:
       overrides.findRunById?.bind(overrides) ?? inner.findRunById.bind(inner),
+    findRunByWorkspaceIdempotencyKey:
+      overrides.findRunByWorkspaceIdempotencyKey?.bind(overrides) ??
+      inner.findRunByWorkspaceIdempotencyKey.bind(inner),
     listRuns: overrides.listRuns?.bind(overrides) ?? inner.listRuns.bind(inner),
     saveRunAttempt:
       overrides.saveRunAttempt?.bind(overrides) ??
