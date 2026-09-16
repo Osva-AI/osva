@@ -3,18 +3,29 @@ import type {
   JobQueue,
   RunAttemptId,
   RunId,
+  WorkflowDefinitionNodeV1,
+  WorkflowDefinitionNodeV2,
   WorkflowNodeRunId,
 } from "@osva/contracts";
 import {
   DomainInvariantError,
-  isTerminalRunState,
-  isTerminalWorkflowRunState,
-  orderedSequentialNodeKeys,
+  LifecycleConflictError,
   WorkflowNodeRun,
+  buildWorkflowGraph,
+  hasFailedNode,
+  inputForNode,
+  isNodeReady,
+  isNodeSkippable,
+  isTerminalRunState,
+  isTerminalWorkflowNodeRunState,
+  isTerminalWorkflowRunState,
+  nodeRunsByKey,
+  selectBranchTarget,
   type AgentRepository,
   type Run,
   type RunAttempt,
   type RunRepository,
+  type WorkflowGraph,
   type WorkflowRepository,
   type WorkflowRun,
   type WorkflowRunError,
@@ -55,100 +66,344 @@ export class ReconcileWorkflowRun {
   constructor(private readonly deps: ReconcileWorkflowRunDependencies) {}
 
   async execute(command: ReconcileWorkflowRunCommand): Promise<void> {
-    let workflowRun =
-      (await this.deps.workflowRuns.findWorkflowRunById(
-        command.workflowRun.id,
-      )) ?? command.workflowRun;
+    const version = await this.loadVersion(
+      command.workflowRun.workflowVersionId,
+    );
+    const graph = buildWorkflowGraph(version.definition);
 
-    if (isTerminalWorkflowRunState(workflowRun.status)) {
+    await this.observeExistingAgents(graph, command);
+
+    let workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (workflowRun === null) {
       return;
     }
 
-    const version = await this.deps.workflows.findWorkflowVersionById(
-      workflowRun.workflowVersionId,
+    const failed = hasFailedNode(
+      nodeRunsByKey(
+        await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
+      ),
     );
+    if (
+      failed !== undefined &&
+      !isTerminalWorkflowRunState(workflowRun.status)
+    ) {
+      await this.failWorkflow(
+        workflowRun,
+        failed.error ?? childRunFailedError(failed.childRunId),
+        command.now,
+      );
+      return;
+    }
+
+    workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (
+      workflowRun === null ||
+      isTerminalWorkflowRunState(workflowRun.status)
+    ) {
+      return;
+    }
+
+    await this.ensureWorkflowRunning(workflowRun, command.now);
+    await this.propagateSkips(graph, command);
+    await this.resolveOrchestrationNodes(graph, command);
+    await this.propagateSkips(graph, command);
+    await this.startReadyAgents(graph, version, command);
+
+    workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (
+      workflowRun === null ||
+      isTerminalWorkflowRunState(workflowRun.status)
+    ) {
+      return;
+    }
+
+    const nodeRuns = nodeRunsByKey(
+      await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
+    );
+    const laterFailure = hasFailedNode(nodeRuns);
+    if (laterFailure !== undefined) {
+      await this.failWorkflow(
+        workflowRun,
+        laterFailure.error ?? childRunFailedError(laterFailure.childRunId),
+        command.now,
+      );
+      return;
+    }
+
+    const terminal = nodeRuns.get(graph.terminalKey);
+    if (terminal?.status === "SUCCEEDED") {
+      await this.succeedWorkflow(
+        workflowRun,
+        terminal.output ?? null,
+        command.now,
+      );
+      return;
+    }
+
+    if (terminal?.status === "SKIPPED") {
+      await this.failWorkflow(
+        workflowRun,
+        {
+          code: "WORKFLOW_TERMINAL_SKIPPED",
+          message: `Terminal workflow node '${graph.terminalKey}' was skipped.`,
+        },
+        command.now,
+      );
+    }
+  }
+
+  private async loadVersion(
+    id: WorkflowVersion["id"],
+  ): Promise<WorkflowVersion> {
+    const version = await this.deps.workflows.findWorkflowVersionById(id);
     if (version === null) {
       throw new DomainInvariantError(
-        `WorkflowRun ${workflowRun.id} references missing WorkflowVersion ${workflowRun.workflowVersionId}.`,
+        `WorkflowRun references missing WorkflowVersion ${id}.`,
       );
     }
 
-    const nodeKeys = orderedSequentialNodeKeys(version.definition);
-    let nextInput: unknown = workflowRun.input;
+    return version;
+  }
 
-    for (let index = 0; index < nodeKeys.length; index += 1) {
-      const nodeKey = nodeKeys[index];
-      if (nodeKey === undefined) {
-        continue;
-      }
+  private async reloadWorkflowRun(
+    id: WorkflowRun["id"],
+  ): Promise<WorkflowRun | null> {
+    return this.deps.workflowRuns.findWorkflowRunById(id);
+  }
 
-      const latest = await this.deps.workflowRuns.findWorkflowRunById(
-        workflowRun.id,
-      );
-      if (latest === null || isTerminalWorkflowRunState(latest.status)) {
-        return;
-      }
-      workflowRun = latest;
-
-      let nodeRun =
-        await this.deps.workflowRuns.findWorkflowNodeRunByWorkflowRunAndKey(
-          workflowRun.id,
-          nodeKey,
-        );
-
-      if (nodeRun === null) {
-        nodeRun = await this.materializeNodeRun({
-          workflowRun,
-          nodeKey,
-          sequence: index + 1,
-          input: nextInput,
-          now: command.now,
-          ids: command.ids,
-        });
-      }
-
-      if (nodeRun.status === "FAILED") {
-        await this.failWorkflow(
-          workflowRun,
-          nodeRun.error ?? childRunFailedError(nodeRun.childRunId),
-          command.now,
-        );
-        return;
-      }
-
-      if (nodeRun.status === "SUCCEEDED") {
-        nextInput = nodeRun.output ?? null;
-        continue;
-      }
-
-      nodeRun = await this.ensureChildRun(
-        workflowRun,
-        version,
-        nodeRun,
-        command,
-      );
-
-      const observed = await this.observeChildRun(nodeRun, command.now);
-      if (observed.outcome === "waiting") {
-        return;
-      }
-
-      if (observed.outcome === "failed") {
-        await this.failWorkflow(workflowRun, observed.error, command.now);
-        return;
-      }
-
-      nextInput = observed.output;
-    }
-
-    const latest = await this.deps.workflowRuns.findWorkflowRunById(
-      workflowRun.id,
+  private async observeExistingAgents(
+    graph: WorkflowGraph,
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
+    const nodeRuns = await this.deps.workflowRuns.listWorkflowNodeRuns(
+      command.workflowRun.id,
     );
-    if (latest === null || isTerminalWorkflowRunState(latest.status)) {
+    const version = await this.loadVersion(
+      command.workflowRun.workflowVersionId,
+    );
+
+    await Promise.all(
+      nodeRuns.map(async (nodeRun) => {
+        const node = graph.nodesByKey.get(nodeRun.workflowNodeKey);
+        if (
+          node?.type !== "AGENT" ||
+          isTerminalWorkflowNodeRunState(nodeRun.status)
+        ) {
+          return;
+        }
+
+        await this.processAgentNode(version, nodeRun, command);
+      }),
+    );
+  }
+
+  private async propagateSkips(
+    graph: WorkflowGraph,
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
+    const workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (
+      workflowRun === null ||
+      isTerminalWorkflowRunState(workflowRun.status)
+    ) {
       return;
     }
 
-    await this.succeedWorkflow(latest, nextInput, command.now);
+    const nodeRuns = nodeRunsByKey(
+      await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
+    );
+
+    await Promise.all(
+      [...graph.nodesByKey.keys()].map(async (nodeKey) => {
+        if (!isNodeSkippable(graph, nodeKey, nodeRuns)) {
+          return;
+        }
+
+        const existing = nodeRuns.get(nodeKey);
+        if (existing === undefined) {
+          await this.materializeNodeRun({
+            workflowRun,
+            nodeKey,
+            sequence: graph.sequenceByKey.get(nodeKey) ?? 1,
+            input: inputForNode(graph, nodeKey, nodeRuns, workflowRun.input),
+            now: command.now,
+            ids: command.ids,
+            skipped: true,
+          });
+          return;
+        }
+
+        if (existing.status === "PENDING") {
+          await this.transitionNode(
+            existing,
+            existing.markSkipped(command.now),
+          );
+        }
+      }),
+    );
+  }
+
+  private async resolveOrchestrationNodes(
+    graph: WorkflowGraph,
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
+    const limit = graph.nodesByKey.size;
+    for (let step = 0; step < limit; step += 1) {
+      const workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+      if (
+        workflowRun === null ||
+        isTerminalWorkflowRunState(workflowRun.status)
+      ) {
+        return;
+      }
+
+      const nodeRuns = nodeRunsByKey(
+        await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
+      );
+      const ready = [...graph.nodesByKey.entries()].filter(([key, node]) => {
+        return node.type !== "AGENT" && isNodeReady(graph, key, nodeRuns);
+      });
+
+      if (ready.length === 0) {
+        return;
+      }
+
+      await Promise.all(
+        ready.map(([nodeKey, node]) =>
+          this.resolveOrchestrationNode({
+            graph,
+            workflowRun,
+            nodeKey,
+            node,
+            nodeRuns,
+            command,
+          }),
+        ),
+      );
+      await this.propagateSkips(graph, command);
+    }
+  }
+
+  private async resolveOrchestrationNode(input: {
+    readonly graph: WorkflowGraph;
+    readonly workflowRun: WorkflowRun;
+    readonly nodeKey: string;
+    readonly node: WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2;
+    readonly nodeRuns: ReadonlyMap<string, WorkflowNodeRun>;
+    readonly command: ReconcileWorkflowRunCommand;
+  }): Promise<void> {
+    const nodeInput = inputForNode(
+      input.graph,
+      input.nodeKey,
+      input.nodeRuns,
+      input.workflowRun.input,
+    );
+    let nodeRun =
+      input.nodeRuns.get(input.nodeKey) ??
+      (await this.materializeNodeRun({
+        workflowRun: input.workflowRun,
+        nodeKey: input.nodeKey,
+        sequence: input.graph.sequenceByKey.get(input.nodeKey) ?? 1,
+        input: nodeInput,
+        now: input.command.now,
+        ids: input.command.ids,
+        skipped: false,
+      }));
+
+    if (isTerminalWorkflowNodeRunState(nodeRun.status)) {
+      return;
+    }
+
+    if (nodeRun.status === "PENDING") {
+      const running = await this.transitionNode(
+        nodeRun,
+        nodeRun.markRunning(input.command.now),
+      );
+      if (running === null) {
+        return;
+      }
+
+      nodeRun = running;
+    }
+
+    if (nodeRun.status !== "RUNNING") {
+      return;
+    }
+
+    if (input.node.type === "BRANCH") {
+      const selectedTargetKey = selectBranchTarget(input.node, nodeRun.input);
+      await this.transitionNode(
+        nodeRun,
+        nodeRun.markSucceeded(
+          input.command.now,
+          nodeRun.input,
+          selectedTargetKey,
+        ),
+      );
+      return;
+    }
+
+    await this.transitionNode(
+      nodeRun,
+      nodeRun.markSucceeded(input.command.now, nodeRun.input),
+    );
+  }
+
+  private async startReadyAgents(
+    graph: WorkflowGraph,
+    version: WorkflowVersion,
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
+    const workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (
+      workflowRun === null ||
+      isTerminalWorkflowRunState(workflowRun.status)
+    ) {
+      return;
+    }
+
+    const nodeRuns = nodeRunsByKey(
+      await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
+    );
+    const ready = [...graph.nodesByKey.entries()].filter(([key, node]) => {
+      return node.type === "AGENT" && isNodeReady(graph, key, nodeRuns);
+    });
+
+    await Promise.all(
+      ready.map(async ([nodeKey]) => {
+        const nodeRun =
+          nodeRuns.get(nodeKey) ??
+          (await this.materializeNodeRun({
+            workflowRun,
+            nodeKey,
+            sequence: graph.sequenceByKey.get(nodeKey) ?? 1,
+            input: inputForNode(graph, nodeKey, nodeRuns, workflowRun.input),
+            now: command.now,
+            ids: command.ids,
+            skipped: false,
+          }));
+
+        if (isTerminalWorkflowNodeRunState(nodeRun.status)) {
+          return;
+        }
+
+        await this.processAgentNode(version, nodeRun, command);
+      }),
+    );
+  }
+
+  private async processAgentNode(
+    version: WorkflowVersion,
+    nodeRun: WorkflowNodeRun,
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
+    const workflowRun = await this.reloadWorkflowRun(nodeRun.workflowRunId);
+    if (workflowRun === null) {
+      return;
+    }
+
+    nodeRun = await this.ensureChildRun(workflowRun, version, nodeRun, command);
+    await this.observeChildRun(nodeRun, command.now);
   }
 
   private async materializeNodeRun(input: {
@@ -158,23 +413,27 @@ export class ReconcileWorkflowRun {
     readonly input: unknown;
     readonly now: Date;
     readonly ids: ReconcileWorkflowRunIds;
+    readonly skipped: boolean;
   }): Promise<WorkflowNodeRun> {
-    if (input.workflowRun.status === "PENDING") {
-      await this.deps.workflowRuns.transitionWorkflowRun(
-        "PENDING",
-        input.workflowRun.markRunning(input.now),
-      );
-    }
-
-    const nodeRun = WorkflowNodeRun.create({
-      id: input.ids.createWorkflowNodeRunId(),
-      workspaceId: input.workflowRun.workspaceId,
-      workflowRunId: input.workflowRun.id,
-      workflowNodeKey: input.nodeKey,
-      sequence: input.sequence,
-      input: input.input,
-      createdAt: input.now,
-    });
+    const nodeRun = input.skipped
+      ? WorkflowNodeRun.createSkipped({
+          id: input.ids.createWorkflowNodeRunId(),
+          workspaceId: input.workflowRun.workspaceId,
+          workflowRunId: input.workflowRun.id,
+          workflowNodeKey: input.nodeKey,
+          sequence: input.sequence,
+          input: input.input,
+          createdAt: input.now,
+        })
+      : WorkflowNodeRun.create({
+          id: input.ids.createWorkflowNodeRunId(),
+          workspaceId: input.workflowRun.workspaceId,
+          workflowRunId: input.workflowRun.id,
+          workflowNodeKey: input.nodeKey,
+          sequence: input.sequence,
+          input: input.input,
+          createdAt: input.now,
+        });
 
     try {
       await this.deps.workflowRuns.saveWorkflowNodeRun(nodeRun);
@@ -207,9 +466,9 @@ export class ReconcileWorkflowRun {
     const node = version.definition.nodes.find(
       (candidate) => candidate.key === nodeRun.workflowNodeKey,
     );
-    if (node === undefined) {
+    if (node === undefined || node.type !== "AGENT") {
       throw new DomainInvariantError(
-        `WorkflowVersion ${version.id} is missing node '${nodeRun.workflowNodeKey}'.`,
+        `Workflow node '${nodeRun.workflowNodeKey}' is not an AGENT node.`,
       );
     }
 
@@ -246,10 +505,13 @@ export class ReconcileWorkflowRun {
     }
 
     if (nodeRun.status === "PENDING") {
-      nodeRun = await this.deps.workflowRuns.saveWorkflowNodeRunTransition(
-        "PENDING",
+      const running = await this.transitionNode(
+        nodeRun,
         nodeRun.markRunning(command.now),
       );
+      if (running !== null) {
+        nodeRun = running;
+      }
     }
 
     if (
@@ -341,7 +603,15 @@ export class ReconcileWorkflowRun {
 
     if (currentRun.status === "PENDING") {
       const queued = currentRun.transitionTo("QUEUED", now);
-      currentRun = await this.deps.runs.transitionRun("PENDING", queued);
+      try {
+        currentRun = await this.deps.runs.transitionRun("PENDING", queued);
+      } catch (error) {
+        if (error instanceof LifecycleConflictError) {
+          return;
+        }
+
+        throw error;
+      }
     }
 
     if (currentRun.status !== "QUEUED") {
@@ -362,18 +632,14 @@ export class ReconcileWorkflowRun {
   private async observeChildRun(
     nodeRun: WorkflowNodeRun,
     now: Date,
-  ): Promise<
-    | { readonly outcome: "waiting" }
-    | { readonly outcome: "succeeded"; readonly output: unknown }
-    | { readonly outcome: "failed"; readonly error: WorkflowRunError }
-  > {
+  ): Promise<void> {
     if (nodeRun.childRunId === undefined) {
-      return { outcome: "waiting" };
+      return;
     }
 
     const run = await this.deps.runs.findRunById(nodeRun.childRunId);
     if (run === null) {
-      return { outcome: "waiting" };
+      return;
     }
 
     if (run.status === "SUCCEEDED") {
@@ -383,12 +649,9 @@ export class ReconcileWorkflowRun {
       );
       const output = succeeded?.output ?? null;
       if (nodeRun.status !== "SUCCEEDED") {
-        await this.deps.workflowRuns.saveWorkflowNodeRunTransition(
-          nodeRun.status,
-          nodeRun.markSucceeded(now, output),
-        );
+        await this.transitionNode(nodeRun, nodeRun.markSucceeded(now, output));
       }
-      return { outcome: "succeeded", output };
+      return;
     }
 
     if (
@@ -398,15 +661,29 @@ export class ReconcileWorkflowRun {
     ) {
       const error = childRunFailedError(run.id, run.status);
       if (nodeRun.status !== "FAILED") {
-        await this.deps.workflowRuns.saveWorkflowNodeRunTransition(
-          nodeRun.status,
-          nodeRun.markFailed(now, error),
-        );
+        await this.transitionNode(nodeRun, nodeRun.markFailed(now, error));
       }
-      return { outcome: "failed", error };
+    }
+  }
+
+  private async ensureWorkflowRunning(
+    workflowRun: WorkflowRun,
+    now: Date,
+  ): Promise<void> {
+    if (workflowRun.status !== "PENDING") {
+      return;
     }
 
-    return { outcome: "waiting" };
+    try {
+      await this.deps.workflowRuns.transitionWorkflowRun(
+        "PENDING",
+        workflowRun.markRunning(now),
+      );
+    } catch (error) {
+      if (!(error instanceof LifecycleConflictError)) {
+        throw error;
+      }
+    }
   }
 
   private async succeedWorkflow(
@@ -414,21 +691,41 @@ export class ReconcileWorkflowRun {
     output: unknown,
     now: Date,
   ): Promise<void> {
-    if (workflowRun.status === "PENDING") {
-      workflowRun = await this.deps.workflowRuns.transitionWorkflowRun(
-        "PENDING",
-        workflowRun.markRunning(now),
-      );
-    }
-
-    if (workflowRun.status !== "RUNNING") {
+    const latest = await this.reloadWorkflowRun(workflowRun.id);
+    if (latest === null || isTerminalWorkflowRunState(latest.status)) {
       return;
     }
 
-    await this.deps.workflowRuns.transitionWorkflowRun(
-      "RUNNING",
-      workflowRun.markSucceeded(now, output),
-    );
+    let current = latest;
+    if (current.status === "PENDING") {
+      try {
+        current = await this.deps.workflowRuns.transitionWorkflowRun(
+          "PENDING",
+          current.markRunning(now),
+        );
+      } catch (error) {
+        if (error instanceof LifecycleConflictError) {
+          return;
+        }
+
+        throw error;
+      }
+    }
+
+    if (current.status !== "RUNNING") {
+      return;
+    }
+
+    try {
+      await this.deps.workflowRuns.transitionWorkflowRun(
+        "RUNNING",
+        current.markSucceeded(now, output),
+      );
+    } catch (error) {
+      if (!(error instanceof LifecycleConflictError)) {
+        throw error;
+      }
+    }
   }
 
   private async failWorkflow(
@@ -436,29 +733,59 @@ export class ReconcileWorkflowRun {
     error: WorkflowRunError,
     now: Date,
   ): Promise<void> {
-    const latest = await this.deps.workflowRuns.findWorkflowRunById(
-      workflowRun.id,
-    );
+    const latest = await this.reloadWorkflowRun(workflowRun.id);
     if (latest === null || isTerminalWorkflowRunState(latest.status)) {
       return;
     }
 
     let current = latest;
     if (current.status === "PENDING") {
-      current = await this.deps.workflowRuns.transitionWorkflowRun(
-        "PENDING",
-        current.markRunning(now),
-      );
+      try {
+        current = await this.deps.workflowRuns.transitionWorkflowRun(
+          "PENDING",
+          current.markRunning(now),
+        );
+      } catch (caught) {
+        if (caught instanceof LifecycleConflictError) {
+          return;
+        }
+
+        throw caught;
+      }
     }
 
     if (current.status !== "RUNNING") {
       return;
     }
 
-    await this.deps.workflowRuns.transitionWorkflowRun(
-      "RUNNING",
-      current.markFailed(now, error),
-    );
+    try {
+      await this.deps.workflowRuns.transitionWorkflowRun(
+        "RUNNING",
+        current.markFailed(now, error),
+      );
+    } catch (caught) {
+      if (!(caught instanceof LifecycleConflictError)) {
+        throw caught;
+      }
+    }
+  }
+
+  private async transitionNode(
+    current: WorkflowNodeRun,
+    next: WorkflowNodeRun,
+  ): Promise<WorkflowNodeRun | null> {
+    try {
+      return await this.deps.workflowRuns.saveWorkflowNodeRunTransition(
+        current.status,
+        next,
+      );
+    } catch (error) {
+      if (error instanceof LifecycleConflictError) {
+        return this.deps.workflowRuns.findWorkflowNodeRunById(current.id);
+      }
+
+      throw error;
+    }
   }
 }
 

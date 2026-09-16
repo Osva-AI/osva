@@ -74,7 +74,10 @@ workflow_node_runs
 `(workflow_id, version)` and a JSONB graph-shaped `definition`.
 `workflow_runs` references one immutable WorkflowVersion.
 `workflow_node_runs` is unique on `(workflow_run_id, workflow_node_key)` and
-may attach at most one canonical child `runs.id`.
+may attach at most one canonical child `runs.id`. Slice 2.2 adds durable
+`SKIPPED` status and optional `selected_target_key` for BRANCH routing
+decisions. Orchestration state remains these node-run rows plus the
+immutable WorkflowVersion graph; there is no edge-execution table.
 
 ## Rules
 

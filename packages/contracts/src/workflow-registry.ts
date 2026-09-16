@@ -6,7 +6,7 @@ import type {
   WorkspaceId,
 } from "./ids.js";
 import type { JsonValue } from "./json-value.js";
-import type { WorkflowDefinitionV1 } from "./workflow-definition.js";
+import type { WorkflowDefinition } from "./workflow-definition.js";
 import type {
   WorkflowNodeRunState,
   WorkflowRunState,
@@ -20,7 +20,7 @@ export interface CreateWorkflowRequestV1 {
 }
 
 export interface CreateWorkflowVersionRequestV1 {
-  readonly definition: WorkflowDefinitionV1;
+  readonly definition: WorkflowDefinition;
 }
 
 export interface CreateWorkflowRunRequestV1 {
@@ -44,7 +44,7 @@ export interface WorkflowVersionResourceV1 {
   readonly workflowId: WorkflowId;
   readonly workspaceId: WorkspaceId;
   readonly version: number;
-  readonly definition: WorkflowDefinitionV1;
+  readonly definition: WorkflowDefinition;
   readonly createdAt: string;
 }
 
@@ -71,6 +71,7 @@ export interface WorkflowNodeRunResourceV1 {
   readonly input: JsonValue;
   readonly output?: JsonValue;
   readonly childRunId?: string;
+  readonly selectedTargetKey?: string;
   readonly error?: WorkflowRunErrorResourceV1;
   readonly startedAt?: string;
   readonly completedAt?: string;

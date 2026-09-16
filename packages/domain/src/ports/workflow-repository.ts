@@ -1,5 +1,5 @@
 import type {
-  WorkflowDefinitionV1,
+  WorkflowDefinition,
   WorkflowId,
   WorkflowVersionId,
 } from "@osva/contracts";
@@ -10,7 +10,7 @@ import type { WorkflowVersion } from "../workflow-version.js";
 export interface AppendWorkflowVersionInput {
   readonly id: WorkflowVersionId;
   readonly workflowId: WorkflowId;
-  readonly definition: WorkflowDefinitionV1;
+  readonly definition: WorkflowDefinition;
   readonly createdAt: Date;
 }
 

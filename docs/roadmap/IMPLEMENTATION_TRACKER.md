@@ -27,7 +27,7 @@ Status is recorded after locally verifiable checks for each slice.
 ## Stage 2
 
 - ✅ 2.1 Workflow Registry, WorkflowVersion, and Sequential Execution
-- 2.2 Branch and parallel workflow nodes
+- ✅ 2.2 Branch and parallel workflow nodes
 - 2.3 Node / Python / HTTP runtimes
 - 2.4 Approval primitive
 - 2.5 Additional model providers
@@ -40,5 +40,5 @@ Status is recorded after locally verifiable checks for each slice.
 
 - Stage 0: 8/8 complete
 - Stage 1: 8/8 complete
-- Stage 2: 1/9 complete
-- Overall: 17/33 slices complete
+- Stage 2: 2/9 complete
+- Overall: 18/33 slices complete

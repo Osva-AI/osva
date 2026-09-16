@@ -277,6 +277,86 @@ describe("Workflow Registry HTTP API", () => {
     expect(await patched.json()).toEqual({ status: "method_not_allowed" });
   });
 
+  it("accepts a V2 DAG WorkflowVersion and rejects invalid BRANCH topology", async () => {
+    const { origin, agentVersionId } = await listenWithAgent();
+    const workflow = await fetchJson(`${origin}/v1/workflows`, {
+      method: "POST",
+      body: {
+        workspaceId: WORKSPACE_ID,
+        key: "routing-report",
+        name: "Routing Report",
+      },
+    });
+    const workflowId = (workflow.body as { id: string }).id;
+
+    const version = await fetchJson(
+      `${origin}/v1/workflows/${workflowId}/versions`,
+      {
+        method: "POST",
+        body: {
+          definition: {
+            schemaVersion: "2",
+            nodes: [
+              { key: "classifier", type: "AGENT", agentVersionId },
+              {
+                key: "route",
+                type: "BRANCH",
+                selector: "/category",
+                cases: [{ equals: "sales", to: "sales" }],
+                defaultTo: "support",
+              },
+              { key: "sales", type: "AGENT", agentVersionId },
+              { key: "support", type: "AGENT", agentVersionId },
+              { key: "join", type: "JOIN" },
+            ],
+            edges: [
+              { from: "classifier", to: "route" },
+              { from: "route", to: "sales" },
+              { from: "route", to: "support" },
+              { from: "sales", to: "join" },
+              { from: "support", to: "join" },
+            ],
+          },
+        },
+      },
+    );
+    expect(version.status).toBe(201);
+    expect(version.body).toMatchObject({
+      workflowId,
+      version: 1,
+      definition: { schemaVersion: "2" },
+    });
+
+    const invalid = await fetchJson(
+      `${origin}/v1/workflows/${workflowId}/versions`,
+      {
+        method: "POST",
+        body: {
+          definition: {
+            schemaVersion: "2",
+            nodes: [
+              { key: "classifier", type: "AGENT", agentVersionId },
+              {
+                key: "route",
+                type: "BRANCH",
+                selector: "/category",
+                cases: [{ equals: "sales", to: "sales" }],
+              },
+              { key: "sales", type: "AGENT", agentVersionId },
+              { key: "support", type: "AGENT", agentVersionId },
+            ],
+            edges: [
+              { from: "classifier", to: "route" },
+              { from: "route", to: "sales" },
+              { from: "route", to: "support" },
+            ],
+          },
+        },
+      },
+    );
+    expect(invalid.status).toBe(400);
+  });
+
   async function listenWithAgent() {
     const { server, agents, queue } = await createTestWebApplication({
       workspaceId: WORKSPACE_ID,

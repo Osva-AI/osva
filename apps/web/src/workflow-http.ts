@@ -339,6 +339,7 @@ function toWorkflowNodeRunFields(nodeRun: WorkflowNodeRun) {
     input: nodeRun.input,
     output: nodeRun.output,
     childRunId: nodeRun.childRunId,
+    selectedTargetKey: nodeRun.selectedTargetKey,
     error: nodeRun.error,
     startedAt: nodeRun.startedAt?.toISOString(),
     completedAt: nodeRun.completedAt?.toISOString(),

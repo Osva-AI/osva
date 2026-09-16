@@ -17,6 +17,7 @@ export const WORKFLOW_NODE_RUN_STATES = [
   "RUNNING",
   "SUCCEEDED",
   "FAILED",
+  "SKIPPED",
 ] as const;
 
 export type WorkflowNodeRunState = (typeof WORKFLOW_NODE_RUN_STATES)[number];
@@ -24,6 +25,7 @@ export type WorkflowNodeRunState = (typeof WORKFLOW_NODE_RUN_STATES)[number];
 export const TERMINAL_WORKFLOW_NODE_RUN_STATES = [
   "SUCCEEDED",
   "FAILED",
+  "SKIPPED",
 ] as const;
 
 export type TerminalWorkflowNodeRunState =

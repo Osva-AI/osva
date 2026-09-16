@@ -40,9 +40,28 @@ export interface WorkflowNodeRunRehydrateProps {
   readonly input: unknown;
   readonly output?: unknown;
   readonly childRunId?: RunId;
+  readonly selectedTargetKey?: string;
   readonly error?: WorkflowRunError;
   readonly startedAt?: Date;
   readonly completedAt?: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
+interface WorkflowNodeRunProps {
+  readonly id: WorkflowNodeRunId;
+  readonly workspaceId: WorkspaceId;
+  readonly workflowRunId: WorkflowRunId;
+  readonly workflowNodeKey: string;
+  readonly sequence: number;
+  readonly status: WorkflowNodeRunState;
+  readonly input: unknown;
+  readonly output: unknown | undefined;
+  readonly childRunId: RunId | undefined;
+  readonly selectedTargetKey: string | undefined;
+  readonly error: WorkflowRunError | undefined;
+  readonly startedAt: Date | undefined;
+  readonly completedAt: Date | undefined;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -57,28 +76,14 @@ export class WorkflowNodeRun {
   readonly input: unknown;
   readonly output: unknown | undefined;
   readonly childRunId: RunId | undefined;
+  readonly selectedTargetKey: string | undefined;
   readonly error: WorkflowRunError | undefined;
   readonly startedAt: Date | undefined;
   readonly completedAt: Date | undefined;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 
-  private constructor(props: {
-    readonly id: WorkflowNodeRunId;
-    readonly workspaceId: WorkspaceId;
-    readonly workflowRunId: WorkflowRunId;
-    readonly workflowNodeKey: string;
-    readonly sequence: number;
-    readonly status: WorkflowNodeRunState;
-    readonly input: unknown;
-    readonly output: unknown | undefined;
-    readonly childRunId: RunId | undefined;
-    readonly error: WorkflowRunError | undefined;
-    readonly startedAt: Date | undefined;
-    readonly completedAt: Date | undefined;
-    readonly createdAt: Date;
-    readonly updatedAt: Date;
-  }) {
+  private constructor(props: WorkflowNodeRunProps) {
     this.id = props.id;
     this.workspaceId = props.workspaceId;
     this.workflowRunId = props.workflowRunId;
@@ -88,6 +93,7 @@ export class WorkflowNodeRun {
     this.input = props.input;
     this.output = props.output;
     this.childRunId = props.childRunId;
+    this.selectedTargetKey = props.selectedTargetKey;
     this.error = props.error;
     this.startedAt = props.startedAt;
     this.completedAt = props.completedAt;
@@ -106,9 +112,30 @@ export class WorkflowNodeRun {
       input: props.input,
       output: undefined,
       childRunId: undefined,
+      selectedTargetKey: undefined,
       error: undefined,
       startedAt: undefined,
       completedAt: undefined,
+      createdAt: props.createdAt,
+      updatedAt: props.createdAt,
+    });
+  }
+
+  static createSkipped(props: WorkflowNodeRunCreateProps): WorkflowNodeRun {
+    return WorkflowNodeRun.instantiate({
+      id: props.id,
+      workspaceId: props.workspaceId,
+      workflowRunId: props.workflowRunId,
+      workflowNodeKey: props.workflowNodeKey,
+      sequence: props.sequence,
+      status: "SKIPPED",
+      input: props.input,
+      output: undefined,
+      childRunId: undefined,
+      selectedTargetKey: undefined,
+      error: undefined,
+      startedAt: undefined,
+      completedAt: props.createdAt,
       createdAt: props.createdAt,
       updatedAt: props.createdAt,
     });
@@ -125,6 +152,7 @@ export class WorkflowNodeRun {
       input: props.input,
       output: props.output,
       childRunId: props.childRunId,
+      selectedTargetKey: props.selectedTargetKey,
       error: props.error,
       startedAt: props.startedAt,
       completedAt: props.completedAt,
@@ -145,19 +173,8 @@ export class WorkflowNodeRun {
     }
 
     return WorkflowNodeRun.instantiate({
-      id: this.id,
-      workspaceId: this.workspaceId,
-      workflowRunId: this.workflowRunId,
-      workflowNodeKey: this.workflowNodeKey,
-      sequence: this.sequence,
-      status: this.status,
-      input: this.input,
-      output: this.output,
+      ...this.copyProps(),
       childRunId,
-      error: this.error,
-      startedAt: this.startedAt,
-      completedAt: this.completedAt,
-      createdAt: this.createdAt,
       updatedAt: now,
     });
   }
@@ -169,10 +186,25 @@ export class WorkflowNodeRun {
     });
   }
 
-  markSucceeded(now: Date, output: unknown): WorkflowNodeRun {
+  markSucceeded(
+    now: Date,
+    output: unknown,
+    selectedTargetKey?: string,
+  ): WorkflowNodeRun {
+    if (
+      this.selectedTargetKey !== undefined &&
+      selectedTargetKey !== undefined &&
+      this.selectedTargetKey !== selectedTargetKey
+    ) {
+      throw new DomainInvariantError(
+        `WorkflowNodeRun '${this.id}' already selected '${this.selectedTargetKey}'.`,
+      );
+    }
+
     return this.transitionTo("SUCCEEDED", {
       now,
       output,
+      selectedTargetKey: selectedTargetKey ?? this.selectedTargetKey,
       completedAt: now,
       startedAt: this.startedAt ?? now,
     });
@@ -187,12 +219,40 @@ export class WorkflowNodeRun {
     });
   }
 
+  markSkipped(now: Date): WorkflowNodeRun {
+    return this.transitionTo("SKIPPED", {
+      now,
+      completedAt: now,
+    });
+  }
+
+  private copyProps(): WorkflowNodeRunProps {
+    return {
+      id: this.id,
+      workspaceId: this.workspaceId,
+      workflowRunId: this.workflowRunId,
+      workflowNodeKey: this.workflowNodeKey,
+      sequence: this.sequence,
+      status: this.status,
+      input: this.input,
+      output: this.output,
+      childRunId: this.childRunId,
+      selectedTargetKey: this.selectedTargetKey,
+      error: this.error,
+      startedAt: this.startedAt,
+      completedAt: this.completedAt,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    };
+  }
+
   private transitionTo(
     target: WorkflowNodeRunState,
     options: {
       readonly now: Date;
       readonly output?: unknown;
       readonly error?: WorkflowRunError;
+      readonly selectedTargetKey?: string;
       readonly startedAt?: Date;
       readonly completedAt?: Date;
     },
@@ -200,39 +260,18 @@ export class WorkflowNodeRun {
     assertLegalWorkflowNodeRunTransition(this.status, target);
 
     return WorkflowNodeRun.instantiate({
-      id: this.id,
-      workspaceId: this.workspaceId,
-      workflowRunId: this.workflowRunId,
-      workflowNodeKey: this.workflowNodeKey,
-      sequence: this.sequence,
+      ...this.copyProps(),
       status: target,
-      input: this.input,
       output: options.output !== undefined ? options.output : this.output,
-      childRunId: this.childRunId,
+      selectedTargetKey: options.selectedTargetKey ?? this.selectedTargetKey,
       error: options.error ?? this.error,
       startedAt: options.startedAt ?? this.startedAt,
       completedAt: options.completedAt ?? this.completedAt,
-      createdAt: this.createdAt,
       updatedAt: options.now,
     });
   }
 
-  private static instantiate(props: {
-    readonly id: WorkflowNodeRunId;
-    readonly workspaceId: WorkspaceId;
-    readonly workflowRunId: WorkflowRunId;
-    readonly workflowNodeKey: string;
-    readonly sequence: number;
-    readonly status: WorkflowNodeRunState;
-    readonly input: unknown;
-    readonly output: unknown | undefined;
-    readonly childRunId: RunId | undefined;
-    readonly error: WorkflowRunError | undefined;
-    readonly startedAt: Date | undefined;
-    readonly completedAt: Date | undefined;
-    readonly createdAt: Date;
-    readonly updatedAt: Date;
-  }): WorkflowNodeRun {
+  private static instantiate(props: WorkflowNodeRunProps): WorkflowNodeRun {
     if (!props.id) {
       throw new DomainInvariantError("WorkflowNodeRun.id is required.");
     }
@@ -258,6 +297,15 @@ export class WorkflowNodeRun {
     if (props.childRunId !== undefined && !props.childRunId) {
       throw new DomainInvariantError(
         "WorkflowNodeRun.childRunId must be a non-empty string when present.",
+      );
+    }
+
+    if (
+      props.selectedTargetKey !== undefined &&
+      props.selectedTargetKey.trim().length === 0
+    ) {
+      throw new DomainInvariantError(
+        "WorkflowNodeRun.selectedTargetKey must be a non-empty string when present.",
       );
     }
 
@@ -288,6 +336,13 @@ export class WorkflowNodeRun {
           ? undefined
           : copyJsonValue(props.output, "WorkflowNodeRun.output"),
       childRunId: props.childRunId,
+      selectedTargetKey:
+        props.selectedTargetKey === undefined
+          ? undefined
+          : requireNonEmptyString(
+              props.selectedTargetKey,
+              "WorkflowNodeRun.selectedTargetKey",
+            ),
       error: props.error === undefined ? undefined : freezeClone(props.error),
       startedAt:
         props.startedAt === undefined

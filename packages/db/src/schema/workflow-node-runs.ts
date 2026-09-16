@@ -28,6 +28,7 @@ export const workflowNodeRuns = pgTable(
     input: jsonb("input").notNull(),
     output: jsonb("output"),
     childRunId: text("child_run_id"),
+    selectedTargetKey: text("selected_target_key"),
     error: jsonb("error").$type<{ code: string; message: string }>(),
     startedAt: timestamp("started_at", {
       withTimezone: true,

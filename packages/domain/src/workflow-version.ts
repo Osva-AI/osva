@@ -1,5 +1,5 @@
 import type {
-  WorkflowDefinitionV1,
+  WorkflowDefinition,
   WorkflowId,
   WorkflowVersionId,
   WorkspaceId,
@@ -11,14 +11,14 @@ import {
   freezeClone,
   requirePositiveInteger,
 } from "./internals.js";
-import { assertSequentialWorkflowDefinition } from "./workflow-definition.js";
+import { assertWorkflowDefinition } from "./workflow-definition.js";
 
 export interface WorkflowVersionProps {
   readonly id: WorkflowVersionId;
   readonly workflowId: WorkflowId;
   readonly workspaceId: WorkspaceId;
   readonly version: number;
-  readonly definition: WorkflowDefinitionV1;
+  readonly definition: WorkflowDefinition;
   readonly createdAt: Date;
 }
 
@@ -27,7 +27,7 @@ export class WorkflowVersion {
   readonly workflowId: WorkflowId;
   readonly workspaceId: WorkspaceId;
   readonly version: number;
-  readonly definition: WorkflowDefinitionV1;
+  readonly definition: WorkflowDefinition;
   readonly createdAt: Date;
 
   private constructor(props: WorkflowVersionProps) {
@@ -61,7 +61,7 @@ export class WorkflowVersion {
     }
 
     const definition = freezeClone(props.definition);
-    assertSequentialWorkflowDefinition(definition);
+    assertWorkflowDefinition(definition);
 
     return Object.freeze(
       new WorkflowVersion({

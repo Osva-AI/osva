@@ -57,6 +57,95 @@ describe("Workflow Definition v1 schema", () => {
   });
 });
 
+describe("Workflow Definition v2 schema", () => {
+  it("parses AGENT, BRANCH, PARALLEL, and JOIN nodes", () => {
+    const parsed = workflowDefinitionSchema.parse({
+      schemaVersion: "2",
+      nodes: [
+        {
+          key: "classifier",
+          type: "AGENT",
+          agentVersionId: "agent-version-1",
+        },
+        {
+          key: "route",
+          type: "BRANCH",
+          selector: "/category",
+          cases: [{ equals: "sales", to: "sales" }],
+          defaultTo: "support",
+        },
+        {
+          key: "sales",
+          type: "AGENT",
+          agentVersionId: "agent-version-2",
+        },
+        {
+          key: "support",
+          type: "AGENT",
+          agentVersionId: "agent-version-3",
+        },
+      ],
+      edges: [
+        { from: "classifier", to: "route" },
+        { from: "route", to: "sales" },
+        { from: "route", to: "support" },
+      ],
+    });
+
+    expect(parsed.schemaVersion).toBe("2");
+    expect(parsed.nodes.map((node) => node.type)).toEqual([
+      "AGENT",
+      "BRANCH",
+      "AGENT",
+      "AGENT",
+    ]);
+  });
+
+  it("rejects unknown V2 node types and invalid JSON Pointers", () => {
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "2",
+        nodes: [{ key: "tool", type: "TOOL" }],
+        edges: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "2",
+        nodes: [
+          {
+            key: "route",
+            type: "BRANCH",
+            selector: "category",
+            cases: [{ equals: "sales", to: "sales" }],
+            defaultTo: "support",
+          },
+        ],
+        edges: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("does not change V1 rejection of BRANCH nodes", () => {
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "1",
+        nodes: [
+          {
+            key: "route",
+            type: "BRANCH",
+            selector: "/category",
+            cases: [{ equals: "sales", to: "sales" }],
+            defaultTo: "support",
+          },
+        ],
+        edges: [],
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("Workflow registry request schemas", () => {
   it("parses a create Workflow request", () => {
     const parsed = createWorkflowRequestSchema.parse({

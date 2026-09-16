@@ -63,6 +63,11 @@ Slice 2.1:
 - HUMAN_TASK
 - SUBWORKFLOW
 
+Slice 2.2 executes BRANCH, PARALLEL, and JOIN on `schemaVersion: "2"`
+definitions. See [`WORKFLOW_DEFINITION_V2.md`](WORKFLOW_DEFINITION_V2.md).
+V1 sequential AGENT graphs remain valid and executable without semantic
+changes.
+
 ## Versioning
 
 Every executable WorkflowRun references one immutable WorkflowVersion.

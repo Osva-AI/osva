@@ -12,6 +12,7 @@ export const LEGAL_WORKFLOW_NODE_RUN_TRANSITIONS: ReadonlyArray<
 > = [
   ["PENDING", "RUNNING"],
   ["PENDING", "FAILED"],
+  ["PENDING", "SKIPPED"],
   ["RUNNING", "SUCCEEDED"],
   ["RUNNING", "FAILED"],
 ];

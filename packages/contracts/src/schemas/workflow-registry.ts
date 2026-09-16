@@ -23,6 +23,7 @@ export const workflowNodeRunStateSchema = z.enum([
   "RUNNING",
   "SUCCEEDED",
   "FAILED",
+  "SKIPPED",
 ]);
 
 export const createWorkflowRequestSchema = z.strictObject({
@@ -84,6 +85,7 @@ export const workflowNodeRunResourceSchema = z.strictObject({
   input: jsonValueSchema,
   output: jsonValueSchema.optional(),
   childRunId: z.string().min(1).optional(),
+  selectedTargetKey: z.string().min(1).optional(),
   error: workflowRunErrorResourceSchema.optional(),
   startedAt: utcIso8601TimestampSchema.optional(),
   completedAt: utcIso8601TimestampSchema.optional(),

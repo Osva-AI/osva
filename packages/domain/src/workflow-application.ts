@@ -1,6 +1,6 @@
 import type {
   AgentVersionId,
-  WorkflowDefinitionV1,
+  WorkflowDefinition,
   WorkflowId,
   WorkflowRunId,
   WorkflowVersionId,
@@ -20,7 +20,7 @@ import type { WorkflowRepository } from "./ports/workflow-repository.js";
 import type { WorkflowRunRepository } from "./ports/workflow-run-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 import { Workflow } from "./workflow.js";
-import { orderedSequentialNodeKeys } from "./workflow-definition.js";
+import { listAgentNodes } from "./workflow-definition.js";
 import { WorkflowRun } from "./workflow-run.js";
 import type { WorkflowNodeRun } from "./workflow-node-run.js";
 import type { WorkflowVersion } from "./workflow-version.js";
@@ -51,7 +51,7 @@ export interface CreateWorkflowCommand {
 
 export interface AppendWorkflowVersionCommand {
   readonly workflowId: WorkflowId;
-  readonly definition: WorkflowDefinitionV1;
+  readonly definition: WorkflowDefinition;
 }
 
 export interface GetWorkflowVersionCommand {
@@ -262,19 +262,11 @@ export function createWorkflowApplication(
 async function assertAgentVersionBindings(
   agents: AgentRepository,
   workspaceId: WorkspaceId,
-  definition: WorkflowDefinitionV1,
+  definition: WorkflowDefinition,
 ): Promise<void> {
-  const keys = orderedSequentialNodeKeys(definition);
-  const nodesByKey = new Map(
-    definition.nodes.map((node) => [node.key, node] as const),
-  );
-
-  for (const key of keys) {
-    const node = nodesByKey.get(key);
-    if (node === undefined) {
-      throw new DomainInvariantError(
-        `Workflow definition is missing node '${key}'.`,
-      );
+  for (const node of listAgentNodes(definition)) {
+    if (!("agentVersionId" in node)) {
+      continue;
     }
 
     const agentVersionId = node.agentVersionId as AgentVersionId;
@@ -286,7 +278,7 @@ async function assertAgentVersionBindings(
     const agent = await agents.findAgentById(agentVersion.agentId);
     if (agent === null || agent.workspaceId !== workspaceId) {
       throw new DomainInvariantError(
-        `Workflow node '${key}' references AgentVersion '${agentVersionId}' that does not belong to workspace '${workspaceId}'.`,
+        `Workflow node '${node.key}' references AgentVersion '${agentVersionId}' that does not belong to workspace '${workspaceId}'.`,
       );
     }
   }

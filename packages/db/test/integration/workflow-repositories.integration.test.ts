@@ -3,12 +3,14 @@ import type {
   WorkflowId,
   WorkflowVersionId,
 } from "@osva/contracts";
+import type { WorkflowNodeRunId } from "@osva/contracts";
 import {
   Agent,
   AgentVersion,
   DomainInvariantError,
   DuplicateWorkflowKeyError,
   Workflow,
+  WorkflowNodeRun,
   WorkflowRun,
   WorkflowVersion,
   Workspace,
@@ -222,5 +224,132 @@ describe("PostgreSQL workflow repositories", () => {
 
     const active = await workflowRuns.listActiveWorkflowRuns(10);
     expect(active.map((run) => run.id)).toEqual([workflowRun.id]);
+  });
+
+  it("persists SKIPPED WorkflowNodeRuns and BRANCH selectedTargetKey", async () => {
+    const ids = createIds("dag");
+    await workspaces.save(
+      Workspace.create({
+        id: ids.workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: ids.agentId,
+        workspaceId: ids.workspaceId,
+        key: "example-agent",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: ids.agentVersionId,
+        agentId: ids.agentId,
+        version: 1,
+        manifest: createManifest(),
+        createdAt: NOW,
+      }),
+    );
+    const workflow = Workflow.create({
+      id: "workflow-1" as WorkflowId,
+      workspaceId: ids.workspaceId,
+      key: "research-report",
+      name: "Research Report",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await workflows.saveWorkflow(workflow);
+    const version = await workflows.appendWorkflowVersion({
+      id: "workflow-version-1" as WorkflowVersionId,
+      workflowId: workflow.id,
+      definition: {
+        schemaVersion: "2",
+        nodes: [
+          {
+            key: "classifier",
+            type: "AGENT",
+            agentVersionId: ids.agentVersionId as AgentVersionId,
+          },
+          {
+            key: "route",
+            type: "BRANCH",
+            selector: "/category",
+            cases: [{ equals: "sales", to: "sales" }],
+            defaultTo: "support",
+          },
+          {
+            key: "sales",
+            type: "AGENT",
+            agentVersionId: ids.agentVersionId as AgentVersionId,
+          },
+          {
+            key: "support",
+            type: "AGENT",
+            agentVersionId: ids.agentVersionId as AgentVersionId,
+          },
+          { key: "join", type: "JOIN" },
+        ],
+        edges: [
+          { from: "classifier", to: "route" },
+          { from: "route", to: "sales" },
+          { from: "route", to: "support" },
+          { from: "sales", to: "join" },
+          { from: "support", to: "join" },
+        ],
+      },
+      createdAt: NOW,
+    });
+    const workflowRun = WorkflowRun.create({
+      id: "workflow-run-1" as never,
+      workspaceId: ids.workspaceId,
+      workflowId: workflow.id,
+      workflowVersionId: version.id,
+      input: { category: "sales" },
+      createdAt: NOW,
+    });
+    await workflowRuns.saveWorkflowRun(workflowRun);
+
+    const route = WorkflowNodeRun.create({
+      id: "node-run-route" as WorkflowNodeRunId,
+      workspaceId: ids.workspaceId,
+      workflowRunId: workflowRun.id,
+      workflowNodeKey: "route",
+      sequence: 2,
+      input: { category: "sales" },
+      createdAt: NOW,
+    });
+    await workflowRuns.saveWorkflowNodeRun(route);
+    const running = await workflowRuns.saveWorkflowNodeRunTransition(
+      "PENDING",
+      route.markRunning(NOW),
+    );
+    const succeeded = await workflowRuns.saveWorkflowNodeRunTransition(
+      "RUNNING",
+      running.markSucceeded(NOW, { category: "sales" }, "sales"),
+    );
+    expect(succeeded.selectedTargetKey).toBe("sales");
+
+    await workflowRuns.saveWorkflowNodeRun(
+      WorkflowNodeRun.createSkipped({
+        id: "node-run-support" as WorkflowNodeRunId,
+        workspaceId: ids.workspaceId,
+        workflowRunId: workflowRun.id,
+        workflowNodeKey: "support",
+        sequence: 4,
+        input: { category: "sales" },
+        createdAt: NOW,
+      }),
+    );
+
+    const loaded = await workflowRuns.findWorkflowNodeRunByWorkflowRunAndKey(
+      workflowRun.id,
+      "support",
+    );
+    expect(loaded?.status).toBe("SKIPPED");
+    const reloadedRoute = await workflowRuns.findWorkflowNodeRunById(route.id);
+    expect(reloadedRoute?.selectedTargetKey).toBe("sales");
   });
 });

@@ -22,5 +22,11 @@
 20. WorkflowVersion is immutable and a WorkflowRun always executes one WorkflowVersion.
 21. Workflow definitions reference immutable AgentVersions.
 22. WorkflowNodeRun is canonical identity for one workflow-node execution.
-23. One WorkflowNodeRun maps to one canonical child Run.
+23. One AGENT WorkflowNodeRun maps to one canonical child Run. BRANCH, PARALLEL, and JOIN are OSVA orchestration nodes and never create Runs.
 24. Workflow orchestration state belongs to PostgreSQL; BullMQ is never workflow lifecycle authority.
+25. Workflow Definition V1 remains backward-compatible; V2 is an immutable DAG of AGENT, BRANCH, PARALLEL, and JOIN.
+26. DAG execution state is derived from durable PostgreSQL WorkflowRun and WorkflowNodeRun rows.
+27. Branch decisions are deterministic and durable; inactive paths become durably SKIPPED.
+28. Explicit PARALLEL owns fan-out; explicit JOIN owns fan-in; JOIN aggregation is deterministic.
+29. Multiple ready AGENT nodes may execute concurrently; reconciliation is idempotent and multi-orchestrator safe.
+30. Already-started parallel child Runs cannot resurrect a FAILED WorkflowRun.

@@ -1,5 +1,5 @@
 import type {
-  WorkflowDefinitionV1,
+  WorkflowDefinition,
   WorkflowId,
   WorkflowVersionId,
   WorkspaceId,
@@ -50,14 +50,14 @@ export function isSameWorkflowVersion(
   );
 }
 
-function toDefinition(value: unknown): WorkflowDefinitionV1 {
+function toDefinition(value: unknown): WorkflowDefinition {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new DomainInvariantError(
       "Persisted WorkflowVersion.definition must be an object.",
     );
   }
 
-  return value as WorkflowDefinitionV1;
+  return value as WorkflowDefinition;
 }
 
 function asJsonObject(value: object): Readonly<Record<string, unknown>> {

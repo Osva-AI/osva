@@ -24,6 +24,7 @@
 - `contracts/RUNTIME_PROTOCOL_V1.md`
 - `contracts/RUN_STATE_MACHINE_V1.md`
 - `contracts/WORKFLOW_DEFINITION_V1.md`
+- `contracts/WORKFLOW_DEFINITION_V2.md`
 - `contracts/EVENT_ENVELOPE_V1.md`
 - `contracts/JOB_QUEUE_CONTRACT.md`
 - `contracts/MODEL_GATEWAY_CONTRACT.md`

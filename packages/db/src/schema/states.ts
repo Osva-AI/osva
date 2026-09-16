@@ -50,4 +50,5 @@ export const PERSISTED_WORKFLOW_NODE_RUN_STATES = [
   "RUNNING",
   "SUCCEEDED",
   "FAILED",
+  "SKIPPED",
 ] as const;

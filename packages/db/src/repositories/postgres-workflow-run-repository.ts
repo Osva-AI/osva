@@ -195,6 +195,7 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
         status: rowValues.status,
         output: rowValues.output,
         childRunId: rowValues.childRunId,
+        selectedTargetKey: rowValues.selectedTargetKey,
         error: rowValues.error,
         startedAt: rowValues.startedAt,
         completedAt: rowValues.completedAt,

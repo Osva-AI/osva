@@ -135,9 +135,23 @@ export {
   type WorkflowNodeRunRehydrateProps,
 } from "./workflow-node-run.js";
 export {
+  assertDagWorkflowDefinition,
   assertSequentialWorkflowDefinition,
+  assertWorkflowDefinition,
+  buildWorkflowGraph,
+  listAgentNodes,
   orderedSequentialNodeKeys,
+  predecessorKeysInDefinitionOrder,
+  type WorkflowGraph,
 } from "./workflow-definition.js";
+export { selectBranchTarget } from "./workflow-branch.js";
+export {
+  hasFailedNode,
+  inputForNode,
+  isNodeReady,
+  isNodeSkippable,
+  nodeRunsByKey,
+} from "./workflow-readiness.js";
 export {
   assertValidFiveFieldCronExpression,
   assertValidIanaTimezone,

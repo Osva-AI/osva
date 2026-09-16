@@ -56,7 +56,12 @@ describe("workflow application", () => {
 
     expect(version.workflowId).toBe(workflow.id);
     expect(version.version).toBe(1);
-    expect(version.definition.nodes[0]?.agentVersionId).toBe(agentVersionId);
+    expect(version.definition.nodes[0]?.type).toBe("AGENT");
+    expect(
+      version.definition.nodes[0]?.type === "AGENT"
+        ? version.definition.nodes[0].agentVersionId
+        : undefined,
+    ).toBe(agentVersionId);
 
     const run = await app.createWorkflowRun.execute({
       workspaceId,
@@ -66,6 +71,36 @@ describe("workflow application", () => {
     expect(run.status).toBe("PENDING");
     expect(run.workflowVersionId).toBe(version.id);
     expect(run.input).toEqual({ topic: "osva" });
+  });
+
+  it("accepts a V2 DAG WorkflowVersion", async () => {
+    const app = await createApp();
+    const workflow = await app.createWorkflow.execute({
+      workspaceId,
+      key: "parallel-report",
+      name: "Parallel Report",
+    });
+    const version = await app.appendWorkflowVersion.execute({
+      workflowId: workflow.id,
+      definition: {
+        schemaVersion: "2",
+        nodes: [
+          { key: "a", type: "AGENT", agentVersionId },
+          { key: "fanout", type: "PARALLEL" },
+          { key: "b", type: "AGENT", agentVersionId },
+          { key: "c", type: "AGENT", agentVersionId },
+          { key: "join", type: "JOIN" },
+        ],
+        edges: [
+          { from: "a", to: "fanout" },
+          { from: "fanout", to: "b" },
+          { from: "fanout", to: "c" },
+          { from: "b", to: "join" },
+          { from: "c", to: "join" },
+        ],
+      },
+    });
+    expect(version.definition.schemaVersion).toBe("2");
   });
 
   it("rejects unknown AgentVersion bindings", async () => {

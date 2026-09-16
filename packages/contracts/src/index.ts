@@ -224,17 +224,40 @@ export type {
 
 export {
   WORKFLOW_DEFINITION_SCHEMA_VERSION,
+  WORKFLOW_DEFINITION_SCHEMA_VERSION_V2,
+  WORKFLOW_DEFINITION_SCHEMA_VERSIONS,
   WORKFLOW_EXECUTABLE_NODE_TYPES,
   WORKFLOW_NODE_TYPES,
+  WORKFLOW_V2_NODE_TYPES,
+  WORKFLOW_V2_ORCHESTRATION_NODE_TYPES,
+  isWorkflowAgentNode,
+  isWorkflowDefinitionV1,
+  isWorkflowDefinitionV2,
 } from "./workflow-definition.js";
 export type {
+  WorkflowBranchEqualsValue,
+  WorkflowDefinition,
+  WorkflowDefinitionAgentNodeV2,
+  WorkflowDefinitionBranchCaseV2,
+  WorkflowDefinitionBranchNodeV2,
   WorkflowDefinitionEdgeV1,
+  WorkflowDefinitionEdgeV2,
+  WorkflowDefinitionJoinNodeV2,
   WorkflowDefinitionNodeV1,
+  WorkflowDefinitionNodeV2,
+  WorkflowDefinitionParallelNodeV2,
   WorkflowDefinitionSchemaVersion,
+  WorkflowDefinitionSchemaVersionV2,
   WorkflowDefinitionV1,
+  WorkflowDefinitionV2,
   WorkflowExecutableNodeType,
   WorkflowNodeType,
+  WorkflowV2NodeType,
+  WorkflowV2OrchestrationNodeType,
 } from "./workflow-definition.js";
+
+export { isValidJsonPointer, resolveJsonPointer } from "./json-pointer.js";
+export type { JsonPointerResolution } from "./json-pointer.js";
 
 export {
   TERMINAL_WORKFLOW_NODE_RUN_STATES,

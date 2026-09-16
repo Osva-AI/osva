@@ -78,7 +78,7 @@ export function createWorkflowOrchestratorProcess(
     queue,
     logger: {
       info: logEvent,
-      error: logError,
+      error: logEvent,
     },
   });
   const tick = new WorkflowOrchestratorTick({
@@ -86,7 +86,7 @@ export function createWorkflowOrchestratorProcess(
     reconcile,
     logger: {
       info: logEvent,
-      error: logError,
+      error: logEvent,
     },
   });
 

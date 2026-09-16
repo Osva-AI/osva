@@ -9,7 +9,8 @@
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "vitest run --config vitest.config.ts"
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@osva/adapters-bullmq": "workspace:*",
@@ -19,6 +20,9 @@
     "@osva/orchestration": "workspace:*"
   },
   "devDependencies": {
+    "@osva/adapters-runtime-typescript": "workspace:*",
+    "@osva/web": "workspace:*",
+    "@osva/worker": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

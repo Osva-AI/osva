@@ -123,9 +123,17 @@ export {
 export { toolGrantSchema, toolInvocationSchema } from "./tool.js";
 
 export {
+  workflowDefinitionAgentNodeV2Schema,
+  workflowDefinitionBranchCaseSchema,
+  workflowDefinitionBranchNodeV2Schema,
   workflowDefinitionEdgeSchema,
+  workflowDefinitionJoinNodeV2Schema,
   workflowDefinitionNodeSchema,
+  workflowDefinitionParallelNodeV2Schema,
   workflowDefinitionSchema,
+  workflowDefinitionV1Schema,
+  workflowDefinitionV2NodeSchema,
+  workflowDefinitionV2Schema,
 } from "./workflow-definition.js";
 
 export {

@@ -468,6 +468,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/orchestration
     devDependencies:
+      '@osva/adapters-runtime-typescript':
+        specifier: workspace:*
+        version: link:../../adapters/runtime-typescript
+      '@osva/web':
+        specifier: workspace:*
+        version: link:../web
+      '@osva/worker':
+        specifier: workspace:*
+        version: link:../worker
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4
