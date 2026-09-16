@@ -1,10 +1,20 @@
+import type { ModelProfileId, ToolVersionId } from "@osva/contracts";
 import {
   MemoryAgentRepository,
   MemoryJobQueue,
+  MemoryModelProfileRepository,
+  MemoryToolRepository,
   MemoryRunRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
-import { Agent, Workspace } from "@osva/domain";
+import {
+  Agent,
+  AgentVersion,
+  ModelProfile,
+  ModelProfileVersion,
+  Workspace,
+  createAgentApplication,
+} from "@osva/domain";
 import { describe, expect, it } from "vitest";
 
 import { CreateRun } from "../src/create-run.js";
@@ -19,12 +29,15 @@ import {
   NOW,
   RUN_INPUT,
   agentId,
-  createBindings,
+  agentVersionId,
+  createManifest,
+  modelProfileVersionId,
   otherAgentId,
   otherAgentVersionId,
   otherWorkspaceId,
   runAttemptId,
   runId,
+  secondaryModelProfileVersionId,
   seedAgentGraph,
   workspaceId,
   wrapRunRepository,
@@ -36,7 +49,7 @@ function createCommand() {
     runAttemptId,
     workspaceId,
     agentId,
-    effectiveBindings: createBindings(),
+    agentVersionId,
     input: RUN_INPUT,
     now: NOW,
   };
@@ -49,9 +62,13 @@ describe("CreateRun", () => {
     const inner = new MemoryRunRepository();
     const statuses: string[] = [];
     const runs = wrapRunRepository(inner, {
-      async saveRun(run) {
+      async createRunWithInitialAttempt(run, attempt) {
         statuses.push(run.status);
-        await inner.saveRun(run);
+        await inner.createRunWithInitialAttempt(run, attempt);
+      },
+      async transitionRun(expectedStatus, next) {
+        statuses.push(next.status);
+        return inner.transitionRun(expectedStatus, next);
       },
     });
     const queue = new MemoryJobQueue();
@@ -66,6 +83,10 @@ describe("CreateRun", () => {
     expect(statuses).toEqual(["PENDING", "QUEUED"]);
     expect(result.run.status).toBe("QUEUED");
     expect(result.run.idempotencyKey).toBe("idem-1");
+    expect(result.run.effectiveBindings.agentVersionId).toBe(agentVersionId);
+    expect(result.run.effectiveBindings.modelProfileVersionBindings).toEqual(
+      {},
+    );
     expect(queue.pendingRunAttemptIds()).toEqual([runAttemptId]);
   });
 
@@ -177,12 +198,264 @@ describe("CreateRun", () => {
     await expect(
       createRun.execute({
         ...createCommand(),
-        effectiveBindings: createBindings(otherAgentVersionId),
+        agentVersionId: otherAgentVersionId,
       }),
     ).rejects.toBeInstanceOf(BindingMismatchError);
 
     expect(await runs.findRunById(runId)).toBeNull();
     expect(await runs.findRunAttemptById(runAttemptId)).toBeNull();
     expect(queue.pendingRunAttemptIds()).toEqual([]);
+  });
+
+  it("accepts an AgentVersion created through the Agent Registry", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+
+    let counter = 0;
+    const registry = createAgentApplication({
+      agents,
+      workspaces,
+      modelProfiles: new MemoryModelProfileRepository(),
+      tools: new MemoryToolRepository(),
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          counter += 1;
+          return counter === 1 ? agentId : agentVersionId;
+        },
+      },
+    });
+
+    await registry.createAgent.execute({
+      workspaceId,
+      key: "agent-key",
+      name: "Example Agent",
+    });
+    await registry.appendAgentVersion.execute({
+      agentId,
+      manifest: createManifest(),
+    });
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute(createCommand());
+
+    expect(result.run.status).toBe("QUEUED");
+    expect(result.run.agentId).toBe(agentId);
+    expect(result.run.effectiveBindings.agentVersionId).toBe(agentVersionId);
+    expect(result.run.effectiveBindings.modelProfileVersionBindings).toEqual(
+      {},
+    );
+    expect(queue.pendingRunAttemptIds()).toEqual([runAttemptId]);
+  });
+
+  it("copies AgentVersion model bindings into immutable Run effectiveBindings", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "agent-key",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest({
+          models: {
+            primary: { modelProfileVersionId },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute(createCommand());
+    expect(result.run.effectiveBindings.modelProfileVersionBindings).toEqual({
+      primary: modelProfileVersionId,
+    });
+
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: otherAgentVersionId,
+        agentId,
+        version: 2,
+        manifest: createManifest({
+          models: {
+            primary: {
+              modelProfileVersionId: secondaryModelProfileVersionId,
+            },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const persisted = await runs.findRunById(runId);
+    expect(persisted?.effectiveBindings.modelProfileVersionBindings).toEqual({
+      primary: modelProfileVersionId,
+    });
+  });
+
+  it("does not change a Run binding when a newer ModelProfileVersion is appended", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const modelProfiles = new MemoryModelProfileRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    const modelProfileId = "model-profile-1" as ModelProfileId;
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "agent-key",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await modelProfiles.saveModelProfile(
+      ModelProfile.create({
+        id: modelProfileId,
+        workspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      }),
+    );
+    await modelProfiles.saveModelProfileVersion(
+      ModelProfileVersion.create({
+        id: modelProfileVersionId,
+        modelProfileId,
+        version: 1,
+        provider: "OPENAI",
+        model: "gpt-one",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest({
+          models: {
+            primary: { modelProfileVersionId },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute(createCommand());
+    expect(result.run.effectiveBindings.modelProfileVersionBindings).toEqual({
+      primary: modelProfileVersionId,
+    });
+
+    const newer = await modelProfiles.appendModelProfileVersion({
+      id: secondaryModelProfileVersionId,
+      modelProfileId,
+      provider: "OPENAI",
+      model: "gpt-two",
+      createdAt: NOW,
+    });
+    expect(newer.version).toBe(2);
+
+    const persisted = await runs.findRunById(runId);
+    expect(persisted?.effectiveBindings.modelProfileVersionBindings).toEqual({
+      primary: modelProfileVersionId,
+    });
+  });
+
+  it("copies AgentVersion tool bindings into immutable Run effectiveBindings", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    const toolVersionId = "tool-version-1" as ToolVersionId;
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "agent-key",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest({
+          tools: {
+            echo: { toolVersionId },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute(createCommand());
+    expect(result.run.effectiveBindings.toolVersionBindings).toEqual({
+      echo: toolVersionId,
+    });
+
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: otherAgentVersionId,
+        agentId,
+        version: 2,
+        manifest: createManifest({
+          tools: {
+            echo: { toolVersionId: "tool-version-2" as ToolVersionId },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const persisted = await runs.findRunById(runId);
+    expect(persisted?.effectiveBindings.toolVersionBindings).toEqual({
+      echo: toolVersionId,
+    });
   });
 });

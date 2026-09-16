@@ -1,0 +1,92 @@
+export const TRUSTED_RUNTIME_IPC_VERSION = 1 as const;
+
+export const TRUSTED_AGENT_EXPORT_NAME = "run";
+
+export const RuntimeErrorCode = {
+  ARTIFACT_NOT_FOUND: "RUNTIME_ARTIFACT_NOT_FOUND",
+  INTEGRITY_MISMATCH: "RUNTIME_INTEGRITY_MISMATCH",
+  INVALID_MODULE: "INVALID_RUNTIME_MODULE",
+  TIMEOUT: "RUNTIME_TIMEOUT",
+  AGENT_ERROR: "AGENT_EXECUTION_ERROR",
+  INVALID_OUTPUT: "INVALID_RUNTIME_OUTPUT",
+  INVALID_DESCRIPTOR: "INVALID_RUNTIME_DESCRIPTOR",
+  PATH_ESCAPE: "RUNTIME_PATH_ESCAPE",
+} as const;
+
+export type RuntimeErrorCode =
+  (typeof RuntimeErrorCode)[keyof typeof RuntimeErrorCode];
+
+/**
+ * Child-safe copies of Stage 1 model IPC bounds. The child runner cannot
+ * import `@osva/contracts` under the Node permission model. Keep these
+ * identical to `packages/contracts/src/model-gateway.ts`.
+ */
+export const MODEL_BINDING_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+export const MODEL_TEXT_ROLES = ["system", "user", "assistant"] as const;
+export const MODEL_TEXT_CONTENT_MAX_LENGTH = 32_768;
+export const MODEL_TEXT_MAX_MESSAGES = 64;
+export const MODEL_MAX_OUTPUT_TOKENS_MIN = 1;
+export const MODEL_MAX_OUTPUT_TOKENS_MAX = 16_384;
+
+export const ModelErrorCode = {
+  MODEL_BINDING_NOT_FOUND: "MODEL_BINDING_NOT_FOUND",
+  MODEL_PROFILE_VERSION_NOT_FOUND: "MODEL_PROFILE_VERSION_NOT_FOUND",
+  MODEL_PROVIDER_UNAVAILABLE: "MODEL_PROVIDER_UNAVAILABLE",
+  MODEL_AUTHENTICATION_ERROR: "MODEL_AUTHENTICATION_ERROR",
+  MODEL_RATE_LIMITED: "MODEL_RATE_LIMITED",
+  MODEL_REQUEST_TIMEOUT: "MODEL_REQUEST_TIMEOUT",
+  MODEL_PROVIDER_ERROR: "MODEL_PROVIDER_ERROR",
+  INVALID_MODEL_RESPONSE: "INVALID_MODEL_RESPONSE",
+} as const;
+
+export type ModelErrorCode =
+  (typeof ModelErrorCode)[keyof typeof ModelErrorCode];
+
+export function isModelBindingName(value: string): boolean {
+  return MODEL_BINDING_NAME_PATTERN.test(value);
+}
+
+export const ToolErrorCode = {
+  TOOL_BINDING_NOT_FOUND: "TOOL_BINDING_NOT_FOUND",
+  TOOL_VERSION_NOT_FOUND: "TOOL_VERSION_NOT_FOUND",
+  TOOL_NOT_AUTHORIZED: "TOOL_NOT_AUTHORIZED",
+  TOOL_IMPLEMENTATION_NOT_FOUND: "TOOL_IMPLEMENTATION_NOT_FOUND",
+  INVALID_TOOL_INPUT: "INVALID_TOOL_INPUT",
+  TOOL_EXECUTION_ERROR: "TOOL_EXECUTION_ERROR",
+  INVALID_TOOL_OUTPUT: "INVALID_TOOL_OUTPUT",
+} as const;
+
+export type ToolErrorCode = (typeof ToolErrorCode)[keyof typeof ToolErrorCode];
+
+export function isToolBindingName(value: string): boolean {
+  return MODEL_BINDING_NAME_PATTERN.test(value);
+}
+
+export const CHILD_ENV_ALLOWLIST = [
+  "PATH",
+  "PATHEXT",
+  "SYSTEMROOT",
+  "SYSTEMDRIVE",
+  "WINDIR",
+  "COMSPEC",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  "HOME",
+  "USERPROFILE",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "USERNAME",
+  "USER",
+  "LOGNAME",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TZ",
+  "TERM",
+  "OS",
+  "PROCESSOR_ARCHITECTURE",
+  "NUMBER_OF_PROCESSORS",
+  "LOCALAPPDATA",
+  "APPDATA",
+] as const;

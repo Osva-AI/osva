@@ -21,6 +21,7 @@ export function runAttemptToRow(attempt: RunAttempt) {
     startedAt: attempt.startedAt ?? null,
     completedAt: attempt.completedAt ?? null,
     error: attempt.error ?? null,
+    output: attempt.status === "SUCCEEDED" ? (attempt.output ?? null) : null,
     infrastructureMetadata: attempt.infrastructureMetadata ?? null,
   };
 }
@@ -35,6 +36,7 @@ export function runAttemptFromRow(row: RunAttemptRow): RunAttempt {
     startedAt: toOptionalDomainDate(row.startedAt),
     completedAt: toOptionalDomainDate(row.completedAt),
     error: toOptionalError(row.error),
+    output: toOptionalOutput(row.status as RunAttemptState, row.output),
     infrastructureMetadata: toOptionalMetadata(row.infrastructureMetadata),
   });
 }
@@ -74,4 +76,19 @@ function toOptionalMetadata(
   }
 
   return value as InfrastructureMetadata;
+}
+
+function toOptionalOutput(
+  status: RunAttemptState,
+  value: unknown,
+): unknown | undefined {
+  if (status !== "SUCCEEDED") {
+    return undefined;
+  }
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return value;
 }

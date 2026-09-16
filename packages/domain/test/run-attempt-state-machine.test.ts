@@ -38,7 +38,11 @@ describe("RunAttempt state machine", () => {
     expect(isLegalRunAttemptTransition(from, to)).toBe(allowed);
 
     if (allowed) {
-      const next = attempt.transitionTo(to, LATER);
+      const next = attempt.transitionTo(
+        to,
+        LATER,
+        to === "SUCCEEDED" ? { output: { ok: true } } : undefined,
+      );
       expect(next.status).toBe(to);
       expect(next.id).toBe(attempt.id);
       expect(next.sequence).toBe(attempt.sequence);

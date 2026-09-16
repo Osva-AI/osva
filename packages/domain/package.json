@@ -16,7 +16,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@osva/contracts": "workspace:*"
+    "@osva/contracts": "workspace:*",
+    "cron-parser": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

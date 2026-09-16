@@ -45,4 +45,14 @@ export class Agent {
       }),
     );
   }
+
+  withName(name: string): Agent {
+    return Agent.create({
+      id: this.id,
+      workspaceId: this.workspaceId,
+      key: this.key,
+      name,
+      createdAt: this.createdAt,
+    });
+  }
 }

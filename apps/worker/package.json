@@ -9,12 +9,24 @@
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "vitest run --config vitest.config.ts"
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
-    "@osva/db": "workspace:*"
+    "@osva/adapters-bullmq": "workspace:*",
+    "@osva/adapters-model-openai": "workspace:*",
+    "@osva/adapters-runtime-typescript": "workspace:*",
+    "@osva/contracts": "workspace:*",
+    "@osva/db": "workspace:*",
+    "@osva/model-gateway": "workspace:*",
+    "@osva/observability": "workspace:*",
+    "@osva/tool-gateway": "workspace:*",
+    "@osva/orchestration": "workspace:*"
   },
   "devDependencies": {
+    "@osva/adapters-memory": "workspace:*",
+    "@osva/domain": "workspace:*",
+    "@osva/web": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

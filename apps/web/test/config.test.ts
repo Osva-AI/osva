@@ -1,26 +1,40 @@
 import { describe, expect, it } from "vitest";
 
 import { loadWebConfig } from "../src/config.js";
-import { postgresReadinessCheck } from "../src/readiness.js";
+import {
+  postgresAndValkeyReadinessCheck,
+  postgresReadinessCheck,
+} from "../src/readiness.js";
 
 describe("loadWebConfig", () => {
   it("requires OSVA_DATABASE_URL", () => {
     expect(() => loadWebConfig({})).toThrow("OSVA_DATABASE_URL is required.");
   });
 
+  it("requires OSVA_VALKEY_URL", () => {
+    expect(() =>
+      loadWebConfig({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+      }),
+    ).toThrow("OSVA_VALKEY_URL is required.");
+  });
+
   it("uses local host and port defaults", () => {
     const config = loadWebConfig({
       OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+      OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
     });
 
     expect(config.host).toBe("127.0.0.1");
     expect(config.port).toBe(3000);
     expect(config.databaseUrl).toBe("postgres://osva@127.0.0.1:5432/osva");
+    expect(config.valkeyUrl).toBe("redis://127.0.0.1:6379");
   });
 
   it("reads host and port overrides", () => {
     const config = loadWebConfig({
       OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+      OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
       OSVA_WEB_HOST: "0.0.0.0",
       OSVA_WEB_PORT: "8080",
     });
@@ -33,6 +47,7 @@ describe("loadWebConfig", () => {
     expect(() =>
       loadWebConfig({
         OSVA_DATABASE_URL: "postgres://secret@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
         OSVA_WEB_PORT: "not-a-port",
       }),
     ).toThrow("OSVA_WEB_PORT must be an integer between 0 and 65535.");
@@ -40,6 +55,7 @@ describe("loadWebConfig", () => {
     try {
       loadWebConfig({
         OSVA_DATABASE_URL: "postgres://secret@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
         OSVA_WEB_PORT: "not-a-port",
       });
     } catch (error) {
@@ -64,6 +80,30 @@ describe("postgresReadinessCheck", () => {
         throw new Error("ECONNREFUSED postgres://secret@127.0.0.1/osva");
       },
     });
+
+    await expect(check()).resolves.toBe(false);
+  });
+});
+
+describe("postgresAndValkeyReadinessCheck", () => {
+  it("returns true when PostgreSQL and Valkey pings succeed", async () => {
+    const check = postgresAndValkeyReadinessCheck(
+      { ping: async () => undefined },
+      { ping: async () => undefined },
+    );
+
+    await expect(check()).resolves.toBe(true);
+  });
+
+  it("returns false when Valkey ping fails", async () => {
+    const check = postgresAndValkeyReadinessCheck(
+      { ping: async () => undefined },
+      {
+        ping: async () => {
+          throw new Error("Valkey is unavailable.");
+        },
+      },
+    );
 
     await expect(check()).resolves.toBe(false);
   });

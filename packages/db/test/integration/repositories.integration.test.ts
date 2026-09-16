@@ -1,15 +1,32 @@
-import type { AgentVersionId, RunAttemptId, RunId } from "@osva/contracts";
+import type {
+  AgentVersionId,
+  ModelProfileId,
+  ModelProfileVersionId,
+  RunAttemptId,
+  RunId,
+} from "@osva/contracts";
 import {
   Agent,
+  AgentNotFoundError,
   AgentVersion,
   DomainInvariantError,
+  DuplicateAgentKeyError,
+  DuplicateModelProfileKeyError,
+  InvalidRunAttemptTransitionError,
+  InvalidRunTransitionError,
+  LifecycleConflictError,
+  ModelProfile,
+  ModelProfileNotFoundError,
+  ModelProfileVersion,
   Run,
   RunAttempt,
+  RunNotFoundError,
   RunStep,
   Workspace,
 } from "@osva/domain";
 import type {
   AgentRepository,
+  ModelProfileRepository,
   RunRepository,
   WorkspaceRepository,
 } from "@osva/domain";
@@ -24,6 +41,7 @@ import {
   postgresErrorCode,
 } from "../../src/postgres-errors.js";
 import { PostgresAgentRepository } from "../../src/repositories/postgres-agent-repository.js";
+import { PostgresModelProfileRepository } from "../../src/repositories/postgres-model-profile-repository.js";
 import { PostgresRunRepository } from "../../src/repositories/postgres-run-repository.js";
 import { PostgresWorkspaceRepository } from "../../src/repositories/postgres-workspace-repository.js";
 import { deployments } from "../../src/schema/deployments.js";
@@ -49,6 +67,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
   let database: Database;
   let workspaces: WorkspaceRepository;
   let agents: AgentRepository;
+  let modelProfiles: ModelProfileRepository;
   let runs: RunRepository;
   let idCounter = 0;
 
@@ -62,6 +81,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
     await migrateDatabase(database);
     workspaces = new PostgresWorkspaceRepository(database);
     agents = new PostgresAgentRepository(database);
+    modelProfiles = new PostgresModelProfileRepository(database);
     runs = new PostgresRunRepository(database);
   });
 
@@ -153,7 +173,40 @@ describe("PostgreSQL Stage 0 repositories", () => {
             createdAt: NOW,
           }),
         ),
-      ).rejects.toBeInstanceOf(DomainInvariantError);
+      ).rejects.toBeInstanceOf(DuplicateAgentKeyError);
+    });
+
+    it("lists Agents in createdAt then id order", async () => {
+      const first = await seedAgentGraph("list-a");
+      const second = await seedAgentGraph("list-b");
+
+      await agents.updateAgentMetadata(first.ids.agentId, {
+        name: "First Agent",
+      });
+
+      const listed = await agents.listAgents();
+      expect(listed.map((agent) => agent.id)).toEqual([
+        first.ids.agentId,
+        second.ids.agentId,
+      ]);
+      expect(listed[0]?.name).toBe("First Agent");
+    });
+
+    it("updates Agent name without changing identity fields", async () => {
+      const { ids, agent } = await seedAgentGraph();
+
+      const updated = await agents.updateAgentMetadata(ids.agentId, {
+        name: "Renamed Agent",
+      });
+
+      expect(updated?.name).toBe("Renamed Agent");
+      expect(updated?.id).toBe(agent.id);
+      expect(updated?.key).toBe(agent.key);
+      expect(updated?.workspaceId).toBe(agent.workspaceId);
+      expect(updated?.createdAt).toEqual(agent.createdAt);
+      expect(
+        await agents.updateAgentMetadata(ids.otherAgentId, { name: "X" }),
+      ).toBeNull();
     });
   });
 
@@ -222,6 +275,62 @@ describe("PostgreSQL Stage 0 repositories", () => {
         ),
       ).rejects.toBeInstanceOf(DomainInvariantError);
     });
+
+    it("appends monotonically increasing versions per Agent", async () => {
+      const { ids } = await seedAgentGraph();
+
+      const second = await agents.appendAgentVersion({
+        id: ids.otherAgentVersionId,
+        agentId: ids.agentId,
+        manifest: createManifest({ name: "Second Snapshot" }),
+        createdAt: LATER,
+      });
+
+      expect(second.version).toBe(2);
+      expect(second.manifest.name).toBe("Second Snapshot");
+
+      const listed = await agents.listAgentVersions(ids.agentId);
+      expect(listed.map((version) => version.version)).toEqual([1, 2]);
+      expect(listed.map((version) => version.id)).toEqual([
+        ids.agentVersionId,
+        ids.otherAgentVersionId,
+      ]);
+    });
+
+    it("numbers versions independently per Agent", async () => {
+      const first = await seedAgentGraph("num-a");
+      const second = await seedAgentGraph("num-b");
+
+      const firstSecond = await agents.appendAgentVersion({
+        id: first.ids.otherAgentVersionId,
+        agentId: first.ids.agentId,
+        manifest: createManifest({ name: "A2" }),
+        createdAt: LATER,
+      });
+      const secondFirst = await agents.findAgentVersionById(
+        second.ids.agentVersionId,
+      );
+
+      expect(firstSecond.version).toBe(2);
+      expect(secondFirst?.version).toBe(1);
+    });
+
+    it("does not expose an AgentVersion mutation operation", () => {
+      expect(agents).not.toHaveProperty("updateAgentVersion");
+    });
+
+    it("rejects appending a version for a nonexistent Agent", async () => {
+      const ids = nextIds();
+
+      await expect(
+        agents.appendAgentVersion({
+          id: ids.agentVersionId,
+          agentId: ids.agentId,
+          manifest: createManifest(),
+          createdAt: NOW,
+        }),
+      ).rejects.toBeInstanceOf(AgentNotFoundError);
+    });
   });
 
   describe("Run", () => {
@@ -272,7 +381,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       await runs.saveRun(pending);
 
       const queued = pending.transitionTo("QUEUED", LATER);
-      await runs.saveRun(queued);
+      await runs.transitionRun("PENDING", queued);
 
       const stored = await runs.findRunById(ids.runId);
       expect(stored?.status).toBe("QUEUED");
@@ -421,6 +530,37 @@ describe("PostgreSQL Stage 0 repositories", () => {
         exit: 1,
       });
       expect(Object.isFrozen(loaded)).toBe(true);
+    });
+
+    it("saves and loads successful RunAttempt output", async () => {
+      const { ids } = await seedAgentGraph();
+      await runs.saveRun(
+        Run.create({
+          input: RUN_INPUT,
+          id: ids.runId,
+          workspaceId: ids.workspaceId,
+          agentId: ids.agentId,
+          effectiveBindings: createBindings(
+            ids.agentVersionId,
+            ids.modelProfileVersionId,
+          ),
+          createdAt: NOW,
+        }),
+      );
+
+      const succeeded = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      })
+        .transitionTo("RUNNING", LATER)
+        .transitionTo("SUCCEEDED", EVEN_LATER, { output: { echoed: true } });
+
+      await runs.saveRunAttempt(succeeded);
+
+      const loaded = await runs.findRunAttemptById(ids.runAttemptId);
+      expect(loaded?.status).toBe("SUCCEEDED");
+      expect(loaded?.output).toEqual({ echoed: true });
     });
 
     it("lists attempts for one Run in ascending sequence without leaking others", async () => {
@@ -595,17 +735,23 @@ describe("PostgreSQL Stage 0 repositories", () => {
         }),
       );
 
-      const step = RunStep.create({
+      const step = RunStep.start({
         id: ids.runStepId,
         runId: ids.runId,
         runAttemptId: ids.runAttemptId,
-        type: "model.generate",
-        name: "generate",
+        kind: "MODEL",
+        bindingName: "default",
         startedAt: NOW,
-        completedAt: LATER,
-        metadata: { tokens: 12 },
+        modelProfileVersionId: ids.modelProfileVersionId,
       });
-      await runs.saveRunStep(step);
+      await runs.insertRunningRunStep(step);
+      await runs.finalizeRunStep(ids.runStepId, {
+        status: "SUCCEEDED",
+        completedAt: LATER,
+        inputTokens: 10,
+        outputTokens: 2,
+        totalTokens: 12,
+      });
 
       const [row] = await database.db
         .select()
@@ -619,7 +765,7 @@ describe("PostgreSQL Stage 0 repositories", () => {
       const loaded = runStepFromRow(row);
       expect(loaded.runId).toBe(ids.runId);
       expect(loaded.runAttemptId).toBe(ids.runAttemptId);
-      expect(loaded.metadata).toEqual({ tokens: 12 });
+      expect(loaded.inputTokens).toBe(10);
       expect(loaded.completedAt).toEqual(LATER);
     });
 
@@ -665,14 +811,15 @@ describe("PostgreSQL Stage 0 repositories", () => {
       );
 
       await expect(
-        runs.saveRunStep(
-          RunStep.create({
+        runs.insertRunningRunStep(
+          RunStep.start({
             id: ids.runStepId,
             runId: ids.runId,
             runAttemptId: ids.otherAttemptId as RunAttemptId,
-            type: "model.generate",
-            name: "generate",
+            kind: "MODEL",
+            bindingName: "default",
             startedAt: NOW,
+            modelProfileVersionId: ids.modelProfileVersionId,
           }),
         ),
       ).rejects.toBeInstanceOf(DomainInvariantError);
@@ -778,6 +925,471 @@ describe("PostgreSQL Stage 0 repositories", () => {
         agentVersionId: ids.agentVersionId,
         environment: "staging",
       });
+    });
+  });
+
+  describe("Slice 1.2 Run lifecycle", () => {
+    it("creates a Run and initial RunAttempt in one transaction", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      const attempt = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+
+      await runs.createRunWithInitialAttempt(pending, attempt);
+
+      expect(await runs.findRunById(ids.runId)).not.toBeNull();
+      expect(await runs.findRunAttemptById(ids.runAttemptId)).not.toBeNull();
+    });
+
+    it("rolls back the Run when initial RunAttempt persistence fails", async () => {
+      const { ids } = await seedAgentGraph();
+      const bindings = createBindings(
+        ids.agentVersionId,
+        ids.modelProfileVersionId,
+      );
+      await runs.createRunWithInitialAttempt(
+        Run.create({
+          input: RUN_INPUT,
+          id: ids.runId,
+          workspaceId: ids.workspaceId,
+          agentId: ids.agentId,
+          effectiveBindings: bindings,
+          createdAt: NOW,
+        }),
+        RunAttempt.createFirst({
+          id: ids.runAttemptId,
+          runId: ids.runId,
+          createdAt: NOW,
+        }),
+      );
+
+      await expect(
+        runs.createRunWithInitialAttempt(
+          Run.create({
+            input: RUN_INPUT,
+            id: ids.otherRunId,
+            workspaceId: ids.workspaceId,
+            agentId: ids.agentId,
+            effectiveBindings: bindings,
+            createdAt: NOW,
+          }),
+          RunAttempt.createFirst({
+            id: ids.runAttemptId,
+            runId: ids.otherRunId,
+            createdAt: NOW,
+          }),
+        ),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+
+      expect(await runs.findRunById(ids.otherRunId)).toBeNull();
+      expect((await runs.findRunAttemptById(ids.runAttemptId))?.runId).toBe(
+        ids.runId,
+      );
+    });
+
+    it("does not overwrite immutable Run fields during a lifecycle transition", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+
+      const spoofed = Run.rehydrate({
+        id: pending.id,
+        workspaceId: pending.workspaceId,
+        agentId: ids.otherAgentId,
+        status: "QUEUED",
+        effectiveBindings: createBindings(
+          ids.otherAgentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        input: { mutated: true },
+        createdAt: LATER,
+        updatedAt: LATER,
+        idempotencyKey: "changed",
+      });
+
+      const stored = await runs.transitionRun("PENDING", spoofed);
+      expect(stored.agentId).toBe(ids.agentId);
+      expect(stored.effectiveBindings.agentVersionId).toBe(ids.agentVersionId);
+      expect(stored.input).toEqual(RUN_INPUT);
+      expect(stored.createdAt).toEqual(NOW);
+      expect(stored.idempotencyKey).toBeUndefined();
+    });
+
+    it("does not move a RunAttempt onto another Run during a lifecycle transition", async () => {
+      const { ids } = await seedAgentGraph();
+      await runs.saveRun(
+        Run.create({
+          input: RUN_INPUT,
+          id: ids.runId,
+          workspaceId: ids.workspaceId,
+          agentId: ids.agentId,
+          effectiveBindings: createBindings(
+            ids.agentVersionId,
+            ids.modelProfileVersionId,
+          ),
+          createdAt: NOW,
+        }),
+      );
+      const pending = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(pending);
+
+      const stored = await runs.transitionRunAttempt(
+        "PENDING",
+        RunAttempt.rehydrate({
+          id: pending.id,
+          runId: ids.otherRunId,
+          sequence: 99,
+          status: "RUNNING",
+          createdAt: LATER,
+          startedAt: LATER,
+        }),
+      );
+
+      expect(stored.runId).toBe(ids.runId);
+      expect(stored.sequence).toBe(1);
+      expect(stored.createdAt).toEqual(NOW);
+    });
+
+    it("rejects invalid Stage 0 Run and RunAttempt transitions", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+      const attempt = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attempt);
+
+      await expect(
+        runs.transitionRun(
+          "PENDING",
+          Run.rehydrate({
+            id: pending.id,
+            workspaceId: pending.workspaceId,
+            agentId: pending.agentId,
+            status: "SUCCEEDED",
+            effectiveBindings: pending.effectiveBindings,
+            input: pending.input,
+            createdAt: pending.createdAt,
+            updatedAt: LATER,
+          }),
+        ),
+      ).rejects.toBeInstanceOf(InvalidRunTransitionError);
+
+      await expect(
+        runs.transitionRunAttempt(
+          "PENDING",
+          attempt
+            .transitionTo("RUNNING", LATER)
+            .transitionTo("SUCCEEDED", LATER, { output: { ok: true } }),
+        ),
+      ).rejects.toBeInstanceOf(InvalidRunAttemptTransitionError);
+    });
+
+    it("allows only one of two concurrent transitions from the same expected state", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+
+      const results = await Promise.allSettled([
+        runs.transitionRun("PENDING", pending.transitionTo("QUEUED", LATER)),
+        runs.transitionRun(
+          "PENDING",
+          pending.transitionTo("QUEUED", EVEN_LATER),
+        ),
+      ]);
+
+      const fulfilled = results.filter(
+        (result) => result.status === "fulfilled",
+      );
+      const rejected = results.filter((result) => result.status === "rejected");
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(
+        LifecycleConflictError,
+      );
+      expect((await runs.findRunById(ids.runId))?.status).toBe("QUEUED");
+    });
+
+    it("lists Runs with createdAt/id ordering, pagination, and filters", async () => {
+      const { ids } = await seedAgentGraph();
+      const bindings = createBindings(
+        ids.agentVersionId,
+        ids.modelProfileVersionId,
+      );
+      await runs.saveRun(
+        Run.create({
+          input: { n: 1 },
+          id: "run-a" as RunId,
+          workspaceId: ids.workspaceId,
+          agentId: ids.agentId,
+          effectiveBindings: bindings,
+          createdAt: NOW,
+        }),
+      );
+      await runs.saveRun(
+        Run.create({
+          input: { n: 2 },
+          id: "run-c" as RunId,
+          workspaceId: ids.workspaceId,
+          agentId: ids.agentId,
+          effectiveBindings: bindings,
+          createdAt: NOW,
+        }),
+      );
+      await runs.saveRun(
+        Run.create({
+          input: { n: 3 },
+          id: "run-b" as RunId,
+          workspaceId: ids.workspaceId,
+          agentId: ids.agentId,
+          effectiveBindings: bindings,
+          createdAt: NOW,
+        }),
+      );
+
+      const firstPage = await runs.listRuns({ limit: 2 });
+      expect(firstPage.runs.map((run) => run.id)).toEqual(["run-c", "run-b"]);
+      expect(firstPage.nextCursor?.id).toBe("run-b" as RunId);
+
+      const secondPage = await runs.listRuns({
+        limit: 2,
+        cursor: firstPage.nextCursor,
+      });
+      expect(secondPage.runs.map((run) => run.id)).toEqual(["run-a"]);
+      expect(secondPage.nextCursor).toBeUndefined();
+
+      const runC = await runs.findRunById("run-c" as RunId);
+      if (runC === null) {
+        throw new Error("expected run-c");
+      }
+      await runs.transitionRun("PENDING", runC.transitionTo("QUEUED", LATER));
+
+      const queued = await runs.listRuns({ limit: 10, status: "QUEUED" });
+      expect(queued.runs.map((run) => run.id)).toEqual(["run-c"]);
+
+      const byAgent = await runs.listRuns({
+        limit: 10,
+        agentId: ids.agentId,
+      });
+      expect(byAgent.runs).toHaveLength(3);
+
+      const byVersion = await runs.listRuns({
+        limit: 10,
+        agentVersionId: ids.agentVersionId,
+      });
+      expect(byVersion.runs).toHaveLength(3);
+    });
+
+    it("throws RunNotFoundError when transitioning a missing Run", async () => {
+      const { ids } = await seedAgentGraph();
+      await expect(
+        runs.transitionRun(
+          "PENDING",
+          Run.create({
+            input: RUN_INPUT,
+            id: ids.runId,
+            workspaceId: ids.workspaceId,
+            agentId: ids.agentId,
+            effectiveBindings: createBindings(
+              ids.agentVersionId,
+              ids.modelProfileVersionId,
+            ),
+            createdAt: NOW,
+          }).transitionTo("QUEUED", LATER),
+        ),
+      ).rejects.toBeInstanceOf(RunNotFoundError);
+    });
+  });
+
+  describe("ModelProfile", () => {
+    it("saves, lists, and renames a ModelProfile without storing credentials", async () => {
+      const { ids } = await seedAgentGraph();
+      const profile = ModelProfile.create({
+        id: `mp_${ids.agentId}` as ModelProfileId,
+        workspaceId: ids.workspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      });
+
+      await modelProfiles.saveModelProfile(profile);
+      const loaded = await modelProfiles.findModelProfileById(profile.id);
+      expect(loaded).toEqual(profile);
+      expect(JSON.stringify(loaded)).not.toContain("sk-");
+
+      const renamed = await modelProfiles.updateModelProfileMetadata(
+        profile.id,
+        { name: "Renamed" },
+      );
+      expect(renamed?.name).toBe("Renamed");
+      expect(renamed?.key).toBe("primary");
+    });
+
+    it("appends immutable ModelProfileVersions with independent numbering", async () => {
+      const { ids } = await seedAgentGraph();
+      const first = ModelProfile.create({
+        id: `mp_${ids.agentId}_a` as ModelProfileId,
+        workspaceId: ids.workspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      });
+      const second = ModelProfile.create({
+        id: `mp_${ids.agentId}_b` as ModelProfileId,
+        workspaceId: ids.workspaceId,
+        key: "secondary",
+        name: "Secondary",
+        createdAt: NOW,
+      });
+      await modelProfiles.saveModelProfile(first);
+      await modelProfiles.saveModelProfile(second);
+
+      const v1 = await modelProfiles.appendModelProfileVersion({
+        id: `mpv_${ids.agentId}_1` as ModelProfileVersionId,
+        modelProfileId: first.id,
+        provider: "OPENAI",
+        model: "gpt-one",
+        createdAt: NOW,
+      });
+      const v2 = await modelProfiles.appendModelProfileVersion({
+        id: `mpv_${ids.agentId}_2` as ModelProfileVersionId,
+        modelProfileId: first.id,
+        provider: "OPENAI",
+        model: "gpt-two",
+        createdAt: LATER,
+      });
+      const other = await modelProfiles.appendModelProfileVersion({
+        id: `mpv_${ids.agentId}_other` as ModelProfileVersionId,
+        modelProfileId: second.id,
+        provider: "OPENAI",
+        model: "gpt-other",
+        createdAt: NOW,
+      });
+
+      expect(v1.version).toBe(1);
+      expect(v2.version).toBe(2);
+      expect(other.version).toBe(1);
+      expect(v1).not.toHaveProperty("apiKey");
+      expect(JSON.stringify(v1)).not.toMatch(/sk-|OPENAI_API_KEY|apiKey/);
+      expect(modelProfiles).not.toHaveProperty("updateModelProfileVersion");
+    });
+
+    it("rejects a duplicate ModelProfile key", async () => {
+      const { ids } = await seedAgentGraph();
+      await modelProfiles.saveModelProfile(
+        ModelProfile.create({
+          id: `mp_${ids.agentId}` as ModelProfileId,
+          workspaceId: ids.workspaceId,
+          key: "primary",
+          name: "Primary",
+          createdAt: NOW,
+        }),
+      );
+      await expect(
+        modelProfiles.saveModelProfile(
+          ModelProfile.create({
+            id: `mp_${ids.otherAgentId}` as ModelProfileId,
+            workspaceId: ids.workspaceId,
+            key: "primary",
+            name: "Duplicate",
+            createdAt: NOW,
+          }),
+        ),
+      ).rejects.toBeInstanceOf(DuplicateModelProfileKeyError);
+    });
+
+    it("rejects appending a version to a missing ModelProfile", async () => {
+      await expect(
+        modelProfiles.appendModelProfileVersion({
+          id: "mpv_missing" as ModelProfileVersionId,
+          modelProfileId: "mp_missing" as ModelProfileId,
+          provider: "OPENAI",
+          model: "gpt-one",
+          createdAt: NOW,
+        }),
+      ).rejects.toBeInstanceOf(ModelProfileNotFoundError);
+    });
+
+    it("rejects replacing an immutable ModelProfileVersion", async () => {
+      const { ids } = await seedAgentGraph();
+      const profile = ModelProfile.create({
+        id: `mp_${ids.agentId}` as ModelProfileId,
+        workspaceId: ids.workspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      });
+      await modelProfiles.saveModelProfile(profile);
+      const version = ModelProfileVersion.create({
+        id: `mpv_${ids.agentId}` as ModelProfileVersionId,
+        modelProfileId: profile.id,
+        version: 1,
+        provider: "OPENAI",
+        model: "gpt-one",
+        createdAt: NOW,
+      });
+      await modelProfiles.saveModelProfileVersion(version);
+      await expect(
+        modelProfiles.saveModelProfileVersion(
+          ModelProfileVersion.create({
+            id: version.id,
+            modelProfileId: profile.id,
+            version: 1,
+            provider: "OPENAI",
+            model: "gpt-two",
+            createdAt: NOW,
+          }),
+        ),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
     });
   });
 });

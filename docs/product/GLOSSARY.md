@@ -22,9 +22,11 @@
 
 **ToolVersion**: immutable Tool definition.
 
-**ModelProfile**: logical model capability/configuration.
+**ModelProfile**: logical model capability/configuration. Stable control-plane
+identity; only `name` is mutable.
 
-**ModelProfileVersion**: immutable effective model configuration.
+**ModelProfileVersion**: immutable effective model configuration. Append-only;
+retries reuse the version ID frozen on the Run.
 
 **ExecutionWorker**: infrastructure process/node that executes work.
 

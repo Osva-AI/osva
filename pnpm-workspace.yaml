@@ -5,6 +5,7 @@ packages:
 
 catalog:
   "@types/node": 24.13.4
+  "cron-parser": 5.4.0
   eslint: 10.10.0
   prettier: 3.9.6
   turbo: 2.10.13
@@ -16,6 +17,7 @@ catalog:
 onlyBuiltDependencies:
   - esbuild
   - turbo
+  - msgpackr-extract
 
 minimumReleaseAgeExclude:
   - "@turbo/darwin-64@2.10.13"
@@ -29,3 +31,4 @@ minimumReleaseAgeExclude:
 
 allowBuilds:
   esbuild: true
+  msgpackr-extract: true

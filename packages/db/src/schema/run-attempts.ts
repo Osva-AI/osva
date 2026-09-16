@@ -31,6 +31,7 @@ export const runAttempts = pgTable(
       mode: "date",
     }),
     error: jsonb("error").$type<{ code: string; message: string }>(),
+    output: jsonb("output"),
     infrastructureMetadata: jsonb("infrastructure_metadata").$type<
       Readonly<Record<string, unknown>>
     >(),

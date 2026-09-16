@@ -10,6 +10,8 @@ export {
   runAttemptIdSchema,
   runIdSchema,
   runStepIdSchema,
+  scheduleIdSchema,
+  scheduleOccurrenceIdSchema,
   toolIdSchema,
   toolVersionIdSchema,
   workflowIdSchema,
@@ -20,8 +22,76 @@ export {
 } from "./ids.js";
 
 export { jsonSchemaRecordSchema } from "./json-schema.js";
+export { jsonValueSchema } from "./json-value.js";
+export { agentManifestSchema, agentRuntimeSchema } from "./agent-manifest.js";
 
-export { agentManifestSchema } from "./agent-manifest.js";
+export {
+  createModelProfileRequestSchema,
+  createModelProfileVersionRequestSchema,
+  modelProfileListResourceSchema,
+  modelProfileResourceSchema,
+  modelProfileVersionListResourceSchema,
+  modelProfileVersionResourceSchema,
+  updateModelProfileRequestSchema,
+} from "./model-profile-registry.js";
+
+export { modelProfileVersionPricingSchema } from "./model-pricing.js";
+
+export {
+  createEvaluationRequestSchema,
+  evaluationListResourceSchema,
+  evaluationResourceSchema,
+  evaluatorConfigSchema,
+  evaluatorTypeSchema,
+  jsonExactMatchEvaluatorSchema,
+} from "./evaluation.js";
+
+export {
+  listRunStepsQuerySchema,
+  runAttemptUsageResourceSchema,
+  runStepKindSchema,
+  runStepListCursorPayloadSchema,
+  runStepListResourceSchema,
+  runStepResourceSchema,
+  runStepStatusSchema,
+} from "./run-step.js";
+
+export {
+  createToolRequestSchema,
+  createToolVersionRequestSchema,
+  toolListResourceSchema,
+  toolResourceSchema,
+  toolVersionListResourceSchema,
+  toolVersionResourceSchema,
+  updateToolRequestSchema,
+} from "./tool-registry.js";
+
+export {
+  internalToolImplementationIdSchema,
+  toolBindingNameSchema,
+  toolTypeSchema,
+} from "./tool-gateway.js";
+
+export {
+  agentListResourceSchema,
+  agentResourceSchema,
+  agentVersionListResourceSchema,
+  agentVersionResourceSchema,
+  createAgentRequestSchema,
+  createAgentVersionRequestSchema,
+  updateAgentRequestSchema,
+} from "./agent-registry.js";
+
+export {
+  createRunRequestSchema,
+  createRunResponseSchema,
+  listRunsQuerySchema,
+  runAttemptListResourceSchema,
+  runAttemptResourceSchema,
+  runListCursorPayloadSchema,
+  runListResourceSchema,
+  runResourceSchema,
+} from "./run-lifecycle.js";
 
 export {
   executionFailureSchema,
@@ -40,11 +110,27 @@ export {
 export { jobQueuePayloadSchema } from "./job-queue.js";
 
 export {
+  generateTextInputSchema,
+  generateTextResultSchema,
+  modelProviderModelIdSchema,
+  modelProviderSchema,
   modelRequestSchema,
   modelResponseSchema,
+  modelTextMessageSchema,
   modelUsageSchema,
 } from "./model-gateway.js";
 
 export { toolGrantSchema, toolInvocationSchema } from "./tool.js";
 
 export { workflowDefinitionSchema } from "./workflow-definition.js";
+
+export {
+  createScheduleRequestSchema,
+  listScheduleOccurrencesQuerySchema,
+  listSchedulesQuerySchema,
+  scheduleListResourceSchema,
+  scheduleOccurrenceListResourceSchema,
+  scheduleOccurrenceResourceSchema,
+  scheduleResourceSchema,
+  updateScheduleRequestSchema,
+} from "./schedule-registry.js";

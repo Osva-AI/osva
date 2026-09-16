@@ -63,7 +63,7 @@ async function queuedAttempt(options?: {
     runAttemptId,
     workspaceId,
     agentId,
-    effectiveBindings: createBindings(),
+    agentVersionId,
     input: RUN_INPUT,
     now: NOW,
   });
@@ -179,6 +179,65 @@ describe("ExecuteRunAttempt", () => {
     expect(first.outcome).toBe("succeeded");
     expect(second.outcome).toBe("already-terminal");
     expect(executions).toBe(1);
+    if (
+      first.outcome === "succeeded" &&
+      second.outcome === "already-terminal"
+    ) {
+      expect(first.runAttempt.output).toEqual({ ok: true });
+      expect(second.runAttempt.output).toEqual({ ok: true });
+    }
+  });
+
+  it("persists canonical RunAttempt output on success and rejects non-JSON output", async () => {
+    const { runs, executeRunAttempt } = await queuedAttempt({
+      runtime: new FakeRuntimeAdapter(async () => ({
+        status: "succeeded",
+        output: { echoed: true },
+      })),
+    });
+
+    const result = await executeRunAttempt.execute({
+      runAttemptId,
+      now: LATER,
+    });
+
+    expect(result.outcome).toBe("succeeded");
+    if (result.outcome !== "succeeded") {
+      return;
+    }
+
+    expect(result.runAttempt.output).toEqual({ echoed: true });
+    expect((await runs.findRunAttemptById(runAttemptId))?.output).toEqual({
+      echoed: true,
+    });
+  });
+
+  it("fails the attempt when runtime output is not JSON-compatible", async () => {
+    const { runs, executeRunAttempt } = await queuedAttempt({
+      runtime: new FakeRuntimeAdapter(async () => ({
+        status: "succeeded",
+        output: { fn: () => undefined },
+      })),
+    });
+
+    const result = await executeRunAttempt.execute({
+      runAttemptId,
+      now: LATER,
+    });
+
+    expect(result.outcome).toBe("failed");
+    if (result.outcome !== "failed") {
+      return;
+    }
+
+    expect(result.result.error.code).toBe("INVALID_RUNTIME_OUTPUT");
+    expect((await runs.findRunAttemptById(runAttemptId))?.status).toBe(
+      "FAILED",
+    );
+    expect(
+      (await runs.findRunAttemptById(runAttemptId))?.output,
+    ).toBeUndefined();
+    expect((await runs.findRunById(runId))?.status).toBe("FAILED");
   });
 
   it("does not re-execute a RUNNING attempt", async () => {
@@ -190,8 +249,12 @@ describe("ExecuteRunAttempt", () => {
       throw new Error("expected persisted Run and RunAttempt");
     }
 
-    await runs.saveRunAttempt(pending.transitionTo("RUNNING", LATER));
-    await runs.saveRun(queued.transitionTo("RUNNING", LATER));
+    await runs.transitionRunAndAttempt(
+      queued.status,
+      queued.transitionTo("RUNNING", LATER),
+      pending.status,
+      pending.transitionTo("RUNNING", LATER),
+    );
 
     const executeRunAttempt = new ExecuteRunAttempt({
       runs,
@@ -317,7 +380,7 @@ describe("ExecuteRunAttempt", () => {
     );
   });
 
-  it("preserves model-profile bindings and AgentVersion timeout on ExecutionRequest", async () => {
+  it("reconstructs ExecutionRequest timeout and persisted bindings", async () => {
     const received: ExecutionRequest[] = [];
     const { executeRunAttempt } = await queuedAttempt({
       timeoutMs: 9_001,
@@ -330,9 +393,7 @@ describe("ExecuteRunAttempt", () => {
     await executeRunAttempt.execute({ runAttemptId, now: LATER });
 
     expect(received[0]?.timeoutMs).toBe(9_001);
-    expect(received[0]?.modelProfileVersionBindings).toEqual(
-      createBindings().modelProfileVersionBindings,
-    );
+    expect(received[0]?.modelProfileVersionBindings).toEqual({});
     expect(received[0]?.input).toEqual(RUN_INPUT);
   });
 
@@ -493,7 +554,7 @@ async function persistPair(
     throw new Error("expected persisted Run and RunAttempt");
   }
 
-  await runs.saveRunAttempt(
+  await runs.replaceRunAttempt(
     RunAttempt.rehydrate({
       id: existingAttempt.id,
       runId: existingAttempt.runId,
@@ -504,7 +565,7 @@ async function persistPair(
       completedAt: isTerminalRunAttemptState(attemptStatus) ? LATER : undefined,
     }),
   );
-  await runs.saveRun(
+  await runs.replaceRun(
     Run.rehydrate({
       id: existingRun.id,
       workspaceId: existingRun.workspaceId,

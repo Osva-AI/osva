@@ -106,6 +106,258 @@ export default tseslint.config(
     },
   },
   {
+    files: ["packages/model-gateway/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message: "packages/model-gateway cannot import persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "packages/model-gateway cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "packages/model-gateway cannot import runtime-core.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/model-gateway cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/model-gateway cannot import apps.",
+            },
+            {
+              name: "openai",
+              message:
+                "packages/model-gateway cannot import provider SDKs; adapters own those types.",
+            },
+            {
+              name: "bullmq",
+              message: "packages/model-gateway cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message: "packages/model-gateway cannot import Redis clients.",
+            },
+            {
+              name: "postgres",
+              message:
+                "packages/model-gateway cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "packages/model-gateway cannot import persistence libraries.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message:
+                "packages/model-gateway cannot import adapters; the composition root wires providers.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "packages/model-gateway cannot import provider SDKs.",
+            },
+            {
+              group: ["openai/*"],
+              message: "packages/model-gateway cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "packages/model-gateway cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["adapters/model-openai/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message:
+                "adapters/model-openai stays below ModelGateway and cannot import domain persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "adapters/model-openai cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "adapters/model-openai cannot import runtime-core.",
+            },
+            {
+              name: "@osva/db",
+              message: "adapters/model-openai cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "adapters/model-openai cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "adapters/model-openai cannot import apps.",
+            },
+            {
+              name: "@osva/adapters-memory",
+              message:
+                "adapters/model-openai production code cannot import test adapters.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message:
+                "adapters/model-openai implements only the OpenAI provider.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "adapters/model-openai cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["adapters/bullmq/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message:
+                "adapters/bullmq cannot import domain types; JobQueue stays in contracts.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "adapters/bullmq cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "adapters/bullmq cannot import runtime-core.",
+            },
+            {
+              name: "@osva/db",
+              message: "adapters/bullmq cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "adapters/bullmq cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "adapters/bullmq cannot import apps.",
+            },
+            {
+              name: "@osva/adapters-memory",
+              message:
+                "adapters/bullmq production code cannot import test adapters.",
+            },
+            {
+              name: "openai",
+              message: "adapters/bullmq cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message: "adapters/bullmq cannot import provider SDKs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["adapters/runtime-typescript/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message:
+                "The trusted TypeScript runtime depends on contracts, not domain persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message:
+                "The trusted TypeScript runtime cannot import orchestration.",
+            },
+            {
+              name: "@osva/db",
+              message:
+                "The trusted TypeScript runtime cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "The trusted TypeScript runtime cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "The trusted TypeScript runtime cannot import apps.",
+            },
+            {
+              name: "bullmq",
+              message: "The trusted TypeScript runtime cannot import BullMQ.",
+            },
+            {
+              name: "ioredis",
+              message:
+                "The trusted TypeScript runtime cannot import Redis clients.",
+            },
+            {
+              name: "postgres",
+              message:
+                "The trusted TypeScript runtime cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "The trusted TypeScript runtime cannot import persistence libraries.",
+            },
+            {
+              name: "openai",
+              message:
+                "The trusted TypeScript runtime cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message:
+                "The trusted TypeScript runtime cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "The trusted TypeScript runtime cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["adapters/memory/**/*.ts"],
     rules: {
       "no-restricted-imports": [
@@ -394,40 +646,36 @@ export default tseslint.config(
         {
           paths: [
             {
-              name: "@osva/orchestration",
-              message:
-                "Stage 0 process shells do not import orchestration. Cross-process execution begins in Stage 1.",
-            },
-            {
               name: "@osva/runtime-core",
-              message: "Stage 0 process shells do not execute Agent runtimes.",
+              message: "Stage 1 process shells do not execute Agent runtimes.",
             },
             {
               name: "bullmq",
-              message: "Stage 0 process shells cannot import queue libraries.",
+              message:
+                "Process shells must use @osva/adapters-bullmq, not BullMQ directly.",
             },
             {
               name: "ioredis",
-              message: "Stage 0 process shells cannot import Redis clients.",
+              message: "Process shells cannot import Redis/Valkey clients.",
             },
             {
               name: "redis",
-              message: "Stage 0 process shells cannot import Redis clients.",
+              message: "Process shells cannot import Redis clients.",
             },
             {
               name: "openai",
-              message: "Stage 0 process shells cannot import provider SDKs.",
+              message: "Process shells cannot import provider SDKs.",
             },
           ],
           patterns: [
             {
-              group: ["@osva/adapters-*"],
+              group: ["@osva/adapters-memory", "@osva/adapters-memory/*"],
               message:
-                "Do not wire MemoryJobQueue or other adapters across web and worker.",
+                "Do not wire MemoryJobQueue or FakeRuntimeAdapter into production process shells.",
             },
             {
               group: ["@anthropic-ai/*"],
-              message: "Stage 0 process shells cannot import provider SDKs.",
+              message: "Process shells cannot import provider SDKs.",
             },
           ],
         },

@@ -36,11 +36,15 @@ export function createExecutionRequest(
   return Object.freeze({
     runId: source.run.id,
     runAttemptId: source.runAttempt.id,
+    workspaceId: source.run.workspaceId,
+    agentId: source.run.agentId,
     agentVersionId: source.run.effectiveBindings.agentVersionId,
+    runtime: source.agentVersion.manifest.runtime,
     input: source.run.input,
     effectiveConfig: Object.freeze({}),
     modelProfileVersionBindings:
       source.run.effectiveBindings.modelProfileVersionBindings,
+    toolVersionBindings: source.run.effectiveBindings.toolVersionBindings,
     toolGrants: Object.freeze([]),
     timeoutMs: source.agentVersion.manifest.execution.timeoutMs,
     policyContext: Object.freeze({}),

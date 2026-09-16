@@ -43,6 +43,27 @@ describe("Stage 0 identity entities", () => {
     expect(Object.isFrozen(agent)).toBe(true);
   });
 
+  it("updates only Agent name through withName", () => {
+    const agent = Agent.create({
+      id: agentId,
+      workspaceId,
+      key: "example-agent",
+      name: "Example Agent",
+      createdAt: NOW,
+    });
+
+    const renamed = agent.withName("Renamed Agent");
+
+    expect(renamed).not.toBe(agent);
+    expect(renamed.id).toBe(agent.id);
+    expect(renamed.workspaceId).toBe(agent.workspaceId);
+    expect(renamed.key).toBe(agent.key);
+    expect(renamed.createdAt).toEqual(agent.createdAt);
+    expect(renamed.name).toBe("Renamed Agent");
+    expect(agent.name).toBe("Example Agent");
+    expect(Object.isFrozen(renamed)).toBe(true);
+  });
+
   it("creates a Deployment that pins an AgentVersion", () => {
     const deployment = Deployment.create({
       id: deploymentId,

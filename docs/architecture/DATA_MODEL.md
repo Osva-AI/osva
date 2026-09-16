@@ -44,6 +44,20 @@ assignments
 human_tasks
 ```
 
+## Stage 1 Slice 1.5 tables
+
+Implemented:
+
+```text
+model_profiles
+model_profile_versions
+```
+
+`model_profiles` is workspace-owned with unique `(workspace_id, key)`.
+`model_profile_versions` references `model_profiles`, stores `provider` and
+`model`, and enforces unique `(model_profile_id, version)` plus a positive
+version check. These tables do not store credentials, usage, or pricing.
+
 ## Rules
 
 - UTC timestamps (`timestamptz`).
@@ -69,3 +83,6 @@ A Run owns an immutable JSON-compatible execution input snapshot,
 persisted as `runs.input` JSONB. Retries and ExecutionRequest
 reconstruction reuse that captured value; it is not stored on the
 JobQueue payload.
+
+A RunAttempt owns optional JSON-compatible `output` JSONB. The value is
+null until the attempt succeeds, then remains immutable for that attempt.

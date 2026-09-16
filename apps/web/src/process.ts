@@ -1,10 +1,32 @@
+import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
-import { createDatabase, type Database } from "@osva/db";
+import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
+import {
+  createDatabase,
+  PostgresAgentRepository,
+  PostgresModelProfileRepository,
+  PostgresToolRepository,
+  PostgresRunRepository,
+  PostgresScheduleRepository,
+  PostgresWorkspaceRepository,
+  type Database,
+} from "@osva/db";
+import {
+  createAgentApplication,
+  createEvaluationApplication,
+  createModelProfileApplication,
+  createRunApplication,
+  createRunObservabilityApplication,
+  createScheduleApplication,
+  createToolApplication,
+} from "@osva/domain";
+import { PostgresEvaluationRepository } from "@osva/db";
+import { CreateRun } from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
 import { createWebApplication } from "./http.js";
 import { logEvent } from "./log.js";
-import { postgresReadinessCheck } from "./readiness.js";
+import { postgresAndValkeyReadinessCheck } from "./readiness.js";
 import { closeHttpServer, listenHttpServer } from "./server.js";
 
 export interface WebProcess {
@@ -19,11 +41,72 @@ export function createWebProcess(
   databaseFactory: (connectionString: string) => Database = (
     connectionString,
   ) => createDatabase({ connectionString }),
+  queueFactory: (valkeyUrl: string) => PingableJobQueue = (valkeyUrl) =>
+    new BullMqJobQueue({ url: valkeyUrl }),
 ): WebProcess {
   const config = loadWebConfig(env);
   const database = databaseFactory(config.databaseUrl);
+  const queue = queueFactory(config.valkeyUrl);
+  const agents = new PostgresAgentRepository(database);
+  const workspaces = new PostgresWorkspaceRepository(database);
+  const modelProfiles = new PostgresModelProfileRepository(database);
+  const tools = new PostgresToolRepository(database);
+  const runs = new PostgresRunRepository(database);
+  const scheduleRepository = new PostgresScheduleRepository(database);
+  const clock = { now: () => new Date() };
+  const ids = { createId: () => randomUUID() };
   const server = createWebApplication({
-    readinessCheck: postgresReadinessCheck(database),
+    readinessCheck: postgresAndValkeyReadinessCheck(database, queue),
+    agents: createAgentApplication({
+      agents,
+      workspaces,
+      modelProfiles,
+      tools,
+      clock,
+      ids,
+    }),
+    modelProfiles: createModelProfileApplication({
+      modelProfiles,
+      workspaces,
+      clock,
+      ids,
+    }),
+    tools: createToolApplication({
+      tools,
+      workspaces,
+      clock,
+      ids,
+    }),
+    runs: {
+      runs: createRunApplication({ runs }),
+      createRun: new CreateRun({
+        runs,
+        agents,
+        queue,
+      }),
+      clock,
+      ids,
+    },
+    runObservability: {
+      observability: createRunObservabilityApplication({ runs }),
+      evaluations: createEvaluationApplication({
+        runs,
+        evaluations: new PostgresEvaluationRepository(database),
+        clock,
+        ids,
+      }),
+    },
+    schedules: {
+      schedules: createScheduleApplication({
+        schedules: scheduleRepository,
+        agents,
+        workspaces,
+        clock,
+        ids,
+      }),
+      clock,
+      ids,
+    },
   });
 
   let stopping: Promise<void> | undefined;
@@ -44,6 +127,7 @@ export function createWebProcess(
       stopping = (async () => {
         logEvent("web.shutting_down");
         await closeHttpServer(server);
+        await queue.shutdown();
         await database.close();
         logEvent("web.shutdown_complete");
       })();

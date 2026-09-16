@@ -1,9 +1,13 @@
-import type { RunAttemptId, RunId, RunStepId } from "@osva/contracts";
-import {
-  DomainInvariantError,
-  RunStep,
-  type RunStepMetadata,
-} from "@osva/domain";
+import type {
+  ModelProfileVersionId,
+  RunAttemptId,
+  RunId,
+  RunStepId,
+  RunStepKind,
+  RunStepStatus,
+  ToolVersionId,
+} from "@osva/contracts";
+import { RunStep } from "@osva/domain";
 
 import type { runSteps } from "../schema/run-steps.js";
 import { toDomainDate, toOptionalDomainDate } from "./timestamps.js";
@@ -15,11 +19,19 @@ export function runStepToRow(step: RunStep) {
     id: step.id,
     runId: step.runId,
     runAttemptId: step.runAttemptId,
-    type: step.type,
-    name: step.name,
+    kind: step.kind,
+    bindingName: step.bindingName,
+    status: step.status,
     startedAt: step.startedAt,
     completedAt: step.completedAt ?? null,
-    metadata: step.metadata ?? null,
+    modelProfileVersionId: step.modelProfileVersionId ?? null,
+    toolVersionId: step.toolVersionId ?? null,
+    inputTokens: step.inputTokens ?? null,
+    outputTokens: step.outputTokens ?? null,
+    totalTokens: step.totalTokens ?? null,
+    cachedInputTokens: step.cachedInputTokens ?? null,
+    estimatedCostUsdMicros: step.estimatedCostUsdMicros ?? null,
+    errorCode: step.errorCode ?? null,
   };
 }
 
@@ -28,24 +40,24 @@ export function runStepFromRow(row: RunStepRow): RunStep {
     id: row.id as RunStepId,
     runId: row.runId as RunId,
     runAttemptId: row.runAttemptId as RunAttemptId,
-    type: row.type,
-    name: row.name,
+    kind: row.kind as RunStepKind,
+    bindingName: row.bindingName,
+    status: row.status as RunStepStatus,
     startedAt: toDomainDate(row.startedAt),
     completedAt: toOptionalDomainDate(row.completedAt),
-    metadata: toOptionalMetadata(row.metadata),
+    modelProfileVersionId:
+      row.modelProfileVersionId === null
+        ? undefined
+        : (row.modelProfileVersionId as ModelProfileVersionId),
+    toolVersionId:
+      row.toolVersionId === null
+        ? undefined
+        : (row.toolVersionId as ToolVersionId),
+    inputTokens: row.inputTokens ?? undefined,
+    outputTokens: row.outputTokens ?? undefined,
+    totalTokens: row.totalTokens ?? undefined,
+    cachedInputTokens: row.cachedInputTokens ?? undefined,
+    estimatedCostUsdMicros: row.estimatedCostUsdMicros,
+    errorCode: row.errorCode ?? undefined,
   });
-}
-
-function toOptionalMetadata(value: unknown): RunStepMetadata | undefined {
-  if (value === null || value === undefined) {
-    return undefined;
-  }
-
-  if (typeof value !== "object" || Array.isArray(value)) {
-    throw new DomainInvariantError(
-      "Persisted RunStep.metadata must be an object.",
-    );
-  }
-
-  return value as RunStepMetadata;
 }

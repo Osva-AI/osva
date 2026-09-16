@@ -6,7 +6,12 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** pre-alpha. Stage 0 is establishing contracts, persistence, and process shells before Agent product features.
+> **Status:** Community Alpha (Stage 1 complete). OSVA supports Agent registry,
+> immutable AgentVersions, Run lifecycle, BullMQ execution transport, trusted
+> TypeScript runtime, ModelGateway, ToolGateway, RunSteps, usage/cost,
+> JSON_EXACT_MATCH evaluation, and recurring scheduling. Requires PostgreSQL,
+> Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`, `worker`, and
+> `scheduler`. `OPENAI_API_KEY` is optional and worker-only.
 
 ## Why OSVA?
 
@@ -132,8 +137,9 @@ The Compose credentials (`osva` / `osva` / `osva`) are local-development default
 only. They are not production-safe.
 
 If Docker is unavailable, `pnpm test:integration` can still use installed
-PostgreSQL 17 binaries or `OSVA_TEST_DATABASE_URL`. That is a test fallback, not
-the documented contributor path.
+PostgreSQL 17 binaries or `OSVA_TEST_DATABASE_URL`, and a real Valkey URL via
+`OSVA_TEST_VALKEY_URL`. Those are test fallbacks, not the documented contributor
+path.
 
 ### Setup
 
@@ -145,7 +151,13 @@ pnpm install
 ```
 
 Copy `.env.example` to `.env` as a reference, or set the same variables in the
-environment. Stage 0 processes do not auto-load `.env`.
+environment. Processes do not auto-load `.env`. Required variables:
+
+- `OSVA_DATABASE_URL`
+- `OSVA_VALKEY_URL`
+- `OSVA_TRUSTED_RUNTIME_ROOT`
+- optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`
+- optional worker-only `OPENAI_API_KEY`
 
 Then start infrastructure, apply committed migrations, and run the apps:
 
@@ -155,12 +167,13 @@ pnpm db:migrate
 pnpm build
 pnpm dev:web
 pnpm dev:worker
+pnpm dev:scheduler
 ```
 
 Required sequence:
 
 ```text
-start PostgreSQL
+start PostgreSQL and Valkey
     ↓
 apply committed migrations
     ↓
@@ -172,16 +185,112 @@ as the normal workflow. The committed files under `packages/db/drizzle/` are
 authoritative. Generate new SQL with `pnpm --filter @osva/db db:generate` and
 commit the result.
 
-`pnpm infra:up` also starts Valkey so the local topology is ready for Stage 1.
-Stage 0 application code does not connect to Valkey.
+`pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web and worker both
+require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
 
 ### Endpoints and worker behavior
 
-- `GET /health` — process liveness. Does not require PostgreSQL.
-- `GET /ready` — `200` when PostgreSQL is reachable, `503` otherwise.
+- `GET /health` — process liveness. Does not require PostgreSQL or Valkey.
+- `GET /ready` — `200` when PostgreSQL and Valkey are reachable, `503` otherwise.
 
-The Stage 0 worker is intentionally idle after a successful PostgreSQL check.
-Cross-process Run execution starts in Stage 1 with a real `JobQueue` adapter.
+Agent Registry:
+
+- `POST /v1/agents` — create an Agent (`workspaceId`, `key`, `name`)
+- `GET /v1/agents` — list Agents
+- `GET /v1/agents/:agentId` — get an Agent
+- `PATCH /v1/agents/:agentId` — update Agent `name`
+- `POST /v1/agents/:agentId/versions` — append an immutable AgentVersion
+- `GET /v1/agents/:agentId/versions` — list versions for an Agent
+- `GET /v1/agents/:agentId/versions/:agentVersionId` — get a version owned by that Agent
+
+ModelProfile registry:
+
+- `POST /v1/model-profiles` — create a ModelProfile (`workspaceId`, `key`, `name`)
+- `GET /v1/model-profiles` — list ModelProfiles
+- `GET /v1/model-profiles/:modelProfileId` — get a ModelProfile
+- `PATCH /v1/model-profiles/:modelProfileId` — update ModelProfile `name`
+- `POST /v1/model-profiles/:modelProfileId/versions` — append an immutable ModelProfileVersion (`provider`, `model`)
+- `GET /v1/model-profiles/:modelProfileId/versions` — list versions for a ModelProfile
+- `GET /v1/model-profiles/:modelProfileId/versions/:modelProfileVersionId` — get a version owned by that ModelProfile
+
+IDs, timestamps, AgentVersion `version` numbers, and ModelProfileVersion
+`version` numbers are assigned by the server. Creating an Agent, AgentVersion,
+ModelProfile, or ModelProfileVersion does not execute a Run. ModelProfileVersion
+stores a provider name and provider model ID; it does not store API keys.
+
+Run lifecycle:
+
+- `POST /v1/runs` — create a Run and its initial RunAttempt through CreateRun
+- `GET /v1/runs` — list Runs with cursor pagination (`createdAt DESC`, `id DESC`)
+- `GET /v1/runs/:runId` — get a persisted Run
+- `GET /v1/runs/:runId/attempts` — list RunAttempts for that Run
+- `GET /v1/runs/:runId/attempts/:runAttemptId` — get a nested RunAttempt
+
+Clients cannot supply Run IDs, RunAttempt IDs, statuses, timestamps, queue
+IDs, or internal `effectiveBindings`. `POST /v1/runs` accepts `workspaceId`,
+`agentId`, `agentVersionId`, `input`, and optional `idempotencyKey`. OSVA
+resolves the immutable `effectiveBindings` snapshot from the requested
+AgentVersion, including that version's logical model bindings. Runtime
+execution reuses the persisted snapshot and does not re-read AgentVersion
+models. Run list query parameters are `limit` (default 50, max 100),
+`cursor`, `agentId`, `agentVersionId`, and `status`. There is no public Run
+or RunAttempt mutation API.
+
+The worker is the ExecutionWorker composition root. After PostgreSQL and Valkey
+are reachable and `OSVA_TRUSTED_RUNTIME_ROOT` resolves to a readable directory,
+it consumes `osva-execution` through the trusted TypeScript RuntimeAdapter.
+Trusted agent modules are operator-installed files beneath that root. They are
+not uploaded through the HTTP API. `CreateRun` still enqueues `{ runAttemptId }`
+through BullMQ. Agents call models only through `context.models.generateText`.
+They do not receive OpenAI SDK clients, API keys, provider model IDs, or
+ModelProfileVersion IDs. `OPENAI_API_KEY` is read only in the worker process
+when composing the OpenAI provider adapter. If it is absent, the worker still
+starts and model calls fail with `MODEL_PROVIDER_UNAVAILABLE`. ToolGateway is
+not available to agent code.
+
+Schedule API:
+
+- `POST /v1/schedules` — create a recurring Schedule (`workspaceId`, `key`,
+  `name`, `agentId`, `agentVersionId`, `cronExpression`, `timezone`, `input`,
+  optional `enabled`)
+- `GET /v1/schedules?workspaceId=...` — list Schedules with cursor pagination
+- `GET /v1/schedules/:scheduleId` — get a Schedule
+- `PATCH /v1/schedules/:scheduleId` — update mutable Schedule fields
+- `GET /v1/schedules/:scheduleId/occurrences` — list materialized occurrences
+
+Schedules use five-field cron evaluated in the configured IANA timezone.
+PostgreSQL owns scheduling state. `apps/scheduler` materializes due occurrences
+and dispatches canonical Runs through CreateRun; BullMQ repeatable jobs are not
+the schedule authority. Community Alpha misfire policy is `COALESCE_ONE`: after
+downtime at most one overdue occurrence is materialized per Schedule.
+
+### Community Alpha quickstart (no paid model key)
+
+Use the trusted echo agent fixture path:
+
+1. `pnpm infra:up` and `pnpm db:migrate`
+2. Set `OSVA_DATABASE_URL`, `OSVA_VALKEY_URL`, and `OSVA_TRUSTED_RUNTIME_ROOT`
+   to a directory containing a trusted TypeScript agent entrypoint
+3. Start `pnpm dev:web`, `pnpm dev:worker`, and `pnpm dev:scheduler`
+4. `POST /v1/agents` and `POST /v1/agents/:id/versions` with a trusted runtime
+   manifest (for example the echo agent under
+   `adapters/runtime-typescript/test/fixtures/echo-agent.ts`)
+5. `POST /v1/schedules` targeting that AgentVersion with cron such as `* * * * *`
+   and timezone `UTC`
+6. Inspect `GET /v1/schedules/:id/occurrences` and resulting Runs under
+   `/v1/runs`
+
+Community Alpha includes Agent registry, immutable AgentVersions, Runs,
+RunAttempts, BullMQ transport, trusted TypeScript runtime, ModelGateway,
+OpenAI provider, ToolGateway, internal tools, RunSteps, usage/cost estimation,
+JSON_EXACT_MATCH evaluation, and recurring scheduling.
+
+Community Alpha does not yet include auth/RBAC, untrusted sandboxing, workflow
+engine, multi-agent workflows, human approvals, MCP, side-effecting external
+tools, deployment objects, automatic logical retries, Run cancellation,
+OpenTelemetry backend, dashboards, LLM-as-judge, evaluation datasets,
+billing/invoicing, budgets, multi-provider production support, or a hosted
+control plane.
 
 ### Quality commands
 

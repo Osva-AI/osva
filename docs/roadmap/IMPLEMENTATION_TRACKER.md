@@ -23,6 +23,10 @@ green:
 unverified on the implementing machine. Stage 0 is not complete until a fully
 green CI run of the latest commit.
 
-## Later stages
+## Stage 1
 
-Stage 1+ work is out of scope for this tracker until Stage 0 is accepted.
+- ✅ 1.1 Agent Registry and Version Management
+- ✅ 1.2 Run Lifecycle API and Persistence Hardening
+- ✅ 1.3 BullMQ + Valkey Queue Adapter and ExecutionWorker
+- ✅ 1.4 Trusted TypeScript Runtime
+- ✅ 1.5 Model Gateway and First Provider

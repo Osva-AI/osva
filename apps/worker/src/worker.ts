@@ -4,6 +4,7 @@ export type WorkerReadinessCheck = () => Promise<void>;
 
 export interface CreateWorkerApplicationOptions {
   readonly readinessCheck: WorkerReadinessCheck;
+  readonly onStart?: () => Promise<void>;
   readonly onClose?: () => Promise<void>;
 }
 
@@ -14,10 +15,10 @@ export interface WorkerApplication {
 }
 
 /**
- * Stage 0 execution-worker process shell.
+ * Execution-worker process shell.
  *
- * The distributed JobQueue adapter is introduced in Stage 1. This process
- * does not consume jobs, create RunAttempts, or execute Runs.
+ * Queue consumption is started through onStart after readiness succeeds.
+ * Run/RunAttempt lifecycle remains in ExecuteRunAttempt.
  */
 export function createWorkerApplication(
   options: CreateWorkerApplicationOptions,
@@ -40,6 +41,9 @@ export function createWorkerApplication(
       }
 
       await options.readinessCheck();
+      if (options.onStart) {
+        await options.onStart();
+      }
       status = "running";
     },
 

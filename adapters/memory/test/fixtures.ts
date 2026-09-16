@@ -47,12 +47,15 @@ export function createManifest(
   };
 }
 
-export function createBindings(): EffectiveRunBindings {
+export function createBindings(
+  versionId: AgentVersionId = agentVersionId,
+): EffectiveRunBindings {
   return EffectiveRunBindings.create({
-    agentVersionId,
+    agentVersionId: versionId,
     modelProfileVersionBindings: {
       default: modelProfileVersionId,
     },
+    toolVersionBindings: {},
   });
 }
 
@@ -64,12 +67,19 @@ export function createExecutionRequest(
   return {
     runId,
     runAttemptId,
+    workspaceId,
+    agentId,
     agentVersionId,
+    runtime: {
+      type: "BUILTIN_PACKAGE",
+      key: "example-agent",
+    },
     input: { prompt: "hello" },
     effectiveConfig: { temperature: 0 },
     modelProfileVersionBindings: {
       default: modelProfileVersionId,
     },
+    toolVersionBindings: {},
     toolGrants: [],
     timeoutMs: 30_000,
     policyContext: {},

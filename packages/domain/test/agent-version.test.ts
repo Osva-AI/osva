@@ -33,7 +33,10 @@ describe("AgentVersion immutability", () => {
     manifest.execution.timeoutMs = 1;
 
     expect(version.manifest.name).toBe("Example Agent");
-    expect(version.manifest.runtime.key).toBe("example-agent");
+    expect(version.manifest.runtime).toEqual({
+      type: "BUILTIN_PACKAGE",
+      key: "example-agent",
+    });
     expect(version.manifest.capabilities.tools).toEqual(["search"]);
     expect(version.manifest.execution.timeoutMs).toBe(30_000);
     expect(Object.isFrozen(version)).toBe(true);
@@ -60,7 +63,10 @@ describe("AgentVersion immutability", () => {
       (version.manifest.capabilities.tools as string[]).push("fs");
     }).toThrow(TypeError);
 
-    expect(version.manifest.runtime.key).toBe("example-agent");
+    expect(version.manifest.runtime).toEqual({
+      type: "BUILTIN_PACKAGE",
+      key: "example-agent",
+    });
     expect(version.manifest.capabilities.tools).toEqual([]);
   });
 

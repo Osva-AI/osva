@@ -15,7 +15,6 @@ import {
   NOW,
   RUN_INPUT,
   agentVersionId,
-  createBindings,
   runAttemptId,
   runId,
   seedAgentGraph,
@@ -48,7 +47,7 @@ describe("in-process walking skeleton", () => {
       runAttemptId,
       workspaceId,
       agentId,
-      effectiveBindings: createBindings(),
+      agentVersionId,
       input: RUN_INPUT,
       now: NOW,
     });
@@ -95,10 +94,11 @@ describe("in-process walking skeleton", () => {
       agentVersionId,
       input: RUN_INPUT,
       effectiveConfig: {},
+      toolVersionBindings: {},
       toolGrants: [],
       timeoutMs: 12_345,
       policyContext: {},
-      modelProfileVersionBindings: createBindings().modelProfileVersionBindings,
+      modelProfileVersionBindings: {},
     });
     expect(Object.isFrozen(request)).toBe(true);
 
@@ -106,6 +106,7 @@ describe("in-process walking skeleton", () => {
     const finishedAttempt = await runs.findRunAttemptById(runAttemptId);
     expect(finishedRun?.status).toBe("SUCCEEDED");
     expect(finishedAttempt?.status).toBe("SUCCEEDED");
+    expect(finishedAttempt?.output).toEqual({ ok: true });
     expect(finishedRun?.input).toEqual(RUN_INPUT);
     expect(queue.pendingRunAttemptIds()).toEqual([]);
   });

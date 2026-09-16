@@ -1,4 +1,8 @@
-import type { AgentVersionId, ModelProfileVersionId } from "@osva/contracts";
+import type {
+  AgentVersionId,
+  ModelProfileVersionId,
+  ToolVersionId,
+} from "@osva/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { freezeRecord } from "./internals.js";
@@ -8,6 +12,7 @@ export interface EffectiveRunBindingsProps {
   readonly modelProfileVersionBindings: Readonly<
     Record<string, ModelProfileVersionId>
   >;
+  readonly toolVersionBindings: Readonly<Record<string, ToolVersionId>>;
 }
 
 export class EffectiveRunBindings {
@@ -15,10 +20,12 @@ export class EffectiveRunBindings {
   readonly modelProfileVersionBindings: Readonly<
     Record<string, ModelProfileVersionId>
   >;
+  readonly toolVersionBindings: Readonly<Record<string, ToolVersionId>>;
 
   private constructor(props: EffectiveRunBindingsProps) {
     this.agentVersionId = props.agentVersionId;
     this.modelProfileVersionBindings = props.modelProfileVersionBindings;
+    this.toolVersionBindings = props.toolVersionBindings;
   }
 
   static create(props: EffectiveRunBindingsProps): EffectiveRunBindings {
@@ -38,12 +45,23 @@ export class EffectiveRunBindings {
       );
     }
 
+    if (
+      props.toolVersionBindings === null ||
+      typeof props.toolVersionBindings !== "object" ||
+      Array.isArray(props.toolVersionBindings)
+    ) {
+      throw new DomainInvariantError(
+        "EffectiveRunBindings.toolVersionBindings must be a map.",
+      );
+    }
+
     return Object.freeze(
       new EffectiveRunBindings({
         agentVersionId: props.agentVersionId,
         modelProfileVersionBindings: freezeRecord(
           props.modelProfileVersionBindings,
         ),
+        toolVersionBindings: freezeRecord(props.toolVersionBindings),
       }),
     );
   }

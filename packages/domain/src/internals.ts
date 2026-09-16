@@ -1,3 +1,5 @@
+import { isCanonicalJsonValue } from "@osva/contracts";
+
 import { DomainInvariantError } from "./errors.js";
 
 export function copyInstant(value: Date): Date {
@@ -19,6 +21,17 @@ export function requireNonEmptyString(value: string, field: string): string {
 export function requirePositiveInteger(value: number, field: string): number {
   if (!Number.isInteger(value) || value < 1) {
     throw new DomainInvariantError(`${field} must be a positive integer.`);
+  }
+
+  return value;
+}
+
+export function requireNonNegativeInteger(
+  value: number,
+  field: string,
+): number {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new DomainInvariantError(`${field} must be a non-negative integer.`);
   }
 
   return value;
@@ -87,4 +100,12 @@ export function copyJsonValue(value: unknown, field: string): unknown {
   } catch {
     throw new DomainInvariantError(`${field} must be JSON-compatible.`);
   }
+}
+
+export function copyCanonicalJsonValue(value: unknown, field: string): unknown {
+  if (!isCanonicalJsonValue(value)) {
+    throw new DomainInvariantError(`${field} must be JSON-compatible.`);
+  }
+
+  return freezeClone(value);
 }

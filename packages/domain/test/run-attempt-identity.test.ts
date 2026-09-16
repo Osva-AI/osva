@@ -110,6 +110,29 @@ describe("RunAttempt identity and sequencing", () => {
     expect(redelivered.startedAt?.getTime()).toBe(LATER.getTime());
     expect(pending.status).toBe("PENDING");
   });
+
+  it("records JSON output on success and rejects non-JSON output", () => {
+    const succeeded = RunAttempt.createFirst({
+      id: runAttemptId,
+      runId,
+      createdAt: NOW,
+    })
+      .transitionTo("RUNNING", LATER)
+      .transitionTo("SUCCEEDED", LATER, { output: { echoed: true } });
+
+    expect(succeeded.output).toEqual({ echoed: true });
+    expect(succeeded.error).toBeUndefined();
+
+    expect(() =>
+      RunAttempt.createFirst({
+        id: runAttemptId,
+        runId,
+        createdAt: NOW,
+      })
+        .transitionTo("RUNNING", LATER)
+        .transitionTo("SUCCEEDED", LATER, { output: { fn: () => 1 } }),
+    ).toThrow(DomainInvariantError);
+  });
 });
 
 describe("subsequent attempt eligibility", () => {

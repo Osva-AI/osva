@@ -12,9 +12,9 @@ const composePath = path.resolve(
 describe("local Docker Compose topology", () => {
   const compose = fs.readFileSync(composePath, "utf8");
 
-  it("pins PostgreSQL 17 and Valkey without application containers", () => {
+  it("pins PostgreSQL 17 and Valkey 8.1 without application containers", () => {
     expect(compose).toContain("image: postgres:17-alpine");
-    expect(compose).toContain("image: valkey/valkey:8-alpine");
+    expect(compose).toContain("image: valkey/valkey:8.1.10-alpine");
     expect(compose).toContain("POSTGRES_DB: osva");
     expect(compose).toContain("POSTGRES_USER: osva");
     expect(compose).toContain("POSTGRES_PASSWORD: osva");

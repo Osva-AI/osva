@@ -65,6 +65,7 @@ export function createBindings(
       default: modelProfileVersionId,
       "tool.summarize": secondaryModelProfileVersionId,
     },
+    toolVersionBindings: {},
   });
 }
 
@@ -131,9 +132,16 @@ export function wrapRunRepository(
   overrides: Partial<RunRepository>,
 ): RunRepository {
   return {
+    createRunWithInitialAttempt:
+      overrides.createRunWithInitialAttempt?.bind(overrides) ??
+      inner.createRunWithInitialAttempt.bind(inner),
     saveRun: overrides.saveRun?.bind(overrides) ?? inner.saveRun.bind(inner),
     findRunById:
       overrides.findRunById?.bind(overrides) ?? inner.findRunById.bind(inner),
+    findRunByWorkspaceIdempotencyKey:
+      overrides.findRunByWorkspaceIdempotencyKey?.bind(overrides) ??
+      inner.findRunByWorkspaceIdempotencyKey.bind(inner),
+    listRuns: overrides.listRuns?.bind(overrides) ?? inner.listRuns.bind(inner),
     saveRunAttempt:
       overrides.saveRunAttempt?.bind(overrides) ??
       inner.saveRunAttempt.bind(inner),
@@ -143,8 +151,29 @@ export function wrapRunRepository(
     listRunAttempts:
       overrides.listRunAttempts?.bind(overrides) ??
       inner.listRunAttempts.bind(inner),
-    saveRunStep:
-      overrides.saveRunStep?.bind(overrides) ?? inner.saveRunStep.bind(inner),
+    insertRunningRunStep:
+      overrides.insertRunningRunStep?.bind(overrides) ??
+      inner.insertRunningRunStep.bind(inner),
+    finalizeRunStep:
+      overrides.finalizeRunStep?.bind(overrides) ??
+      inner.finalizeRunStep.bind(inner),
+    findRunStepById:
+      overrides.findRunStepById?.bind(overrides) ??
+      inner.findRunStepById.bind(inner),
+    listRunSteps:
+      overrides.listRunSteps?.bind(overrides) ?? inner.listRunSteps.bind(inner),
+    aggregateRunAttemptUsage:
+      overrides.aggregateRunAttemptUsage?.bind(overrides) ??
+      inner.aggregateRunAttemptUsage.bind(inner),
+    transitionRun:
+      overrides.transitionRun?.bind(overrides) ??
+      inner.transitionRun.bind(inner),
+    transitionRunAttempt:
+      overrides.transitionRunAttempt?.bind(overrides) ??
+      inner.transitionRunAttempt.bind(inner),
+    transitionRunAndAttempt:
+      overrides.transitionRunAndAttempt?.bind(overrides) ??
+      inner.transitionRunAndAttempt.bind(inner),
   };
 }
 
@@ -158,11 +187,22 @@ export function wrapAgentRepository(
     findAgentById:
       overrides.findAgentById?.bind(overrides) ??
       inner.findAgentById.bind(inner),
+    listAgents:
+      overrides.listAgents?.bind(overrides) ?? inner.listAgents.bind(inner),
+    updateAgentMetadata:
+      overrides.updateAgentMetadata?.bind(overrides) ??
+      inner.updateAgentMetadata.bind(inner),
     saveAgentVersion:
       overrides.saveAgentVersion?.bind(overrides) ??
       inner.saveAgentVersion.bind(inner),
+    appendAgentVersion:
+      overrides.appendAgentVersion?.bind(overrides) ??
+      inner.appendAgentVersion.bind(inner),
     findAgentVersionById:
       overrides.findAgentVersionById?.bind(overrides) ??
       inner.findAgentVersionById.bind(inner),
+    listAgentVersions:
+      overrides.listAgentVersions?.bind(overrides) ??
+      inner.listAgentVersions.bind(inner),
   };
 }

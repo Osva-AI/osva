@@ -1,6 +1,34 @@
-import type { RunAttemptId, RunId } from "@osva/contracts";
-import type { Run, RunAttempt, RunRepository, RunStep } from "@osva/domain";
-import { asc, eq } from "drizzle-orm";
+import type {
+  RunAttemptId,
+  RunAttemptState,
+  RunId,
+  RunState,
+  RunStepId,
+  WorkspaceId,
+} from "@osva/contracts";
+import {
+  DomainInvariantError,
+  LifecycleConflictError,
+  RunAttemptNotFoundError,
+  RunNotFoundError,
+  RunStepNotFoundError,
+  assertLegalRunAttemptTransition,
+  assertLegalRunTransition,
+} from "@osva/domain";
+import type {
+  FinalizeRunStepProps,
+  ListRunStepsQuery,
+  ListRunStepsResult,
+  ListRunsQuery,
+  ListRunsResult,
+  Run,
+  RunAttempt,
+  RunAttemptUsageSummary,
+  RunLifecycleTransitionResult,
+  RunRepository,
+  RunStep,
+} from "@osva/domain";
+import { and, asc, desc, eq, gt, lt, or, sql, type SQL } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import {
@@ -8,44 +36,65 @@ import {
   runAttemptToRow,
 } from "../mappers/run-attempt-mapper.js";
 import { runFromRow, runToRow } from "../mappers/run-mapper.js";
-import { runStepToRow } from "../mappers/run-step-mapper.js";
+import { runStepFromRow, runStepToRow } from "../mappers/run-step-mapper.js";
 import { withMappedDatabaseErrors } from "../postgres-errors.js";
 import { runAttempts } from "../schema/run-attempts.js";
 import { runSteps } from "../schema/run-steps.js";
 import { runs } from "../schema/runs.js";
 
+const RUN_INSERT_MESSAGES = {
+  runs_pkey: (run: Run) => `A Run with id '${run.id}' already exists.`,
+  runs_workspace_id_idempotency_key_unique: (run: Run) =>
+    run.idempotencyKey
+      ? `A Run with idempotency key '${run.idempotencyKey}' already exists in workspace '${run.workspaceId}'.`
+      : "A Run with this workspace idempotency key already exists.",
+  runs_workspace_id_agent_id_agents_fk: (run: Run) =>
+    `Agent '${run.agentId}' does not belong to workspace '${run.workspaceId}'.`,
+  runs_agent_id_agent_version_id_agent_versions_fk: (run: Run) =>
+    `AgentVersion '${run.effectiveBindings.agentVersionId}' does not belong to Agent '${run.agentId}'.`,
+};
+
+const RUN_ATTEMPT_INSERT_MESSAGES = {
+  run_attempts_pkey: (attempt: RunAttempt) =>
+    `A RunAttempt with id '${attempt.id}' already exists.`,
+  run_attempts_run_id_id_unique: (attempt: RunAttempt) =>
+    `A RunAttempt with id '${attempt.id}' already exists.`,
+  run_attempts_run_id_sequence_unique: (attempt: RunAttempt) =>
+    `RunAttempt sequence ${String(attempt.sequence)} already exists for Run '${attempt.runId}'.`,
+  run_attempts_run_id_runs_id_fk: (attempt: RunAttempt) =>
+    `RunAttempt '${attempt.id}' must belong to an existing Run.`,
+};
+
 export class PostgresRunRepository implements RunRepository {
   constructor(private readonly database: Database) {}
 
-  async saveRun(run: Run): Promise<void> {
-    const row = runToRow(run);
+  async createRunWithInitialAttempt(
+    run: Run,
+    attempt: RunAttempt,
+  ): Promise<void> {
+    if (attempt.runId !== run.id) {
+      throw new DomainInvariantError(
+        "Initial RunAttempt.runId must match the created Run.id.",
+      );
+    }
 
     await withMappedDatabaseErrors(
       () =>
-        this.database.db
-          .insert(runs)
-          .values(row)
-          .onConflictDoUpdate({
-            target: runs.id,
-            set: {
-              workspaceId: row.workspaceId,
-              agentId: row.agentId,
-              status: row.status,
-              agentVersionId: row.agentVersionId,
-              modelProfileVersionBindings: row.modelProfileVersionBindings,
-              input: row.input,
-              idempotencyKey: row.idempotencyKey,
-              createdAt: row.createdAt,
-              updatedAt: row.updatedAt,
-            },
-          }),
+        this.database.db.transaction(async (tx) => {
+          await tx.insert(runs).values(runToRow(run));
+          await tx.insert(runAttempts).values(runAttemptToRow(attempt));
+        }),
       {
-        runs_workspace_id_idempotency_key_unique: run.idempotencyKey
-          ? `A Run with idempotency key '${run.idempotencyKey}' already exists in workspace '${run.workspaceId}'.`
-          : "A Run with this workspace idempotency key already exists.",
-        runs_workspace_id_agent_id_agents_fk: `Agent '${run.agentId}' does not belong to workspace '${run.workspaceId}'.`,
-        runs_agent_id_agent_version_id_agent_versions_fk: `AgentVersion '${run.effectiveBindings.agentVersionId}' does not belong to Agent '${run.agentId}'.`,
+        ...runInsertMessages(run),
+        ...runAttemptInsertMessages(attempt),
       },
+    );
+  }
+
+  async saveRun(run: Run): Promise<void> {
+    await withMappedDatabaseErrors(
+      () => this.database.db.insert(runs).values(runToRow(run)),
+      runInsertMessages(run),
     );
   }
 
@@ -59,31 +108,77 @@ export class PostgresRunRepository implements RunRepository {
     return row === undefined ? null : runFromRow(row);
   }
 
-  async saveRunAttempt(attempt: RunAttempt): Promise<void> {
-    const row = runAttemptToRow(attempt);
+  async findRunByWorkspaceIdempotencyKey(
+    workspaceId: WorkspaceId,
+    idempotencyKey: string,
+  ): Promise<Run | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(runs)
+      .where(
+        and(
+          eq(runs.workspaceId, workspaceId),
+          eq(runs.idempotencyKey, idempotencyKey),
+        ),
+      )
+      .limit(1);
 
+    return row === undefined ? null : runFromRow(row);
+  }
+
+  async listRuns(query: ListRunsQuery): Promise<ListRunsResult> {
+    const conditions: SQL[] = [];
+
+    if (query.agentId !== undefined) {
+      conditions.push(eq(runs.agentId, query.agentId));
+    }
+
+    if (query.agentVersionId !== undefined) {
+      conditions.push(eq(runs.agentVersionId, query.agentVersionId));
+    }
+
+    if (query.status !== undefined) {
+      conditions.push(eq(runs.status, query.status));
+    }
+
+    if (query.cursor !== undefined) {
+      const cursorCondition = or(
+        lt(runs.createdAt, query.cursor.createdAt),
+        and(
+          eq(runs.createdAt, query.cursor.createdAt),
+          lt(runs.id, query.cursor.id),
+        ),
+      );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
+    }
+
+    const rows = await this.database.db
+      .select()
+      .from(runs)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(runs.createdAt), desc(runs.id))
+      .limit(query.limit + 1);
+
+    const hasMore = rows.length > query.limit;
+    const page = hasMore ? rows.slice(0, query.limit) : rows;
+    const last = page[page.length - 1];
+
+    return {
+      runs: page.map(runFromRow),
+      nextCursor:
+        hasMore && last !== undefined
+          ? { createdAt: last.createdAt, id: last.id as RunId }
+          : undefined,
+    };
+  }
+
+  async saveRunAttempt(attempt: RunAttempt): Promise<void> {
     await withMappedDatabaseErrors(
       () =>
-        this.database.db
-          .insert(runAttempts)
-          .values(row)
-          .onConflictDoUpdate({
-            target: runAttempts.id,
-            set: {
-              runId: row.runId,
-              sequence: row.sequence,
-              status: row.status,
-              createdAt: row.createdAt,
-              startedAt: row.startedAt,
-              completedAt: row.completedAt,
-              error: row.error,
-              infrastructureMetadata: row.infrastructureMetadata,
-            },
-          }),
-      {
-        run_attempts_run_id_sequence_unique: `RunAttempt sequence ${String(attempt.sequence)} already exists for Run '${attempt.runId}'.`,
-        run_attempts_run_id_runs_id_fk: `RunAttempt '${attempt.id}' must belong to an existing Run.`,
-      },
+        this.database.db.insert(runAttempts).values(runAttemptToRow(attempt)),
+      runAttemptInsertMessages(attempt),
     );
   }
 
@@ -107,30 +202,314 @@ export class PostgresRunRepository implements RunRepository {
     return rows.map(runAttemptFromRow);
   }
 
-  async saveRunStep(step: RunStep): Promise<void> {
+  async insertRunningRunStep(step: RunStep): Promise<void> {
+    if (step.status !== "RUNNING") {
+      throw new DomainInvariantError(
+        "insertRunningRunStep requires a RUNNING RunStep.",
+      );
+    }
+
     const row = runStepToRow(step);
 
     await withMappedDatabaseErrors(
-      () =>
-        this.database.db
-          .insert(runSteps)
-          .values(row)
-          .onConflictDoUpdate({
-            target: runSteps.id,
-            set: {
-              runId: row.runId,
-              runAttemptId: row.runAttemptId,
-              type: row.type,
-              name: row.name,
-              startedAt: row.startedAt,
-              completedAt: row.completedAt,
-              metadata: row.metadata,
-            },
-          }),
+      () => this.database.db.insert(runSteps).values(row),
       {
         run_steps_run_attempt_same_run_fk:
           "RunStep must reference a RunAttempt that belongs to the same Run.",
+        run_steps_pkey: `A RunStep with id '${step.id}' already exists.`,
       },
     );
   }
+
+  async finalizeRunStep(
+    runStepId: RunStepId,
+    finalize: FinalizeRunStepProps,
+  ): Promise<RunStep> {
+    const existing = await this.findRunStepById(runStepId);
+    if (existing === null) {
+      throw new RunStepNotFoundError(runStepId);
+    }
+
+    const finalized = existing.finalize(finalize);
+    const row = runStepToRow(finalized);
+
+    const [updated] = await this.database.db
+      .update(runSteps)
+      .set({
+        status: row.status,
+        completedAt: row.completedAt,
+        inputTokens: row.inputTokens,
+        outputTokens: row.outputTokens,
+        totalTokens: row.totalTokens,
+        cachedInputTokens: row.cachedInputTokens,
+        estimatedCostUsdMicros: row.estimatedCostUsdMicros,
+        errorCode: row.errorCode,
+      })
+      .where(and(eq(runSteps.id, runStepId), eq(runSteps.status, "RUNNING")))
+      .returning();
+
+    if (updated !== undefined) {
+      return runStepFromRow(updated);
+    }
+
+    const current = await this.findRunStepById(runStepId);
+    if (current === null) {
+      throw new RunStepNotFoundError(runStepId);
+    }
+
+    throw new LifecycleConflictError("runStep", runStepId, "RUNNING");
+  }
+
+  async findRunStepById(id: RunStepId): Promise<RunStep | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(runSteps)
+      .where(eq(runSteps.id, id))
+      .limit(1);
+
+    return row === undefined ? null : runStepFromRow(row);
+  }
+
+  async listRunSteps(query: ListRunStepsQuery): Promise<ListRunStepsResult> {
+    const conditions: SQL[] = [eq(runSteps.runAttemptId, query.runAttemptId)];
+
+    if (query.cursor !== undefined) {
+      const cursorCondition = or(
+        gt(runSteps.startedAt, query.cursor.startedAt),
+        and(
+          eq(runSteps.startedAt, query.cursor.startedAt),
+          gt(runSteps.id, query.cursor.id),
+        ),
+      );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
+    }
+
+    const rows = await this.database.db
+      .select()
+      .from(runSteps)
+      .where(and(...conditions))
+      .orderBy(asc(runSteps.startedAt), asc(runSteps.id))
+      .limit(query.limit + 1);
+
+    const hasMore = rows.length > query.limit;
+    const page = hasMore ? rows.slice(0, query.limit) : rows;
+    const last = page[page.length - 1];
+
+    return {
+      steps: page.map(runStepFromRow),
+      nextCursor:
+        hasMore && last !== undefined
+          ? {
+              startedAt: last.startedAt,
+              id: last.id as RunStepId,
+            }
+          : undefined,
+    };
+  }
+
+  async aggregateRunAttemptUsage(
+    runAttemptId: RunAttemptId,
+  ): Promise<RunAttemptUsageSummary> {
+    const [row] = await this.database.db
+      .select({
+        modelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED')`,
+        toolCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'TOOL' and ${runSteps.status} = 'SUCCEEDED')`,
+        inputTokens: sql<number>`coalesce(sum(${runSteps.inputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        outputTokens: sql<number>`coalesce(sum(${runSteps.outputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        totalTokens: sql<number>`coalesce(sum(${runSteps.totalTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        cachedInputTokens: sql<number>`coalesce(sum(${runSteps.cachedInputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        estimatedCostUsdMicros: sql<
+          number | null
+        >`sum(${runSteps.estimatedCostUsdMicros}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is not null)`,
+        pricedModelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is not null)`,
+        unpricedModelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is null)`,
+      })
+      .from(runSteps)
+      .where(eq(runSteps.runAttemptId, runAttemptId));
+
+    return {
+      modelCalls: Number(row?.modelCalls ?? 0),
+      toolCalls: Number(row?.toolCalls ?? 0),
+      inputTokens: Number(row?.inputTokens ?? 0),
+      outputTokens: Number(row?.outputTokens ?? 0),
+      totalTokens: Number(row?.totalTokens ?? 0),
+      cachedInputTokens: Number(row?.cachedInputTokens ?? 0),
+      estimatedCostUsdMicros:
+        row?.estimatedCostUsdMicros === null ||
+        row?.estimatedCostUsdMicros === undefined
+          ? null
+          : Number(row.estimatedCostUsdMicros),
+      pricedModelCalls: Number(row?.pricedModelCalls ?? 0),
+      unpricedModelCalls: Number(row?.unpricedModelCalls ?? 0),
+    };
+  }
+
+  async transitionRun(expectedStatus: RunState, next: Run): Promise<Run> {
+    assertLegalRunTransition(expectedStatus, next.status);
+
+    const [row] = await this.database.db
+      .update(runs)
+      .set({
+        status: next.status,
+        updatedAt: next.updatedAt,
+      })
+      .where(and(eq(runs.id, next.id), eq(runs.status, expectedStatus)))
+      .returning();
+
+    if (row !== undefined) {
+      return runFromRow(row);
+    }
+
+    const existing = await this.findRunById(next.id);
+    if (existing === null) {
+      throw new RunNotFoundError(next.id);
+    }
+
+    throw new LifecycleConflictError("run", next.id, expectedStatus);
+  }
+
+  async transitionRunAttempt(
+    expectedStatus: RunAttemptState,
+    next: RunAttempt,
+  ): Promise<RunAttempt> {
+    assertLegalRunAttemptTransition(expectedStatus, next.status);
+
+    const [row] = await this.database.db
+      .update(runAttempts)
+      .set({
+        status: next.status,
+        startedAt: next.startedAt ?? null,
+        completedAt: next.completedAt ?? null,
+        error: next.error ?? null,
+        output: next.status === "SUCCEEDED" ? (next.output ?? null) : null,
+        infrastructureMetadata: next.infrastructureMetadata ?? null,
+      })
+      .where(
+        and(
+          eq(runAttempts.id, next.id),
+          eq(runAttempts.status, expectedStatus),
+        ),
+      )
+      .returning();
+
+    if (row !== undefined) {
+      return runAttemptFromRow(row);
+    }
+
+    const existing = await this.findRunAttemptById(next.id);
+    if (existing === null) {
+      throw new RunAttemptNotFoundError(next.id);
+    }
+
+    throw new LifecycleConflictError("runAttempt", next.id, expectedStatus);
+  }
+
+  async transitionRunAndAttempt(
+    expectedRunStatus: RunState,
+    nextRun: Run,
+    expectedAttemptStatus: RunAttemptState,
+    nextAttempt: RunAttempt,
+  ): Promise<RunLifecycleTransitionResult> {
+    if (nextAttempt.runId !== nextRun.id) {
+      throw new DomainInvariantError(
+        "Paired RunAttempt.runId must match the Run.id.",
+      );
+    }
+
+    assertLegalRunTransition(expectedRunStatus, nextRun.status);
+    assertLegalRunAttemptTransition(expectedAttemptStatus, nextAttempt.status);
+
+    return this.database.db.transaction(async (tx) => {
+      const [attemptRow] = await tx
+        .update(runAttempts)
+        .set({
+          status: nextAttempt.status,
+          startedAt: nextAttempt.startedAt ?? null,
+          completedAt: nextAttempt.completedAt ?? null,
+          error: nextAttempt.error ?? null,
+          output:
+            nextAttempt.status === "SUCCEEDED"
+              ? (nextAttempt.output ?? null)
+              : null,
+          infrastructureMetadata: nextAttempt.infrastructureMetadata ?? null,
+        })
+        .where(
+          and(
+            eq(runAttempts.id, nextAttempt.id),
+            eq(runAttempts.status, expectedAttemptStatus),
+          ),
+        )
+        .returning();
+
+      if (attemptRow === undefined) {
+        const [existingAttempt] = await tx
+          .select()
+          .from(runAttempts)
+          .where(eq(runAttempts.id, nextAttempt.id))
+          .limit(1);
+        if (existingAttempt === undefined) {
+          throw new RunAttemptNotFoundError(nextAttempt.id);
+        }
+
+        throw new LifecycleConflictError(
+          "runAttempt",
+          nextAttempt.id,
+          expectedAttemptStatus,
+        );
+      }
+
+      const [runRow] = await tx
+        .update(runs)
+        .set({
+          status: nextRun.status,
+          updatedAt: nextRun.updatedAt,
+        })
+        .where(and(eq(runs.id, nextRun.id), eq(runs.status, expectedRunStatus)))
+        .returning();
+
+      if (runRow === undefined) {
+        const [existingRun] = await tx
+          .select()
+          .from(runs)
+          .where(eq(runs.id, nextRun.id))
+          .limit(1);
+        if (existingRun === undefined) {
+          throw new RunNotFoundError(nextRun.id);
+        }
+
+        throw new LifecycleConflictError("run", nextRun.id, expectedRunStatus);
+      }
+
+      return {
+        run: runFromRow(runRow),
+        runAttempt: runAttemptFromRow(attemptRow),
+      };
+    });
+  }
+}
+
+function runInsertMessages(run: Run): Record<string, string> {
+  return {
+    runs_pkey: RUN_INSERT_MESSAGES.runs_pkey(run),
+    runs_workspace_id_idempotency_key_unique:
+      RUN_INSERT_MESSAGES.runs_workspace_id_idempotency_key_unique(run),
+    runs_workspace_id_agent_id_agents_fk:
+      RUN_INSERT_MESSAGES.runs_workspace_id_agent_id_agents_fk(run),
+    runs_agent_id_agent_version_id_agent_versions_fk:
+      RUN_INSERT_MESSAGES.runs_agent_id_agent_version_id_agent_versions_fk(run),
+  };
+}
+
+function runAttemptInsertMessages(attempt: RunAttempt): Record<string, string> {
+  return {
+    run_attempts_pkey: RUN_ATTEMPT_INSERT_MESSAGES.run_attempts_pkey(attempt),
+    run_attempts_run_id_id_unique:
+      RUN_ATTEMPT_INSERT_MESSAGES.run_attempts_run_id_id_unique(attempt),
+    run_attempts_run_id_sequence_unique:
+      RUN_ATTEMPT_INSERT_MESSAGES.run_attempts_run_id_sequence_unique(attempt),
+    run_attempts_run_id_runs_id_fk:
+      RUN_ATTEMPT_INSERT_MESSAGES.run_attempts_run_id_runs_id_fk(attempt),
+  };
 }
