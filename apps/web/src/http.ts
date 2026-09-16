@@ -4,6 +4,7 @@ import type {
   AgentApplication,
   ModelProfileApplication,
   ToolApplication,
+  WorkflowApplication,
 } from "@osva/domain";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
@@ -19,6 +20,7 @@ import {
   handleScheduleRequest,
   type ScheduleHttpServices,
 } from "./schedule-http.js";
+import { handleWorkflowRequest } from "./workflow-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
@@ -30,6 +32,7 @@ export interface CreateWebApplicationOptions {
   readonly runs: RunHttpServices;
   readonly runObservability: RunObservabilityHttpServices;
   readonly schedules: ScheduleHttpServices;
+  readonly workflows: WorkflowApplication;
 }
 
 export function createWebApplication(
@@ -46,6 +49,7 @@ export function createWebApplication(
       options.runs,
       options.runObservability,
       options.schedules,
+      options.workflows,
     );
   });
 }
@@ -60,6 +64,7 @@ async function handleRequest(
   runs: RunHttpServices,
   runObservability: RunObservabilityHttpServices,
   schedules: ScheduleHttpServices,
+  workflows: WorkflowApplication,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -173,6 +178,17 @@ async function handleRequest(
     schedules,
   );
   if (handledSchedules) {
+    return;
+  }
+
+  const handledWorkflows = await handleWorkflowRequest(
+    request,
+    response,
+    method,
+    path,
+    workflows,
+  );
+  if (handledWorkflows) {
     return;
   }
 

@@ -7,10 +7,13 @@ import {
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
   DuplicateScheduleKeyError,
+  DuplicateWorkflowKeyError,
   EvaluationNotFoundError,
   InvalidRunAttemptStateError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
+  InvalidWorkflowNodeRunTransitionError,
+  InvalidWorkflowRunTransitionError,
   LifecycleConflictError,
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
@@ -21,6 +24,10 @@ import {
   RunStepNotFoundError,
   ScheduleNotFoundError,
   WorkspaceNotFoundError,
+  WorkflowNotFoundError,
+  WorkflowNodeRunNotFoundError,
+  WorkflowRunNotFoundError,
+  WorkflowVersionNotFoundError,
 } from "@osva/domain";
 import {
   AgentNotFoundError as OrchestrationAgentNotFoundError,
@@ -52,6 +59,10 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof RunStepNotFoundError ||
     error instanceof EvaluationNotFoundError ||
     error instanceof ScheduleNotFoundError ||
+    error instanceof WorkflowNotFoundError ||
+    error instanceof WorkflowVersionNotFoundError ||
+    error instanceof WorkflowRunNotFoundError ||
+    error instanceof WorkflowNodeRunNotFoundError ||
     error instanceof OrchestrationAgentNotFoundError ||
     error instanceof OrchestrationAgentVersionNotFoundError ||
     error instanceof OrchestrationRunNotFoundError ||
@@ -66,6 +77,7 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof DuplicateModelProfileKeyError ||
     error instanceof DuplicateToolKeyError ||
     error instanceof DuplicateScheduleKeyError ||
+    error instanceof DuplicateWorkflowKeyError ||
     error instanceof LifecycleConflictError ||
     error instanceof InvalidRunAttemptStateError
   ) {
@@ -77,7 +89,9 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof DomainInvariantError ||
     error instanceof BindingMismatchError ||
     error instanceof InvalidRunTransitionError ||
-    error instanceof InvalidRunAttemptTransitionError
+    error instanceof InvalidRunAttemptTransitionError ||
+    error instanceof InvalidWorkflowRunTransitionError ||
+    error instanceof InvalidWorkflowNodeRunTransitionError
   ) {
     sendJson(response, 400, { status: "invalid_request" });
     return;

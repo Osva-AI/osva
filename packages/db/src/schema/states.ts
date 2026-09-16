@@ -37,3 +37,17 @@ export const PERSISTED_RUN_STEP_STATUSES = [
 ] as const;
 
 export const PERSISTED_EVALUATOR_TYPES = ["JSON_EXACT_MATCH"] as const;
+
+export const PERSISTED_WORKFLOW_RUN_STATES = [
+  "PENDING",
+  "RUNNING",
+  "SUCCEEDED",
+  "FAILED",
+] as const;
+
+export const PERSISTED_WORKFLOW_NODE_RUN_STATES = [
+  "PENDING",
+  "RUNNING",
+  "SUCCEEDED",
+  "FAILED",
+] as const;

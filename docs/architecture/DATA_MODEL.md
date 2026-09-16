@@ -58,6 +58,24 @@ model_profile_versions
 `model`, and enforces unique `(model_profile_id, version)` plus a positive
 version check. These tables do not store credentials, usage, or pricing.
 
+## Stage 2 Slice 2.1 tables
+
+Implemented:
+
+```text
+workflows
+workflow_versions
+workflow_runs
+workflow_node_runs
+```
+
+`workflows` is workspace-owned with unique `(workspace_id, key)`.
+`workflow_versions` is an immutable append-only snapshot with unique
+`(workflow_id, version)` and a JSONB graph-shaped `definition`.
+`workflow_runs` references one immutable WorkflowVersion.
+`workflow_node_runs` is unique on `(workflow_run_id, workflow_node_key)` and
+may attach at most one canonical child `runs.id`.
+
 ## Rules
 
 - UTC timestamps (`timestamptz`).

@@ -12,6 +12,12 @@ import type {
   RunId,
   RunState,
   RunStepId,
+  WorkflowId,
+  WorkflowNodeRunId,
+  WorkflowNodeRunState,
+  WorkflowRunId,
+  WorkflowRunState,
+  WorkflowVersionId,
   WorkspaceId,
 } from "@osva/contracts";
 
@@ -244,15 +250,101 @@ export class InvalidRunAttemptStateError extends DomainError {
   }
 }
 
+export class DuplicateWorkflowKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `Workflow key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class WorkflowNotFoundError extends DomainError {
+  readonly workflowId: WorkflowId;
+
+  constructor(workflowId: WorkflowId) {
+    super(`Workflow ${workflowId} was not found.`);
+    this.workflowId = workflowId;
+  }
+}
+
+export class WorkflowVersionNotFoundError extends DomainError {
+  readonly workflowVersionId: WorkflowVersionId;
+
+  constructor(workflowVersionId: WorkflowVersionId) {
+    super(`WorkflowVersion ${workflowVersionId} was not found.`);
+    this.workflowVersionId = workflowVersionId;
+  }
+}
+
+export class WorkflowRunNotFoundError extends DomainError {
+  readonly workflowRunId: WorkflowRunId;
+
+  constructor(workflowRunId: WorkflowRunId) {
+    super(`WorkflowRun ${workflowRunId} was not found.`);
+    this.workflowRunId = workflowRunId;
+  }
+}
+
+export class WorkflowNodeRunNotFoundError extends DomainError {
+  readonly workflowNodeRunId: WorkflowNodeRunId;
+
+  constructor(workflowNodeRunId: WorkflowNodeRunId) {
+    super(`WorkflowNodeRun ${workflowNodeRunId} was not found.`);
+    this.workflowNodeRunId = workflowNodeRunId;
+  }
+}
+
+export class InvalidWorkflowRunTransitionError extends DomainError {
+  readonly from: WorkflowRunState;
+  readonly to: WorkflowRunState;
+
+  constructor(from: WorkflowRunState, to: WorkflowRunState) {
+    super(`Invalid workflow run transition from ${from} to ${to}.`);
+    this.from = from;
+    this.to = to;
+  }
+}
+
+export class InvalidWorkflowNodeRunTransitionError extends DomainError {
+  readonly from: WorkflowNodeRunState;
+  readonly to: WorkflowNodeRunState;
+
+  constructor(from: WorkflowNodeRunState, to: WorkflowNodeRunState) {
+    super(`Invalid workflow node run transition from ${from} to ${to}.`);
+    this.from = from;
+    this.to = to;
+  }
+}
+
+export class InvalidWorkflowDefinitionError extends DomainInvariantError {}
+
 export class LifecycleConflictError extends DomainError {
-  readonly entity: "run" | "runAttempt" | "runStep";
-  readonly id: RunId | RunAttemptId | RunStepId;
-  readonly expectedStatus: RunState | RunAttemptState | "RUNNING";
+  readonly entity:
+    "run" | "runAttempt" | "runStep" | "workflowRun" | "workflowNodeRun";
+  readonly id:
+    RunId | RunAttemptId | RunStepId | WorkflowRunId | WorkflowNodeRunId;
+  readonly expectedStatus:
+    | RunState
+    | RunAttemptState
+    | WorkflowRunState
+    | WorkflowNodeRunState
+    | "RUNNING";
 
   constructor(
-    entity: "run" | "runAttempt" | "runStep",
-    id: RunId | RunAttemptId | RunStepId,
-    expectedStatus: RunState | RunAttemptState | "RUNNING",
+    entity:
+      "run" | "runAttempt" | "runStep" | "workflowRun" | "workflowNodeRun",
+    id: RunId | RunAttemptId | RunStepId | WorkflowRunId | WorkflowNodeRunId,
+    expectedStatus:
+      | RunState
+      | RunAttemptState
+      | WorkflowRunState
+      | WorkflowNodeRunState
+      | "RUNNING",
   ) {
     super(
       `Persisted ${entity} ${id} was not in expected status ${expectedStatus}.`,

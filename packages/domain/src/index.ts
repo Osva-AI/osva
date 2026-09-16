@@ -16,6 +16,12 @@ export type {
   TerminalRunState,
   ToolId,
   ToolVersionId,
+  WorkflowId,
+  WorkflowNodeRunId,
+  WorkflowNodeRunState,
+  WorkflowRunId,
+  WorkflowRunState,
+  WorkflowVersionId,
   WorkspaceId,
 } from "@osva/contracts";
 
@@ -23,6 +29,10 @@ export {
   RUN_ATTEMPT_STATES,
   RUN_STATES,
   TERMINAL_RUN_STATES,
+  TERMINAL_WORKFLOW_NODE_RUN_STATES,
+  TERMINAL_WORKFLOW_RUN_STATES,
+  WORKFLOW_NODE_RUN_STATES,
+  WORKFLOW_RUN_STATES,
 } from "@osva/contracts";
 
 export {
@@ -34,6 +44,7 @@ export {
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
   DuplicateScheduleKeyError,
+  DuplicateWorkflowKeyError,
   EvaluationNotFoundError,
   InvalidAttemptSequenceError,
   InvalidModelBindingError,
@@ -42,6 +53,9 @@ export {
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   InvalidSubsequentAttemptError,
+  InvalidWorkflowDefinitionError,
+  InvalidWorkflowNodeRunTransitionError,
+  InvalidWorkflowRunTransitionError,
   LifecycleConflictError,
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
@@ -52,6 +66,10 @@ export {
   RunStepNotFoundError,
   ScheduleNotFoundError,
   WorkspaceNotFoundError,
+  WorkflowNotFoundError,
+  WorkflowNodeRunNotFoundError,
+  WorkflowRunNotFoundError,
+  WorkflowVersionNotFoundError,
 } from "./errors.js";
 
 export { Workspace, type WorkspaceProps } from "./workspace.js";
@@ -100,6 +118,26 @@ export {
   type CreateScheduleOccurrenceProps,
   type ScheduleOccurrenceProps,
 } from "./schedule-occurrence.js";
+export { Workflow, type WorkflowProps } from "./workflow.js";
+export {
+  WorkflowVersion,
+  type WorkflowVersionProps,
+} from "./workflow-version.js";
+export {
+  WorkflowRun,
+  type WorkflowRunCreateProps,
+  type WorkflowRunError,
+  type WorkflowRunRehydrateProps,
+} from "./workflow-run.js";
+export {
+  WorkflowNodeRun,
+  type WorkflowNodeRunCreateProps,
+  type WorkflowNodeRunRehydrateProps,
+} from "./workflow-node-run.js";
+export {
+  assertSequentialWorkflowDefinition,
+  orderedSequentialNodeKeys,
+} from "./workflow-definition.js";
 export {
   assertValidFiveFieldCronExpression,
   assertValidIanaTimezone,
@@ -125,6 +163,20 @@ export {
   type RetryableRunAttemptState,
   type TerminalRunAttemptState,
 } from "./run-attempt-state-machine.js";
+export {
+  LEGAL_WORKFLOW_RUN_TRANSITIONS,
+  assertLegalWorkflowRunTransition,
+  isLegalWorkflowRunTransition,
+  isTerminalWorkflowRunState,
+  isWorkflowRunState,
+} from "./workflow-run-state-machine.js";
+export {
+  LEGAL_WORKFLOW_NODE_RUN_TRANSITIONS,
+  assertLegalWorkflowNodeRunTransition,
+  isLegalWorkflowNodeRunTransition,
+  isTerminalWorkflowNodeRunState,
+  isWorkflowNodeRunState,
+} from "./workflow-node-run-state-machine.js";
 
 export type {
   AgentMetadataUpdate,
@@ -154,6 +206,9 @@ export type {
   ListSchedulesQuery,
   ListSchedulesResult,
   WorkspaceRepository,
+  AppendWorkflowVersionInput,
+  WorkflowRepository,
+  WorkflowRunRepository,
 } from "./ports/index.js";
 
 export {
@@ -273,3 +328,24 @@ export {
   type ScheduleApplicationIds,
   type UpdateScheduleCommand,
 } from "./schedule-application.js";
+
+export {
+  AppendWorkflowVersion,
+  CreateWorkflow,
+  CreateWorkflowRun,
+  GetWorkflow,
+  GetWorkflowRun,
+  GetWorkflowVersion,
+  ListWorkflowVersions,
+  ListWorkflows,
+  createWorkflowApplication,
+  type AppendWorkflowVersionCommand,
+  type CreateWorkflowCommand,
+  type CreateWorkflowRunCommand,
+  type GetWorkflowVersionCommand,
+  type WorkflowApplication,
+  type WorkflowApplicationClock,
+  type WorkflowApplicationDependencies,
+  type WorkflowApplicationIds,
+  type WorkflowRunView,
+} from "./workflow-application.js";

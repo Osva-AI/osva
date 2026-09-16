@@ -12,3 +12,5 @@ export { PostgresToolRepository } from "./repositories/postgres-tool-repository.
 export { PostgresRunRepository } from "./repositories/postgres-run-repository.js";
 export { PostgresEvaluationRepository } from "./repositories/postgres-evaluation-repository.js";
 export { PostgresScheduleRepository } from "./repositories/postgres-schedule-repository.js";
+export { PostgresWorkflowRepository } from "./repositories/postgres-workflow-repository.js";
+export { PostgresWorkflowRunRepository } from "./repositories/postgres-workflow-run-repository.js";

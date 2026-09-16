@@ -122,7 +122,26 @@ export {
 
 export { toolGrantSchema, toolInvocationSchema } from "./tool.js";
 
-export { workflowDefinitionSchema } from "./workflow-definition.js";
+export {
+  workflowDefinitionEdgeSchema,
+  workflowDefinitionNodeSchema,
+  workflowDefinitionSchema,
+} from "./workflow-definition.js";
+
+export {
+  createWorkflowRequestSchema,
+  createWorkflowRunRequestSchema,
+  createWorkflowVersionRequestSchema,
+  workflowListResourceSchema,
+  workflowNodeRunResourceSchema,
+  workflowNodeRunStateSchema,
+  workflowResourceSchema,
+  workflowRunErrorResourceSchema,
+  workflowRunResourceSchema,
+  workflowRunStateSchema,
+  workflowVersionListResourceSchema,
+  workflowVersionResourceSchema,
+} from "./workflow-registry.js";
 
 export {
   createScheduleRequestSchema,

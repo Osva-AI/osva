@@ -224,11 +224,40 @@ export type {
 
 export {
   WORKFLOW_DEFINITION_SCHEMA_VERSION,
+  WORKFLOW_EXECUTABLE_NODE_TYPES,
   WORKFLOW_NODE_TYPES,
 } from "./workflow-definition.js";
 export type {
+  WorkflowDefinitionEdgeV1,
+  WorkflowDefinitionNodeV1,
   WorkflowDefinitionSchemaVersion,
   WorkflowDefinitionV1,
+  WorkflowExecutableNodeType,
   WorkflowNodeType,
-  WorkflowNodeV1,
 } from "./workflow-definition.js";
+
+export {
+  TERMINAL_WORKFLOW_NODE_RUN_STATES,
+  TERMINAL_WORKFLOW_RUN_STATES,
+  WORKFLOW_NODE_RUN_STATES,
+  WORKFLOW_RUN_STATES,
+} from "./workflow-state.js";
+export type {
+  TerminalWorkflowNodeRunState,
+  TerminalWorkflowRunState,
+  WorkflowNodeRunState,
+  WorkflowRunState,
+} from "./workflow-state.js";
+
+export type {
+  CreateWorkflowRequestV1,
+  CreateWorkflowRunRequestV1,
+  CreateWorkflowVersionRequestV1,
+  WorkflowListResourceV1,
+  WorkflowNodeRunResourceV1,
+  WorkflowResourceV1,
+  WorkflowRunErrorResourceV1,
+  WorkflowRunResourceV1,
+  WorkflowVersionListResourceV1,
+  WorkflowVersionResourceV1,
+} from "./workflow-registry.js";

@@ -18,3 +18,9 @@
 16. ExecutionWorker and OfficeWorker are different concepts.
 17. Retries reuse immutable dependency bindings.
 18. Idempotency identifies logical operations, not attempts.
+19. Workflow is an OSVA product object.
+20. WorkflowVersion is immutable and a WorkflowRun always executes one WorkflowVersion.
+21. Workflow definitions reference immutable AgentVersions.
+22. WorkflowNodeRun is canonical identity for one workflow-node execution.
+23. One WorkflowNodeRun maps to one canonical child Run.
+24. Workflow orchestration state belongs to PostgreSQL; BullMQ is never workflow lifecycle authority.

@@ -55,6 +55,14 @@ export default tseslint.config(
               message: "packages/domain cannot import apps.",
             },
             {
+              name: "@osva/scheduler",
+              message: "packages/domain cannot import apps.",
+            },
+            {
+              name: "@osva/workflow-orchestrator",
+              message: "packages/domain cannot import apps.",
+            },
+            {
               name: "@osva/contracts/schemas",
               message: "packages/domain cannot import runtime Zod schemas.",
             },
@@ -639,7 +647,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/web/src/**/*.ts", "apps/worker/src/**/*.ts"],
+    files: [
+      "apps/web/src/**/*.ts",
+      "apps/worker/src/**/*.ts",
+      "apps/scheduler/src/**/*.ts",
+      "apps/workflow-orchestrator/src/**/*.ts",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",

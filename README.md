@@ -6,12 +6,13 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** Community Alpha (Stage 1 complete). OSVA supports Agent registry,
-> immutable AgentVersions, Run lifecycle, BullMQ execution transport, trusted
-> TypeScript runtime, ModelGateway, ToolGateway, RunSteps, usage/cost,
-> JSON_EXACT_MATCH evaluation, and recurring scheduling. Requires PostgreSQL,
-> Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`, `worker`, and
-> `scheduler`. `OPENAI_API_KEY` is optional and worker-only.
+> **Status:** Community Beta in progress (Stage 2 Slice 2.1 complete). OSVA
+> supports Agent registry, immutable AgentVersions, Run lifecycle, BullMQ
+> execution transport, trusted TypeScript runtime, ModelGateway, ToolGateway,
+> RunSteps, usage/cost, JSON_EXACT_MATCH evaluation, recurring scheduling, and
+> versioned sequential Workflows. Requires PostgreSQL, Valkey, and
+> `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`, `worker`, `scheduler`, and
+> `workflow-orchestrator`. `OPENAI_API_KEY` is optional and worker-only.
 
 ## Why OSVA?
 
@@ -168,6 +169,7 @@ pnpm build
 pnpm dev:web
 pnpm dev:worker
 pnpm dev:scheduler
+pnpm dev:workflow-orchestrator
 ```
 
 Required sequence:
@@ -185,8 +187,8 @@ as the normal workflow. The committed files under `packages/db/drizzle/` are
 authoritative. Generate new SQL with `pnpm --filter @osva/db db:generate` and
 commit the result.
 
-`pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web and worker both
-require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
+`pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web, worker, scheduler,
+and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
 
 ### Endpoints and worker behavior
 
@@ -264,6 +266,25 @@ and dispatches canonical Runs through CreateRun; BullMQ repeatable jobs are not
 the schedule authority. Community Alpha misfire policy is `COALESCE_ONE`: after
 downtime at most one overdue occurrence is materialized per Schedule.
 
+Workflow API:
+
+- `POST /v1/workflows` — create a Workflow (`workspaceId`, `key`, `name`,
+  optional `description`)
+- `GET /v1/workflows` — list Workflows
+- `GET /v1/workflows/:workflowId` — get a Workflow
+- `POST /v1/workflows/:workflowId/versions` — append an immutable WorkflowVersion
+- `GET /v1/workflows/:workflowId/versions` — list versions for a Workflow
+- `GET /v1/workflows/:workflowId/versions/:workflowVersionId` — get a version
+- `POST /v1/workflow-runs` — create a PENDING WorkflowRun
+  (`workspaceId`, `workflowVersionId`, `input`)
+- `GET /v1/workflow-runs/:workflowRunId` — get a WorkflowRun and its node runs
+
+Creating a WorkflowRun does not execute the workflow inside the HTTP request.
+`apps/workflow-orchestrator` reconciles PostgreSQL WorkflowRun state, materializes
+sequential WorkflowNodeRuns, and creates canonical child Runs through CreateRun.
+Slice 2.1 executes only linear AGENT graphs. Node N output becomes node N+1
+input. A failed child Run fails the WorkflowRun and later nodes do not start.
+
 ### Community Alpha quickstart (no paid model key)
 
 Use the trusted echo agent fixture path:
@@ -271,7 +292,8 @@ Use the trusted echo agent fixture path:
 1. `pnpm infra:up` and `pnpm db:migrate`
 2. Set `OSVA_DATABASE_URL`, `OSVA_VALKEY_URL`, and `OSVA_TRUSTED_RUNTIME_ROOT`
    to a directory containing a trusted TypeScript agent entrypoint
-3. Start `pnpm dev:web`, `pnpm dev:worker`, and `pnpm dev:scheduler`
+3. Start `pnpm dev:web`, `pnpm dev:worker`, `pnpm dev:scheduler`, and
+   `pnpm dev:workflow-orchestrator`
 4. `POST /v1/agents` and `POST /v1/agents/:id/versions` with a trusted runtime
    manifest (for example the echo agent under
    `adapters/runtime-typescript/test/fixtures/echo-agent.ts`)
@@ -285,10 +307,13 @@ RunAttempts, BullMQ transport, trusted TypeScript runtime, ModelGateway,
 OpenAI provider, ToolGateway, internal tools, RunSteps, usage/cost estimation,
 JSON_EXACT_MATCH evaluation, and recurring scheduling.
 
-Community Alpha does not yet include auth/RBAC, untrusted sandboxing, workflow
-engine, multi-agent workflows, human approvals, MCP, side-effecting external
-tools, deployment objects, automatic logical retries, Run cancellation,
-OpenTelemetry backend, dashboards, LLM-as-judge, evaluation datasets,
+Slice 2.1 adds versioned sequential Workflows. Community Beta does not yet
+include branch/parallel execution, human approvals, MCP, additional runtimes,
+OpenTelemetry, public SDKs, or a hosted control plane.
+
+Community Alpha does not yet include auth/RBAC, untrusted sandboxing,
+side-effecting external tools, deployment objects, automatic logical retries,
+Run cancellation, dashboards, LLM-as-judge, evaluation datasets,
 billing/invoicing, budgets, multi-provider production support, or a hosted
 control plane.
 

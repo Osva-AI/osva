@@ -47,3 +47,8 @@ export {
   MAX_SCHEDULE_OCCURRENCE_LIST_LIMIT,
 } from "./schedule-repository.js";
 export type { WorkspaceRepository } from "./workspace-repository.js";
+export type {
+  AppendWorkflowVersionInput,
+  WorkflowRepository,
+} from "./workflow-repository.js";
+export type { WorkflowRunRepository } from "./workflow-run-repository.js";

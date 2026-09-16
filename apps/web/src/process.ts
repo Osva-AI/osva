@@ -8,6 +8,8 @@ import {
   PostgresToolRepository,
   PostgresRunRepository,
   PostgresScheduleRepository,
+  PostgresWorkflowRepository,
+  PostgresWorkflowRunRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
@@ -19,6 +21,7 @@ import {
   createRunObservabilityApplication,
   createScheduleApplication,
   createToolApplication,
+  createWorkflowApplication,
 } from "@osva/domain";
 import { PostgresEvaluationRepository } from "@osva/db";
 import { CreateRun } from "@osva/orchestration";
@@ -53,6 +56,8 @@ export function createWebProcess(
   const tools = new PostgresToolRepository(database);
   const runs = new PostgresRunRepository(database);
   const scheduleRepository = new PostgresScheduleRepository(database);
+  const workflowRepository = new PostgresWorkflowRepository(database);
+  const workflowRunRepository = new PostgresWorkflowRunRepository(database);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
   const server = createWebApplication({
@@ -107,6 +112,14 @@ export function createWebProcess(
       clock,
       ids,
     },
+    workflows: createWorkflowApplication({
+      workflows: workflowRepository,
+      workflowRuns: workflowRunRepository,
+      agents,
+      workspaces,
+      clock,
+      ids,
+    }),
   });
 
   let stopping: Promise<void> | undefined;

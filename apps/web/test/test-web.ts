@@ -7,6 +7,8 @@ import {
   MemoryToolRepository,
   MemoryRunRepository,
   MemoryScheduleRepository,
+  MemoryWorkflowRepository,
+  MemoryWorkflowRunRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import {
@@ -18,6 +20,7 @@ import {
   createRunObservabilityApplication,
   createScheduleApplication,
   createToolApplication,
+  createWorkflowApplication,
 } from "@osva/domain";
 import { CreateRun } from "@osva/orchestration";
 
@@ -37,6 +40,8 @@ export async function createTestWebApplication(options?: {
   const tools = new MemoryToolRepository();
   const runs = new MemoryRunRepository();
   const schedules = new MemoryScheduleRepository();
+  const workflowRepository = new MemoryWorkflowRepository();
+  const workflowRunRepository = new MemoryWorkflowRunRepository();
   const queue = new MemoryJobQueue();
   const clock = { now: () => TEST_NOW };
   let counter = 0;
@@ -108,6 +113,14 @@ export async function createTestWebApplication(options?: {
       clock,
       ids,
     },
+    workflows: createWorkflowApplication({
+      workflows: workflowRepository,
+      workflowRuns: workflowRunRepository,
+      agents,
+      workspaces,
+      clock,
+      ids,
+    }),
   });
 
   return {
@@ -118,6 +131,8 @@ export async function createTestWebApplication(options?: {
     tools,
     runs,
     schedules,
+    workflows: workflowRepository,
+    workflowRuns: workflowRunRepository,
     queue,
   };
 }

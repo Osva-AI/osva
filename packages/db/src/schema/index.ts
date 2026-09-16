@@ -12,6 +12,10 @@ export { tools } from "./tools.js";
 export { toolVersions } from "./tool-versions.js";
 export { schedules } from "./schedules.js";
 export { scheduleOccurrences } from "./schedule-occurrences.js";
+export { workflows } from "./workflows.js";
+export { workflowVersions } from "./workflow-versions.js";
+export { workflowRuns } from "./workflow-runs.js";
+export { workflowNodeRuns } from "./workflow-node-runs.js";
 export {
   PERSISTED_EVALUATOR_TYPES,
   PERSISTED_MODEL_PROVIDERS,
@@ -20,4 +24,6 @@ export {
   PERSISTED_RUN_STATES,
   PERSISTED_RUN_STEP_KINDS,
   PERSISTED_RUN_STEP_STATUSES,
+  PERSISTED_WORKFLOW_NODE_RUN_STATES,
+  PERSISTED_WORKFLOW_RUN_STATES,
 } from "./states.js";
