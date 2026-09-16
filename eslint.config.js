@@ -649,7 +649,6 @@ export default tseslint.config(
   {
     files: [
       "apps/web/src/**/*.ts",
-      "apps/worker/src/**/*.ts",
       "apps/scheduler/src/**/*.ts",
       "apps/workflow-orchestrator/src/**/*.ts",
     ],
@@ -660,7 +659,8 @@ export default tseslint.config(
           paths: [
             {
               name: "@osva/runtime-core",
-              message: "Stage 1 process shells do not execute Agent runtimes.",
+              message:
+                "Control-plane process shells do not execute Agent runtimes.",
             },
             {
               name: "bullmq",
@@ -721,6 +721,118 @@ export default tseslint.config(
             {
               name: "@osva/web",
               message: "apps/worker cannot import the web process.",
+            },
+            {
+              name: "bullmq",
+              message:
+                "Process shells must use @osva/adapters-bullmq, not BullMQ directly.",
+            },
+            {
+              name: "ioredis",
+              message: "Process shells cannot import Redis/Valkey clients.",
+            },
+            {
+              name: "redis",
+              message: "Process shells cannot import Redis clients.",
+            },
+            {
+              name: "openai",
+              message: "Process shells cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-memory", "@osva/adapters-memory/*"],
+              message:
+                "Do not wire MemoryJobQueue or FakeRuntimeAdapter into production process shells.",
+            },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "Process shells cannot import provider SDKs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/runtime-protocol/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message: "runtime-protocol cannot import persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "runtime-protocol cannot import orchestration.",
+            },
+            {
+              name: "@osva/web",
+              message: "runtime-protocol cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "runtime-protocol cannot import apps.",
+            },
+            {
+              name: "bullmq",
+              message: "runtime-protocol cannot import queue libraries.",
+            },
+            {
+              name: "openai",
+              message: "runtime-protocol cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@osva/adapters-*"],
+              message: "runtime-protocol cannot import adapters.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["adapters/runtime-http/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message: "The remote HTTP runtime cannot import persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "The remote HTTP runtime cannot import orchestration.",
+            },
+            {
+              name: "@osva/web",
+              message: "The remote HTTP runtime cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "The remote HTTP runtime cannot import apps.",
+            },
+            {
+              name: "bullmq",
+              message: "The remote HTTP runtime cannot import BullMQ.",
+            },
+            {
+              name: "openai",
+              message: "The remote HTTP runtime cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message: "The remote HTTP runtime cannot import provider SDKs.",
             },
           ],
         },

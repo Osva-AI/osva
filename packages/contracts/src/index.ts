@@ -83,6 +83,7 @@ export {
   AGENT_EXECUTION_MAX_TIMEOUT_MS,
   AGENT_EXECUTION_MIN_TIMEOUT_MS,
   AGENT_MANIFEST_SCHEMA_VERSION,
+  AGENT_REMOTE_HTTP_PROTOCOL_VERSION,
   AGENT_RUNTIME_TYPES,
 } from "./agent-manifest.js";
 export type {
@@ -93,11 +94,17 @@ export type {
   AgentManifestToolBinding,
   AgentManifestSchemaVersion,
   AgentManifestV1,
+  AgentRemoteHttpProtocolVersion,
   AgentRuntime,
   AgentRuntimeType,
   BuiltinPackageRuntime,
+  RemoteHttpRuntime,
   TrustedTypeScriptRuntime,
 } from "./agent-manifest.js";
+export {
+  REMOTE_RUNTIME_ENDPOINT_MAX_LENGTH,
+  isAllowedRemoteRuntimeEndpoint,
+} from "./remote-runtime.js";
 export {
   SHA256_INTEGRITY_PREFIX,
   isRelativeTrustedEntrypoint,

@@ -1,5 +1,6 @@
 import type { ModelProfileVersionId, ToolVersionId } from "./ids.js";
 import type { JsonSchemaRecord } from "./json-schema.js";
+import type { SecretReference } from "./secret-reference.js";
 
 export const AGENT_MANIFEST_SCHEMA_VERSION = "1" as const;
 
@@ -8,7 +9,13 @@ export type AgentManifestSchemaVersion = typeof AGENT_MANIFEST_SCHEMA_VERSION;
 export const AGENT_RUNTIME_TYPES = [
   "BUILTIN_PACKAGE",
   "TRUSTED_TYPESCRIPT",
+  "REMOTE_HTTP",
 ] as const;
+
+export const AGENT_REMOTE_HTTP_PROTOCOL_VERSION = "1" as const;
+
+export type AgentRemoteHttpProtocolVersion =
+  typeof AGENT_REMOTE_HTTP_PROTOCOL_VERSION;
 
 export type AgentRuntimeType = (typeof AGENT_RUNTIME_TYPES)[number];
 
@@ -38,7 +45,31 @@ export interface TrustedTypeScriptRuntime {
   readonly integrity: string;
 }
 
-export type AgentRuntime = BuiltinPackageRuntime | TrustedTypeScriptRuntime;
+export interface RemoteHttpRuntime {
+  readonly type: "REMOTE_HTTP";
+  /**
+   * Runtime Protocol version understood by the remote endpoint.
+   * Slice 2.4 supports `"1"` only.
+   */
+  readonly protocolVersion: AgentRemoteHttpProtocolVersion;
+  /**
+   * Privileged `http:` / `https:` execute URL owned by this AgentVersion.
+   * Never taken from Run or workflow input.
+   */
+  readonly endpoint: string;
+  /**
+   * Optional secret reference for the outbound execute Authorization header.
+   * Plaintext remote credentials are rejected.
+   */
+  readonly authSecretRef?: SecretReference;
+  /**
+   * Optional execute timeout. Defaults to `execution.timeoutMs` when omitted.
+   */
+  readonly timeoutMs?: number;
+}
+
+export type AgentRuntime =
+  BuiltinPackageRuntime | TrustedTypeScriptRuntime | RemoteHttpRuntime;
 
 export interface AgentManifestIO {
   readonly schema: JsonSchemaRecord;

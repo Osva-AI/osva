@@ -13,9 +13,12 @@
   (different AGENT nodes bind different immutable AgentVersions; human
   approval is a workflow orchestration primitive with ApprovalRequest;
   no direct agent-to-agent runtime API);
+- ✅ Slice 2.4: Runtime Protocol V1 and Remote HTTP runtime
+  (ExecutionWorker dispatches through RuntimeDispatcher; trusted TypeScript
+  remains one RuntimeAdapter; remote HTTP is synchronous Protocol V1 with
+  executionId = RunAttemptId and an OSVA capability bridge);
 - Node SDK;
 - Python SDK;
-- HTTP runtime;
 - additional providers;
 - MCP client;
 - connectors;
@@ -105,3 +108,24 @@ WorkflowRun means human input is the actual remaining blocker.
 Slice 2.3 does not implement approval expiration, assignment, quorum,
 rejection branches, revision loops, tool-call approval, Node/Python/HTTP
 runtimes, MCP, or a visual builder.
+
+## Slice 2.4
+
+Stage 2.4 introduces a stable runtime execution boundary so trusted
+TypeScript is one RuntimeAdapter rather than the only runtime model.
+
+```text
+ExecutionWorker
+  → RuntimeDispatcher
+  → TrustedTypeScriptRuntimeAdapter | RemoteHttpRuntimeAdapter
+```
+
+Runtime choice is immutable AgentVersion state. Workflows and approvals stay
+runtime-agnostic. Remote HTTP speaks Runtime Protocol V1: one synchronous
+POST, `executionId` = RunAttemptId, no automatic HTTP retries, no remote job
+lifecycle. Remote model/tool calls go through the OSVA capability bridge to
+ModelGateway and ToolGateway. Outbound REMOTE_HTTP destinations default to
+public networks only; private destinations require worker operator opt-in.
+
+Slice 2.4 does not implement Node/Python SDKs, streaming, async remote jobs,
+HTTP retry policy, runtime failover, or a runtime registry.

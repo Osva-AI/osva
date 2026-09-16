@@ -6,15 +6,18 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** Community Beta in progress (Stage 2 Slice 2.3 complete). OSVA
+> **Status:** Community Beta in progress (Stage 2 Slice 2.4 complete). OSVA
 > supports Agent registry, immutable AgentVersions, Run lifecycle, BullMQ
-> execution transport, trusted TypeScript runtime, ModelGateway, ToolGateway,
-> RunSteps, usage/cost, JSON_EXACT_MATCH evaluation, recurring scheduling,
-> versioned sequential Workflows, DAG orchestration (BRANCH / PARALLEL /
-> JOIN), multi-agent workflow composition, and durable human APPROVAL gates.
+> execution transport, trusted TypeScript runtime, Remote HTTP runtime via
+> Runtime Protocol V1, ModelGateway, ToolGateway, RunSteps, usage/cost,
+> JSON_EXACT_MATCH evaluation, recurring scheduling, versioned sequential
+> Workflows, DAG orchestration (BRANCH / PARALLEL / JOIN), multi-agent
+> workflow composition, and durable human APPROVAL gates.
 > Requires PostgreSQL, Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`,
 > `worker`, `scheduler`, and `workflow-orchestrator`. `OPENAI_API_KEY` is
-> optional and worker-only.
+> optional and worker-only. Remote HTTP also needs
+> `OSVA_RUNTIME_CAPABILITY_SECRET` on the worker. Private remote runtime
+> destinations require operator `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS`.
 
 ## Why OSVA?
 
@@ -161,6 +164,8 @@ environment. Processes do not auto-load `.env`. Required variables:
 - `OSVA_TRUSTED_RUNTIME_ROOT`
 - optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`
 - optional worker-only `OPENAI_API_KEY`
+- optional worker-only `OSVA_RUNTIME_CAPABILITY_SECRET` for Remote HTTP
+- optional worker-only `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS` (default off)
 
 Then start infrastructure, apply committed migrations, and run the apps:
 

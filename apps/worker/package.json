@@ -15,11 +15,14 @@
   "dependencies": {
     "@osva/adapters-bullmq": "workspace:*",
     "@osva/adapters-model-openai": "workspace:*",
+    "@osva/adapters-runtime-http": "workspace:*",
     "@osva/adapters-runtime-typescript": "workspace:*",
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/model-gateway": "workspace:*",
     "@osva/observability": "workspace:*",
+    "@osva/runtime-core": "workspace:*",
+    "@osva/runtime-protocol": "workspace:*",
     "@osva/tool-gateway": "workspace:*",
     "@osva/orchestration": "workspace:*"
   },

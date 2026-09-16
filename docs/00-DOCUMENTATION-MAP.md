@@ -69,6 +69,7 @@
 - `adr/ADR-004-durable-workflow-backend.md`
 - `adr/ADR-005-apache2.md`
 - `adr/ADR-006-trusted-typescript-runtime.md`
+- `adr/ADR-007-runtime-protocol-and-remote-http.md`
 
 ## Source-of-truth precedence
 

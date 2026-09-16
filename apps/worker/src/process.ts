@@ -6,6 +6,13 @@ import {
   type OpenAIProviderAdapterOptions,
 } from "@osva/adapters-model-openai";
 import {
+  ProcessEnvSecretResolver,
+  RemoteHttpRuntimeAdapter,
+  RuntimeCapabilityBridge,
+  startRuntimeCapabilityServer,
+  type RuntimeCapabilityServer,
+} from "@osva/adapters-runtime-http";
+import {
   assertTrustedTypeScriptRuntimeReady,
   TrustedTypeScriptRuntimeAdapter,
 } from "@osva/adapters-runtime-typescript";
@@ -21,6 +28,7 @@ import {
 } from "@osva/db";
 import { ModelGateway } from "@osva/model-gateway";
 import { createRunStepRecorder } from "@osva/observability";
+import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
 import { ExecuteRunAttempt } from "@osva/orchestration";
 
@@ -74,6 +82,7 @@ export function createWorkerProcess(
   const clock = dependencies.clock ?? { now: () => new Date() };
   const injectedRuntime = dependencies.runtime;
   let runtime: RuntimeAdapter | undefined = injectedRuntime;
+  let capabilityServer: RuntimeCapabilityServer | undefined;
   let consumeStarted = false;
 
   const worker: WorkerApplication = createWorkerApplication({
@@ -89,6 +98,7 @@ export function createWorkerProcess(
     onStart: async () => {
       const modelProfiles = new PostgresModelProfileRepository(database);
       const runsRepository = new PostgresRunRepository(database);
+      const agents = new PostgresAgentRepository(database);
       const modelGateway = new ModelGateway({
         modelProfiles,
         providers: composeOpenAIProviders(env, dependencies.openai),
@@ -97,42 +107,86 @@ export function createWorkerProcess(
         tools: new PostgresToolRepository(database),
         policy: new DefaultToolPolicy(),
       });
-      runtime =
-        injectedRuntime ??
-        new TrustedTypeScriptRuntimeAdapter({
-          trustedRuntimeRoot: config.trustedRuntimeRoot ?? "",
+      const recorderDeps = {
+        runs: runsRepository,
+        modelProfiles,
+        clock,
+        ids: { createId: () => randomUUID() },
+        logger: {
+          info: logEvent,
+          error: logError,
+        },
+      };
+      const scopedModel = (
+        execution: Parameters<typeof createRunStepRecorder>[0],
+      ) =>
+        createRunStepRecorder(execution, recorderDeps).wrapModelGateway(
+          modelGateway,
+        );
+      const scopedTool = (
+        execution: Parameters<typeof createRunStepRecorder>[0],
+      ) =>
+        createRunStepRecorder(execution, recorderDeps).wrapToolGateway(
+          toolGateway,
+        );
+
+      let capabilityBaseUrl = config.runtimeCapabilityBaseUrl;
+      if (config.runtimeCapabilitySecret !== undefined) {
+        const bridge = new RuntimeCapabilityBridge({
+          secret: config.runtimeCapabilitySecret,
+          runs: runsRepository,
+          agents,
+          clock,
           logger: {
             info: logEvent,
             error: logError,
           },
-          modelGateway,
-          toolGateway,
-          createScopedModelGateway: (execution) =>
-            createRunStepRecorder(execution, {
-              runs: runsRepository,
-              modelProfiles,
-              clock,
-              ids: { createId: () => randomUUID() },
+          createScopedModelGateway: scopedModel,
+          createScopedToolGateway: scopedTool,
+        });
+        capabilityServer = await startRuntimeCapabilityServer({
+          host: config.runtimeCapabilityHost,
+          port: config.runtimeCapabilityPort,
+          handler: bridge.handle,
+        });
+        capabilityBaseUrl = capabilityBaseUrl ?? capabilityServer.origin;
+        logEvent("worker.runtime_capability_listening", {
+          host: config.runtimeCapabilityHost,
+          port: capabilityServer.port,
+        });
+      }
+
+      runtime =
+        injectedRuntime ??
+        new RuntimeDispatcher({
+          executors: {
+            TRUSTED_TYPESCRIPT: new TrustedTypeScriptRuntimeAdapter({
+              trustedRuntimeRoot: config.trustedRuntimeRoot ?? "",
               logger: {
                 info: logEvent,
                 error: logError,
               },
-            }).wrapModelGateway(modelGateway),
-          createScopedToolGateway: (execution) =>
-            createRunStepRecorder(execution, {
-              runs: runsRepository,
-              modelProfiles,
+              modelGateway,
+              toolGateway,
+              createScopedModelGateway: scopedModel,
+              createScopedToolGateway: scopedTool,
+            }),
+            REMOTE_HTTP: new RemoteHttpRuntimeAdapter({
+              secretResolver: new ProcessEnvSecretResolver(env),
+              getCapabilityBaseUrl: () => capabilityBaseUrl,
+              capabilitySecret: config.runtimeCapabilitySecret ?? "",
+              allowPrivateNetworks: config.remoteHttpAllowPrivateNetworks,
               clock,
-              ids: { createId: () => randomUUID() },
               logger: {
                 info: logEvent,
                 error: logError,
               },
-            }).wrapToolGateway(toolGateway),
+            }),
+          },
         });
       const executeRunAttempt = new ExecuteRunAttempt({
         runs: runsRepository,
-        agents: new PostgresAgentRepository(database),
+        agents,
         runtime,
       });
       await queue.consume(
@@ -143,6 +197,9 @@ export function createWorkerProcess(
     onClose: async () => {
       if (runtime !== undefined && isClosableRuntime(runtime)) {
         await runtime.close();
+      }
+      if (capabilityServer !== undefined) {
+        await capabilityServer.close();
       }
       await queue.shutdown();
       await database.close();

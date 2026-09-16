@@ -302,6 +302,46 @@ importers:
         specifier: 'catalog:'
         version: 5.0.0(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
 
+  adapters/runtime-http:
+    dependencies:
+      '@osva/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@osva/model-gateway':
+        specifier: workspace:*
+        version: link:../../packages/model-gateway
+      '@osva/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      '@osva/runtime-core':
+        specifier: workspace:*
+        version: link:../../packages/runtime-core
+      '@osva/runtime-protocol':
+        specifier: workspace:*
+        version: link:../../packages/runtime-protocol
+      '@osva/tool-gateway':
+        specifier: workspace:*
+        version: link:../../packages/tool-gateway
+    devDependencies:
+      '@osva/adapters-memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.4
+      eslint:
+        specifier: 'catalog:'
+        version: 10.10.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.0(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
+
   adapters/runtime-typescript:
     dependencies:
       '@osva/contracts':
@@ -406,6 +446,9 @@ importers:
       '@osva/adapters-model-openai':
         specifier: workspace:*
         version: link:../../adapters/model-openai
+      '@osva/adapters-runtime-http':
+        specifier: workspace:*
+        version: link:../../adapters/runtime-http
       '@osva/adapters-runtime-typescript':
         specifier: workspace:*
         version: link:../../adapters/runtime-typescript
@@ -424,6 +467,12 @@ importers:
       '@osva/orchestration':
         specifier: workspace:*
         version: link:../../packages/orchestration
+      '@osva/runtime-core':
+        specifier: workspace:*
+        version: link:../../packages/runtime-core
+      '@osva/runtime-protocol':
+        specifier: workspace:*
+        version: link:../../packages/runtime-protocol
       '@osva/tool-gateway':
         specifier: workspace:*
         version: link:../../packages/tool-gateway
@@ -657,6 +706,28 @@ importers:
       '@osva/domain':
         specifier: workspace:*
         version: link:../domain
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.4
+      eslint:
+        specifier: 'catalog:'
+        version: 10.10.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.0(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/runtime-protocol:
+    dependencies:
+      '@osva/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

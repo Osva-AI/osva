@@ -160,6 +160,82 @@ describe("Agent Registry HTTP API", () => {
       },
     });
     expect(traversal.status).toBe(400);
+
+    const remote = await fetchJson(`${origin}/v1/agents/id-1/versions`, {
+      method: "POST",
+      body: {
+        manifest: {
+          ...VALID_MANIFEST,
+          runtime: {
+            type: "REMOTE_HTTP",
+            protocolVersion: "1",
+            endpoint: "https://runtime.example.com/execute",
+            authSecretRef: { key: "OSVA_REMOTE_RUNTIME_TOKEN" },
+            timeoutMs: 15_000,
+          },
+        },
+      },
+    });
+    expect(remote.status).toBe(201);
+    expect(remote.body).toMatchObject({
+      version: 2,
+      manifest: {
+        runtime: {
+          type: "REMOTE_HTTP",
+          protocolVersion: "1",
+          endpoint: "https://runtime.example.com/execute",
+          authSecretRef: { key: "OSVA_REMOTE_RUNTIME_TOKEN" },
+          timeoutMs: 15_000,
+        },
+      },
+    });
+
+    const plaintext = await fetchJson(`${origin}/v1/agents/id-1/versions`, {
+      method: "POST",
+      body: {
+        manifest: {
+          ...VALID_MANIFEST,
+          runtime: {
+            type: "REMOTE_HTTP",
+            protocolVersion: "1",
+            endpoint: "https://runtime.example.com/execute",
+            apiKey: "plaintext",
+          },
+        },
+      },
+    });
+    expect(plaintext.status).toBe(400);
+
+    const privateOptIn = await fetchJson(`${origin}/v1/agents/id-1/versions`, {
+      method: "POST",
+      body: {
+        manifest: {
+          ...VALID_MANIFEST,
+          runtime: {
+            type: "REMOTE_HTTP",
+            protocolVersion: "1",
+            endpoint: "https://runtime.example.com/execute",
+            allowPrivateNetworks: true,
+          },
+        },
+      },
+    });
+    expect(privateOptIn.status).toBe(400);
+
+    const badEndpoint = await fetchJson(`${origin}/v1/agents/id-1/versions`, {
+      method: "POST",
+      body: {
+        manifest: {
+          ...VALID_MANIFEST,
+          runtime: {
+            type: "REMOTE_HTTP",
+            protocolVersion: "1",
+            endpoint: "ftp://runtime.example.com/execute",
+          },
+        },
+      },
+    });
+    expect(badEndpoint.status).toBe(400);
   });
 
   it("creates, reads, and lists AgentVersions with deterministic numbering", async () => {

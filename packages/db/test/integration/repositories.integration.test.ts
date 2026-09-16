@@ -224,6 +224,28 @@ describe("PostgreSQL Stage 0 repositories", () => {
       expect(Object.isFrozen(loaded?.manifest)).toBe(true);
     });
 
+    it("persists immutable remote HTTP runtime configuration", async () => {
+      const { ids } = await seedAgentGraph();
+      const runtime = {
+        type: "REMOTE_HTTP" as const,
+        protocolVersion: "1" as const,
+        endpoint: "https://runtime.example.com/execute",
+        authSecretRef: { key: "OSVA_REMOTE_RUNTIME_TOKEN" },
+        timeoutMs: 15_000,
+      };
+      const version = AgentVersion.create({
+        id: ids.otherAgentVersionId,
+        agentId: ids.agentId,
+        version: 2,
+        manifest: createManifest({ runtime }),
+        createdAt: LATER,
+      });
+
+      await agents.saveAgentVersion(version);
+      const loaded = await agents.findAgentVersionById(ids.otherAgentVersionId);
+      expect(loaded?.manifest.runtime).toEqual(runtime);
+    });
+
     it("treats saving the same immutable AgentVersion as idempotent", async () => {
       const { ids } = await seedAgentGraph();
       const equivalent = AgentVersion.create({

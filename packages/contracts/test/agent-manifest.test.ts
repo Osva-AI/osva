@@ -152,6 +152,89 @@ describe("Agent Manifest v1", () => {
     ).toBe(false);
   });
 
+  it("parses a valid remote HTTP runtime descriptor", () => {
+    const runtime = {
+      type: "REMOTE_HTTP",
+      protocolVersion: "1",
+      endpoint: "https://runtime.example.com/execute",
+      authSecretRef: { key: "OSVA_REMOTE_RUNTIME_TOKEN" },
+      timeoutMs: 15_000,
+    };
+    const parsed = agentManifestSchema.parse({
+      ...validManifest,
+      runtime,
+    });
+    expect(parsed.runtime).toEqual(runtime);
+  });
+
+  it.each([
+    "ftp://runtime.example.com/execute",
+    "file:///tmp/execute",
+    "https://user:pass@runtime.example.com/execute",
+    "https://",
+    "not-a-url",
+    "",
+  ])("rejects invalid remote HTTP endpoint %j", (endpoint) => {
+    const parsed = agentManifestSchema.safeParse({
+      ...validManifest,
+      runtime: {
+        type: "REMOTE_HTTP",
+        protocolVersion: "1",
+        endpoint,
+      },
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects unsupported remote protocol versions and plaintext credentials", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validManifest,
+        runtime: {
+          type: "REMOTE_HTTP",
+          protocolVersion: "2",
+          endpoint: "https://runtime.example.com/execute",
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      agentManifestSchema.safeParse({
+        ...validManifest,
+        runtime: {
+          type: "REMOTE_HTTP",
+          protocolVersion: "1",
+          endpoint: "https://runtime.example.com/execute",
+          apiKey: "plaintext",
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      agentManifestSchema.safeParse({
+        ...validManifest,
+        runtime: {
+          type: "REMOTE_HTTP",
+          protocolVersion: "1",
+          endpoint: "https://runtime.example.com/execute",
+          allowPrivateNetworks: true,
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      agentManifestSchema.safeParse({
+        ...validManifest,
+        runtime: {
+          type: "REMOTE_HTTP",
+          protocolVersion: "1",
+          endpoint: "https://runtime.example.com/execute",
+          timeoutMs: 99,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects a non-sha256 integrity digest", () => {
     const parsed = agentManifestSchema.safeParse({
       ...validManifest,

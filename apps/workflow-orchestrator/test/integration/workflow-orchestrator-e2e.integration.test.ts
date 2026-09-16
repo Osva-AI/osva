@@ -18,6 +18,7 @@ import { Workspace } from "@osva/domain";
 import { createWebProcess } from "../../../web/src/process.js";
 import { createWorkerProcess } from "../../../worker/src/process.js";
 import { createWorkflowOrchestratorProcess } from "../../src/process.js";
+import { startFakeRemoteRuntime } from "../../../../adapters/runtime-http/test/fake-remote-runtime.js";
 import {
   resetStage0Tables,
   startPostgresForTests,
@@ -313,6 +314,217 @@ describe("workflow-orchestrator end-to-end", () => {
       await web.stop();
     }
   });
+
+  it("executes mixed trusted and remote HTTP AGENT nodes without workflow runtime fields", async () => {
+    const trustedRuntimeRoot = await prepareEchoAgentFixture();
+    const remote = await startFakeRemoteRuntime();
+    const queue = new BullMqJobQueue({ url: valkey.url });
+    const web = createWebProcess(
+      {
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      },
+      (connectionString) => createDatabase({ connectionString, max: 5 }),
+      () => queue,
+    );
+
+    let worker: ReturnType<typeof createWorkerProcess> | undefined;
+    let orchestrator:
+      ReturnType<typeof createWorkflowOrchestratorProcess> | undefined;
+
+    try {
+      const port = await web.listen();
+      const origin = `http://127.0.0.1:${String(port)}`;
+      const registered = await createMixedRuntimeWorkflow(
+        origin,
+        trustedRuntimeRoot,
+        `${remote.origin}/execute`,
+      );
+
+      worker = createWorkerProcess(
+        {
+          OSVA_DATABASE_URL: postgres.connectionString,
+          OSVA_VALKEY_URL: valkey.url,
+          OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+          OSVA_RUNTIME_CAPABILITY_SECRET: "capability-secret",
+          OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS: "true",
+        },
+        (connectionString) => createDatabase({ connectionString, max: 5 }),
+        { queueFactory: () => queue },
+      );
+      orchestrator = createWorkflowOrchestratorProcess(
+        {
+          OSVA_DATABASE_URL: postgres.connectionString,
+          OSVA_VALKEY_URL: valkey.url,
+        },
+        (connectionString) => createDatabase({ connectionString, max: 5 }),
+        { queueFactory: () => queue },
+      );
+
+      await worker.start();
+      const workflowRuns = new PostgresWorkflowRunRepository(database);
+      await waitUntil(async () => {
+        await orchestrator!.tickOnce();
+        const view = await workflowRuns.findWorkflowRunById(
+          registered.workflowRunId as never,
+        );
+        return view?.status === "SUCCEEDED";
+      });
+
+      const loaded = await fetchJson(
+        `${origin}/v1/workflow-runs/${registered.workflowRunId}`,
+      );
+      const body = loaded.body as {
+        status: string;
+        nodeRuns: ReadonlyArray<{
+          workflowNodeKey: string;
+          status: string;
+          childRunId?: string;
+        }>;
+      };
+      expect(body.status).toBe("SUCCEEDED");
+      const byKey = Object.fromEntries(
+        body.nodeRuns.map((node) => [node.workflowNodeKey, node]),
+      );
+      expect(byKey.trusted?.status).toBe("SUCCEEDED");
+      expect(byKey.remote?.status).toBe("SUCCEEDED");
+      expect(byKey.trusted?.childRunId).toBeTruthy();
+      expect(byKey.remote?.childRunId).toBeTruthy();
+      expect(remote.executeCount).toBe(1);
+      expect(JSON.stringify(body)).not.toContain("REMOTE_HTTP");
+    } finally {
+      if (orchestrator) {
+        await orchestrator.stop();
+      }
+      if (worker) {
+        await worker.stop();
+      }
+      await queue.shutdown();
+      await web.stop();
+      await remote.close();
+    }
+  });
+
+  it("keeps approval orchestration independent of remote vs trusted runtime", async () => {
+    const trustedRuntimeRoot = await prepareEchoAgentFixture();
+    const remote = await startFakeRemoteRuntime();
+    const queue = new BullMqJobQueue({ url: valkey.url });
+    const web = createWebProcess(
+      {
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      },
+      (connectionString) => createDatabase({ connectionString, max: 5 }),
+      () => queue,
+    );
+
+    let worker: ReturnType<typeof createWorkerProcess> | undefined;
+    let orchestrator:
+      ReturnType<typeof createWorkflowOrchestratorProcess> | undefined;
+
+    try {
+      const port = await web.listen();
+      const origin = `http://127.0.0.1:${String(port)}`;
+      const registered = await createRemoteApprovalWorkflow(
+        origin,
+        trustedRuntimeRoot,
+        `${remote.origin}/execute`,
+      );
+
+      worker = createWorkerProcess(
+        {
+          OSVA_DATABASE_URL: postgres.connectionString,
+          OSVA_VALKEY_URL: valkey.url,
+          OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+          OSVA_RUNTIME_CAPABILITY_SECRET: "capability-secret",
+          OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS: "true",
+        },
+        (connectionString) => createDatabase({ connectionString, max: 5 }),
+        { queueFactory: () => queue },
+      );
+      orchestrator = createWorkflowOrchestratorProcess(
+        {
+          OSVA_DATABASE_URL: postgres.connectionString,
+          OSVA_VALKEY_URL: valkey.url,
+        },
+        (connectionString) => createDatabase({ connectionString, max: 5 }),
+        { queueFactory: () => queue },
+      );
+
+      await worker.start();
+      const workflowRuns = new PostgresWorkflowRunRepository(database);
+      await waitUntil(async () => {
+        await orchestrator!.tickOnce();
+        const view = await workflowRuns.findWorkflowRunById(
+          registered.workflowRunId as never,
+        );
+        return view?.status === "WAITING_FOR_APPROVAL";
+      });
+
+      const waiting = await fetchJson(
+        `${origin}/v1/workflow-runs/${registered.workflowRunId}`,
+      );
+      const waitingBody = waiting.body as {
+        status: string;
+        approvalRequests: ReadonlyArray<{ id: string; status: string }>;
+        nodeRuns: ReadonlyArray<{ workflowNodeKey: string; status: string }>;
+      };
+      expect(waitingBody.status).toBe("WAITING_FOR_APPROVAL");
+      expect(waitingBody.approvalRequests[0]?.status).toBe("PENDING");
+
+      const decided = await fetchJson(
+        `${origin}/v1/approval-requests/${waitingBody.approvalRequests[0]!.id}/decision`,
+        {
+          method: "POST",
+          body: {
+            workspaceId: WORKSPACE_ID,
+            decision: "APPROVED",
+          },
+        },
+      );
+      expect(decided.status).toBe(200);
+
+      await waitUntil(async () => {
+        await orchestrator!.tickOnce();
+        const view = await workflowRuns.findWorkflowRunById(
+          registered.workflowRunId as never,
+        );
+        return view?.status === "SUCCEEDED";
+      });
+
+      const loaded = await fetchJson(
+        `${origin}/v1/workflow-runs/${registered.workflowRunId}`,
+      );
+      const byKey = Object.fromEntries(
+        (
+          loaded.body as {
+            nodeRuns: ReadonlyArray<{
+              workflowNodeKey: string;
+              status: string;
+            }>;
+          }
+        ).nodeRuns.map((node) => [node.workflowNodeKey, node]),
+      );
+      expect((loaded.body as { status: string }).status).toBe("SUCCEEDED");
+      expect(byKey.a?.status).toBe("SUCCEEDED");
+      expect(byKey.review?.status).toBe("SUCCEEDED");
+      expect(byKey.b?.status).toBe("SUCCEEDED");
+    } finally {
+      if (orchestrator) {
+        await orchestrator.stop();
+      }
+      if (worker) {
+        await worker.stop();
+      }
+      await queue.shutdown();
+      await web.stop();
+      await remote.close();
+    }
+  });
 });
 
 async function prepareEchoAgentFixture(): Promise<string> {
@@ -513,6 +725,236 @@ async function createApprovalWorkflow(
     workflowRunId: (workflowRun.body as { id: string }).id,
     agentVersionId,
   };
+}
+
+async function createMixedRuntimeWorkflow(
+  origin: string,
+  trustedRuntimeRoot: string,
+  remoteEndpoint: string,
+): Promise<{ readonly workflowRunId: string }> {
+  const integrity = sha256IntegrityOf(
+    await fs.readFile(path.join(trustedRuntimeRoot, "echo-agent.ts")),
+  );
+  const trustedAgent = await fetchJson(`${origin}/v1/agents`, {
+    method: "POST",
+    body: {
+      workspaceId: WORKSPACE_ID,
+      key: "trusted-mixed",
+      name: "Trusted Agent",
+    },
+  });
+  const trustedVersion = await fetchJson(
+    `${origin}/v1/agents/${(trustedAgent.body as { id: string }).id}/versions`,
+    {
+      method: "POST",
+      body: {
+        manifest: {
+          schemaVersion: "1",
+          key: "trusted-mixed",
+          name: "Trusted Agent",
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "echo-agent.ts",
+            integrity,
+          },
+          input: { schema: {} },
+          output: { schema: {} },
+          execution: { timeoutMs: 5_000, maxAttempts: 1 },
+          capabilities: { model: false, tools: [] },
+        },
+      },
+    },
+  );
+  const remoteAgent = await fetchJson(`${origin}/v1/agents`, {
+    method: "POST",
+    body: {
+      workspaceId: WORKSPACE_ID,
+      key: "remote-mixed",
+      name: "Remote Agent",
+    },
+  });
+  const remoteVersion = await fetchJson(
+    `${origin}/v1/agents/${(remoteAgent.body as { id: string }).id}/versions`,
+    {
+      method: "POST",
+      body: {
+        manifest: {
+          schemaVersion: "1",
+          key: "remote-mixed",
+          name: "Remote Agent",
+          runtime: {
+            type: "REMOTE_HTTP",
+            protocolVersion: "1",
+            endpoint: remoteEndpoint,
+          },
+          input: { schema: {} },
+          output: { schema: {} },
+          execution: { timeoutMs: 5_000, maxAttempts: 1 },
+          capabilities: { model: false, tools: [] },
+        },
+      },
+    },
+  );
+  const workflow = await fetchJson(`${origin}/v1/workflows`, {
+    method: "POST",
+    body: {
+      workspaceId: WORKSPACE_ID,
+      key: "mixed-runtime",
+      name: "Mixed Runtime",
+    },
+  });
+  const workflowVersion = await fetchJson(
+    `${origin}/v1/workflows/${(workflow.body as { id: string }).id}/versions`,
+    {
+      method: "POST",
+      body: {
+        definition: {
+          schemaVersion: "2",
+          nodes: [
+            {
+              key: "trusted",
+              type: "AGENT",
+              agentVersionId: (trustedVersion.body as { id: string }).id,
+            },
+            {
+              key: "remote",
+              type: "AGENT",
+              agentVersionId: (remoteVersion.body as { id: string }).id,
+            },
+          ],
+          edges: [{ from: "trusted", to: "remote" }],
+        },
+      },
+    },
+  );
+  const workflowRun = await fetchJson(`${origin}/v1/workflow-runs`, {
+    method: "POST",
+    body: {
+      workspaceId: WORKSPACE_ID,
+      workflowVersionId: (workflowVersion.body as { id: string }).id,
+      input: { topic: "mixed runtime" },
+    },
+  });
+  return { workflowRunId: (workflowRun.body as { id: string }).id };
+}
+
+async function createRemoteApprovalWorkflow(
+  origin: string,
+  trustedRuntimeRoot: string,
+  remoteEndpoint: string,
+): Promise<{ readonly workflowRunId: string }> {
+  const integrity = sha256IntegrityOf(
+    await fs.readFile(path.join(trustedRuntimeRoot, "echo-agent.ts")),
+  );
+  const remoteAgent = await fetchJson(`${origin}/v1/agents`, {
+    method: "POST",
+    body: {
+      workspaceId: WORKSPACE_ID,
+      key: "remote-approval-a",
+      name: "Remote Agent",
+    },
+  });
+  const remoteVersion = await fetchJson(
+    `${origin}/v1/agents/${(remoteAgent.body as { id: string }).id}/versions`,
+    {
+      method: "POST",
+      body: {
+        manifest: {
+          schemaVersion: "1",
+          key: "remote-approval-a",
+          name: "Remote Agent",
+          runtime: {
+            type: "REMOTE_HTTP",
+            protocolVersion: "1",
+            endpoint: remoteEndpoint,
+          },
+          input: { schema: {} },
+          output: { schema: {} },
+          execution: { timeoutMs: 5_000, maxAttempts: 1 },
+          capabilities: { model: false, tools: [] },
+        },
+      },
+    },
+  );
+  const trustedAgent = await fetchJson(`${origin}/v1/agents`, {
+    method: "POST",
+    body: {
+      workspaceId: WORKSPACE_ID,
+      key: "trusted-approval-b",
+      name: "Trusted Agent",
+    },
+  });
+  const trustedVersion = await fetchJson(
+    `${origin}/v1/agents/${(trustedAgent.body as { id: string }).id}/versions`,
+    {
+      method: "POST",
+      body: {
+        manifest: {
+          schemaVersion: "1",
+          key: "trusted-approval-b",
+          name: "Trusted Agent",
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "echo-agent.ts",
+            integrity,
+          },
+          input: { schema: {} },
+          output: { schema: {} },
+          execution: { timeoutMs: 5_000, maxAttempts: 1 },
+          capabilities: { model: false, tools: [] },
+        },
+      },
+    },
+  );
+  const workflow = await fetchJson(`${origin}/v1/workflows`, {
+    method: "POST",
+    body: {
+      workspaceId: WORKSPACE_ID,
+      key: "remote-approval-gate",
+      name: "Remote Approval Gate",
+    },
+  });
+  const workflowVersion = await fetchJson(
+    `${origin}/v1/workflows/${(workflow.body as { id: string }).id}/versions`,
+    {
+      method: "POST",
+      body: {
+        definition: {
+          schemaVersion: "2",
+          nodes: [
+            {
+              key: "a",
+              type: "AGENT",
+              agentVersionId: (remoteVersion.body as { id: string }).id,
+            },
+            {
+              key: "review",
+              type: "APPROVAL",
+              title: "Approve remote handoff",
+            },
+            {
+              key: "b",
+              type: "AGENT",
+              agentVersionId: (trustedVersion.body as { id: string }).id,
+            },
+          ],
+          edges: [
+            { from: "a", to: "review" },
+            { from: "review", to: "b" },
+          ],
+        },
+      },
+    },
+  );
+  const workflowRun = await fetchJson(`${origin}/v1/workflow-runs`, {
+    method: "POST",
+    body: {
+      workspaceId: WORKSPACE_ID,
+      workflowVersionId: (workflowVersion.body as { id: string }).id,
+      input: { topic: "remote approval e2e" },
+    },
+  });
+  return { workflowRunId: (workflowRun.body as { id: string }).id };
 }
 
 async function waitUntil(check: () => Promise<boolean>): Promise<void> {

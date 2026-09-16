@@ -25,6 +25,7 @@ export {
 export { jsonSchemaRecordSchema } from "./json-schema.js";
 export { jsonValueSchema } from "./json-value.js";
 export { agentManifestSchema, agentRuntimeSchema } from "./agent-manifest.js";
+export { secretReferenceSchema } from "./secret-reference.js";
 
 export {
   createModelProfileRequestSchema,

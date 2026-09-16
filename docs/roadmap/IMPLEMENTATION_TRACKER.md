@@ -29,7 +29,7 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ 2.1 Workflow Registry, WorkflowVersion, and Sequential Execution
 - ✅ 2.2 Branch and parallel workflow nodes
 - ✅ 2.3 Multi-agent composition and approval primitive
-- 2.4 Node / Python / HTTP runtimes
+- ✅ 2.4 Runtime Protocol and Remote HTTP runtime
 - 2.5 Additional model providers
 - 2.6 MCP client and connectors
 - 2.7 Memory namespaces
@@ -40,5 +40,5 @@ Status is recorded after locally verifiable checks for each slice.
 
 - Stage 0: 8/8 complete
 - Stage 1: 8/8 complete
-- Stage 2: 3/9 complete
-- Overall: 19/33 slices complete
+- Stage 2: 4/9 complete
+- Overall: 20/33 slices complete

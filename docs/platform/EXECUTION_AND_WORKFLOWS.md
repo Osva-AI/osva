@@ -24,6 +24,11 @@ branches, revision loops, pause/resume outside waiting-for-approval
 derivation, cancellation, workflow retries, loops, expression languages,
 TOOL/HTTP/MCP nodes, or a visual builder.
 
+Slice 2.4 keeps workflows runtime-agnostic. AGENT nodes still bind immutable
+AgentVersion IDs. Trusted TypeScript and Remote HTTP share the same
+WorkflowNodeRun → Run → RunAttempt path.
+
+
 ## OSS 1.0
 OSVA adds stable Workflow Definition v1, durable backend adapters, waits, and stronger recovery.
 
