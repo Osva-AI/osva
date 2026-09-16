@@ -15,6 +15,8 @@ export {
   scheduleOccurrenceIdSchema,
   toolIdSchema,
   toolVersionIdSchema,
+  connectorIdSchema,
+  connectorVersionIdSchema,
   workflowIdSchema,
   workflowNodeRunIdSchema,
   workflowRunIdSchema,
@@ -61,6 +63,8 @@ export {
 export {
   createToolRequestSchema,
   createToolVersionRequestSchema,
+  internalToolVersionResourceSchema,
+  mcpToolVersionResourceSchema,
   toolListResourceSchema,
   toolResourceSchema,
   toolVersionListResourceSchema,
@@ -69,7 +73,32 @@ export {
 } from "./tool-registry.js";
 
 export {
+  connectorAuthConfigSchema,
+  connectorKindSchema,
+  connectorTransportConfigSchema,
+  connectorTransportSchema,
+  stdioTransportConfigSchema,
+  streamableHttpTransportConfigSchema,
+} from "./connector.js";
+
+export {
+  connectorListResourceSchema,
+  connectorResourceSchema,
+  connectorVersionListResourceSchema,
+  connectorVersionResourceSchema,
+  createConnectorRequestSchema,
+  createConnectorVersionRequestSchema,
+  discoverConnectorToolsResponseSchema,
+  discoveredMcpToolSchema,
+  importMcpToolsRequestSchema,
+  importMcpToolsResponseSchema,
+  importedMcpToolResourceSchema,
+  updateConnectorRequestSchema,
+} from "./connector-registry.js";
+
+export {
   internalToolImplementationIdSchema,
+  mcpToolVersionConfigSchema,
   toolBindingNameSchema,
   toolTypeSchema,
 } from "./tool-gateway.js";

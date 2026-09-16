@@ -4,6 +4,8 @@ export type {
   AgentVersionId,
   ApprovalRequestId,
   ApprovalRequestState,
+  ConnectorId,
+  ConnectorVersionId,
   DeploymentId,
   ModelProfileId,
   ModelProfileVersionId,
@@ -47,6 +49,7 @@ export {
   DomainError,
   DomainInvariantError,
   DuplicateAgentKeyError,
+  DuplicateConnectorKeyError,
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
   DuplicateScheduleKeyError,
@@ -64,6 +67,8 @@ export {
   InvalidWorkflowNodeRunTransitionError,
   InvalidWorkflowRunTransitionError,
   LifecycleConflictError,
+  ConnectorNotFoundError,
+  ConnectorVersionNotFoundError,
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
   ToolNotFoundError,
@@ -89,7 +94,11 @@ export {
   ModelProfileVersion,
   type ModelProfileVersionProps,
 } from "./model-profile-version.js";
-export { ToolVersion, type ToolVersionProps } from "./tool-version.js";
+export {
+  ToolVersion,
+  isSameMcpToolVersionConfig,
+  type ToolVersionProps,
+} from "./tool-version.js";
 export { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 export { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 export {
@@ -217,8 +226,11 @@ export type {
   AgentRepository,
   ApprovalRequestRepository,
   AppendAgentVersionInput,
+  AppendConnectorVersionInput,
   AppendModelProfileVersionInput,
   AppendToolVersionInput,
+  ConnectorMetadataUpdate,
+  ConnectorRepository,
   EvaluationRepository,
   ListRunStepsQuery,
   ListRunStepsResult,
@@ -309,6 +321,33 @@ export {
   type EvaluationApplicationIds,
   type GetEvaluationCommand,
 } from "./evaluation-application.js";
+
+export { Connector } from "./connector.js";
+export { ConnectorVersion } from "./connector-version.js";
+export {
+  AppendConnectorVersion,
+  CreateConnector,
+  DiscoverConnectorTools,
+  GetConnector,
+  GetConnectorVersion,
+  ImportMcpTools,
+  ListConnectorVersions,
+  ListConnectors,
+  UpdateConnectorMetadata,
+  createConnectorApplication,
+  type AppendConnectorVersionCommand,
+  type ConnectorApplication,
+  type ConnectorApplicationClock,
+  type ConnectorApplicationDependencies,
+  type ConnectorApplicationIds,
+  type CreateConnectorCommand,
+  type DiscoverConnectorToolsCommand,
+  type GetConnectorVersionCommand,
+  type ImportMcpToolCommand,
+  type ImportMcpToolsCommand,
+  type ImportedMcpToolResult,
+  type UpdateConnectorMetadataCommand,
+} from "./connector-application.js";
 
 export {
   AppendModelProfileVersion,

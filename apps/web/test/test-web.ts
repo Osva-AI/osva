@@ -1,9 +1,11 @@
 import type { WorkspaceId } from "@osva/contracts";
 import {
   MemoryAgentRepository,
+  MemoryConnectorRepository,
   MemoryEvaluationRepository,
   MemoryJobQueue,
   MemoryModelProfileRepository,
+  MemorySecretResolver,
   MemoryToolRepository,
   MemoryRunRepository,
   MemoryScheduleRepository,
@@ -15,6 +17,7 @@ import {
 import {
   Workspace,
   createAgentApplication,
+  createConnectorApplication,
   createEvaluationApplication,
   createModelProfileApplication,
   createRunApplication,
@@ -25,6 +28,8 @@ import {
 } from "@osva/domain";
 import { CreateRun } from "@osva/orchestration";
 
+import { createMcpClientPool } from "@osva/adapters-mcp-client";
+
 import { createWebApplication } from "../src/http.js";
 import type { RunHttpServices } from "../src/run-http.js";
 
@@ -34,10 +39,12 @@ export async function createTestWebApplication(options?: {
   readonly readinessCheck?: () => Promise<boolean>;
   readonly workspaceId?: WorkspaceId;
   readonly idPrefix?: string;
+  readonly secrets?: Readonly<Record<string, string>>;
 }) {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
   const modelProfiles = new MemoryModelProfileRepository();
+  const connectors = new MemoryConnectorRepository();
   const tools = new MemoryToolRepository();
   const runs = new MemoryRunRepository();
   const schedules = new MemoryScheduleRepository();
@@ -72,6 +79,10 @@ export async function createTestWebApplication(options?: {
     ids,
   };
 
+  const mcpClientPool = createMcpClientPool({
+    secretResolver: new MemorySecretResolver(options?.secrets ?? {}),
+  });
+
   const server = createWebApplication({
     readinessCheck: options?.readinessCheck ?? (async () => true),
     agents: createAgentApplication({
@@ -91,6 +102,14 @@ export async function createTestWebApplication(options?: {
     tools: createToolApplication({
       tools,
       workspaces,
+      clock,
+      ids,
+    }),
+    connectors: createConnectorApplication({
+      connectors,
+      tools,
+      workspaces,
+      mcpClientPool,
       clock,
       ids,
     }),
@@ -131,6 +150,7 @@ export async function createTestWebApplication(options?: {
     workspaces,
     agents,
     modelProfiles,
+    connectors,
     tools,
     runs,
     schedules,

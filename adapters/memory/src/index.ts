@@ -11,6 +11,7 @@ export { MemorySecretResolver } from "./memory-secret-resolver.js";
 export { MemoryTelemetrySink } from "./memory-telemetry-sink.js";
 export { MemoryWorkspaceRepository } from "./memory-workspace-repository.js";
 export { MemoryModelProfileRepository } from "./memory-model-profile-repository.js";
+export { MemoryConnectorRepository } from "./memory-connector-repository.js";
 export { MemoryToolRepository } from "./memory-tool-repository.js";
 export { MemoryScheduleRepository } from "./memory-schedule-repository.js";
 export { MemoryWorkflowRepository } from "./memory-workflow-repository.js";

@@ -1,10 +1,12 @@
 import type {
   AgentId,
+  ConnectorVersionId,
   RunAttemptId,
   RunId,
   ToolVersionId,
   WorkspaceId,
 } from "./ids.js";
+import type { JsonSchemaRecord } from "./json-schema.js";
 import type { JsonValue } from "./json-value.js";
 
 export const TOOL_BINDING_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
@@ -17,9 +19,20 @@ export const INTERNAL_TOOL_IMPLEMENTATIONS = [
 export type InternalToolImplementationId =
   (typeof INTERNAL_TOOL_IMPLEMENTATIONS)[number];
 
-export const TOOL_TYPES = ["INTERNAL"] as const;
+export const TOOL_TYPES = ["INTERNAL", "MCP"] as const;
 
 export type ToolType = (typeof TOOL_TYPES)[number];
+
+export const MCP_TOOL_IMPLEMENTATION = "MCP_V1" as const;
+
+export type McpToolImplementationId = typeof MCP_TOOL_IMPLEMENTATION;
+
+export interface McpToolVersionConfig {
+  readonly connectorVersionId: ConnectorVersionId;
+  readonly remoteToolName: string;
+  readonly description?: string;
+  readonly inputSchema: JsonSchemaRecord;
+}
 
 export const TOOL_EFFECT_CLASSIFICATIONS = ["READ_ONLY"] as const;
 
@@ -34,6 +47,16 @@ export const TOOL_ERROR_CODES = {
   INVALID_TOOL_INPUT: "INVALID_TOOL_INPUT",
   TOOL_EXECUTION_ERROR: "TOOL_EXECUTION_ERROR",
   INVALID_TOOL_OUTPUT: "INVALID_TOOL_OUTPUT",
+  CONNECTOR_UNAVAILABLE: "CONNECTOR_UNAVAILABLE",
+  CONNECTOR_AUTHENTICATION_FAILED: "CONNECTOR_AUTHENTICATION_FAILED",
+  CONNECTOR_TIMEOUT: "CONNECTOR_TIMEOUT",
+  CONNECTOR_CANCELLED: "CONNECTOR_CANCELLED",
+  MCP_PROTOCOL_ERROR: "MCP_PROTOCOL_ERROR",
+  MCP_TOOL_NOT_FOUND: "MCP_TOOL_NOT_FOUND",
+  MCP_INVALID_ARGUMENTS: "MCP_INVALID_ARGUMENTS",
+  MCP_TOOL_ERROR: "MCP_TOOL_ERROR",
+  MCP_INVALID_RESPONSE: "MCP_INVALID_RESPONSE",
+  MCP_UNSUPPORTED_INTERACTION: "MCP_UNSUPPORTED_INTERACTION",
 } as const;
 
 export type ToolErrorCode =

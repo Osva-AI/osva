@@ -1,20 +1,24 @@
 import type {
   JsonValue,
+  McpClientPool,
   ToolGateway as ToolGatewayPort,
   ToolInvokeRequest,
   ToolPolicy,
 } from "@osva/contracts";
 import { isCanonicalJsonValue } from "@osva/contracts";
-import type { ToolRepository } from "@osva/domain";
+import type { ConnectorRepository, ToolRepository } from "@osva/domain";
 
 import { ToolGatewayError, toolGatewayError } from "./errors.js";
 import type { Clock } from "./internal/clock.js";
 import { systemClock } from "./internal/clock.js";
 import { getInternalToolCatalogEntry } from "./internal/catalog.js";
+import { invokeMcpToolVersion } from "./internal/mcp-tool-executor.js";
 import { resolveInternalToolImplementation } from "./internal/registry.js";
 
 export interface ToolGatewayDependencies {
   readonly tools: ToolRepository;
+  readonly connectors?: ConnectorRepository;
+  readonly mcpClientPool?: McpClientPool;
   readonly policy: ToolPolicy;
   readonly clock?: Clock;
 }
@@ -66,7 +70,37 @@ export class ToolGateway implements ToolGatewayPort {
       );
     }
 
-    const catalogEntry = getInternalToolCatalogEntry(version.implementation);
+    if (version.type === "MCP") {
+      if (
+        this.deps.connectors === undefined ||
+        this.deps.mcpClientPool === undefined
+      ) {
+        throw toolGatewayError(
+          "TOOL_IMPLEMENTATION_NOT_FOUND",
+          "MCP tool execution is not configured.",
+        );
+      }
+
+      const raw = await invokeMcpToolVersion(
+        {
+          connectors: this.deps.connectors,
+          mcpClientPool: this.deps.mcpClientPool,
+        },
+        version,
+        request,
+      );
+      if (!isCanonicalJsonValue(raw)) {
+        throw toolGatewayError(
+          "INVALID_TOOL_OUTPUT",
+          "Tool output is not JSON-compatible.",
+        );
+      }
+      return raw;
+    }
+
+    const catalogEntry = getInternalToolCatalogEntry(
+      version.implementation as import("@osva/contracts").InternalToolImplementationId,
+    );
     if (catalogEntry === undefined) {
       throw toolGatewayError(
         "TOOL_IMPLEMENTATION_NOT_FOUND",
@@ -75,7 +109,7 @@ export class ToolGateway implements ToolGatewayPort {
     }
 
     const implementation = resolveInternalToolImplementation(
-      version.implementation,
+      version.implementation as import("@osva/contracts").InternalToolImplementationId,
     );
     if (implementation === undefined) {
       throw toolGatewayError(

@@ -9,6 +9,11 @@ export type {
   ModelProfileRepository,
 } from "./model-profile-repository.js";
 export type {
+  AppendConnectorVersionInput,
+  ConnectorMetadataUpdate,
+  ConnectorRepository,
+} from "./connector-repository.js";
+export type {
   AppendToolVersionInput,
   ToolMetadataUpdate,
   ToolRepository,

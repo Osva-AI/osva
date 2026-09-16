@@ -8,6 +8,7 @@ export { migrateDatabase, migrationsFolder } from "./migrate.js";
 export { PostgresWorkspaceRepository } from "./repositories/postgres-workspace-repository.js";
 export { PostgresAgentRepository } from "./repositories/postgres-agent-repository.js";
 export { PostgresModelProfileRepository } from "./repositories/postgres-model-profile-repository.js";
+export { PostgresConnectorRepository } from "./repositories/postgres-connector-repository.js";
 export { PostgresToolRepository } from "./repositories/postgres-tool-repository.js";
 export { PostgresRunRepository } from "./repositories/postgres-run-repository.js";
 export { PostgresEvaluationRepository } from "./repositories/postgres-evaluation-repository.js";

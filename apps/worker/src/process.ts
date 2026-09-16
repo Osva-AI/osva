@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
+import { createMcpClientPool } from "@osva/adapters-mcp-client";
 import {
   AnthropicProviderAdapter,
   type AnthropicProviderAdapterOptions,
@@ -30,6 +31,7 @@ import {
   checkDatabaseConnection,
   createDatabase,
   PostgresAgentRepository,
+  PostgresConnectorRepository,
   PostgresModelProfileRepository,
   PostgresToolRepository,
   PostgresRunRepository,
@@ -98,6 +100,8 @@ export function createWorkerProcess(
   const injectedRuntime = dependencies.runtime;
   let runtime: RuntimeAdapter | undefined = injectedRuntime;
   let capabilityServer: RuntimeCapabilityServer | undefined;
+  let mcpClientPool:
+    Awaited<ReturnType<typeof createMcpClientPool>> | undefined;
   let consumeStarted = false;
 
   const worker: WorkerApplication = createWorkerApplication({
@@ -114,12 +118,18 @@ export function createWorkerProcess(
       const modelProfiles = new PostgresModelProfileRepository(database);
       const runsRepository = new PostgresRunRepository(database);
       const agents = new PostgresAgentRepository(database);
+      const connectors = new PostgresConnectorRepository(database);
+      mcpClientPool = createMcpClientPool({
+        secretResolver: new ProcessEnvSecretResolver(env),
+      });
       const modelGateway = new ModelGateway({
         modelProfiles,
         providers: composeModelProviders(env, dependencies),
       });
       const toolGateway = new ToolGateway({
         tools: new PostgresToolRepository(database),
+        connectors,
+        mcpClientPool,
         policy: new DefaultToolPolicy(),
       });
       const recorderDeps = {
@@ -215,6 +225,9 @@ export function createWorkerProcess(
       }
       if (capabilityServer !== undefined) {
         await capabilityServer.close();
+      }
+      if (mcpClientPool !== undefined) {
+        await mcpClientPool.close();
       }
       await queue.shutdown();
       await database.close();

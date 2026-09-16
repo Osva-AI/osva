@@ -227,11 +227,23 @@ function toToolListResource(items: readonly Tool[]) {
 }
 
 function toToolVersionResource(version: ToolVersion) {
+  if (version.type === "MCP" && version.mcp !== undefined) {
+    return toolVersionResourceSchema.parse({
+      id: version.id,
+      toolId: version.toolId,
+      version: version.version,
+      type: "MCP",
+      implementation: "MCP_V1",
+      mcp: version.mcp,
+      createdAt: version.createdAt.toISOString(),
+    });
+  }
+
   return toolVersionResourceSchema.parse({
     id: version.id,
     toolId: version.toolId,
     version: version.version,
-    type: version.type,
+    type: "INTERNAL",
     implementation: version.implementation,
     createdAt: version.createdAt.toISOString(),
   });
@@ -239,13 +251,6 @@ function toToolVersionResource(version: ToolVersion) {
 
 function toToolVersionListResource(versions: readonly ToolVersion[]) {
   return toolVersionListResourceSchema.parse({
-    versions: versions.map((version) => ({
-      id: version.id,
-      toolId: version.toolId,
-      version: version.version,
-      type: version.type,
-      implementation: version.implementation,
-      createdAt: version.createdAt.toISOString(),
-    })),
+    versions: versions.map((version) => toToolVersionResource(version)),
   });
 }

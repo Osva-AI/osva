@@ -2,11 +2,13 @@ import { sql } from "drizzle-orm";
 import {
   check,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
+import type { McpToolVersionConfig } from "@osva/contracts";
 
 import { sqlTextInList } from "./sql.js";
 import { PERSISTED_TOOL_TYPES } from "./states.js";
@@ -22,6 +24,7 @@ export const toolVersions = pgTable(
     version: integer("version").notNull(),
     type: text("type").notNull(),
     implementation: text("implementation").notNull(),
+    mcpConfig: jsonb("mcp_config").$type<McpToolVersionConfig>(),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",

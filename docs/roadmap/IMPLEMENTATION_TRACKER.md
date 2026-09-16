@@ -30,15 +30,15 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ 2.2 Branch and parallel workflow nodes
 - ✅ 2.3 Multi-agent composition and approval primitive
 - ✅ 2.4 Runtime Protocol and Remote HTTP runtime
-- ✅ 2.5 Additional model providers
-- 2.6 MCP client and connectors
-- 2.7 Memory namespaces
-- 2.8 OpenTelemetry
-- 2.9 CLI, public SDK, EvaluationSuites, and basic AI Office entities
+- ✅ 2.5 Node SDK, Python SDK, CLI, and public SDK surface
+- ✅ 2.6 Additional model providers
+- ✅ 2.7 MCP client and connector foundation
+- 2.8 Memory namespaces
+- 2.9 OpenTelemetry, EvaluationSuites, and basic AI Office entities
 
 ## Totals
 
 - Stage 0: 8/8 complete
 - Stage 1: 8/8 complete
-- Stage 2: 5/9 complete
-- Overall: 21/33 slices complete
+- Stage 2: 7/9 complete
+- Overall: 23/33 slices complete

@@ -23,8 +23,10 @@
 - ✅ Slice 2.6: additional model providers
   (Anthropic direct API and Google Gemini Developer API behind ModelGateway;
   synchronous text generation only; OpenAI unchanged);
-- MCP client;
-- connectors;
+- ✅ Slice 2.7: MCP client and connector foundation
+  (versioned `Connector` / immutable `ConnectorVersion`; Streamable HTTP and
+  stdio transports; explicit MCP tool discovery into immutable MCP
+  `ToolVersion` snapshots; execution only through ToolGateway);
 - memory namespaces;
 - OpenTelemetry;
 - EvaluationSuites;
@@ -131,3 +133,48 @@ public networks only; private destinations require worker operator opt-in.
 
 Slice 2.4 does not implement Node/Python SDKs, streaming, async remote jobs,
 HTTP retry policy, runtime failover, or a runtime registry.
+
+## Slice 2.7
+
+Stage 2.7 adds a versioned connector foundation and MCP client adapter beneath
+the existing ToolGateway. MCP is an integration protocol, not an alternate
+execution path around OSVA policy, permissions, lifecycle, or immutable
+bindings.
+
+```text
+Connector
+  → immutable ConnectorVersion (kind=MCP, transport, transportConfig, auth refs)
+  → explicit control-plane discovery
+  → OSVA Tool + immutable MCP ToolVersion snapshot
+  → AgentVersion tool binding
+  → Runtime / capability bridge
+  → ToolGateway permission checks
+  → MCP execution adapter
+  → ConnectorVersion
+  → external MCP server
+  → normalized ToolResult / RunStep observability
+```
+
+Supported MCP transports in Community Beta slice 2.7:
+
+- `STREAMABLE_HTTP` (remote MCP HTTP endpoint)
+- `STDIO` (managed local MCP child process, reused per ConnectorVersion)
+
+Supported MCP surface:
+
+- tool discovery (`tools/list` equivalent)
+- tool execution (`tools/call` equivalent)
+
+Discovery is control-plane behavior (`POST .../discover`,
+`POST /v1/connectors/import-mcp-tools`). Execution always uses the immutable
+ToolVersion snapshot bound on the AgentVersion. Remote MCP schema changes create
+new ToolVersions; existing AgentVersions keep their prior snapshots.
+
+Credentials resolve through existing `SecretReference` + `SecretResolver`
+patterns (environment-backed in Community Edition). Plaintext secrets are not
+persisted in ConnectorVersion records, Runtime Protocol, logs, or tool results.
+
+Slice 2.7 does not implement MCP resources, prompts, sampling, roots,
+elicitation/input-required interaction, MCP Tasks, subscriptions, OAuth flows,
+legacy SSE as an OSVA connector transport, OSVA-as-MCP-server, provider-specific
+connectors, runtime-direct MCP APIs, or a connector marketplace.

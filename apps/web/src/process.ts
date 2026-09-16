@@ -4,6 +4,7 @@ import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
   createDatabase,
   PostgresAgentRepository,
+  PostgresConnectorRepository,
   PostgresModelProfileRepository,
   PostgresToolRepository,
   PostgresRunRepository,
@@ -16,6 +17,7 @@ import {
 } from "@osva/db";
 import {
   createAgentApplication,
+  createConnectorApplication,
   createEvaluationApplication,
   createModelProfileApplication,
   createRunApplication,
@@ -25,6 +27,8 @@ import {
   createWorkflowApplication,
 } from "@osva/domain";
 import { PostgresEvaluationRepository } from "@osva/db";
+import { createMcpClientPool } from "@osva/adapters-mcp-client";
+import { ProcessEnvSecretResolver } from "@osva/adapters-runtime-http";
 import { CreateRun } from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
@@ -55,6 +59,7 @@ export function createWebProcess(
   const workspaces = new PostgresWorkspaceRepository(database);
   const modelProfiles = new PostgresModelProfileRepository(database);
   const tools = new PostgresToolRepository(database);
+  const connectors = new PostgresConnectorRepository(database);
   const runs = new PostgresRunRepository(database);
   const scheduleRepository = new PostgresScheduleRepository(database);
   const workflowRepository = new PostgresWorkflowRepository(database);
@@ -64,6 +69,9 @@ export function createWebProcess(
   );
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
+  const mcpClientPool = createMcpClientPool({
+    secretResolver: new ProcessEnvSecretResolver(env),
+  });
   const server = createWebApplication({
     readinessCheck: postgresAndValkeyReadinessCheck(database, queue),
     agents: createAgentApplication({
@@ -83,6 +91,14 @@ export function createWebProcess(
     tools: createToolApplication({
       tools,
       workspaces,
+      clock,
+      ids,
+    }),
+    connectors: createConnectorApplication({
+      connectors,
+      tools,
+      workspaces,
+      mcpClientPool,
       clock,
       ids,
     }),

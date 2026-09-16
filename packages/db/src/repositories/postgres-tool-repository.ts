@@ -171,6 +171,7 @@ export class PostgresToolRepository implements ToolRepository {
         version: nextVersion,
         type: input.type,
         implementation: input.implementation,
+        mcp: input.mcp,
         createdAt: input.createdAt,
       });
 

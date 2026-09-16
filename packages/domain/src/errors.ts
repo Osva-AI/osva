@@ -1,17 +1,21 @@
 import type {
   AgentId,
   AgentVersionId,
+  ApprovalRequestId,
+  ApprovalRequestState,
+  ConnectorId,
+  ConnectorVersionId,
   EvaluationId,
   ModelProfileId,
   ModelProfileVersionId,
-  ScheduleId,
-  ToolId,
-  ToolVersionId,
   RunAttemptId,
   RunAttemptState,
   RunId,
   RunState,
   RunStepId,
+  ScheduleId,
+  ToolId,
+  ToolVersionId,
   WorkflowId,
   WorkflowNodeRunId,
   WorkflowNodeRunState,
@@ -19,8 +23,6 @@ import type {
   WorkflowRunState,
   WorkflowVersionId,
   WorkspaceId,
-  ApprovalRequestId,
-  ApprovalRequestState,
 } from "@osva/contracts";
 
 export class DomainError extends Error {
@@ -159,6 +161,39 @@ export class DuplicateToolKeyError extends DomainInvariantError {
     this.key = key;
   }
 }
+
+export class ConnectorNotFoundError extends DomainError {
+  readonly connectorId: ConnectorId;
+
+  constructor(connectorId: ConnectorId) {
+    super(`Connector ${connectorId} was not found.`);
+    this.connectorId = connectorId;
+  }
+}
+
+export class ConnectorVersionNotFoundError extends DomainError {
+  readonly connectorVersionId: ConnectorVersionId;
+
+  constructor(connectorVersionId: ConnectorVersionId) {
+    super(`ConnectorVersion ${connectorVersionId} was not found.`);
+    this.connectorVersionId = connectorVersionId;
+  }
+}
+
+export class DuplicateConnectorKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `Connector key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class InvalidConnectorTransportError extends DomainInvariantError {}
 
 export class DuplicateScheduleKeyError extends DomainInvariantError {
   readonly workspaceId: WorkspaceId;

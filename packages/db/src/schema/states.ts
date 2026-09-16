@@ -30,7 +30,14 @@ export const PERSISTED_MODEL_PROVIDERS = [
   "GOOGLE_GEMINI",
 ] as const;
 
-export const PERSISTED_TOOL_TYPES = ["INTERNAL"] as const;
+export const PERSISTED_TOOL_TYPES = ["INTERNAL", "MCP"] as const;
+
+export const PERSISTED_CONNECTOR_KINDS = ["MCP"] as const;
+
+export const PERSISTED_CONNECTOR_TRANSPORTS = [
+  "STREAMABLE_HTTP",
+  "STDIO",
+] as const;
 
 export const PERSISTED_RUN_STEP_KINDS = ["MODEL", "TOOL"] as const;
 

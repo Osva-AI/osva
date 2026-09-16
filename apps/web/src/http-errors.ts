@@ -2,8 +2,11 @@ import type { ServerResponse } from "node:http";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
+  ConnectorNotFoundError,
+  ConnectorVersionNotFoundError,
   DomainInvariantError,
   DuplicateAgentKeyError,
+  DuplicateConnectorKeyError,
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
   DuplicateScheduleKeyError,
@@ -54,6 +57,8 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof WorkspaceNotFoundError ||
     error instanceof RunNotFoundError ||
     error instanceof RunAttemptNotFoundError ||
+    error instanceof ConnectorNotFoundError ||
+    error instanceof ConnectorVersionNotFoundError ||
     error instanceof ModelProfileNotFoundError ||
     error instanceof ModelProfileVersionNotFoundError ||
     error instanceof ToolNotFoundError ||
@@ -77,6 +82,7 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
 
   if (
     error instanceof DuplicateAgentKeyError ||
+    error instanceof DuplicateConnectorKeyError ||
     error instanceof DuplicateModelProfileKeyError ||
     error instanceof DuplicateToolKeyError ||
     error instanceof DuplicateScheduleKeyError ||

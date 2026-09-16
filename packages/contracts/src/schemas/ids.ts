@@ -23,6 +23,8 @@ export const workflowNodeRunIdSchema = osvaIdSchema<"WorkflowNodeRunId">();
 export const approvalRequestIdSchema = osvaIdSchema<"ApprovalRequestId">();
 export const toolIdSchema = osvaIdSchema<"ToolId">();
 export const toolVersionIdSchema = osvaIdSchema<"ToolVersionId">();
+export const connectorIdSchema = osvaIdSchema<"ConnectorId">();
+export const connectorVersionIdSchema = osvaIdSchema<"ConnectorVersionId">();
 export const modelProfileIdSchema = osvaIdSchema<"ModelProfileId">();
 export const modelProfileVersionIdSchema =
   osvaIdSchema<"ModelProfileVersionId">();

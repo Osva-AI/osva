@@ -8,6 +8,8 @@ export { runSteps } from "./run-steps.js";
 export { evaluations } from "./evaluations.js";
 export { modelProfiles } from "./model-profiles.js";
 export { modelProfileVersions } from "./model-profile-versions.js";
+export { connectors } from "./connectors.js";
+export { connectorVersions } from "./connector-versions.js";
 export { tools } from "./tools.js";
 export { toolVersions } from "./tool-versions.js";
 export { schedules } from "./schedules.js";
@@ -19,6 +21,8 @@ export { workflowNodeRuns } from "./workflow-node-runs.js";
 export { approvalRequests } from "./approval-requests.js";
 export {
   PERSISTED_EVALUATOR_TYPES,
+  PERSISTED_CONNECTOR_KINDS,
+  PERSISTED_CONNECTOR_TRANSPORTS,
   PERSISTED_MODEL_PROVIDERS,
   PERSISTED_TOOL_TYPES,
   PERSISTED_RUN_ATTEMPT_STATES,

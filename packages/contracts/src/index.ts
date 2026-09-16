@@ -16,6 +16,8 @@ export type {
   ScheduleOccurrenceId,
   ToolId,
   ToolVersionId,
+  ConnectorId,
+  ConnectorVersionId,
   WorkflowId,
   WorkflowNodeRunId,
   WorkflowRunId,
@@ -60,12 +62,58 @@ export type {
 export type {
   CreateToolRequestV1,
   CreateToolVersionRequestV1,
+  InternalToolVersionResourceV1,
+  McpToolVersionResourceV1,
   ToolListResourceV1,
   ToolResourceV1,
   ToolVersionListResourceV1,
   ToolVersionResourceV1,
   UpdateToolRequestV1,
 } from "./tool-registry.js";
+
+export {
+  CONNECTOR_KINDS,
+  CONNECTOR_TRANSPORTS,
+  isConnectorKind,
+  isConnectorTransport,
+  isStdioTransportConfig,
+  isStreamableHttpTransportConfig,
+} from "./connector.js";
+export type {
+  ConnectorAuthConfig,
+  ConnectorBearerAuthConfig,
+  ConnectorHeaderAuthConfig,
+  ConnectorKind,
+  ConnectorTransport,
+  ConnectorTransportConfig,
+  StdioTransportConfig,
+  StreamableHttpTransportConfig,
+} from "./connector.js";
+
+export type {
+  ConnectorListResourceV1,
+  ConnectorResourceV1,
+  ConnectorVersionListResourceV1,
+  ConnectorVersionResourceV1,
+  CreateConnectorRequestV1,
+  CreateConnectorVersionRequestV1,
+  DiscoverConnectorToolsResponseV1,
+  DiscoveredMcpToolV1,
+  ImportMcpToolRequestV1,
+  ImportMcpToolsRequestV1,
+  ImportMcpToolsResponseV1,
+  ImportedMcpToolResourceV1,
+  UpdateConnectorRequestV1,
+} from "./connector-registry.js";
+
+export type {
+  DiscoveredMcpTool,
+  McpClientAdapter,
+  McpClientPool,
+  McpClientPoolKey,
+  McpToolInvokeRequest,
+  McpToolInvokeResult,
+} from "./mcp-client.js";
 
 export {
   RUN_ATTEMPT_STATES,
@@ -181,6 +229,7 @@ export {
   TOOL_EFFECT_CLASSIFICATIONS,
   TOOL_ERROR_CODES,
   TOOL_TYPES,
+  MCP_TOOL_IMPLEMENTATION,
   isInternalToolImplementationId,
   isToolBindingName,
   isToolErrorCode,
@@ -188,6 +237,8 @@ export {
 } from "./tool-gateway.js";
 export type {
   InternalToolImplementationId,
+  McpToolImplementationId,
+  McpToolVersionConfig,
   ToolAuthorizationContext,
   ToolEffectClassification,
   ToolErrorCode,
