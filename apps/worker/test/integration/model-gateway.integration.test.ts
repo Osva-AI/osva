@@ -15,6 +15,8 @@ import {
 } from "@osva/db";
 import { Workspace } from "@osva/domain";
 
+import { startFakeAnthropicMessagesServer } from "../../../../adapters/model-anthropic/test/fake-anthropic-server.js";
+import { startFakeGeminiGenerateContentServer } from "../../../../adapters/model-gemini/test/fake-gemini-server.js";
 import { startFakeOpenAIResponsesServer } from "../../../../adapters/model-openai/test/fake-openai-server.js";
 import { createWebProcess } from "../../../../apps/web/src/process.js";
 import { createWorkerProcess } from "../../src/process.js";
@@ -331,6 +333,189 @@ describe("model gateway end-to-end", () => {
     }
   });
 
+  it("freezes Anthropic bindings and executes generateText through the Anthropic adapter", async () => {
+    await runProviderEndToEnd(postgres, valkey, {
+      provider: "ANTHROPIC",
+      model: "claude-test-snapshot",
+      expectedText: "normalized text from fake anthropic",
+      expectedUsage: {
+        inputTokens: 120,
+        outputTokens: 15,
+        totalTokens: 135,
+        estimatedCostUsdMicros: 150,
+      },
+      startFakeProvider: startFakeAnthropicMessagesServer,
+      workerDependencyKey: "anthropic",
+      assertProviderRequest: (requests) => {
+        expect(requests[0]?.body).toMatchObject({
+          model: "claude-test-snapshot",
+          system: "You are concise.",
+        });
+      },
+    });
+  });
+
+  it("freezes Gemini bindings and executes generateText through the Gemini adapter", async () => {
+    await runProviderEndToEnd(postgres, valkey, {
+      provider: "GOOGLE_GEMINI",
+      model: "gemini-test-snapshot",
+      expectedText: "normalized text from fake gemini",
+      expectedUsage: {
+        inputTokens: 120,
+        outputTokens: 15,
+        totalTokens: 135,
+        estimatedCostUsdMicros: 150,
+      },
+      startFakeProvider: startFakeGeminiGenerateContentServer,
+      workerDependencyKey: "gemini",
+      assertProviderRequest: (requests) => {
+        expect(requests[0]?.url).toContain(
+          "/models/gemini-test-snapshot:generateContent",
+        );
+        expect(requests[0]?.body).toMatchObject({
+          systemInstruction: { parts: [{ text: "You are concise." }] },
+        });
+      },
+    });
+  });
+
+  it("records unpriced usage when a Gemini model profile version has no pricing snapshot", async () => {
+    const trustedRuntimeRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-e2e-gemini-unpriced-"),
+    );
+    await fs.copyFile(
+      path.join(FIXTURE_DIR, "model-text-agent.ts"),
+      path.join(trustedRuntimeRoot, "model-text-agent.ts"),
+    );
+    const integrity = sha256IntegrityOf(
+      await fs.readFile(path.join(trustedRuntimeRoot, "model-text-agent.ts")),
+    );
+    const fakeGemini = await startFakeGeminiGenerateContentServer();
+
+    const web = createWebProcess({
+      OSVA_DATABASE_URL: postgres.connectionString,
+      OSVA_VALKEY_URL: valkey.url,
+      OSVA_WEB_HOST: "127.0.0.1",
+      OSVA_WEB_PORT: "0",
+    });
+    const worker = createWorkerProcess(
+      {
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+      },
+      (connectionString) => createDatabase({ connectionString, max: 5 }),
+      {
+        gemini: {
+          apiKey: "test-key",
+          baseURL: fakeGemini.origin,
+        },
+      },
+    );
+
+    try {
+      const port = await web.listen();
+      await worker.start();
+      const origin = `http://127.0.0.1:${String(port)}`;
+      const profile = await fetchJson(`${origin}/v1/model-profiles`, {
+        method: "POST",
+        body: {
+          workspaceId: WORKSPACE_ID,
+          key: "primary",
+          name: "Primary",
+        },
+      });
+      const modelProfileId = (profile.body as { id: string }).id;
+      const version = await fetchJson(
+        `${origin}/v1/model-profiles/${modelProfileId}/versions`,
+        {
+          method: "POST",
+          body: { provider: "GOOGLE_GEMINI", model: "gemini-test-snapshot" },
+        },
+      );
+      const modelProfileVersionId = (version.body as { id: string }).id;
+      const agent = await fetchJson(`${origin}/v1/agents`, {
+        method: "POST",
+        body: {
+          workspaceId: WORKSPACE_ID,
+          key: "model-text-agent",
+          name: "Model Text Agent",
+        },
+      });
+      const agentId = (agent.body as { id: string }).id;
+      const agentVersion = await fetchJson(
+        `${origin}/v1/agents/${agentId}/versions`,
+        {
+          method: "POST",
+          body: {
+            manifest: {
+              schemaVersion: "1",
+              key: "model-text-agent",
+              name: "Model Text Agent",
+              runtime: {
+                type: "TRUSTED_TYPESCRIPT",
+                entrypoint: "model-text-agent.ts",
+                integrity,
+              },
+              input: { schema: {} },
+              output: { schema: {} },
+              execution: { timeoutMs: 8_000, maxAttempts: 1 },
+              capabilities: { model: true, tools: [] },
+              models: {
+                primary: { modelProfileVersionId },
+              },
+            },
+          },
+        },
+      );
+      const created = await fetchJson(`${origin}/v1/runs`, {
+        method: "POST",
+        body: {
+          workspaceId: WORKSPACE_ID,
+          agentId,
+          agentVersionId: (agentVersion.body as { id: string }).id,
+          input: { prompt: "e2e-gemini-unpriced" },
+        },
+      });
+      const runId = (created.body as { run: { id: string } }).run.id;
+      const runAttemptId = (created.body as { runAttempt: { id: string } })
+        .runAttempt.id;
+
+      await waitUntil(async () => {
+        const run = await fetchJson(`${origin}/v1/runs/${runId}`);
+        return (
+          run.status === 200 &&
+          (run.body as { status?: string }).status === "SUCCEEDED"
+        );
+      });
+
+      const steps = await fetchJson(
+        `${origin}/v1/runs/${runId}/attempts/${runAttemptId}/steps`,
+      );
+      expect(
+        (steps.body as { steps: Array<Record<string, unknown>> }).steps[0],
+      ).toMatchObject({
+        inputTokens: 120,
+        outputTokens: 15,
+        totalTokens: 135,
+        estimatedCostUsdMicros: null,
+      });
+
+      const usage = await fetchJson(
+        `${origin}/v1/runs/${runId}/attempts/${runAttemptId}/usage`,
+      );
+      expect(usage.body).toMatchObject({
+        pricedModelCalls: 0,
+        unpricedModelCalls: 1,
+        estimatedCostUsdMicros: null,
+      });
+    } finally {
+      await worker.stop();
+      await web.stop();
+      await fakeGemini.close();
+    }
+  });
+
   it("fails OPENAI bindings with MODEL_PROVIDER_UNAVAILABLE when no key is configured", async () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-e2e-model-unavailable-"),
@@ -443,6 +628,184 @@ describe("model gateway end-to-end", () => {
     }
   });
 });
+
+async function runProviderEndToEnd(
+  postgres: PostgresTestContext,
+  valkey: ValkeyTestContext,
+  options: {
+    readonly provider: "ANTHROPIC" | "GOOGLE_GEMINI" | "OPENAI";
+    readonly model: string;
+    readonly expectedText: string;
+    readonly expectedUsage: {
+      readonly inputTokens: number;
+      readonly outputTokens: number;
+      readonly totalTokens: number;
+      readonly estimatedCostUsdMicros: number;
+    };
+    readonly startFakeProvider: () => Promise<{
+      readonly origin: string;
+      readonly requests: Array<{
+        readonly body: unknown;
+        readonly url?: string;
+      }>;
+      close(): Promise<void>;
+    }>;
+    readonly workerDependencyKey: "anthropic" | "gemini" | "openai";
+    readonly assertProviderRequest: (
+      requests: Array<{ readonly body: unknown; readonly url?: string }>,
+    ) => void;
+  },
+): Promise<void> {
+  const trustedRuntimeRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), `osva-e2e-model-${options.provider.toLowerCase()}-`),
+  );
+  await fs.copyFile(
+    path.join(FIXTURE_DIR, "model-text-agent.ts"),
+    path.join(trustedRuntimeRoot, "model-text-agent.ts"),
+  );
+  const integrity = sha256IntegrityOf(
+    await fs.readFile(path.join(trustedRuntimeRoot, "model-text-agent.ts")),
+  );
+  const fakeProvider = await options.startFakeProvider();
+
+  const web = createWebProcess({
+    OSVA_DATABASE_URL: postgres.connectionString,
+    OSVA_VALKEY_URL: valkey.url,
+    OSVA_WEB_HOST: "127.0.0.1",
+    OSVA_WEB_PORT: "0",
+  });
+  const worker = createWorkerProcess(
+    {
+      OSVA_DATABASE_URL: postgres.connectionString,
+      OSVA_VALKEY_URL: valkey.url,
+      OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+    },
+    (connectionString) => createDatabase({ connectionString, max: 5 }),
+    {
+      [options.workerDependencyKey]: {
+        apiKey: "test-key",
+        baseURL: fakeProvider.origin,
+        maxRetries: 0,
+      },
+    },
+  );
+
+  try {
+    const port = await web.listen();
+    await worker.start();
+    const origin = `http://127.0.0.1:${String(port)}`;
+
+    const profile = await fetchJson(`${origin}/v1/model-profiles`, {
+      method: "POST",
+      body: {
+        workspaceId: WORKSPACE_ID,
+        key: "primary",
+        name: "Primary",
+      },
+    });
+    const modelProfileId = (profile.body as { id: string }).id;
+    const version = await fetchJson(
+      `${origin}/v1/model-profiles/${modelProfileId}/versions`,
+      {
+        method: "POST",
+        body: {
+          provider: options.provider,
+          model: options.model,
+          pricing: {
+            currency: "USD",
+            inputUsdMicrosPerMillionTokens: 1_000_000,
+            outputUsdMicrosPerMillionTokens: 2_000_000,
+          },
+        },
+      },
+    );
+    const modelProfileVersionId = (version.body as { id: string }).id;
+    const agent = await fetchJson(`${origin}/v1/agents`, {
+      method: "POST",
+      body: {
+        workspaceId: WORKSPACE_ID,
+        key: "model-text-agent",
+        name: "Model Text Agent",
+      },
+    });
+    const agentId = (agent.body as { id: string }).id;
+    const agentVersion = await fetchJson(
+      `${origin}/v1/agents/${agentId}/versions`,
+      {
+        method: "POST",
+        body: {
+          manifest: {
+            schemaVersion: "1",
+            key: "model-text-agent",
+            name: "Model Text Agent",
+            runtime: {
+              type: "TRUSTED_TYPESCRIPT",
+              entrypoint: "model-text-agent.ts",
+              integrity,
+            },
+            input: { schema: {} },
+            output: { schema: {} },
+            execution: { timeoutMs: 8_000, maxAttempts: 1 },
+            capabilities: { model: true, tools: [] },
+            models: {
+              primary: { modelProfileVersionId },
+            },
+          },
+        },
+      },
+    );
+    const created = await fetchJson(`${origin}/v1/runs`, {
+      method: "POST",
+      body: {
+        workspaceId: WORKSPACE_ID,
+        agentId,
+        agentVersionId: (agentVersion.body as { id: string }).id,
+        input: { prompt: `e2e-${options.provider.toLowerCase()}` },
+      },
+    });
+    const runId = (created.body as { run: { id: string } }).run.id;
+    const runAttemptId = (created.body as { runAttempt: { id: string } })
+      .runAttempt.id;
+
+    await waitUntil(async () => {
+      const run = await fetchJson(`${origin}/v1/runs/${runId}`);
+      return (
+        run.status === 200 &&
+        (run.body as { status?: string }).status === "SUCCEEDED"
+      );
+    });
+
+    const attempt = await fetchJson(
+      `${origin}/v1/runs/${runId}/attempts/${runAttemptId}`,
+    );
+    expect(attempt.body).toMatchObject({
+      status: "SUCCEEDED",
+      output: { text: options.expectedText },
+    });
+    expect(fakeProvider.requests).toHaveLength(1);
+    options.assertProviderRequest(fakeProvider.requests);
+
+    const steps = await fetchJson(
+      `${origin}/v1/runs/${runId}/attempts/${runAttemptId}/steps`,
+    );
+    expect(
+      (steps.body as { steps: Array<Record<string, unknown>> }).steps[0],
+    ).toMatchObject({
+      kind: "MODEL",
+      bindingName: "primary",
+      status: "SUCCEEDED",
+      modelProfileVersionId,
+      ...options.expectedUsage,
+    });
+    expect(
+      (steps.body as { steps: Array<Record<string, unknown>> }).steps[0],
+    ).not.toHaveProperty("apiKey");
+  } finally {
+    await worker.stop();
+    await web.stop();
+    await fakeProvider.close();
+  }
+}
 
 async function waitUntil(check: () => Promise<boolean>): Promise<void> {
   const deadline = Date.now() + 15_000;

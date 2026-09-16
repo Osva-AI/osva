@@ -2,9 +2,18 @@ import { randomUUID } from "node:crypto";
 
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
+  AnthropicProviderAdapter,
+  type AnthropicProviderAdapterOptions,
+} from "@osva/adapters-model-anthropic";
+import {
+  GeminiProviderAdapter,
+  type GeminiProviderAdapterOptions,
+} from "@osva/adapters-model-gemini";
+import {
   OpenAIProviderAdapter,
   type OpenAIProviderAdapterOptions,
 } from "@osva/adapters-model-openai";
+import type { ModelProvider } from "@osva/contracts";
 import {
   ProcessEnvSecretResolver,
   RemoteHttpRuntimeAdapter,
@@ -26,7 +35,7 @@ import {
   PostgresRunRepository,
   type Database,
 } from "@osva/db";
-import { ModelGateway } from "@osva/model-gateway";
+import { ModelGateway, type ModelProviderAdapter } from "@osva/model-gateway";
 import { createRunStepRecorder } from "@osva/observability";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
@@ -54,6 +63,12 @@ export interface WorkerProcessDependencies {
   readonly runtime?: RuntimeAdapter;
   readonly clock?: { now(): Date };
   readonly openai?: Omit<OpenAIProviderAdapterOptions, "apiKey"> & {
+    readonly apiKey?: string;
+  };
+  readonly anthropic?: Omit<AnthropicProviderAdapterOptions, "apiKey"> & {
+    readonly apiKey?: string;
+  };
+  readonly gemini?: Omit<GeminiProviderAdapterOptions, "apiKey"> & {
     readonly apiKey?: string;
   };
 }
@@ -101,7 +116,7 @@ export function createWorkerProcess(
       const agents = new PostgresAgentRepository(database);
       const modelGateway = new ModelGateway({
         modelProfiles,
-        providers: composeOpenAIProviders(env, dependencies.openai),
+        providers: composeModelProviders(env, dependencies),
       });
       const toolGateway = new ToolGateway({
         tools: new PostgresToolRepository(database),
@@ -226,24 +241,48 @@ export function createWorkerProcess(
   };
 }
 
-function composeOpenAIProviders(
+function composeModelProviders(
   env: NodeJS.ProcessEnv,
-  openai: WorkerProcessDependencies["openai"],
-): ConstructorParameters<typeof ModelGateway>[0]["providers"] {
-  const apiKey = openai?.apiKey ?? env.OPENAI_API_KEY?.trim();
-  if (apiKey === undefined || apiKey.length === 0) {
-    return {};
+  dependencies: WorkerProcessDependencies,
+): Partial<Record<ModelProvider, ModelProviderAdapter>> {
+  const providers: Partial<Record<ModelProvider, ModelProviderAdapter>> = {};
+
+  const openaiApiKey =
+    dependencies.openai?.apiKey ?? env.OPENAI_API_KEY?.trim();
+  if (openaiApiKey !== undefined && openaiApiKey.length > 0) {
+    providers.OPENAI = new OpenAIProviderAdapter({
+      apiKey: openaiApiKey,
+      baseURL: dependencies.openai?.baseURL,
+      fetch: dependencies.openai?.fetch,
+      maxRetries: dependencies.openai?.maxRetries,
+      timeout: dependencies.openai?.timeout,
+    });
   }
 
-  return {
-    OPENAI: new OpenAIProviderAdapter({
-      apiKey,
-      baseURL: openai?.baseURL,
-      fetch: openai?.fetch,
-      maxRetries: openai?.maxRetries,
-      timeout: openai?.timeout,
-    }),
-  };
+  const anthropicApiKey =
+    dependencies.anthropic?.apiKey ?? env.ANTHROPIC_API_KEY?.trim();
+  if (anthropicApiKey !== undefined && anthropicApiKey.length > 0) {
+    providers.ANTHROPIC = new AnthropicProviderAdapter({
+      apiKey: anthropicApiKey,
+      baseURL: dependencies.anthropic?.baseURL,
+      fetch: dependencies.anthropic?.fetch,
+      maxRetries: dependencies.anthropic?.maxRetries,
+      timeout: dependencies.anthropic?.timeout,
+    });
+  }
+
+  const geminiApiKey =
+    dependencies.gemini?.apiKey ?? env.GOOGLE_GEMINI_API_KEY?.trim();
+  if (geminiApiKey !== undefined && geminiApiKey.length > 0) {
+    providers.GOOGLE_GEMINI = new GeminiProviderAdapter({
+      apiKey: geminiApiKey,
+      baseURL: dependencies.gemini?.baseURL,
+      fetch: dependencies.gemini?.fetch,
+      timeout: dependencies.gemini?.timeout,
+    });
+  }
+
+  return providers;
 }
 
 function isClosableRuntime(

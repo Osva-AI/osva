@@ -18,6 +18,8 @@
     { "path": "../../packages/runtime-protocol" },
     { "path": "../../packages/tool-gateway" },
     { "path": "../../adapters/bullmq" },
+    { "path": "../../adapters/model-anthropic" },
+    { "path": "../../adapters/model-gemini" },
     { "path": "../../adapters/model-openai" },
     { "path": "../../adapters/runtime-http" },
     { "path": "../../adapters/runtime-typescript" }

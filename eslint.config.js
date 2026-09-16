@@ -243,6 +243,129 @@ export default tseslint.config(
     },
   },
   {
+    files: ["adapters/model-anthropic/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message:
+                "adapters/model-anthropic stays below ModelGateway and cannot import domain persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "adapters/model-anthropic cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "adapters/model-anthropic cannot import runtime-core.",
+            },
+            {
+              name: "@osva/db",
+              message: "adapters/model-anthropic cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "adapters/model-anthropic cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "adapters/model-anthropic cannot import apps.",
+            },
+            {
+              name: "@osva/adapters-memory",
+              message:
+                "adapters/model-anthropic production code cannot import test adapters.",
+            },
+            {
+              name: "openai",
+              message:
+                "adapters/model-anthropic implements only the Anthropic provider.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["openai/*"],
+              message:
+                "adapters/model-anthropic implements only the Anthropic provider.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "adapters/model-anthropic cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["adapters/model-gemini/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message:
+                "adapters/model-gemini stays below ModelGateway and cannot import domain persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "adapters/model-gemini cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message: "adapters/model-gemini cannot import runtime-core.",
+            },
+            {
+              name: "@osva/db",
+              message: "adapters/model-gemini cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "adapters/model-gemini cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "adapters/model-gemini cannot import apps.",
+            },
+            {
+              name: "@osva/adapters-memory",
+              message:
+                "adapters/model-gemini production code cannot import test adapters.",
+            },
+            {
+              name: "openai",
+              message:
+                "adapters/model-gemini implements only the Google Gemini provider.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message:
+                "adapters/model-gemini implements only the Google Gemini provider.",
+            },
+            {
+              group: ["openai/*"],
+              message:
+                "adapters/model-gemini implements only the Google Gemini provider.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "adapters/model-gemini cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["adapters/bullmq/src/**/*.ts"],
     rules: {
       "no-restricted-imports": [
