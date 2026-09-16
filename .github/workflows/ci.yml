@@ -53,21 +53,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Unit tests
-        run: pnpm test
-
-      - name: Build
-        run: pnpm build
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -76,20 +61,27 @@ jobs:
       - name: Install Python SDK for integration tests
         run: |
           python -m pip install --upgrade pip
-          pip install -e ./sdks/python
+          python -m pip install -e ./sdks/python
 
-      - name: Integration tests (self-managed PostgreSQL)
-        run: pnpm test:integration
+      - name: Verify
+        run: pnpm verify:ci
 
   python-sdk:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: sdks/python
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -97,24 +89,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install SDK and dev dependencies
+        working-directory: sdks/python
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          python -m pip install -e ".[dev]"
 
-      - name: Format check
-        run: ruff format --check .
-
-      - name: Lint
-        run: ruff check .
-
-      - name: Typecheck
-        run: mypy src
-
-      - name: Tests
-        run: pytest
-
-      - name: Build wheel and sdist
-        run: python -m build
+      - name: Verify Python SDK
+        run: pnpm verify:python
 
   compose-smoke:
     runs-on: ubuntu-latest

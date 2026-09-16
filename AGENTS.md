@@ -107,7 +107,11 @@ Every concrete infrastructure adapter must pass the shared contract tests for it
 
 Permanent state machines and invariants require unit tests.
 
-Before completion run relevant formatter, lint, typecheck, unit, integration, and E2E commands.
+See `docs/engineering/DEVELOPMENT_GATES.md`.
+
+During implementation, run `pnpm verify:quick` at meaningful checkpoints.
+
+Before completion, run `pnpm verify:ci:clean`.
 
 Do not claim commands passed unless they were actually executed.
 

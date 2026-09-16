@@ -363,14 +363,13 @@ control plane.
 ### Quality commands
 
 ```text
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm test:integration
-pnpm infra:down
+pnpm verify:quick
+pnpm verify:ci:clean
 ```
+
+`pnpm verify:quick` is the inner development loop. `pnpm verify:ci:clean` is
+the local gate before review. GitHub CI runs the same `pnpm verify:ci` and
+`pnpm verify:python` commands. See `docs/engineering/DEVELOPMENT_GATES.md`.
 
 ## Contributing
 
