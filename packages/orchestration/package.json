@@ -19,6 +19,7 @@
   "dependencies": {
     "@osva/contracts": "workspace:*",
     "@osva/domain": "workspace:*",
+    "@osva/observability": "workspace:*",
     "@osva/runtime-core": "workspace:*"
   },
   "devDependencies": {

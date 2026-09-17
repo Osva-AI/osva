@@ -29,6 +29,8 @@ Workflow
   ├── WorkflowVersion*
   └── WorkflowRun*
        └── WorkflowNodeRun*
+            ├── canonical child Run (AGENT only)
+            └── ApprovalRequest (APPROVAL only)
 ```
 
 ## Tool

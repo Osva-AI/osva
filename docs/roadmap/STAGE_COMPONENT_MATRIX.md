@@ -4,8 +4,8 @@
 |---|---|---|---|---|---|
 | DB | repositories | PostgreSQL foundation | PostgreSQL | PostgreSQL | production topology |
 | Job dispatch | JobQueue | fake | BullMQ | BullMQ | pluggable |
-| Durable workflows | DurableWorkflowBackend | boundary | none | OSVA coordinator | durable adapter |
-| Runtime | RuntimeAdapter | contract | trusted TS | Node/Python/HTTP | container |
+| Durable workflows | DurableWorkflowBackend | boundary | none | OSVA DAG coordinator | durable adapter |
+| Runtime | RuntimeAdapter | contract | trusted TS | trusted TS + remote HTTP | container |
 | Models | ModelGateway | contract | first provider | multi-provider | routing hooks |
 | Tools | Tool contract | contract | internal | HTTP/MCP | connector SDK |
 | Secrets | SecretResolver | contract | env | additional | pluggable |

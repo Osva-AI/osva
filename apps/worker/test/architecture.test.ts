@@ -54,13 +54,6 @@ function toRepoPath(filePath: string): string {
 }
 
 function forbiddenWorkerImport(specifier: string): string | undefined {
-  if (
-    specifier === "@osva/runtime-core" ||
-    specifier.startsWith("@osva/runtime-core/")
-  ) {
-    return "@osva/runtime-core";
-  }
-
   if (specifier === "@osva/web" || specifier.startsWith("@osva/web/")) {
     return "@osva/web";
   }

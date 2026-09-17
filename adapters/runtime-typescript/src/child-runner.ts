@@ -7,6 +7,10 @@ import {
   ModelCapabilityError,
 } from "./model-capability.js";
 import {
+  createTrustedAgentMemory,
+  MemoryCapabilityError,
+} from "./memory-capability.js";
+import {
   createTrustedAgentTools,
   ToolCapabilityError,
 } from "./tool-capability.js";
@@ -44,6 +48,7 @@ async function handle(raw: unknown): Promise<void> {
       ...raw.context,
       models: createTrustedAgentModels(),
       tools: createTrustedAgentTools(),
+      memory: createTrustedAgentMemory(),
     });
     const output: unknown = await run(context);
     if (!isChildJsonValue(output)) {
@@ -66,6 +71,11 @@ async function handle(raw: unknown): Promise<void> {
     }
 
     if (error instanceof ToolCapabilityError) {
+      sendFailure(error.code, error.message);
+      return;
+    }
+
+    if (error instanceof MemoryCapabilityError) {
       sendFailure(error.code, error.message);
       return;
     }

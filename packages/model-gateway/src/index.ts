@@ -17,3 +17,13 @@ export type {
   NormalizedModelUsage,
   ProviderGenerateTextResult,
 } from "./usage.js";
+export {
+  MODEL_FINISH_REASONS,
+  isModelFinishReason,
+  type ModelFinishReason,
+} from "./finish-reason.js";
+export {
+  splitSystemAndConversationMessages,
+  type SplitModelMessagesResult,
+} from "./messages.js";
+export type { ModelGatewayErrorOptions } from "./errors.js";

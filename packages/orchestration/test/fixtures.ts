@@ -66,6 +66,7 @@ export function createBindings(
       "tool.summarize": secondaryModelProfileVersionId,
     },
     toolVersionBindings: {},
+    memoryNamespaceBindings: {},
   });
 }
 

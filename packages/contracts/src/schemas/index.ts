@@ -1,10 +1,17 @@
 export {
   agentIdSchema,
   agentVersionIdSchema,
+  approvalRequestIdSchema,
   artifactIdSchema,
   deploymentIdSchema,
+  evaluationCaseIdSchema,
+  evaluationCaseResultIdSchema,
   evaluationIdSchema,
+  evaluationRunIdSchema,
+  evaluationSuiteIdSchema,
+  evaluationSuiteVersionIdSchema,
   eventIdSchema,
+  memoryNamespaceIdSchema,
   modelProfileIdSchema,
   modelProfileVersionIdSchema,
   runAttemptIdSchema,
@@ -14,16 +21,24 @@ export {
   scheduleOccurrenceIdSchema,
   toolIdSchema,
   toolVersionIdSchema,
+  connectorIdSchema,
+  connectorVersionIdSchema,
   workflowIdSchema,
   workflowNodeRunIdSchema,
   workflowRunIdSchema,
   workflowVersionIdSchema,
   workspaceIdSchema,
+  officeWorkerIdSchema,
+  roleIdSchema,
+  teamIdSchema,
+  goalIdSchema,
+  assignmentIdSchema,
 } from "./ids.js";
 
 export { jsonSchemaRecordSchema } from "./json-schema.js";
 export { jsonValueSchema } from "./json-value.js";
 export { agentManifestSchema, agentRuntimeSchema } from "./agent-manifest.js";
+export { secretReferenceSchema } from "./secret-reference.js";
 
 export {
   createModelProfileRequestSchema,
@@ -59,6 +74,8 @@ export {
 export {
   createToolRequestSchema,
   createToolVersionRequestSchema,
+  internalToolVersionResourceSchema,
+  mcpToolVersionResourceSchema,
   toolListResourceSchema,
   toolResourceSchema,
   toolVersionListResourceSchema,
@@ -67,7 +84,32 @@ export {
 } from "./tool-registry.js";
 
 export {
+  connectorAuthConfigSchema,
+  connectorKindSchema,
+  connectorTransportConfigSchema,
+  connectorTransportSchema,
+  stdioTransportConfigSchema,
+  streamableHttpTransportConfigSchema,
+} from "./connector.js";
+
+export {
+  connectorListResourceSchema,
+  connectorResourceSchema,
+  connectorVersionListResourceSchema,
+  connectorVersionResourceSchema,
+  createConnectorRequestSchema,
+  createConnectorVersionRequestSchema,
+  discoverConnectorToolsResponseSchema,
+  discoveredMcpToolSchema,
+  importMcpToolsRequestSchema,
+  importMcpToolsResponseSchema,
+  importedMcpToolResourceSchema,
+  updateConnectorRequestSchema,
+} from "./connector-registry.js";
+
+export {
   internalToolImplementationIdSchema,
+  mcpToolVersionConfigSchema,
   toolBindingNameSchema,
   toolTypeSchema,
 } from "./tool-gateway.js";
@@ -122,7 +164,65 @@ export {
 
 export { toolGrantSchema, toolInvocationSchema } from "./tool.js";
 
-export { workflowDefinitionSchema } from "./workflow-definition.js";
+export {
+  workflowDefinitionAgentNodeV2Schema,
+  workflowDefinitionApprovalNodeV2Schema,
+  workflowDefinitionBranchCaseSchema,
+  workflowDefinitionBranchNodeV2Schema,
+  workflowDefinitionEdgeSchema,
+  workflowDefinitionJoinNodeV2Schema,
+  workflowDefinitionNodeSchema,
+  workflowDefinitionParallelNodeV2Schema,
+  workflowDefinitionSchema,
+  workflowDefinitionV1Schema,
+  workflowDefinitionV2NodeSchema,
+  workflowDefinitionV2Schema,
+} from "./workflow-definition.js";
+
+export {
+  approvalDecisionSchema,
+  approvalRequestResourceSchema,
+  approvalRequestStateSchema,
+  createWorkflowRequestSchema,
+  createWorkflowRunRequestSchema,
+  createWorkflowVersionRequestSchema,
+  decideApprovalRequestSchema,
+  workflowListResourceSchema,
+  workflowNodeRunResourceSchema,
+  workflowNodeRunStateSchema,
+  workflowResourceSchema,
+  workflowRunErrorResourceSchema,
+  workflowRunResourceSchema,
+  workflowRunStateSchema,
+  workflowVersionListResourceSchema,
+  workflowVersionResourceSchema,
+} from "./workflow-registry.js";
+
+export {
+  createMemoryNamespaceRequestSchema,
+  listMemoryRecordsQuerySchema,
+  memoryNamespaceListResourceSchema,
+  memoryNamespaceResourceSchema,
+  memoryRecordListResourceSchema,
+  memoryRecordResourceSchema,
+} from "./memory-registry.js";
+
+export {
+  createEvaluationRunRequestSchema,
+  createEvaluationSuiteRequestSchema,
+  createEvaluationSuiteVersionRequestSchema,
+  evaluationCaseDefinitionSchema,
+  evaluationCaseResourceSchema,
+  evaluationCaseResultListResourceSchema,
+  evaluationCaseResultResourceSchema,
+  evaluationRunDetailResourceSchema,
+  evaluationRunResourceSchema,
+  evaluationRunSummarySchema,
+  evaluationSuiteListResourceSchema,
+  evaluationSuiteResourceSchema,
+  evaluationSuiteVersionListResourceSchema,
+  evaluationSuiteVersionResourceSchema,
+} from "./evaluation-suite.js";
 
 export {
   createScheduleRequestSchema,
@@ -134,3 +234,33 @@ export {
   scheduleResourceSchema,
   updateScheduleRequestSchema,
 } from "./schedule-registry.js";
+
+export {
+  addTeamMembershipRequestSchema,
+  assignmentListResourceSchema,
+  assignmentResourceSchema,
+  assignmentStateSchema,
+  assignmentTargetTypeSchema,
+  createAssignmentRequestSchema,
+  createGoalRequestSchema,
+  createOfficeWorkerRequestSchema,
+  createRoleRequestSchema,
+  createTeamRequestSchema,
+  goalListResourceSchema,
+  goalResourceSchema,
+  goalStateSchema,
+  listOfficeResourcesQuerySchema,
+  officeWorkerListResourceSchema,
+  officeWorkerResourceSchema,
+  roleListResourceSchema,
+  roleResourceSchema,
+  teamListResourceSchema,
+  teamMembershipListResourceSchema,
+  teamMembershipResourceSchema,
+  teamResourceSchema,
+  updateAssignmentRequestSchema,
+  updateGoalRequestSchema,
+  updateOfficeWorkerRequestSchema,
+  updateRoleRequestSchema,
+  updateTeamRequestSchema,
+} from "./office-registry.js";

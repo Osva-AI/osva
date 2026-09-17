@@ -11,6 +11,7 @@ import {
   MODEL_TEXT_MAX_MESSAGES,
   MODEL_TEXT_ROLES,
   TRUSTED_RUNTIME_IPC_VERSION,
+  isMemoryBindingName,
   isModelBindingName,
   isToolBindingName,
 } from "./constants.js";
@@ -104,6 +105,135 @@ export interface ToolInvokeFailedMessage {
 
 export type ParentToChildToolMessage =
   ToolInvokeSucceededMessage | ToolInvokeFailedMessage;
+
+export interface MemoryGetRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.get.request";
+  readonly callId: string;
+  readonly binding: string;
+  readonly key: string;
+}
+
+export interface MemoryGetSucceededMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.get.succeeded";
+  readonly callId: string;
+  readonly record: {
+    readonly key: string;
+    readonly value: JsonValue;
+    readonly revision: number;
+  };
+}
+
+export interface MemoryGetFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.get.failed";
+  readonly callId: string;
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+  };
+}
+
+export type ParentToChildMemoryGetMessage =
+  MemoryGetSucceededMessage | MemoryGetFailedMessage;
+
+export interface MemorySetRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.set.request";
+  readonly callId: string;
+  readonly binding: string;
+  readonly key: string;
+  readonly value: JsonValue;
+  readonly expectedRevision?: number;
+}
+
+export interface MemorySetSucceededMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.set.succeeded";
+  readonly callId: string;
+  readonly record: {
+    readonly key: string;
+    readonly value: JsonValue;
+    readonly revision: number;
+  };
+}
+
+export interface MemorySetFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.set.failed";
+  readonly callId: string;
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+  };
+}
+
+export type ParentToChildMemorySetMessage =
+  MemorySetSucceededMessage | MemorySetFailedMessage;
+
+export interface MemoryDeleteRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.delete.request";
+  readonly callId: string;
+  readonly binding: string;
+  readonly key: string;
+  readonly expectedRevision?: number;
+}
+
+export interface MemoryDeleteSucceededMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.delete.succeeded";
+  readonly callId: string;
+}
+
+export interface MemoryDeleteFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.delete.failed";
+  readonly callId: string;
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+  };
+}
+
+export type ParentToChildMemoryDeleteMessage =
+  MemoryDeleteSucceededMessage | MemoryDeleteFailedMessage;
+
+export interface MemoryListRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.list.request";
+  readonly callId: string;
+  readonly binding: string;
+  readonly prefix?: string;
+  readonly limit?: number;
+  readonly cursor?: string;
+}
+
+export interface MemoryListSucceededMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.list.succeeded";
+  readonly callId: string;
+  readonly items: readonly {
+    readonly key: string;
+    readonly value: JsonValue;
+    readonly revision: number;
+  }[];
+  readonly nextCursor?: string;
+}
+
+export interface MemoryListFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "memory.list.failed";
+  readonly callId: string;
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+  };
+}
+
+export type ParentToChildMemoryListMessage =
+  MemoryListSucceededMessage | MemoryListFailedMessage;
 
 export function isExecuteChildRequest(
   value: unknown,
@@ -294,6 +424,219 @@ export function isParentToChildToolMessage(
   );
 }
 
+export function isMemoryGetRequestMessage(
+  value: unknown,
+): value is MemoryGetRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "memory.get.request" &&
+    isNonEmptyString(record.callId) &&
+    typeof record.binding === "string" &&
+    isMemoryBindingName(record.binding) &&
+    typeof record.key === "string" &&
+    record.key.length > 0
+  );
+}
+
+export function isMemorySetRequestMessage(
+  value: unknown,
+): value is MemorySetRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    record.type !== "memory.set.request" ||
+    !isNonEmptyString(record.callId) ||
+    typeof record.binding !== "string" ||
+    !isMemoryBindingName(record.binding) ||
+    typeof record.key !== "string" ||
+    record.key.length === 0 ||
+    !("value" in record)
+  ) {
+    return false;
+  }
+
+  if (
+    record.expectedRevision !== undefined &&
+    (typeof record.expectedRevision !== "number" ||
+      !Number.isInteger(record.expectedRevision) ||
+      record.expectedRevision < 1)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isMemoryDeleteRequestMessage(
+  value: unknown,
+): value is MemoryDeleteRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    record.type !== "memory.delete.request" ||
+    !isNonEmptyString(record.callId) ||
+    typeof record.binding !== "string" ||
+    !isMemoryBindingName(record.binding) ||
+    typeof record.key !== "string" ||
+    record.key.length === 0
+  ) {
+    return false;
+  }
+
+  if (
+    record.expectedRevision !== undefined &&
+    (typeof record.expectedRevision !== "number" ||
+      !Number.isInteger(record.expectedRevision) ||
+      record.expectedRevision < 1)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isMemoryListRequestMessage(
+  value: unknown,
+): value is MemoryListRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    record.type !== "memory.list.request" ||
+    !isNonEmptyString(record.callId) ||
+    typeof record.binding !== "string" ||
+    !isMemoryBindingName(record.binding)
+  ) {
+    return false;
+  }
+
+  if (
+    record.limit !== undefined &&
+    (typeof record.limit !== "number" ||
+      !Number.isInteger(record.limit) ||
+      record.limit < 1 ||
+      record.limit > 100)
+  ) {
+    return false;
+  }
+
+  if (
+    record.cursor !== undefined &&
+    (typeof record.cursor !== "string" || record.cursor.length === 0)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isParentToChildMemoryGetMessage(
+  value: unknown,
+): value is ParentToChildMemoryGetMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  if (record.type === "memory.get.succeeded") {
+    return isMemoryRecordView(record.record);
+  }
+
+  return record.type === "memory.get.failed" && isNamedError(record.error);
+}
+
+export function isParentToChildMemorySetMessage(
+  value: unknown,
+): value is ParentToChildMemorySetMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  if (record.type === "memory.set.succeeded") {
+    return isMemoryRecordView(record.record);
+  }
+
+  return record.type === "memory.set.failed" && isNamedError(record.error);
+}
+
+export function isParentToChildMemoryDeleteMessage(
+  value: unknown,
+): value is ParentToChildMemoryDeleteMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  if (record.type === "memory.delete.succeeded") {
+    return true;
+  }
+
+  return record.type === "memory.delete.failed" && isNamedError(record.error);
+}
+
+export function isParentToChildMemoryListMessage(
+  value: unknown,
+): value is ParentToChildMemoryListMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  if (record.type === "memory.list.succeeded") {
+    return (
+      Array.isArray(record.items) &&
+      record.items.every((item) => isMemoryRecordView(item))
+    );
+  }
+
+  return record.type === "memory.list.failed" && isNamedError(record.error);
+}
+
 function isTrustedAgentContext(value: unknown): value is TrustedAgentContext {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -394,4 +737,20 @@ function isNamedError(value: unknown): value is {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function isMemoryRecordView(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.key === "string" &&
+    record.key.length > 0 &&
+    typeof record.revision === "number" &&
+    Number.isInteger(record.revision) &&
+    record.revision >= 1 &&
+    "value" in record
+  );
 }

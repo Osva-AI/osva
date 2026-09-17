@@ -93,6 +93,7 @@ export class MemoryToolRepository implements ToolRepository {
       version: maxVersion + 1,
       type: input.type,
       implementation: input.implementation,
+      mcp: input.mcp,
       createdAt: input.createdAt,
     });
 
@@ -127,6 +128,7 @@ function isSameToolVersion(left: ToolVersion, right: ToolVersion): boolean {
     left.version === right.version &&
     left.type === right.type &&
     left.implementation === right.implementation &&
+    JSON.stringify(left.mcp) === JSON.stringify(right.mcp) &&
     left.createdAt.getTime() === right.createdAt.getTime()
   );
 }

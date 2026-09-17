@@ -59,6 +59,7 @@ describe("RunStepRecorder", () => {
       },
       modelProfileVersionBindings: { default: modelProfileVersionId },
       toolVersionBindings: {},
+      memoryNamespaceBindings: {},
       toolGrants: [],
       policyContext: {},
     };

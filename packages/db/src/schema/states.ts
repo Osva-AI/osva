@@ -24,11 +24,22 @@ export const PERSISTED_RUN_ATTEMPT_STATES = [
   "CANCELLED",
 ] as const;
 
-export const PERSISTED_MODEL_PROVIDERS = ["OPENAI"] as const;
+export const PERSISTED_MODEL_PROVIDERS = [
+  "OPENAI",
+  "ANTHROPIC",
+  "GOOGLE_GEMINI",
+] as const;
 
-export const PERSISTED_TOOL_TYPES = ["INTERNAL"] as const;
+export const PERSISTED_TOOL_TYPES = ["INTERNAL", "MCP"] as const;
 
-export const PERSISTED_RUN_STEP_KINDS = ["MODEL", "TOOL"] as const;
+export const PERSISTED_CONNECTOR_KINDS = ["MCP"] as const;
+
+export const PERSISTED_CONNECTOR_TRANSPORTS = [
+  "STREAMABLE_HTTP",
+  "STDIO",
+] as const;
+
+export const PERSISTED_RUN_STEP_KINDS = ["MODEL", "TOOL", "MEMORY"] as const;
 
 export const PERSISTED_RUN_STEP_STATUSES = [
   "RUNNING",
@@ -37,3 +48,65 @@ export const PERSISTED_RUN_STEP_STATUSES = [
 ] as const;
 
 export const PERSISTED_EVALUATOR_TYPES = ["JSON_EXACT_MATCH"] as const;
+
+export const PERSISTED_WORKFLOW_RUN_STATES = [
+  "PENDING",
+  "RUNNING",
+  "WAITING_FOR_APPROVAL",
+  "SUCCEEDED",
+  "FAILED",
+] as const;
+
+export const PERSISTED_WORKFLOW_NODE_RUN_STATES = [
+  "PENDING",
+  "RUNNING",
+  "WAITING_FOR_APPROVAL",
+  "SUCCEEDED",
+  "FAILED",
+  "SKIPPED",
+] as const;
+
+export const PERSISTED_APPROVAL_REQUEST_STATES = [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+] as const;
+
+export const PERSISTED_EVALUATION_RUN_STATES = [
+  "PENDING",
+  "RUNNING",
+  "COMPLETED",
+  "FAILED",
+  "CANCELLED",
+] as const;
+
+export const PERSISTED_EVALUATION_RUN_TARGET_TYPES = [
+  "AGENT_VERSION",
+  "WORKFLOW_VERSION",
+] as const;
+
+export const PERSISTED_EVALUATION_CASE_OUTCOMES = [
+  "PASS",
+  "FAIL",
+  "ERROR",
+] as const;
+
+export const PERSISTED_GOAL_STATES = [
+  "OPEN",
+  "ACTIVE",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+
+export const PERSISTED_ASSIGNMENT_STATES = [
+  "PENDING",
+  "RUNNING",
+  "COMPLETED",
+  "FAILED",
+  "CANCELLED",
+] as const;
+
+export const PERSISTED_ASSIGNMENT_TARGET_TYPES = [
+  "AGENT_VERSION",
+  "WORKFLOW_VERSION",
+] as const;

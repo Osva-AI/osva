@@ -2,6 +2,10 @@ export type {
   AgentId,
   AgentManifestV1,
   AgentVersionId,
+  ApprovalRequestId,
+  ApprovalRequestState,
+  ConnectorId,
+  ConnectorVersionId,
   DeploymentId,
   ModelProfileId,
   ModelProfileVersionId,
@@ -16,33 +20,66 @@ export type {
   TerminalRunState,
   ToolId,
   ToolVersionId,
+  WorkflowId,
+  WorkflowNodeRunId,
+  WorkflowNodeRunState,
+  WorkflowRunId,
+  WorkflowRunState,
+  WorkflowVersionId,
   WorkspaceId,
 } from "@osva/contracts";
 
 export {
+  APPROVAL_REJECTED_ERROR_CODE,
+  APPROVAL_REQUEST_STATES,
   RUN_ATTEMPT_STATES,
   RUN_STATES,
+  TERMINAL_APPROVAL_REQUEST_STATES,
   TERMINAL_RUN_STATES,
+  TERMINAL_WORKFLOW_NODE_RUN_STATES,
+  TERMINAL_WORKFLOW_RUN_STATES,
+  WORKFLOW_NODE_RUN_STATES,
+  WORKFLOW_RUN_STATES,
 } from "@osva/contracts";
 
 export {
   AgentNotFoundError,
   AgentVersionNotFoundError,
+  ApprovalRequestNotFoundError,
   DomainError,
   DomainInvariantError,
   DuplicateAgentKeyError,
+  DuplicateConnectorKeyError,
+  DuplicateEvaluationSuiteKeyError,
+  DuplicateMemoryNamespaceKeyError,
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
   DuplicateScheduleKeyError,
+  DuplicateWorkflowKeyError,
+  EvaluationCaseNotFoundError,
   EvaluationNotFoundError,
+  EvaluationRunNotFoundError,
+  EvaluationSuiteNotFoundError,
+  EvaluationSuiteVersionNotFoundError,
+  InvalidApprovalRequestTransitionError,
+  InvalidEvaluationRunTransitionError,
   InvalidAttemptSequenceError,
+  InvalidMemoryBindingError,
   InvalidModelBindingError,
   InvalidRunAttemptStateError,
   InvalidToolBindingError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   InvalidSubsequentAttemptError,
+  InvalidWorkflowDefinitionError,
+  InvalidWorkflowNodeRunTransitionError,
+  InvalidWorkflowRunTransitionError,
   LifecycleConflictError,
+  MemoryNamespaceNotFoundError,
+  MemoryRecordConflictError,
+  MemoryRecordNotFoundError,
+  ConnectorNotFoundError,
+  ConnectorVersionNotFoundError,
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
   ToolNotFoundError,
@@ -52,6 +89,22 @@ export {
   RunStepNotFoundError,
   ScheduleNotFoundError,
   WorkspaceNotFoundError,
+  WorkflowNotFoundError,
+  WorkflowNodeRunNotFoundError,
+  WorkflowRunNotFoundError,
+  WorkflowVersionNotFoundError,
+  OfficeWorkerNotFoundError,
+  DuplicateOfficeWorkerKeyError,
+  RoleNotFoundError,
+  DuplicateRoleKeyError,
+  TeamNotFoundError,
+  DuplicateTeamKeyError,
+  DuplicateTeamMembershipError,
+  GoalNotFoundError,
+  DuplicateGoalKeyError,
+  AssignmentNotFoundError,
+  InvalidGoalTransitionError,
+  InvalidAssignmentTransitionError,
 } from "./errors.js";
 
 export { Workspace, type WorkspaceProps } from "./workspace.js";
@@ -64,7 +117,12 @@ export {
   ModelProfileVersion,
   type ModelProfileVersionProps,
 } from "./model-profile-version.js";
-export { ToolVersion, type ToolVersionProps } from "./tool-version.js";
+export {
+  ToolVersion,
+  isSameMcpToolVersionConfig,
+  type ToolVersionProps,
+} from "./tool-version.js";
+export { memoryNamespaceBindingsFromManifest } from "./memory-bindings.js";
 export { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 export { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 export {
@@ -87,6 +145,33 @@ export {
   type RunStepProps,
 } from "./run-step.js";
 export { Evaluation, type EvaluationProps } from "./evaluation.js";
+export {
+  EvaluationSuite,
+  type EvaluationSuiteProps,
+} from "./evaluation-suite.js";
+export {
+  EvaluationSuiteVersion,
+  type EvaluationSuiteVersionProps,
+} from "./evaluation-suite-version.js";
+export { EvaluationCase, type EvaluationCaseProps } from "./evaluation-case.js";
+export {
+  EvaluationRun,
+  type EvaluationRunCreateProps,
+  type EvaluationRunRehydrateProps,
+} from "./evaluation-run.js";
+export {
+  EvaluationCaseResult,
+  type EvaluationCaseResultProps,
+} from "./evaluation-case-result.js";
+export {
+  MemoryNamespace,
+  type MemoryNamespaceProps,
+} from "./memory-namespace.js";
+export {
+  MemoryRecord,
+  MEMORY_RECORD_INITIAL_REVISION,
+  type MemoryRecordProps,
+} from "./memory-record.js";
 export { estimateModelCostUsdMicros } from "./model-cost.js";
 export { jsonValuesEqual } from "./json-equality.js";
 export {
@@ -100,6 +185,93 @@ export {
   type CreateScheduleOccurrenceProps,
   type ScheduleOccurrenceProps,
 } from "./schedule-occurrence.js";
+export {
+  OfficeWorker,
+  type CreateOfficeWorkerProps,
+  type OfficeWorkerProps,
+  type UpdateOfficeWorkerProps,
+} from "./office-worker.js";
+export {
+  Role,
+  type CreateRoleProps,
+  type RoleProps,
+  type UpdateRoleProps,
+} from "./role.js";
+export {
+  Team,
+  type CreateTeamProps,
+  type TeamProps,
+  type UpdateTeamProps,
+} from "./team.js";
+export { TeamMembership, type TeamMembershipProps } from "./team-membership.js";
+export {
+  Goal,
+  type CreateGoalProps,
+  type GoalProps,
+  type UpdateGoalProps,
+} from "./goal.js";
+export {
+  Assignment,
+  type AssignmentProps,
+  type CreateAssignmentProps,
+  type LaunchAssignmentProps,
+  type UpdateAssignmentProps,
+} from "./assignment.js";
+export {
+  assertLegalGoalTransition,
+  isGoalState,
+  isLegalGoalTransition,
+  LEGAL_GOAL_TRANSITIONS,
+} from "./goal-state-machine.js";
+export {
+  assertLegalAssignmentTransition,
+  isAssignmentState,
+  isLegalAssignmentTransition,
+  isTerminalAssignmentState,
+  LEGAL_ASSIGNMENT_TRANSITIONS,
+  TERMINAL_ASSIGNMENT_STATES,
+  type TerminalAssignmentState,
+} from "./assignment-state-machine.js";
+export { Workflow, type WorkflowProps } from "./workflow.js";
+export {
+  WorkflowVersion,
+  type WorkflowVersionProps,
+} from "./workflow-version.js";
+export {
+  WorkflowRun,
+  type WorkflowRunCreateProps,
+  type WorkflowRunError,
+  type WorkflowRunRehydrateProps,
+} from "./workflow-run.js";
+export {
+  WorkflowNodeRun,
+  type WorkflowNodeRunCreateProps,
+  type WorkflowNodeRunRehydrateProps,
+} from "./workflow-node-run.js";
+export {
+  ApprovalRequest,
+  type ApprovalRequestCreateProps,
+  type ApprovalRequestRehydrateProps,
+} from "./approval-request.js";
+export {
+  assertDagWorkflowDefinition,
+  assertSequentialWorkflowDefinition,
+  assertWorkflowDefinition,
+  buildWorkflowGraph,
+  listAgentNodes,
+  orderedSequentialNodeKeys,
+  predecessorKeysInDefinitionOrder,
+  type WorkflowGraph,
+} from "./workflow-definition.js";
+export { selectBranchTarget } from "./workflow-branch.js";
+export {
+  hasFailedNode,
+  inputForNode,
+  isNodeReady,
+  isNodeSkippable,
+  isWorkflowBlockedOnApproval,
+  nodeRunsByKey,
+} from "./workflow-readiness.js";
 export {
   assertValidFiveFieldCronExpression,
   assertValidIanaTimezone,
@@ -125,14 +297,52 @@ export {
   type RetryableRunAttemptState,
   type TerminalRunAttemptState,
 } from "./run-attempt-state-machine.js";
+export {
+  LEGAL_WORKFLOW_RUN_TRANSITIONS,
+  assertLegalWorkflowRunTransition,
+  isLegalWorkflowRunTransition,
+  isTerminalWorkflowRunState,
+  isWorkflowRunState,
+} from "./workflow-run-state-machine.js";
+export {
+  LEGAL_WORKFLOW_NODE_RUN_TRANSITIONS,
+  assertLegalWorkflowNodeRunTransition,
+  isLegalWorkflowNodeRunTransition,
+  isTerminalWorkflowNodeRunState,
+  isWorkflowNodeRunState,
+} from "./workflow-node-run-state-machine.js";
+export {
+  LEGAL_APPROVAL_REQUEST_TRANSITIONS,
+  assertLegalApprovalRequestTransition,
+  isApprovalRequestState,
+  isLegalApprovalRequestTransition,
+  isTerminalApprovalRequestState,
+} from "./approval-request-state-machine.js";
+export {
+  LEGAL_EVALUATION_RUN_TRANSITIONS,
+  assertLegalEvaluationRunTransition,
+  isEvaluationRunState,
+  isLegalEvaluationRunTransition,
+} from "./evaluation-run-state-machine.js";
 
 export type {
   AgentMetadataUpdate,
   AgentRepository,
+  ApprovalRequestRepository,
   AppendAgentVersionInput,
+  AppendConnectorVersionInput,
   AppendModelProfileVersionInput,
   AppendToolVersionInput,
+  ConnectorMetadataUpdate,
+  ConnectorRepository,
+  DeleteMemoryRecordInput,
   EvaluationRepository,
+  EvaluationSuiteRepository,
+  OfficeRepository,
+  ListMemoryRecordsQuery,
+  ListMemoryRecordsResult,
+  MemoryNamespaceRepository,
+  SetMemoryRecordInput,
   ListRunStepsQuery,
   ListRunStepsResult,
   ListRunsQuery,
@@ -154,6 +364,9 @@ export type {
   ListSchedulesQuery,
   ListSchedulesResult,
   WorkspaceRepository,
+  AppendWorkflowVersionInput,
+  WorkflowRepository,
+  WorkflowRunRepository,
 } from "./ports/index.js";
 
 export {
@@ -163,8 +376,10 @@ export {
   MAX_RUN_STEP_LIST_LIMIT,
   DEFAULT_SCHEDULE_LIST_LIMIT,
   DEFAULT_SCHEDULE_OCCURRENCE_LIST_LIMIT,
+  DEFAULT_MEMORY_RECORD_LIST_LIMIT,
   MAX_SCHEDULE_LIST_LIMIT,
   MAX_SCHEDULE_OCCURRENCE_LIST_LIMIT,
+  MAX_MEMORY_RECORD_LIST_LIMIT,
 } from "./ports/index.js";
 
 export {
@@ -221,6 +436,79 @@ export {
 } from "./evaluation-application.js";
 
 export {
+  AppendEvaluationSuiteVersion,
+  CreateEvaluationSuite,
+  GetEvaluationSuite,
+  GetEvaluationSuiteVersion,
+  ListEvaluationSuiteVersions,
+  ListEvaluationSuites,
+  createEvaluationSuiteApplication,
+  type AppendEvaluationSuiteVersionCommand,
+  type CreateEvaluationSuiteCommand,
+  type EvaluationSuiteApplication,
+  type EvaluationSuiteApplicationClock,
+  type EvaluationSuiteApplicationDependencies,
+  type EvaluationSuiteApplicationIds,
+  type GetEvaluationSuiteVersionCommand,
+} from "./evaluation-suite-application.js";
+
+export {
+  GetEvaluationRun,
+  LaunchEvaluationRun,
+  ListEvaluationCaseResults,
+  ReconcileEvaluationCase,
+  createEvaluationRunApplication,
+  type EvaluationRunApplication,
+  type EvaluationRunApplicationClock,
+  type EvaluationRunApplicationDependencies,
+  type EvaluationRunApplicationIds,
+  type EvaluationRunSummary,
+  type LaunchEvaluationRunCommand,
+  type ReconcileEvaluationCaseCommand,
+} from "./evaluation-run-application.js";
+
+export {
+  CreateMemoryNamespace,
+  GetMemoryNamespace,
+  ListMemoryNamespaces,
+  ListMemoryRecords,
+  createMemoryApplication,
+  type CreateMemoryNamespaceCommand,
+  type ListMemoryRecordsCommand,
+  type MemoryApplication,
+  type MemoryApplicationClock,
+  type MemoryApplicationDependencies,
+  type MemoryApplicationIds,
+} from "./memory-application.js";
+
+export { Connector } from "./connector.js";
+export { ConnectorVersion } from "./connector-version.js";
+export {
+  AppendConnectorVersion,
+  CreateConnector,
+  DiscoverConnectorTools,
+  GetConnector,
+  GetConnectorVersion,
+  ImportMcpTools,
+  ListConnectorVersions,
+  ListConnectors,
+  UpdateConnectorMetadata,
+  createConnectorApplication,
+  type AppendConnectorVersionCommand,
+  type ConnectorApplication,
+  type ConnectorApplicationClock,
+  type ConnectorApplicationDependencies,
+  type ConnectorApplicationIds,
+  type CreateConnectorCommand,
+  type DiscoverConnectorToolsCommand,
+  type GetConnectorVersionCommand,
+  type ImportMcpToolCommand,
+  type ImportMcpToolsCommand,
+  type ImportedMcpToolResult,
+  type UpdateConnectorMetadataCommand,
+} from "./connector-application.js";
+
+export {
   AppendModelProfileVersion,
   CreateModelProfile,
   GetModelProfile,
@@ -273,3 +561,70 @@ export {
   type ScheduleApplicationIds,
   type UpdateScheduleCommand,
 } from "./schedule-application.js";
+
+export {
+  AppendWorkflowVersion,
+  CreateWorkflow,
+  CreateWorkflowRun,
+  DecideApprovalRequest,
+  GetApprovalRequest,
+  GetWorkflow,
+  GetWorkflowRun,
+  GetWorkflowVersion,
+  ListWorkflowVersions,
+  ListWorkflows,
+  createWorkflowApplication,
+  type AppendWorkflowVersionCommand,
+  type CreateWorkflowCommand,
+  type CreateWorkflowRunCommand,
+  type DecideApprovalRequestCommand,
+  type GetApprovalRequestCommand,
+  type GetWorkflowVersionCommand,
+  type WorkflowApplication,
+  type WorkflowApplicationClock,
+  type WorkflowApplicationDependencies,
+  type WorkflowApplicationIds,
+  type WorkflowRunView,
+} from "./workflow-application.js";
+
+export {
+  AddTeamMembership,
+  CreateAssignment,
+  CreateGoal,
+  CreateOfficeWorker,
+  CreateRole,
+  CreateTeam,
+  GetAssignment,
+  GetGoal,
+  GetOfficeWorker,
+  GetRole,
+  GetTeam,
+  ListAssignments,
+  ListGoals,
+  ListOfficeWorkers,
+  ListRoles,
+  ListTeamMemberships,
+  ListTeams,
+  CancelAssignment,
+  UpdateAssignment,
+  UpdateGoal,
+  UpdateOfficeWorker,
+  UpdateRole,
+  UpdateTeam,
+  createOfficeApplication,
+  type AddTeamMembershipCommand,
+  type CreateAssignmentCommand,
+  type CreateGoalCommand,
+  type CreateOfficeWorkerCommand,
+  type CreateRoleCommand,
+  type CreateTeamCommand,
+  type OfficeApplication,
+  type OfficeApplicationClock,
+  type OfficeApplicationDependencies,
+  type OfficeApplicationIds,
+  type UpdateAssignmentCommand,
+  type UpdateGoalCommand,
+  type UpdateOfficeWorkerCommand,
+  type UpdateRoleCommand,
+  type UpdateTeamCommand,
+} from "./office-application.js";

@@ -1,5 +1,9 @@
 import type { ToolId, ToolVersionId, WorkspaceId } from "./ids.js";
-import type { InternalToolImplementationId, ToolType } from "./tool-gateway.js";
+import type {
+  InternalToolImplementationId,
+  McpToolVersionConfig,
+  ToolType,
+} from "./tool-gateway.js";
 
 export interface CreateToolRequestV1 {
   readonly workspaceId: WorkspaceId;
@@ -28,14 +32,27 @@ export interface ToolListResourceV1 {
   readonly tools: readonly ToolResourceV1[];
 }
 
-export interface ToolVersionResourceV1 {
+export interface InternalToolVersionResourceV1 {
   readonly id: ToolVersionId;
   readonly toolId: ToolId;
   readonly version: number;
-  readonly type: ToolType;
+  readonly type: "INTERNAL";
   readonly implementation: InternalToolImplementationId;
   readonly createdAt: string;
 }
+
+export interface McpToolVersionResourceV1 {
+  readonly id: ToolVersionId;
+  readonly toolId: ToolId;
+  readonly version: number;
+  readonly type: "MCP";
+  readonly implementation: "MCP_V1";
+  readonly mcp: McpToolVersionConfig;
+  readonly createdAt: string;
+}
+
+export type ToolVersionResourceV1 =
+  InternalToolVersionResourceV1 | McpToolVersionResourceV1;
 
 export interface ToolVersionListResourceV1 {
   readonly versions: readonly ToolVersionResourceV1[];

@@ -38,3 +38,14 @@ temp/
 docker-compose.override.yml
 *.tsbuildinfo
 .cache/
+
+# Python SDK artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+sdks/python/dist/
+sdks/python/build/

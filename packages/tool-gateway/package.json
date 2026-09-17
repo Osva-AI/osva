@@ -16,6 +16,7 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
+    "@osva/adapters-mcp-client": "workspace:*",
     "@osva/contracts": "workspace:*",
     "@osva/domain": "workspace:*"
   },

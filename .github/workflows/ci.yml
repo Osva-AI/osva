@@ -53,23 +53,49 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check formatting
-        run: pnpm format:check
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Lint
-        run: pnpm lint
+      - name: Install Python SDK for integration tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./sdks/python
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Verify
+        run: pnpm verify:ci
 
-      - name: Unit tests
-        run: pnpm test
+  python-sdk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-      - name: Build
-        run: pnpm build
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
-      - name: Integration tests (self-managed PostgreSQL)
-        run: pnpm test:integration
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SDK and dev dependencies
+        working-directory: sdks/python
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Verify Python SDK
+        run: pnpm verify:python
 
   compose-smoke:
     runs-on: ubuntu-latest

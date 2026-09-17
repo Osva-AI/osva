@@ -24,6 +24,7 @@
 - `contracts/RUNTIME_PROTOCOL_V1.md`
 - `contracts/RUN_STATE_MACHINE_V1.md`
 - `contracts/WORKFLOW_DEFINITION_V1.md`
+- `contracts/WORKFLOW_DEFINITION_V2.md`
 - `contracts/EVENT_ENVELOPE_V1.md`
 - `contracts/JOB_QUEUE_CONTRACT.md`
 - `contracts/MODEL_GATEWAY_CONTRACT.md`
@@ -46,8 +47,14 @@
 - `engineering/BUILD_VS_REUSE.md`
 - `engineering/NON_FUNCTIONAL_REQUIREMENTS.md`
 - `engineering/TESTING_STRATEGY.md`
+- `engineering/DEVELOPMENT_GATES.md`
 - `engineering/REPOSITORY_STRUCTURE.md`
+- `engineering/SDK.md`
 - `engineering/OSS_LICENSE_STRATEGY.md`
+
+## Community Beta
+- `COMMUNITY-BETA-QUICKSTART.md`
+- `COMMUNITY-BETA.md`
 
 ## Roadmap
 - `roadmap/STAGE_ROADMAP.md`
@@ -68,6 +75,7 @@
 - `adr/ADR-004-durable-workflow-backend.md`
 - `adr/ADR-005-apache2.md`
 - `adr/ADR-006-trusted-typescript-runtime.md`
+- `adr/ADR-007-runtime-protocol-and-remote-http.md`
 
 ## Source-of-truth precedence
 

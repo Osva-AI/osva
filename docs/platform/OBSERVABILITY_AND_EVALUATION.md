@@ -29,7 +29,22 @@ judge, datasets, or automatic evaluation runs yet.
 
 Evaluation results are immutable after creation.
 
+## EvaluationSuites (Stage 2.8)
+
+Stage 2.8 adds immutable **EvaluationSuiteVersion** definitions with embedded
+cases and **EvaluationRun** batch coordination. Each case executes as an
+ordinary OSVA Run through the existing queue and ExecutionWorker; there is no
+separate evaluation engine.
+
+Deterministic evaluators reuse Stage 1 infrastructure (`JSON_EXACT_MATCH` at
+minimum). Case outcomes are `PASS`, `FAIL`, or `ERROR`. Assertion failure does
+not mark the EvaluationRun infrastructure as `FAILED`; `COMPLETED` means batch
+orchestration finished.
+
+EvaluationRun summaries aggregate child Run usage and cost through existing
+RunStep observability. Unpriced model calls remain explicitly unpriced.
+
 ## Later stages
 
-Future evaluation types may include schema/rules, datasets, LLM judge, and human
-review. OSS 1.0 may use evaluation gates before AgentVersion activation.
+Future evaluation types may include schema/rules, LLM judge, and human review.
+OSS 1.0 may use evaluation gates before AgentVersion activation.

@@ -143,7 +143,8 @@ describe("OpenAIProviderAdapter", () => {
     controller.abort();
 
     await expect(pending).rejects.toMatchObject({
-      code: MODEL_ERROR_CODES.MODEL_REQUEST_TIMEOUT,
+      code: MODEL_ERROR_CODES.MODEL_CANCELLED,
+      retryable: false,
     });
   });
 
@@ -184,7 +185,8 @@ describe("OpenAIProviderAdapter", () => {
     expect(seen?.aborted).toBe(true);
 
     await expect(pending).rejects.toMatchObject({
-      code: MODEL_ERROR_CODES.MODEL_REQUEST_TIMEOUT,
+      code: MODEL_ERROR_CODES.MODEL_CANCELLED,
+      retryable: false,
     });
   });
 });

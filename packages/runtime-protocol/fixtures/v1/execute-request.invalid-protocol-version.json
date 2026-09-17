@@ -1,0 +1,9 @@
+{
+  "protocolVersion": "2",
+  "executionId": "run-attempt-fixture-1",
+  "input": { "prompt": "hello" },
+  "capabilities": {
+    "endpoint": "http://127.0.0.1:3000/v1/runtime/capabilities",
+    "token": "opaque-capability-token"
+  }
+}

@@ -2,6 +2,7 @@ import type { ModelProfileId, ToolVersionId } from "@osva/contracts";
 import {
   MemoryAgentRepository,
   MemoryJobQueue,
+  MemoryMemoryNamespaceRepository,
   MemoryModelProfileRepository,
   MemoryToolRepository,
   MemoryRunRepository,
@@ -226,6 +227,7 @@ describe("CreateRun", () => {
       workspaces,
       modelProfiles: new MemoryModelProfileRepository(),
       tools: new MemoryToolRepository(),
+      memoryNamespaces: new MemoryMemoryNamespaceRepository(),
       clock: { now: () => NOW },
       ids: {
         createId() {

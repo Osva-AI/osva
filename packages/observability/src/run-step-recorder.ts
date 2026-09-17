@@ -5,10 +5,22 @@ import type {
   GenerateTextRequest,
   GenerateTextResult,
   JsonValue,
+  MemoryAuthorization,
+  MemoryDeleteRequest,
+  MemoryGetRequest,
+  MemoryListRequest,
+  MemoryListResult,
+  MemoryRecordView,
+  MemorySetRequest,
   RunStepId,
   ToolInvokeRequest,
 } from "@osva/contracts";
-import { MODEL_ERROR_CODES, TOOL_ERROR_CODES } from "@osva/contracts";
+import {
+  MEMORY_ERROR_CODES,
+  MODEL_ERROR_CODES,
+  TOOL_ERROR_CODES,
+} from "@osva/contracts";
+import type { MemoryGateway } from "@osva/contracts";
 import {
   RunStep,
   estimateModelCostUsdMicros,
@@ -17,6 +29,15 @@ import {
 } from "@osva/domain";
 import type { ModelGateway } from "@osva/model-gateway";
 import type { ToolGateway } from "@osva/tool-gateway";
+
+import { OSVA_ATTR } from "./attributes.js";
+import {
+  elapsedMs,
+  resolveInstrumentation,
+  type OsvaInstrumentation,
+} from "./instrumentation.js";
+import { OSVA_METRIC } from "./metrics.js";
+import { OSVA_SPAN } from "./span-names.js";
 
 export interface RunStepRecorderLogger {
   info(event: string, fields?: Readonly<Record<string, unknown>>): void;
@@ -37,11 +58,32 @@ export interface RunStepRecorderDependencies {
   readonly clock: RunStepRecorderClock;
   readonly ids: RunStepRecorderIds;
   readonly logger?: RunStepRecorderLogger;
+  readonly instrumentation?: OsvaInstrumentation;
+}
+
+export interface RuntimeMemoryGateway {
+  get(
+    request: MemoryGetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryRecordView>;
+  set(
+    request: MemorySetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryRecordView>;
+  delete(
+    request: MemoryDeleteRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<void>;
+  list(
+    request: MemoryListRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryListResult>;
 }
 
 export interface ScopedRunStepRecorder {
   wrapModelGateway(modelGateway: ModelGateway): RuntimeModelGateway;
   wrapToolGateway(toolGateway: ToolGateway): RuntimeToolGateway;
+  wrapMemoryGateway(memoryGateway: MemoryGateway): RuntimeMemoryGateway;
 }
 
 /**
@@ -70,6 +112,9 @@ export function createRunStepRecorder(
     wrapToolGateway(toolGateway) {
       return new ObservabilityToolGateway(execution, deps, toolGateway);
     },
+    wrapMemoryGateway(memoryGateway) {
+      return new ObservabilityMemoryGateway(execution, deps, memoryGateway);
+    },
   };
 }
 
@@ -84,11 +129,13 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
     request: GenerateTextRequest,
     options?: { readonly signal?: AbortSignal },
   ): Promise<GenerateTextResult> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
     const bindingName = findModelBindingName(
       this.execution.modelProfileVersionBindings,
       request.modelProfileVersionId,
     );
     const startedAt = this.deps.clock.now();
+    const perfStartedAt = performance.now();
     const runStepId = this.deps.ids.createId() as RunStepId;
 
     const running = RunStep.start({
@@ -115,41 +162,86 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
       bindingName,
     });
 
-    try {
-      const outcome = await this.inner.generateTextOutcome(request, options);
-      const version = await this.deps.modelProfiles.findModelProfileVersionById(
-        request.modelProfileVersionId,
-      );
-      const estimatedCostUsdMicros =
-        outcome.usage === undefined
-          ? null
-          : estimateModelCostUsdMicros(
-              {
-                inputTokens: outcome.usage.inputTokens,
-                outputTokens: outcome.usage.outputTokens,
-              },
-              version?.pricing,
+    return telemetry.withSpan(
+      OSVA_SPAN.MODEL_GENERATE_TEXT,
+      {
+        [OSVA_ATTR.RUN_ID]: this.execution.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: this.execution.runAttemptId,
+        [OSVA_ATTR.MODEL_PROFILE_VERSION_ID]: request.modelProfileVersionId,
+        [OSVA_ATTR.OPERATION]: "generate_text",
+      },
+      async (span) => {
+        try {
+          const outcome = await this.inner.generateTextOutcome(
+            request,
+            options,
+          );
+          const version =
+            await this.deps.modelProfiles.findModelProfileVersionById(
+              request.modelProfileVersionId,
             );
+          if (version !== null) {
+            span.setAttributes({
+              [OSVA_ATTR.PROVIDER]: version.provider,
+            });
+          }
+          const estimatedCostUsdMicros =
+            outcome.usage === undefined
+              ? null
+              : estimateModelCostUsdMicros(
+                  {
+                    inputTokens: outcome.usage.inputTokens,
+                    outputTokens: outcome.usage.outputTokens,
+                  },
+                  version?.pricing,
+                );
 
-      await this.finalizeSafely(runStepId, {
-        status: "SUCCEEDED",
-        completedAt: this.deps.clock.now(),
-        inputTokens: outcome.usage?.inputTokens,
-        outputTokens: outcome.usage?.outputTokens,
-        totalTokens: outcome.usage?.totalTokens,
-        cachedInputTokens: outcome.usage?.cachedInputTokens,
-        estimatedCostUsdMicros,
-      });
+          await this.finalizeSafely(runStepId, {
+            status: "SUCCEEDED",
+            completedAt: this.deps.clock.now(),
+            inputTokens: outcome.usage?.inputTokens,
+            outputTokens: outcome.usage?.outputTokens,
+            totalTokens: outcome.usage?.totalTokens,
+            cachedInputTokens: outcome.usage?.cachedInputTokens,
+            estimatedCostUsdMicros,
+          });
 
-      return { text: outcome.text };
-    } catch (error) {
-      await this.finalizeSafely(runStepId, {
-        status: "FAILED",
-        completedAt: this.deps.clock.now(),
-        errorCode: mapModelErrorCode(error),
-      });
-      throw error;
-    }
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.MODEL_CALLS, 1, {
+            provider: version?.provider ?? "unknown",
+          });
+          telemetry.recordHistogram(
+            OSVA_METRIC.MODEL_DURATION_MS,
+            elapsedMs(perfStartedAt, performance.now()),
+            { provider: version?.provider ?? "unknown" },
+          );
+          if (outcome.usage !== undefined) {
+            telemetry.recordHistogram(
+              OSVA_METRIC.MODEL_INPUT_TOKENS,
+              outcome.usage.inputTokens,
+              { provider: version?.provider ?? "unknown" },
+            );
+            telemetry.recordHistogram(
+              OSVA_METRIC.MODEL_OUTPUT_TOKENS,
+              outcome.usage.outputTokens,
+              { provider: version?.provider ?? "unknown" },
+            );
+          }
+
+          return { text: outcome.text };
+        } catch (error) {
+          const errorCategory = mapModelErrorCode(error);
+          await this.finalizeSafely(runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          span.setStatus(false, errorCategory);
+          span.recordException(error);
+          throw error;
+        }
+      },
+    );
   }
 
   private async finalizeSafely(
@@ -178,7 +270,9 @@ class ObservabilityToolGateway implements RuntimeToolGateway {
   ) {}
 
   async invoke(request: ToolInvokeRequest): Promise<JsonValue> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
     const startedAt = this.deps.clock.now();
+    const perfStartedAt = performance.now();
     const runStepId = this.deps.ids.createId() as RunStepId;
 
     const running = RunStep.start({
@@ -205,21 +299,51 @@ class ObservabilityToolGateway implements RuntimeToolGateway {
       bindingName: request.authorization.bindingName,
     });
 
-    try {
-      const output = await this.inner.invoke(request);
-      await this.finalizeSafely(runStepId, {
-        status: "SUCCEEDED",
-        completedAt: this.deps.clock.now(),
-      });
-      return output;
-    } catch (error) {
-      await this.finalizeSafely(runStepId, {
-        status: "FAILED",
-        completedAt: this.deps.clock.now(),
-        errorCode: mapToolErrorCode(error),
-      });
-      throw error;
-    }
+    const executionKind = "gateway";
+
+    return telemetry.withSpan(
+      OSVA_SPAN.TOOL_INVOKE,
+      {
+        [OSVA_ATTR.RUN_ID]: this.execution.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: this.execution.runAttemptId,
+        [OSVA_ATTR.TOOL_VERSION_ID]: request.toolVersionId,
+        [OSVA_ATTR.OPERATION]: "invoke",
+        [OSVA_ATTR.TOOL_EXECUTION_KIND]: executionKind,
+      },
+      async (span) => {
+        try {
+          const output = await this.inner.invoke(request);
+          await this.finalizeSafely(runStepId, {
+            status: "SUCCEEDED",
+            completedAt: this.deps.clock.now(),
+          });
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.TOOL_CALLS, 1, {
+            tool_execution_kind: executionKind,
+          });
+          telemetry.recordHistogram(
+            OSVA_METRIC.TOOL_DURATION_MS,
+            elapsedMs(perfStartedAt, performance.now()),
+            { tool_execution_kind: executionKind },
+          );
+          return output;
+        } catch (error) {
+          const errorCategory = mapToolErrorCode(error);
+          await this.finalizeSafely(runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          span.setStatus(false, errorCategory);
+          span.recordException(error);
+          telemetry.recordCounter(OSVA_METRIC.TOOL_ERRORS, 1, {
+            tool_execution_kind: executionKind,
+            error_category: errorCategory,
+          });
+          throw error;
+        }
+      },
+    );
   }
 
   private async finalizeSafely(
@@ -265,6 +389,149 @@ function mapModelErrorCode(error: unknown): string {
   }
 
   return MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR;
+}
+
+class ObservabilityMemoryGateway implements RuntimeMemoryGateway {
+  constructor(
+    private readonly execution: ExecutionRequest,
+    private readonly deps: RunStepRecorderDependencies,
+    private readonly inner: MemoryGateway,
+  ) {}
+
+  async get(
+    request: MemoryGetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryRecordView> {
+    return this.record("memory.get", request.bindingName, () =>
+      this.inner.get(request, authorization),
+    );
+  }
+
+  async set(
+    request: MemorySetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryRecordView> {
+    return this.record("memory.set", request.bindingName, () =>
+      this.inner.set(request, authorization),
+    );
+  }
+
+  async delete(
+    request: MemoryDeleteRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<void> {
+    await this.record("memory.delete", request.bindingName, () =>
+      this.inner.delete(request, authorization),
+    );
+  }
+
+  async list(
+    request: MemoryListRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryListResult> {
+    return this.record("memory.list", request.bindingName, () =>
+      this.inner.list(request, authorization),
+    );
+  }
+
+  private async record<T>(
+    operation: string,
+    bindingName: string,
+    invoke: () => Promise<T>,
+  ): Promise<T> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+    const startedAt = this.deps.clock.now();
+    const runStepId = this.deps.ids.createId() as RunStepId;
+    const memoryOperation = operation.replace(/^memory\./, "");
+
+    const running = RunStep.start({
+      id: runStepId,
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      kind: "MEMORY",
+      bindingName,
+      startedAt,
+    });
+
+    try {
+      await this.deps.runs.insertRunningRunStep(running);
+    } catch (error) {
+      this.deps.logger?.error("observability.run_step_start_failed", error);
+    }
+
+    this.deps.logger?.info("observability.memory_step_started", {
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      runStepId,
+      kind: "MEMORY",
+      bindingName,
+      operation,
+    });
+
+    return telemetry.withSpan(
+      OSVA_SPAN.MEMORY_OPERATION,
+      {
+        [OSVA_ATTR.RUN_ID]: this.execution.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: this.execution.runAttemptId,
+        [OSVA_ATTR.OPERATION]: memoryOperation,
+      },
+      async (span) => {
+        try {
+          const result = await invoke();
+          await this.finalizeSafely(runStepId, {
+            status: "SUCCEEDED",
+            completedAt: this.deps.clock.now(),
+          });
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.MEMORY_OPERATIONS, 1, {
+            operation: memoryOperation,
+          });
+          return result;
+        } catch (error) {
+          const errorCategory = mapMemoryErrorCode(error);
+          await this.finalizeSafely(runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          span.setStatus(false, errorCategory);
+          span.recordException(error);
+          throw error;
+        }
+      },
+    );
+  }
+
+  private async finalizeSafely(
+    runStepId: RunStepId,
+    finalize: Parameters<RunStep["finalize"]>[0],
+  ): Promise<void> {
+    try {
+      await this.deps.runs.finalizeRunStep(runStepId, finalize);
+      this.deps.logger?.info("observability.memory_step_finalized", {
+        runId: this.execution.runId,
+        runAttemptId: this.execution.runAttemptId,
+        runStepId,
+        status: finalize.status,
+      });
+    } catch (error) {
+      this.deps.logger?.error("observability.run_step_finalize_failed", error);
+    }
+  }
+}
+
+function mapMemoryErrorCode(error: unknown): string {
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.length > 0
+  ) {
+    return error.code;
+  }
+
+  return MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE;
 }
 
 function mapToolErrorCode(error: unknown): string {

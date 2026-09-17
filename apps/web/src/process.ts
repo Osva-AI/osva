@@ -2,26 +2,49 @@ import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
+  createOpenTelemetryLifecycle,
+  type OpenTelemetryLifecycle,
+} from "@osva/adapters-opentelemetry";
+import {
   createDatabase,
   PostgresAgentRepository,
+  PostgresConnectorRepository,
   PostgresModelProfileRepository,
   PostgresToolRepository,
   PostgresRunRepository,
   PostgresScheduleRepository,
+  PostgresWorkflowRepository,
+  PostgresWorkflowRunRepository,
+  PostgresApprovalRequestRepository,
+  PostgresEvaluationSuiteRepository,
+  PostgresMemoryNamespaceRepository,
+  PostgresOfficeRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
 import {
   createAgentApplication,
+  createConnectorApplication,
   createEvaluationApplication,
+  createEvaluationRunApplication,
+  createEvaluationSuiteApplication,
+  createMemoryApplication,
   createModelProfileApplication,
   createRunApplication,
   createRunObservabilityApplication,
   createScheduleApplication,
   createToolApplication,
+  createWorkflowApplication,
+  createOfficeApplication,
 } from "@osva/domain";
 import { PostgresEvaluationRepository } from "@osva/db";
-import { CreateRun } from "@osva/orchestration";
+import { createMcpClientPool } from "@osva/adapters-mcp-client";
+import { ProcessEnvSecretResolver } from "@osva/adapters-runtime-http";
+import {
+  CreateRun,
+  LaunchAssignment,
+  ReconcileAssignment,
+} from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
 import { createWebApplication } from "./http.js";
@@ -36,25 +59,69 @@ export interface WebProcess {
   stop(): Promise<void>;
 }
 
+export interface WebProcessDependencies {
+  readonly telemetry?: OpenTelemetryLifecycle;
+}
+
 export function createWebProcess(
   env: NodeJS.ProcessEnv = process.env,
   databaseFactory: (connectionString: string) => Database = (
     connectionString,
   ) => createDatabase({ connectionString }),
-  queueFactory: (valkeyUrl: string) => PingableJobQueue = (valkeyUrl) =>
-    new BullMqJobQueue({ url: valkeyUrl }),
+  queueFactory?: (valkeyUrl: string) => PingableJobQueue,
+  dependencies: WebProcessDependencies = {},
 ): WebProcess {
   const config = loadWebConfig(env);
+  const telemetryLifecycle =
+    dependencies.telemetry ?? createOpenTelemetryLifecycle(env);
+  const instrumentation = telemetryLifecycle.instrumentation;
   const database = databaseFactory(config.databaseUrl);
-  const queue = queueFactory(config.valkeyUrl);
+  const createQueue =
+    queueFactory ??
+    ((valkeyUrl: string) =>
+      new BullMqJobQueue({ url: valkeyUrl, instrumentation }));
+  const queue = createQueue(config.valkeyUrl);
   const agents = new PostgresAgentRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
   const modelProfiles = new PostgresModelProfileRepository(database);
   const tools = new PostgresToolRepository(database);
+  const connectors = new PostgresConnectorRepository(database);
   const runs = new PostgresRunRepository(database);
   const scheduleRepository = new PostgresScheduleRepository(database);
+  const workflowRepository = new PostgresWorkflowRepository(database);
+  const workflowRunRepository = new PostgresWorkflowRunRepository(database);
+  const approvalRequestRepository = new PostgresApprovalRequestRepository(
+    database,
+  );
+  const memoryNamespaces = new PostgresMemoryNamespaceRepository(database);
+  const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
+  const officeRepository = new PostgresOfficeRepository(database);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
+  const createRun = new CreateRun({
+    runs,
+    agents,
+    queue,
+    instrumentation,
+  });
+  const reconcileAssignment = new ReconcileAssignment({
+    office: officeRepository,
+    runs,
+    workflowRuns: workflowRunRepository,
+  });
+  const launchAssignment = new LaunchAssignment({
+    office: officeRepository,
+    agents,
+    workflows: workflowRepository,
+    workflowRuns: workflowRunRepository,
+    runs,
+    createRun,
+    reconcileAssignment,
+    instrumentation,
+  });
+  const mcpClientPool = createMcpClientPool({
+    secretResolver: new ProcessEnvSecretResolver(env),
+  });
   const server = createWebApplication({
     readinessCheck: postgresAndValkeyReadinessCheck(database, queue),
     agents: createAgentApplication({
@@ -62,6 +129,7 @@ export function createWebProcess(
       workspaces,
       modelProfiles,
       tools,
+      memoryNamespaces,
       clock,
       ids,
     }),
@@ -77,13 +145,39 @@ export function createWebProcess(
       clock,
       ids,
     }),
-    runs: {
-      runs: createRunApplication({ runs }),
-      createRun: new CreateRun({
+    connectors: createConnectorApplication({
+      connectors,
+      tools,
+      workspaces,
+      mcpClientPool,
+      clock,
+      ids,
+    }),
+    memory: createMemoryApplication({
+      memoryNamespaces,
+      workspaces,
+      clock,
+      ids,
+    }),
+    evaluations: {
+      suites: createEvaluationSuiteApplication({
+        evaluationSuites,
+        workspaces,
+        clock,
+        ids,
+      }),
+      runs: createEvaluationRunApplication({
+        evaluationSuites,
         runs,
         agents,
         queue,
+        clock,
+        ids,
       }),
+    },
+    runs: {
+      runs: createRunApplication({ runs }),
+      createRun,
       clock,
       ids,
     },
@@ -104,6 +198,29 @@ export function createWebProcess(
         clock,
         ids,
       }),
+      clock,
+      ids,
+    },
+    workflows: createWorkflowApplication({
+      workflows: workflowRepository,
+      workflowRuns: workflowRunRepository,
+      approvalRequests: approvalRequestRepository,
+      agents,
+      workspaces,
+      clock,
+      ids,
+    }),
+    office: {
+      office: createOfficeApplication({
+        office: officeRepository,
+        workspaces,
+        agents,
+        workflows: workflowRepository,
+        clock,
+        ids,
+      }),
+      launchAssignment,
+      reconcileAssignment,
       clock,
       ids,
     },
@@ -129,6 +246,7 @@ export function createWebProcess(
         await closeHttpServer(server);
         await queue.shutdown();
         await database.close();
+        await telemetryLifecycle.shutdown();
         logEvent("web.shutdown_complete");
       })();
 

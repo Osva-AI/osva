@@ -4,11 +4,22 @@ import {
   AGENT_EXECUTION_MAX_TIMEOUT_MS,
   AGENT_EXECUTION_MIN_TIMEOUT_MS,
   AGENT_MANIFEST_SCHEMA_VERSION,
+  AGENT_REMOTE_HTTP_PROTOCOL_VERSION,
 } from "../agent-manifest.js";
 import { MODEL_BINDING_NAME_PATTERN } from "../model-gateway.js";
+import { isAllowedRemoteRuntimeEndpoint } from "../remote-runtime.js";
+import {
+  MEMORY_ACCESS_MODES,
+  MEMORY_BINDING_NAME_PATTERN,
+} from "../memory-gateway.js";
 import { TOOL_BINDING_NAME_PATTERN } from "../tool-gateway.js";
 import { jsonSchemaRecordSchema } from "./json-schema.js";
-import { modelProfileVersionIdSchema, toolVersionIdSchema } from "./ids.js";
+import {
+  memoryNamespaceIdSchema,
+  modelProfileVersionIdSchema,
+  toolVersionIdSchema,
+} from "./ids.js";
+import { secretReferenceSchema } from "./secret-reference.js";
 import {
   isRelativeTrustedEntrypoint,
   isSha256IntegrityDigest,
@@ -30,9 +41,25 @@ const trustedTypeScriptRuntimeSchema = z.strictObject({
   }),
 });
 
+const remoteHttpRuntimeSchema = z.strictObject({
+  type: z.literal("REMOTE_HTTP"),
+  protocolVersion: z.literal(AGENT_REMOTE_HTTP_PROTOCOL_VERSION),
+  endpoint: z.string().min(1).refine(isAllowedRemoteRuntimeEndpoint, {
+    message:
+      "runtime.endpoint must be an http: or https: URL with a host and without userinfo.",
+  }),
+  authSecretRef: secretReferenceSchema.optional(),
+  timeoutMs: z
+    .int()
+    .min(AGENT_EXECUTION_MIN_TIMEOUT_MS)
+    .max(AGENT_EXECUTION_MAX_TIMEOUT_MS)
+    .optional(),
+});
+
 export const agentRuntimeSchema = z.discriminatedUnion("type", [
   builtinPackageRuntimeSchema,
   trustedTypeScriptRuntimeSchema,
+  remoteHttpRuntimeSchema,
 ]);
 
 const agentManifestIoSchema = z.strictObject({
@@ -76,6 +103,19 @@ const agentManifestToolsSchema = z.record(
   agentManifestToolBindingSchema,
 );
 
+const agentManifestMemoryBindingSchema = z.strictObject({
+  namespaceId: memoryNamespaceIdSchema,
+  access: z.enum(MEMORY_ACCESS_MODES),
+});
+
+const agentManifestMemorySchema = z.record(
+  z.string().regex(MEMORY_BINDING_NAME_PATTERN, {
+    message:
+      "memory binding names must start with a letter and use only letters, digits, '_' or '-'.",
+  }),
+  agentManifestMemoryBindingSchema,
+);
+
 export const agentManifestSchema = z.strictObject({
   schemaVersion: z.literal(AGENT_MANIFEST_SCHEMA_VERSION),
   key: z.string().min(1),
@@ -87,4 +127,5 @@ export const agentManifestSchema = z.strictObject({
   capabilities: agentManifestCapabilitiesSchema,
   models: agentManifestModelsSchema.optional(),
   tools: agentManifestToolsSchema.optional(),
+  memory: agentManifestMemorySchema.optional(),
 });

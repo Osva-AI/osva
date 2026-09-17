@@ -23,10 +23,16 @@ describe("toBullMqJobId", () => {
 });
 
 describe("parseExecutionJobPayload", () => {
-  it("accepts exactly { runAttemptId }", () => {
+  it("accepts { runAttemptId } and transport-only trace metadata", () => {
     expect(parseExecutionJobPayload({ runAttemptId: "attempt-1" })).toEqual({
       runAttemptId: "attempt-1",
     });
+    expect(
+      parseExecutionJobPayload({
+        runAttemptId: "attempt-1",
+        __osvaTraceCarrier: { traceparent: "00-abc-def-01" },
+      }),
+    ).toEqual({ runAttemptId: "attempt-1" });
   });
 
   it("rejects extra execution data", () => {

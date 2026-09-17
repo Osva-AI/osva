@@ -9,6 +9,11 @@ export type {
   ModelProfileRepository,
 } from "./model-profile-repository.js";
 export type {
+  AppendConnectorVersionInput,
+  ConnectorMetadataUpdate,
+  ConnectorRepository,
+} from "./connector-repository.js";
+export type {
   AppendToolVersionInput,
   ToolMetadataUpdate,
   ToolRepository,
@@ -47,3 +52,22 @@ export {
   MAX_SCHEDULE_OCCURRENCE_LIST_LIMIT,
 } from "./schedule-repository.js";
 export type { WorkspaceRepository } from "./workspace-repository.js";
+export type {
+  AppendWorkflowVersionInput,
+  WorkflowRepository,
+} from "./workflow-repository.js";
+export type { WorkflowRunRepository } from "./workflow-run-repository.js";
+export type { ApprovalRequestRepository } from "./approval-request-repository.js";
+export type {
+  DeleteMemoryRecordInput,
+  ListMemoryRecordsQuery,
+  ListMemoryRecordsResult,
+  MemoryNamespaceRepository,
+  SetMemoryRecordInput,
+} from "./memory-namespace-repository.js";
+export {
+  DEFAULT_MEMORY_RECORD_LIST_LIMIT,
+  MAX_MEMORY_RECORD_LIST_LIMIT,
+} from "./memory-namespace-repository.js";
+export type { EvaluationSuiteRepository } from "./evaluation-suite-repository.js";
+export type { OfficeRepository } from "./office-repository.js";

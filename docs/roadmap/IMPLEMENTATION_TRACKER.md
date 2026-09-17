@@ -11,17 +11,7 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ 0.5 PostgreSQL persistence
 - ✅ 0.6 Orchestration and runtime-core walking skeleton
 - ✅ 0.7 Web and Worker process shells
-- 🟡 0.8 Local Infrastructure, CI, and Stage 0 Acceptance
-
-Slice 0.8 stays yellow until the latest commit has both GitHub Actions jobs
-green:
-
-- `verify` ✅
-- `compose-smoke` ✅
-
-`compose-smoke` has already passed on GitHub. Local Docker Compose remains
-unverified on the implementing machine. Stage 0 is not complete until a fully
-green CI run of the latest commit.
+- ✅ 0.8 Local Infrastructure, CI, and Stage 0 Acceptance
 
 ## Stage 1
 
@@ -30,3 +20,29 @@ green CI run of the latest commit.
 - ✅ 1.3 BullMQ + Valkey Queue Adapter and ExecutionWorker
 - ✅ 1.4 Trusted TypeScript Runtime
 - ✅ 1.5 Model Gateway and First Provider
+- ✅ 1.6 Tool Gateway and Internal Tools
+- ✅ 1.7 RunSteps, Usage/Cost, and JSON_EXACT_MATCH Evaluation
+- ✅ 1.8 Recurring Scheduling
+
+## Stage 2
+
+- ✅ 2.1 Workflow Registry, WorkflowVersion, and Sequential Execution
+- ✅ 2.2 Branch and parallel workflow nodes
+- ✅ 2.3 Multi-agent composition and approval primitive
+- ✅ 2.4 Runtime Protocol and Remote HTTP runtime
+- ✅ 2.5 Node SDK, Python SDK, CLI, and public SDK surface
+- ✅ 2.6 Additional model providers
+- ✅ 2.7 MCP client and connector foundation
+- ✅ 2.8 Memory namespaces and EvaluationSuites
+- ✅ 2.9A OpenTelemetry foundation
+- ✅ 2.9B Basic AI Office
+- ✅ 2.9C Community Beta readiness
+
+## Totals
+
+- Stage 0: 8/8 complete
+- Stage 1: 8/8 complete
+- Stage 2: 9/9 complete
+- Overall: 25/33 slices complete
+
+**Community Beta:** complete

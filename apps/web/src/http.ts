@@ -2,12 +2,21 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import http from "node:http";
 import type {
   AgentApplication,
+  ConnectorApplication,
+  MemoryApplication,
   ModelProfileApplication,
   ToolApplication,
+  WorkflowApplication,
 } from "@osva/domain";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
+import { handleConnectorRegistryRequest } from "./connector-http.js";
+import {
+  handleEvaluationRegistryRequest,
+  type EvaluationHttpServices,
+} from "./evaluation-http.js";
 import { sendJson } from "./json.js";
+import { handleMemoryRegistryRequest } from "./memory-http.js";
 import { handleModelProfileRegistryRequest } from "./model-profile-http.js";
 import { handleToolRegistryRequest } from "./tool-http.js";
 import {
@@ -19,17 +28,24 @@ import {
   handleScheduleRequest,
   type ScheduleHttpServices,
 } from "./schedule-http.js";
+import { handleWorkflowRequest } from "./workflow-http.js";
+import { handleOfficeRequest, type OfficeHttpServices } from "./office-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
 export interface CreateWebApplicationOptions {
   readonly readinessCheck: ReadinessCheck;
   readonly agents: AgentApplication;
+  readonly connectors: ConnectorApplication;
+  readonly memory: MemoryApplication;
+  readonly evaluations: EvaluationHttpServices;
   readonly modelProfiles: ModelProfileApplication;
   readonly tools: ToolApplication;
   readonly runs: RunHttpServices;
   readonly runObservability: RunObservabilityHttpServices;
   readonly schedules: ScheduleHttpServices;
+  readonly workflows: WorkflowApplication;
+  readonly office: OfficeHttpServices;
 }
 
 export function createWebApplication(
@@ -41,11 +57,16 @@ export function createWebApplication(
       response,
       options.readinessCheck,
       options.agents,
+      options.connectors,
+      options.memory,
+      options.evaluations,
       options.modelProfiles,
       options.tools,
       options.runs,
       options.runObservability,
       options.schedules,
+      options.workflows,
+      options.office,
     );
   });
 }
@@ -55,11 +76,16 @@ async function handleRequest(
   response: ServerResponse,
   readinessCheck: ReadinessCheck,
   agents: AgentApplication,
+  connectors: ConnectorApplication,
+  memory: MemoryApplication,
+  evaluations: EvaluationHttpServices,
   modelProfiles: ModelProfileApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
   runObservability: RunObservabilityHttpServices,
   schedules: ScheduleHttpServices,
+  workflows: WorkflowApplication,
+  office: OfficeHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -129,6 +155,41 @@ async function handleRequest(
     return;
   }
 
+  const handledConnectors = await handleConnectorRegistryRequest(
+    request,
+    response,
+    method,
+    path,
+    connectors,
+  );
+  if (handledConnectors) {
+    return;
+  }
+
+  const handledMemory = await handleMemoryRegistryRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    memory,
+  );
+  if (handledMemory) {
+    return;
+  }
+
+  const handledEvaluations = await handleEvaluationRegistryRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    evaluations,
+  );
+  if (handledEvaluations) {
+    return;
+  }
+
   const handledTools = await handleToolRegistryRequest(
     request,
     response,
@@ -173,6 +234,30 @@ async function handleRequest(
     schedules,
   );
   if (handledSchedules) {
+    return;
+  }
+
+  const handledWorkflows = await handleWorkflowRequest(
+    request,
+    response,
+    method,
+    path,
+    workflows,
+    url.searchParams,
+  );
+  if (handledWorkflows) {
+    return;
+  }
+
+  const handledOffice = await handleOfficeRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    office,
+  );
+  if (handledOffice) {
     return;
   }
 

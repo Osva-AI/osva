@@ -1,0 +1,31 @@
+{
+  "name": "@osva/cli",
+  "version": "0.0.0",
+  "description": "Official OSVA command-line interface",
+  "type": "module",
+  "bin": {
+    "osva": "./dist/bin/osva.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@osva/contracts": "workspace:*",
+    "@osva/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

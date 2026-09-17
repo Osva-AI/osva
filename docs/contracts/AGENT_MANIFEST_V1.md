@@ -41,6 +41,31 @@ runtime:
   key: example-agent
 ```
 
+Remote HTTP runtime:
+
+```yaml
+runtime:
+  type: REMOTE_HTTP
+  protocolVersion: "1"
+  endpoint: https://runtime.example.com/execute
+  authSecretRef:
+    key: OSVA_REMOTE_RUNTIME_TOKEN
+  timeoutMs: 15000
+```
+
+`endpoint` must be `http:` or `https:` with a host and without userinfo.
+Plaintext remote credentials are rejected. `authSecretRef` is resolved only
+by the Remote HTTP executor. `timeoutMs` is optional and uses the same
+100–300000ms bounds as `execution.timeoutMs`. The endpoint is privileged
+AgentVersion configuration and is never taken from Run or workflow input.
+
+Creating an AgentVersion does not by itself authorize outbound access to
+private or loopback networks. The worker applies a public-destination
+policy at execute time, including DNS resolution. Private-network access
+requires operator configuration `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS`.
+The AgentVersion document has no field that disables that policy.
+
+
 ## Trusted TypeScript runtime
 
 `TRUSTED_TYPESCRIPT` identifies an operator-installed TypeScript file beneath

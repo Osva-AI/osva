@@ -84,4 +84,44 @@ describe("loadWorkerConfig", () => {
       }),
     ).toThrow("OSVA_VALKEY_URL is required.");
   });
+
+  it("keeps runtime capability configuration optional for trusted-only workers", () => {
+    expect(
+      loadWorkerConfig({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+      }),
+    ).toMatchObject({
+      runtimeCapabilityHost: "127.0.0.1",
+      runtimeCapabilityPort: 0,
+      runtimeCapabilitySecret: undefined,
+      runtimeCapabilityBaseUrl: undefined,
+      remoteHttpAllowPrivateNetworks: false,
+    });
+  });
+
+  it("enables REMOTE_HTTP private networks only from explicit operator env", () => {
+    const env = {
+      OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+      OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+    };
+    expect(
+      loadWorkerConfig({
+        ...env,
+        OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS: "true",
+      }).remoteHttpAllowPrivateNetworks,
+    ).toBe(true);
+    expect(
+      loadWorkerConfig({
+        ...env,
+        OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS: "false",
+      }).remoteHttpAllowPrivateNetworks,
+    ).toBe(false);
+    expect(() =>
+      loadWorkerConfig({
+        ...env,
+        OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS: "workspace-yes",
+      }),
+    ).toThrow("OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS must be true or false.");
+  });
 });

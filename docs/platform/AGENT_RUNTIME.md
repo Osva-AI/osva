@@ -2,13 +2,26 @@
 
 RuntimeAdapters execute AgentVersions.
 
+## Dispatch
+
+```text
+ExecutionWorker
+  → RuntimeDispatcher
+  → RuntimeAdapter.execute(ExecutionRequest)
+```
+
+The dispatcher selects an executor from the immutable AgentVersion runtime
+binding. Workflow node configuration cannot override it. Trusted TypeScript
+is one implementation. Remote HTTP is another. There is no runtime registry
+in Slice 2.4.
+
 ## Stage evolution
 
 ```text
 trusted TypeScript
+→ remote HTTP (Runtime Protocol V1)
 → Node SDK
 → Python SDK
-→ remote HTTP
 → container
 → stronger isolation
 ```
@@ -27,9 +40,13 @@ Slice 1.4 implements L1 for trusted TypeScript: a dedicated Node child process
 for fault isolation and timeout enforcement. It is not L2/L3 sandboxing and is
 not safe for hostile user-submitted code.
 
+Slice 2.4 adds L4 remote HTTP through Runtime Protocol V1. The remote process
+is not an OSVA lifecycle authority.
+
 ## Trusted TypeScript runtime
 
-Production workers compose `@osva/adapters-runtime-typescript`.
+Production workers compose `@osva/adapters-runtime-typescript` behind
+`RuntimeDispatcher`.
 
 - Operator configuration: `OSVA_TRUSTED_RUNTIME_ROOT`.
 - Entrypoints must resolve beneath that root after `realpath`.
@@ -41,7 +58,29 @@ Production workers compose `@osva/adapters-runtime-typescript`.
 - Child processes are started with Node `--permission` as defense-in-depth
   (read grants for the runner and trusted root; no write, child-process,
   worker, or addon grants). This is not a hostile-code sandbox.
-- Model access is the controlled `context.models.generateText` capability.
-  Tool capabilities remain unavailable.
+- Model access is the in-process `context.models.generateText` capability.
+- Tool access is the in-process `context.tools.invoke` capability.
 
-See Runtime Protocol v1, Agent Manifest v1, and Model Gateway.
+## Remote HTTP runtime
+
+`REMOTE_HTTP` AgentVersions execute through `@osva/adapters-runtime-http`.
+
+- Endpoint and optional `authSecretRef` are immutable AgentVersion fields.
+- Execution is one synchronous Runtime Protocol V1 POST. Redirects are not
+  followed. The adapter does not retry.
+- `executionId` equals the canonical RunAttemptId.
+- Model and tool access is mediated by the worker-hosted capability bridge.
+- Capability credentials are execution-scoped HMAC tokens. They are not
+  stored as plaintext lifecycle data.
+- Optional worker configuration: `OSVA_RUNTIME_CAPABILITY_SECRET`,
+  `OSVA_RUNTIME_CAPABILITY_HOST` (default `127.0.0.1`),
+  `OSVA_RUNTIME_CAPABILITY_PORT` (default `0`),
+  `OSVA_RUNTIME_CAPABILITY_BASE_URL`. Trusted-only workers may omit them.
+- Outbound network policy is worker-owned. By default `REMOTE_HTTP` may
+  connect only to public unicast destinations. Loopback, link-local,
+  private, unspecified, and multicast addresses are rejected after DNS
+  resolution at execute time. `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS=true`
+  is an operator opt-in for self-hosted private runtimes. AgentVersion,
+  Run input, and workflow input cannot enable it. Redirects remain disabled.
+
+See Runtime Protocol v1 and Agent Manifest v1.

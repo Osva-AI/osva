@@ -21,6 +21,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { MemoryAgentRepository } from "../src/memory-agent-repository.js";
+import { MemoryMemoryNamespaceRepository } from "../src/memory-memory-namespace-repository.js";
 import { MemoryModelProfileRepository } from "../src/memory-model-profile-repository.js";
 import { MemoryToolRepository } from "../src/memory-tool-repository.js";
 import { MemoryWorkspaceRepository } from "../src/memory-workspace-repository.js";
@@ -387,6 +388,7 @@ function createEmptyHarness(): {
   const agents = new MemoryAgentRepository();
   const modelProfiles = new MemoryModelProfileRepository();
   const tools = new MemoryToolRepository();
+  const memoryNamespaces = new MemoryMemoryNamespaceRepository();
   let counter = 0;
 
   return {
@@ -399,6 +401,7 @@ function createEmptyHarness(): {
       workspaces,
       modelProfiles,
       tools,
+      memoryNamespaces,
       clock: { now: () => NOW },
       ids: {
         createId() {

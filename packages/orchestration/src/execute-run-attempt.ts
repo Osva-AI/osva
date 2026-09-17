@@ -16,6 +16,15 @@ import {
   type RunRepository,
   type TerminalRunAttemptState,
 } from "@osva/domain";
+import {
+  OSVA_ATTR,
+  OSVA_METRIC,
+  OSVA_SPAN,
+  elapsedMs,
+  resolveInstrumentation,
+  type ActiveSpan,
+  type OsvaInstrumentation,
+} from "@osva/observability";
 import { createExecutionRequest } from "@osva/runtime-core";
 
 import {
@@ -47,6 +56,7 @@ export interface ExecuteRunAttemptDependencies {
   readonly runs: RunRepository;
   readonly agents: AgentRepository;
   readonly runtime: RuntimeAdapter;
+  readonly instrumentation?: OsvaInstrumentation;
 }
 
 export interface ExecuteRunAttemptSucceeded {
@@ -96,6 +106,43 @@ export class ExecuteRunAttempt {
   async execute(
     command: ExecuteRunAttemptCommand,
   ): Promise<ExecuteRunAttemptResult> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+    const startedAt = performance.now();
+
+    return telemetry.withSpan(
+      OSVA_SPAN.RUN_ATTEMPT_EXECUTE,
+      {
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: command.runAttemptId,
+      },
+      async (span) => {
+        const result = await this.executeInner(command, span);
+        if (result.outcome === "succeeded" || result.outcome === "failed") {
+          telemetry.recordHistogram(
+            OSVA_METRIC.RUN_DURATION_MS,
+            elapsedMs(startedAt, performance.now()),
+            {
+              terminal_status: result.run.status,
+            },
+          );
+          if (result.outcome === "succeeded") {
+            telemetry.recordCounter(OSVA_METRIC.RUNS_COMPLETED, 1, {
+              terminal_status: result.run.status,
+            });
+          } else {
+            telemetry.recordCounter(OSVA_METRIC.RUNS_FAILED, 1, {
+              terminal_status: result.run.status,
+            });
+          }
+        }
+        return result;
+      },
+    );
+  }
+
+  private async executeInner(
+    command: ExecuteRunAttemptCommand,
+    span: ActiveSpan,
+  ): Promise<ExecuteRunAttemptResult> {
     const attempt = await this.deps.runs.findRunAttemptById(
       command.runAttemptId,
     );
@@ -107,6 +154,11 @@ export class ExecuteRunAttempt {
     if (run === null) {
       throw new RunNotFoundError(attempt.runId);
     }
+
+    span.setAttributes({
+      [OSVA_ATTR.RUN_ID]: run.id,
+      [OSVA_ATTR.AGENT_VERSION_ID]: run.effectiveBindings.agentVersionId,
+    });
 
     if (attempt.runId !== run.id) {
       throw new IdentityMismatchError(

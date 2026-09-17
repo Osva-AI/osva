@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
+import { createOpenTelemetryLifecycle } from "@osva/adapters-opentelemetry";
 import type {
   RunAttemptId,
   RunId,
@@ -50,12 +51,15 @@ export function createSchedulerProcess(
   dependencies: SchedulerProcessDependencies = {},
 ): SchedulerProcess {
   const config = loadSchedulerConfig(env);
+  const telemetryLifecycle = createOpenTelemetryLifecycle(env);
+  const instrumentation = telemetryLifecycle.instrumentation;
   const createDatabaseHandle = dependencies.databaseFactory ?? databaseFactory;
   const createQueue =
     dependencies.queueFactory ??
     ((valkeyUrl: string) =>
       new BullMqJobQueue({
         url: valkeyUrl,
+        instrumentation,
         logger: {
           info: logEvent,
           error: logError,
@@ -67,12 +71,13 @@ export function createSchedulerProcess(
   const runs = new PostgresRunRepository(database);
   const schedules = new PostgresScheduleRepository(database);
   const agents = new PostgresAgentRepository(database);
-  const createRun = new CreateRun({ runs, agents, queue });
+  const createRun = new CreateRun({ runs, agents, queue, instrumentation });
   const dispatch = new DispatchScheduleOccurrence({
     schedules,
     runs,
     createRun,
     queue,
+    instrumentation,
     logger: {
       info: logEvent,
       error: logError,
@@ -81,6 +86,7 @@ export function createSchedulerProcess(
   const tick = new SchedulerTick({
     schedules,
     dispatch,
+    instrumentation,
     logger: {
       info: logEvent,
       error: logError,
@@ -104,6 +110,7 @@ export function createSchedulerProcess(
     onClose: async () => {
       await queue.shutdown();
       await database.close();
+      await telemetryLifecycle.shutdown();
     },
   });
 

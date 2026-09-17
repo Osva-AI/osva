@@ -1,0 +1,7 @@
+{
+  "protocolVersion": "1",
+  "executionId": "run-attempt-fixture-1",
+  "bindingName": "echo",
+  "input": { "value": 42 },
+  "idempotencyKey": "tool-echo-1"
+}

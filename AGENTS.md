@@ -1,41 +1,52 @@
 # AGENTS.md
 
-Repository-wide instructions for Codex and other coding agents working on OSVA.
+Concise operating guide for coding agents working on OSVA.
 
 ## Read before implementation
 
-Read:
+1. This file
+2. `docs/architecture/ARCHITECTURE_OVERVIEW.md`
+3. `docs/architecture/REPOSITORY_MAP.md`
+4. `docs/architecture/flows/<relevant-flow>.md` for the area you are changing
+5. Relevant contract under `docs/contracts/` and stage spec under `docs/implementation/`
 
-1. `README.md`
-2. `docs/00-DOCUMENTATION-MAP.md`
-3. `docs/architecture/ARCHITECTURAL_INVARIANTS.md`
-4. relevant contract documents under `docs/contracts/`
-5. relevant platform documents
-6. relevant ADRs
-7. the current implementation-stage specification
+## Architecture invariants
 
-## Permanent product concepts
-
-Examples:
-
-- Agent
-- AgentVersion
-- Deployment
-- Run
-- RunAttempt
-- RunStep
-- Workflow
-- WorkflowVersion
-- WorkflowRun
-- WorkflowNodeRun
-- Tool
-- ToolVersion
-- ModelProfile
-- ModelProfileVersion
-- Evaluation
-- OfficeWorker
-
-Replaceable infrastructure includes queues, workflow engines, provider SDKs, telemetry backends, secret stores, object stores, identity providers, vector stores, policy engines, and sandbox technologies.
+- Run is an OSVA product object.
+- Queue IDs are implementation details.
+- RunAttempt is canonical execution-attempt identity.
+- Queue redelivery reuses RunAttemptId.
+- A new logical retry creates a new RunAttemptId.
+- AgentVersion is immutable.
+- Retries reuse immutable effective bindings.
+- Run snapshots effective execution bindings at creation/execution according to existing implementation.
+- Workflow definitions belong to OSVA.
+- Control plane and execution plane remain separate.
+- PostgreSQL is canonical lifecycle/state authority.
+- BullMQ is transport, not lifecycle authority.
+- Provider SDK objects never enter domain contracts.
+- Model calls are mediated by ModelGateway.
+- Tool calls are mediated by ToolGateway.
+- Persistent memory is mediated by MemoryGateway.
+- Tool permissions are policy-mediated.
+- Prompts cannot grant permissions.
+- Tool idempotency identifies logical side effects, not attempts.
+- Multi-agent behavior is workflow composition.
+- Human approval is workflow state.
+- Secrets are references, not plaintext records.
+- Runtime implementation is an AgentVersion concern.
+- executionId maps 1:1 to RunAttempt for Runtime Protocol V1.
+- Remote runtimes do not own lifecycle.
+- Remote model/tool/memory capabilities re-enter OSVA gateways.
+- Public SDKs use public HTTP contracts.
+- CLI uses the Node SDK rather than a parallel HTTP implementation.
+- Workflows remain runtime-language agnostic.
+- MCP sits beneath ToolGateway and never bypasses it.
+- ConnectorVersion is immutable.
+- EvaluationSuiteVersion is immutable.
+- Evaluation cases execute as ordinary OSVA Runs.
+- EvaluationRun is a coordinator, not an execution engine.
+- Evaluation child Runs cannot mutate persistent memory by default.
 
 ## Dependency direction
 
@@ -51,68 +62,23 @@ applications / composition root
 
 Core/domain code must not import concrete infrastructure adapters.
 
-Examples:
+## Development rules
 
-- depend on `JobQueue`, not BullMQ;
-- depend on `ModelGateway`, not OpenAI SDK types;
-- OSVA owns Workflow definitions;
-- OSVA owns Run and RunAttempt identities.
-
-## Control and execution
-
-The control plane owns product state and intent.
-
-ExecutionWorkers run Agent code through RuntimeAdapters.
-
-Do not execute arbitrary Agent code inside normal HTTP request handlers.
-
-## Reproducibility
-
-A Run must preserve immutable effective bindings.
-
-Retries of the same logical operation must not silently resolve newer AgentVersions, ToolVersions, WorkflowVersions, or ModelProfileVersions.
-
-## Current-stage discipline
-
-The target architecture defines where a feature belongs.
-
-The current stage defines how much to build now.
-
-Do not implement later-stage capabilities unless requested.
-
-## Contracts
-
-Treat documents in `docs/contracts/` as public architectural contracts.
-
-If implementation reveals a genuine contract problem:
-
-1. stop;
-2. explain the problem;
-3. propose the smallest compatible correction;
-4. update the contract and ADR if accepted.
-
-Do not silently change contract semantics.
+- Prefer existing architecture and package patterns.
+- Do not broadly refactor unrelated code.
+- Do not pull future roadmap functionality into the current slice.
+- Do not commit or push unless explicitly instructed.
+- Use targeted package/tests while implementing.
+- Use `pnpm verify:quick` only at meaningful integration checkpoints.
+- Use `pnpm verify:ci:clean` once when a roadmap slice is ready for final verification.
+- The clean gate is authoritative.
+- Do not recreate the old manual verification checklist unless the harness itself fails.
+- One meaningful product commit per roadmap slice.
 
 ## Security
 
-Treat API input, model output, Tool output, external data, and webhooks as untrusted.
-
-Never expose or commit secrets.
-
-Tool access is permissioned server-side.
-
-## Testing
-
-Every concrete infrastructure adapter must pass the shared contract tests for its interface.
-
-Permanent state machines and invariants require unit tests.
-
-Before completion run relevant formatter, lint, typecheck, unit, integration, and E2E commands.
-
-Do not claim commands passed unless they were actually executed.
+Treat API input, model output, Tool output, external data, and webhooks as untrusted. Never expose or commit secrets.
 
 ## Documentation
 
-Update documentation when behavior or contracts change.
-
-Use ADRs for major architectural choices or changes to permanent boundaries.
+Update docs when behavior or contracts change. Use ADRs for major boundary changes.

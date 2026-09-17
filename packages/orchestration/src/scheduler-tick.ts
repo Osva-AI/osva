@@ -6,6 +6,12 @@ import type {
 import type { ScheduleOccurrence, ScheduleRepository } from "@osva/domain";
 
 import {
+  OSVA_SPAN,
+  resolveInstrumentation,
+  type OsvaInstrumentation,
+} from "@osva/observability";
+
+import {
   DispatchScheduleOccurrence,
   type DispatchScheduleOccurrenceCommand,
 } from "./dispatch-schedule-occurrence.js";
@@ -21,6 +27,7 @@ export interface SchedulerTickDependencies {
   readonly dispatch: DispatchScheduleOccurrence;
   readonly materializeBatchSize?: number;
   readonly dispatchBatchSize?: number;
+  readonly instrumentation?: OsvaInstrumentation;
   readonly logger?: {
     info(event: string, fields: Record<string, string>): void;
     error(event: string, fields: Record<string, string>): void;
@@ -37,10 +44,17 @@ export class SchedulerTick {
   }
 
   async execute(now: Date, ids: SchedulerTickIds): Promise<void> {
-    const materialized = await this.deps.schedules.materializeDueOccurrences(
-      now,
-      this.materializeBatchSize,
-      () => ids.createScheduleOccurrenceId(),
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+
+    const materialized = await telemetry.withSpan(
+      OSVA_SPAN.SCHEDULE_MATERIALIZE,
+      undefined,
+      async () =>
+        this.deps.schedules.materializeDueOccurrences(
+          now,
+          this.materializeBatchSize,
+          () => ids.createScheduleOccurrenceId(),
+        ),
     );
 
     const undispatched = await this.deps.schedules.listUndispatchedOccurrences(

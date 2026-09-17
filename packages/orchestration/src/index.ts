@@ -25,6 +25,33 @@ export {
   type SchedulerTickIds,
 } from "./scheduler-tick.js";
 export { scheduleOccurrenceRunIdempotencyKey } from "./schedule-idempotency.js";
+export { assignmentRunIdempotencyKey } from "./assignment-idempotency.js";
+export {
+  LaunchAssignment,
+  type LaunchAssignmentCommand,
+  type LaunchAssignmentDependencies,
+} from "./launch-assignment.js";
+export {
+  ReconcileAssignment,
+  type ReconcileAssignmentCommand,
+  type ReconcileAssignmentDependencies,
+} from "./reconcile-assignment.js";
+export { workflowNodeRunIdempotencyKey } from "./workflow-idempotency.js";
+export {
+  ReconcileWorkflowRun,
+  type ReconcileWorkflowRunCommand,
+  type ReconcileWorkflowRunDependencies,
+  type ReconcileWorkflowRunIds,
+} from "./reconcile-workflow-run.js";
+export {
+  WorkflowOrchestratorTick,
+  type WorkflowOrchestratorTickDependencies,
+} from "./workflow-orchestrator-tick.js";
+export {
+  EvaluationCoordinator,
+  type EvaluationCoordinatorDependencies,
+  type ReconcileEvaluationCaseCommand,
+} from "./evaluation-coordinator.js";
 export {
   AgentNotFoundError,
   AgentVersionNotFoundError,

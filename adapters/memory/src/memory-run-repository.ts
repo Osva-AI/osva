@@ -59,6 +59,8 @@ export class MemoryRunRepository implements RunRepository {
       );
     }
 
+    assertUniqueRunIdempotencyKey(this.runsByWorkspaceIdempotencyKey, run);
+
     this.runs.set(run.id, run);
     this.attempts.set(attempt.id, attempt);
     indexRunIdempotencyKey(this.runsByWorkspaceIdempotencyKey, run);
@@ -70,6 +72,8 @@ export class MemoryRunRepository implements RunRepository {
         `A Run with id '${run.id}' already exists.`,
       );
     }
+
+    assertUniqueRunIdempotencyKey(this.runsByWorkspaceIdempotencyKey, run);
 
     this.runs.set(run.id, run);
     indexRunIdempotencyKey(this.runsByWorkspaceIdempotencyKey, run);
@@ -416,6 +420,24 @@ function indexRunIdempotencyKey(index: Map<string, RunId>, run: Run): void {
     workspaceIdempotencyKey(run.workspaceId, run.idempotencyKey),
     run.id,
   );
+}
+
+function assertUniqueRunIdempotencyKey(
+  index: Map<string, RunId>,
+  run: Run,
+): void {
+  if (run.idempotencyKey === undefined) {
+    return;
+  }
+
+  const existing = index.get(
+    workspaceIdempotencyKey(run.workspaceId, run.idempotencyKey),
+  );
+  if (existing !== undefined && existing !== run.id) {
+    throw new DomainInvariantError(
+      `A Run with idempotency key '${run.idempotencyKey}' already exists in workspace '${run.workspaceId}'.`,
+    );
+  }
 }
 
 function compareRunsCreatedAtIdDesc(left: Run, right: Run): number {

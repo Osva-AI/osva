@@ -36,7 +36,8 @@ AI Office remains conceptual.
 
 Add:
 
-- Node/Python/HTTP runtimes;
+- Runtime Protocol V1 and remote HTTP runtime;
+- Node/Python SDKs;
 - versioned Workflows;
 - multi-agent composition;
 - multiple providers;

@@ -2,6 +2,8 @@ import type { JobQueue } from "@osva/contracts";
 import type {
   AgentId,
   AgentVersionId,
+  EvaluationCaseId,
+  EvaluationRunId,
   RunAttemptId,
   RunId,
   WorkspaceId,
@@ -10,12 +12,21 @@ import {
   EffectiveRunBindings,
   Run,
   RunAttempt,
+  memoryNamespaceBindingsFromManifest,
   modelProfileVersionBindingsFromManifest,
   toolVersionBindingsFromManifest,
   type AgentRepository,
   type AgentVersion,
   type RunRepository,
 } from "@osva/domain";
+
+import {
+  OSVA_ATTR,
+  OSVA_METRIC,
+  OSVA_SPAN,
+  resolveInstrumentation,
+  type OsvaInstrumentation,
+} from "@osva/observability";
 
 import {
   AgentNotFoundError,
@@ -32,6 +43,8 @@ export interface CreateRunCommand {
   readonly agentVersionId: AgentVersionId;
   readonly input: unknown;
   readonly idempotencyKey?: string;
+  readonly evaluationRunId?: EvaluationRunId;
+  readonly evaluationCaseId?: EvaluationCaseId;
   readonly now: Date;
 }
 
@@ -39,6 +52,7 @@ export interface CreateRunDependencies {
   readonly runs: RunRepository;
   readonly agents: AgentRepository;
   readonly queue: JobQueue;
+  readonly instrumentation?: OsvaInstrumentation;
 }
 
 export interface CreateRunResult {
@@ -70,6 +84,36 @@ export class CreateRun {
   constructor(private readonly deps: CreateRunDependencies) {}
 
   async execute(command: CreateRunCommand): Promise<CreateRunResult> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+
+    return telemetry.withSpan(
+      OSVA_SPAN.RUN_CREATE,
+      {
+        [OSVA_ATTR.RUN_ID]: command.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: command.runAttemptId,
+        [OSVA_ATTR.AGENT_VERSION_ID]: command.agentVersionId,
+        ...(command.evaluationRunId !== undefined
+          ? { [OSVA_ATTR.EVALUATION_RUN_ID]: command.evaluationRunId }
+          : {}),
+      },
+      async (span) => {
+        try {
+          const result = await this.executeInner(command);
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.RUNS_STARTED, 1);
+          return result;
+        } catch (error) {
+          span.setStatus(false);
+          span.recordException(error);
+          throw error;
+        }
+      },
+    );
+  }
+
+  private async executeInner(
+    command: CreateRunCommand,
+  ): Promise<CreateRunResult> {
     const agentVersion = await this.assertAgentOwnership(command);
 
     const pending = Run.create({
@@ -80,6 +124,8 @@ export class CreateRun {
       input: command.input,
       createdAt: command.now,
       idempotencyKey: command.idempotencyKey,
+      evaluationRunId: command.evaluationRunId,
+      evaluationCaseId: command.evaluationCaseId,
     });
     const attempt = RunAttempt.createFirst({
       id: command.runAttemptId,
@@ -149,5 +195,8 @@ function resolveEffectiveBindings(
       agentVersion.manifest,
     ),
     toolVersionBindings: toolVersionBindingsFromManifest(agentVersion.manifest),
+    memoryNamespaceBindings: memoryNamespaceBindingsFromManifest(
+      agentVersion.manifest,
+    ),
   });
 }

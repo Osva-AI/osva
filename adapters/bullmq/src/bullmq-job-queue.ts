@@ -1,5 +1,10 @@
 import { Queue, Worker, type Job } from "bullmq";
 import type { JobQueueHandler, RunAttemptId } from "@osva/contracts";
+import {
+  extractBullMqTraceCarrier,
+  withBullMqTraceCarrier,
+  type OsvaInstrumentation,
+} from "@osva/observability";
 
 import { checkValkeyConnection } from "./check-valkey-connection.js";
 import {
@@ -23,6 +28,7 @@ export interface BullMqJobQueueOptions {
   readonly prefix?: string;
   readonly concurrency?: number;
   readonly logger?: BullMqJobQueueLogger;
+  readonly instrumentation?: OsvaInstrumentation;
 }
 
 export interface QueuedExecutionJob {
@@ -46,6 +52,7 @@ export class BullMqJobQueue implements PingableJobQueue {
   private readonly prefix: string | undefined;
   private readonly concurrency: number;
   private readonly logger: BullMqJobQueueLogger | undefined;
+  private readonly instrumentation: OsvaInstrumentation | undefined;
   private readonly connection: BullMqConnectionOptions;
   private readonly queue: Queue;
   private worker: Worker | undefined;
@@ -58,6 +65,7 @@ export class BullMqJobQueue implements PingableJobQueue {
     this.prefix = options.prefix;
     this.concurrency = options.concurrency ?? DEFAULT_WORKER_CONCURRENCY;
     this.logger = options.logger;
+    this.instrumentation = options.instrumentation;
     this.connection = {
       url: options.url,
       maxRetriesPerRequest: null,
@@ -78,11 +86,12 @@ export class BullMqJobQueue implements PingableJobQueue {
     const jobId = toBullMqJobId(runAttemptId);
 
     try {
-      await this.queue.add(
-        EXECUTE_RUN_ATTEMPT_JOB_NAME,
+      const carrier = this.instrumentation?.injectTraceContext();
+      const payload = withBullMqTraceCarrier(
         Object.freeze({ runAttemptId }),
-        { jobId },
+        carrier,
       );
+      await this.queue.add(EXECUTE_RUN_ATTEMPT_JOB_NAME, payload, { jobId });
     } catch (error) {
       if (isDuplicateJobError(error)) {
         return;
@@ -197,17 +206,27 @@ export class BullMqJobQueue implements PingableJobQueue {
     }
 
     const payload = parseExecutionJobPayload(job.data);
+    const traceCarrier = extractBullMqTraceCarrier(job.data);
     const handler = this.handler;
     if (handler === undefined) {
       throw new Error("Execution job handler is not registered.");
     }
 
-    try {
-      await handler(payload);
-    } catch (error) {
-      this.logger?.error("worker.job_processing_failed", error);
-      throw error;
+    const invoke = async () => {
+      try {
+        await handler(payload);
+      } catch (error) {
+        this.logger?.error("worker.job_processing_failed", error);
+        throw error;
+      }
+    };
+
+    if (this.instrumentation === undefined) {
+      await invoke();
+      return;
     }
+
+    await this.instrumentation.runWithExtractedContext(traceCarrier, invoke);
   }
 
   private assertOpen(operation: string): void {

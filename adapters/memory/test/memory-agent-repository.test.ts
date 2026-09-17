@@ -53,6 +53,28 @@ describe("MemoryAgentRepository", () => {
     );
   });
 
+  it("persists immutable remote HTTP runtime configuration", async () => {
+    const repository: AgentRepository = new MemoryAgentRepository();
+    const runtime = {
+      type: "REMOTE_HTTP" as const,
+      protocolVersion: "1" as const,
+      endpoint: "https://runtime.example.com/execute",
+      authSecretRef: { key: "OSVA_REMOTE_RUNTIME_TOKEN" },
+      timeoutMs: 15_000,
+    };
+    const version = AgentVersion.create({
+      id: agentVersionId,
+      agentId,
+      version: 1,
+      manifest: createManifest({ runtime }),
+      createdAt: NOW,
+    });
+
+    await repository.saveAgentVersion(version);
+    const loaded = await repository.findAgentVersionById(agentVersionId);
+    expect(loaded?.manifest.runtime).toEqual(runtime);
+  });
+
   it("treats saving the same immutable AgentVersion as idempotent", async () => {
     const repository: AgentRepository = new MemoryAgentRepository();
     const first = AgentVersion.create({

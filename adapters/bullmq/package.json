@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@osva/contracts": "workspace:*",
+    "@osva/observability": "workspace:*",
     "bullmq": "5.66.4",
     "ioredis": "5.8.2"
   },

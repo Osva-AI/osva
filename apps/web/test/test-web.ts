@@ -1,25 +1,45 @@
 import type { WorkspaceId } from "@osva/contracts";
 import {
   MemoryAgentRepository,
+  MemoryConnectorRepository,
   MemoryEvaluationRepository,
   MemoryJobQueue,
   MemoryModelProfileRepository,
+  MemorySecretResolver,
   MemoryToolRepository,
   MemoryRunRepository,
   MemoryScheduleRepository,
+  MemoryWorkflowRepository,
+  MemoryWorkflowRunRepository,
+  MemoryApprovalRequestRepository,
+  MemoryEvaluationSuiteRepository,
+  MemoryMemoryNamespaceRepository,
+  MemoryOfficeRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import {
   Workspace,
   createAgentApplication,
+  createConnectorApplication,
   createEvaluationApplication,
+  createEvaluationRunApplication,
+  createEvaluationSuiteApplication,
+  createMemoryApplication,
   createModelProfileApplication,
   createRunApplication,
   createRunObservabilityApplication,
   createScheduleApplication,
   createToolApplication,
+  createWorkflowApplication,
+  createOfficeApplication,
 } from "@osva/domain";
-import { CreateRun } from "@osva/orchestration";
+import {
+  CreateRun,
+  LaunchAssignment,
+  ReconcileAssignment,
+} from "@osva/orchestration";
+
+import { createMcpClientPool } from "@osva/adapters-mcp-client";
 
 import { createWebApplication } from "../src/http.js";
 import type { RunHttpServices } from "../src/run-http.js";
@@ -30,13 +50,21 @@ export async function createTestWebApplication(options?: {
   readonly readinessCheck?: () => Promise<boolean>;
   readonly workspaceId?: WorkspaceId;
   readonly idPrefix?: string;
+  readonly secrets?: Readonly<Record<string, string>>;
 }) {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
   const modelProfiles = new MemoryModelProfileRepository();
+  const connectors = new MemoryConnectorRepository();
   const tools = new MemoryToolRepository();
   const runs = new MemoryRunRepository();
   const schedules = new MemoryScheduleRepository();
+  const workflowRepository = new MemoryWorkflowRepository();
+  const workflowRunRepository = new MemoryWorkflowRunRepository();
+  const approvalRequestRepository = new MemoryApprovalRequestRepository();
+  const memoryNamespaces = new MemoryMemoryNamespaceRepository();
+  const evaluationSuites = new MemoryEvaluationSuiteRepository();
+  const officeRepository = new MemoryOfficeRepository();
   const queue = new MemoryJobQueue();
   const clock = { now: () => TEST_NOW };
   let counter = 0;
@@ -58,12 +86,31 @@ export async function createTestWebApplication(options?: {
     );
   }
 
+  const createRun = new CreateRun({ runs, agents, queue });
+  const reconcileAssignment = new ReconcileAssignment({
+    office: officeRepository,
+    runs,
+    workflowRuns: workflowRunRepository,
+  });
+  const launchAssignment = new LaunchAssignment({
+    office: officeRepository,
+    agents,
+    workflows: workflowRepository,
+    workflowRuns: workflowRunRepository,
+    runs,
+    createRun,
+    reconcileAssignment,
+  });
   const runServices: RunHttpServices = {
     runs: createRunApplication({ runs }),
-    createRun: new CreateRun({ runs, agents, queue }),
+    createRun,
     clock,
     ids,
   };
+
+  const mcpClientPool = createMcpClientPool({
+    secretResolver: new MemorySecretResolver(options?.secrets ?? {}),
+  });
 
   const server = createWebApplication({
     readinessCheck: options?.readinessCheck ?? (async () => true),
@@ -72,6 +119,7 @@ export async function createTestWebApplication(options?: {
       workspaces,
       modelProfiles,
       tools,
+      memoryNamespaces,
       clock,
       ids,
     }),
@@ -87,6 +135,36 @@ export async function createTestWebApplication(options?: {
       clock,
       ids,
     }),
+    connectors: createConnectorApplication({
+      connectors,
+      tools,
+      workspaces,
+      mcpClientPool,
+      clock,
+      ids,
+    }),
+    memory: createMemoryApplication({
+      memoryNamespaces,
+      workspaces,
+      clock,
+      ids,
+    }),
+    evaluations: {
+      suites: createEvaluationSuiteApplication({
+        evaluationSuites,
+        workspaces,
+        clock,
+        ids,
+      }),
+      runs: createEvaluationRunApplication({
+        evaluationSuites,
+        runs,
+        agents,
+        queue,
+        clock,
+        ids,
+      }),
+    },
     runs: runServices,
     runObservability: {
       observability: createRunObservabilityApplication({ runs }),
@@ -108,6 +186,29 @@ export async function createTestWebApplication(options?: {
       clock,
       ids,
     },
+    workflows: createWorkflowApplication({
+      workflows: workflowRepository,
+      workflowRuns: workflowRunRepository,
+      approvalRequests: approvalRequestRepository,
+      agents,
+      workspaces,
+      clock,
+      ids,
+    }),
+    office: {
+      office: createOfficeApplication({
+        office: officeRepository,
+        workspaces,
+        agents,
+        workflows: workflowRepository,
+        clock,
+        ids,
+      }),
+      launchAssignment,
+      reconcileAssignment,
+      clock,
+      ids,
+    },
   });
 
   return {
@@ -115,9 +216,13 @@ export async function createTestWebApplication(options?: {
     workspaces,
     agents,
     modelProfiles,
+    connectors,
     tools,
     runs,
     schedules,
+    workflows: workflowRepository,
+    workflowRuns: workflowRunRepository,
+    approvalRequests: approvalRequestRepository,
     queue,
   };
 }

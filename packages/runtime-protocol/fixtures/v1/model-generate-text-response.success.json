@@ -1,0 +1,6 @@
+{
+  "protocolVersion": "1",
+  "executionId": "run-attempt-fixture-1",
+  "outcome": "SUCCEEDED",
+  "result": { "text": "hello back" }
+}

@@ -135,9 +135,10 @@ committed SQL from `packages/db/drizzle/` using `OSVA_DATABASE_URL`.
 not mutate tracked migration files. Integration tests apply the committed
 history and verify the resulting schema.
 
-GitHub Actions (`.github/workflows/ci.yml`) `verify` job runs the same root
-commands as local development: `format:check`, `lint`, `typecheck`, `test`,
-`build`, and `test:integration`. Integration tests provision a temporary
+GitHub Actions (`.github/workflows/ci.yml`) `verify` job runs `pnpm verify:ci`
+after Node, pnpm, and Python runtime setup. That command is the same local
+gate: `format:check`, lint, typecheck, unit tests, build, then integration
+(including the Python SDK runtime E2E). Integration tests provision a temporary
 `postgres:17-alpine` container through the existing harness when Docker is
 available; they do not use a GitHub Actions PostgreSQL service.
 

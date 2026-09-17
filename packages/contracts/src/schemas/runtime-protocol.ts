@@ -1,8 +1,12 @@
 import { z } from "zod";
 
+import { MEMORY_ACCESS_MODES } from "../memory-gateway.js";
 import {
   agentIdSchema,
   agentVersionIdSchema,
+  evaluationCaseIdSchema,
+  evaluationRunIdSchema,
+  memoryNamespaceIdSchema,
   modelProfileVersionIdSchema,
   toolVersionIdSchema,
   runAttemptIdSchema,
@@ -11,6 +15,16 @@ import {
 } from "./ids.js";
 import { agentRuntimeSchema } from "./agent-manifest.js";
 import { toolGrantSchema } from "./tool.js";
+
+const memoryNamespaceBindingSchema = z.strictObject({
+  namespaceId: memoryNamespaceIdSchema,
+  access: z.enum(MEMORY_ACCESS_MODES),
+});
+
+const executionEvaluationContextSchema = z.strictObject({
+  evaluationRunId: evaluationRunIdSchema,
+  evaluationCaseId: evaluationCaseIdSchema,
+});
 
 export const executionRequestSchema = z.strictObject({
   runId: runIdSchema,
@@ -26,9 +40,11 @@ export const executionRequestSchema = z.strictObject({
     modelProfileVersionIdSchema,
   ),
   toolVersionBindings: z.record(z.string(), toolVersionIdSchema),
+  memoryNamespaceBindings: z.record(z.string(), memoryNamespaceBindingSchema),
   toolGrants: z.array(toolGrantSchema),
   timeoutMs: z.int().positive(),
   policyContext: z.record(z.string(), z.unknown()),
+  evaluationContext: executionEvaluationContextSchema.optional(),
 });
 
 const executionErrorSchema = z.strictObject({

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { toolIdSchema, toolVersionIdSchema, workspaceIdSchema } from "./ids.js";
 import {
   internalToolImplementationIdSchema,
+  mcpToolVersionConfigSchema,
   toolTypeSchema,
 } from "./tool-gateway.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
@@ -34,14 +35,29 @@ export const toolListResourceSchema = z.strictObject({
   tools: z.array(toolResourceSchema),
 });
 
-export const toolVersionResourceSchema = z.strictObject({
+export const internalToolVersionResourceSchema = z.strictObject({
   id: toolVersionIdSchema,
   toolId: toolIdSchema,
   version: z.int().positive(),
-  type: toolTypeSchema,
+  type: z.literal("INTERNAL"),
   implementation: internalToolImplementationIdSchema,
   createdAt: utcIso8601TimestampSchema,
 });
+
+export const mcpToolVersionResourceSchema = z.strictObject({
+  id: toolVersionIdSchema,
+  toolId: toolIdSchema,
+  version: z.int().positive(),
+  type: z.literal("MCP"),
+  implementation: z.literal("MCP_V1"),
+  mcp: mcpToolVersionConfigSchema,
+  createdAt: utcIso8601TimestampSchema,
+});
+
+export const toolVersionResourceSchema = z.union([
+  internalToolVersionResourceSchema,
+  mcpToolVersionResourceSchema,
+]);
 
 export const toolVersionListResourceSchema = z.strictObject({
   versions: z.array(toolVersionResourceSchema),

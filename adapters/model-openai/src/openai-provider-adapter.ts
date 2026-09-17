@@ -148,13 +148,19 @@ function mapOpenAIError(error: unknown): ModelGatewayError {
     );
   }
 
-  if (
-    error instanceof OpenAI.APIUserAbortError ||
-    error instanceof OpenAI.APIConnectionTimeoutError
-  ) {
+  if (error instanceof OpenAI.APIUserAbortError) {
+    return new ModelGatewayError(
+      MODEL_ERROR_CODES.MODEL_CANCELLED,
+      "The model provider request was cancelled.",
+      { provider: "openai", retryable: false },
+    );
+  }
+
+  if (error instanceof OpenAI.APIConnectionTimeoutError) {
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_REQUEST_TIMEOUT,
       "The model provider request timed out.",
+      { provider: "openai", retryable: true },
     );
   }
 

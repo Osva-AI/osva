@@ -9,6 +9,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { MemoryNamespaceBinding } from "@osva/contracts";
 
 import { agentVersions } from "./agent-versions.js";
 import { agents } from "./agents.js";
@@ -30,6 +31,12 @@ export const runs = pgTable(
       .$type<Readonly<Record<string, string>>>()
       .notNull()
       .default({}),
+    memoryNamespaceBindings: jsonb("memory_namespace_bindings")
+      .$type<Readonly<Record<string, MemoryNamespaceBinding>>>()
+      .notNull()
+      .default({}),
+    evaluationRunId: text("evaluation_run_id"),
+    evaluationCaseId: text("evaluation_case_id"),
     input: jsonb("input").notNull(),
     idempotencyKey: text("idempotency_key"),
     createdAt: timestamp("created_at", {

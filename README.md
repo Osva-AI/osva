@@ -6,12 +6,13 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** Community Alpha (Stage 1 complete). OSVA supports Agent registry,
-> immutable AgentVersions, Run lifecycle, BullMQ execution transport, trusted
-> TypeScript runtime, ModelGateway, ToolGateway, RunSteps, usage/cost,
-> JSON_EXACT_MATCH evaluation, and recurring scheduling. Requires PostgreSQL,
-> Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`, `worker`, and
-> `scheduler`. `OPENAI_API_KEY` is optional and worker-only.
+> **Status:** **Community Beta complete** (Stage 2, 9/9 slices). OSVA supports
+> Agent registry, immutable AgentVersions, Run lifecycle, trusted TypeScript and
+> Remote HTTP runtimes, ModelGateway (OpenAI / Anthropic / Gemini), ToolGateway
+> (internal tools + MCP), persistent memory, EvaluationSuites, scheduling,
+> versioned workflows (sequential + DAG + approval), Node/Python SDKs, CLI,
+> optional OpenTelemetry, and basic AI Office. See
+> [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md).
 
 ## Why OSVA?
 
@@ -93,16 +94,21 @@ AI Office
 
 See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
+## Community Beta quickstart
+
+1. [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) — authoritative local setup
+2. [`docs/COMMUNITY-BETA.md`](docs/COMMUNITY-BETA.md) — capability matrix and non-goals
+
 ## Documentation
 
 Start with:
 
 1. [`docs/00-DOCUMENTATION-MAP.md`](docs/00-DOCUMENTATION-MAP.md)
 2. [`docs/product/PRODUCT_VISION.md`](docs/product/PRODUCT_VISION.md)
-3. [`docs/architecture/REFERENCE_ARCHITECTURE.md`](docs/architecture/REFERENCE_ARCHITECTURE.md)
+3. [`docs/architecture/ARCHITECTURE_OVERVIEW.md`](docs/architecture/ARCHITECTURE_OVERVIEW.md)
 4. [`docs/architecture/ARCHITECTURAL_INVARIANTS.md`](docs/architecture/ARCHITECTURAL_INVARIANTS.md)
 5. [`docs/contracts/README.md`](docs/contracts/README.md)
-6. [`docs/implementation/STAGE-0-FOUNDATION.md`](docs/implementation/STAGE-0-FOUNDATION.md)
+6. [`docs/roadmap/IMPLEMENTATION_TRACKER.md`](docs/roadmap/IMPLEMENTATION_TRACKER.md)
 
 ## Initial implementation direction
 
@@ -119,13 +125,7 @@ Stage 1 is expected to use:
 
 These are implementation choices, not permanent domain dependencies.
 
-## Stage 0 Development
-
-Stage 0 is the architectural foundation: public contracts, domain, PostgreSQL
-persistence, a walking orchestration skeleton, and process shells. It is not a
-usable Agent product. Deeper notes live in
-[`docs/implementation/STAGE-0-FOUNDATION.md`](docs/implementation/STAGE-0-FOUNDATION.md)
-and [`docs/roadmap/IMPLEMENTATION_TRACKER.md`](docs/roadmap/IMPLEMENTATION_TRACKER.md).
+## Local development
 
 ### Prerequisites
 
@@ -158,6 +158,8 @@ environment. Processes do not auto-load `.env`. Required variables:
 - `OSVA_TRUSTED_RUNTIME_ROOT`
 - optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`
 - optional worker-only `OPENAI_API_KEY`
+- optional worker-only `OSVA_RUNTIME_CAPABILITY_SECRET` for Remote HTTP
+- optional worker-only `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS` (default off)
 
 Then start infrastructure, apply committed migrations, and run the apps:
 
@@ -168,6 +170,7 @@ pnpm build
 pnpm dev:web
 pnpm dev:worker
 pnpm dev:scheduler
+pnpm dev:workflow-orchestrator
 ```
 
 Required sequence:
@@ -185,8 +188,36 @@ as the normal workflow. The committed files under `packages/db/drizzle/` are
 authoritative. Generate new SQL with `pnpm --filter @osva/db db:generate` and
 commit the result.
 
-`pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web and worker both
-require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
+`pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web, worker, scheduler,
+and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
+
+### SDK and CLI (Stage 2.5)
+
+Publish-ready packages (not yet published externally):
+
+- `@osva/sdk` — TypeScript control-plane client (`OsvaClient`) and Runtime Protocol V1 helpers (`@osva/sdk/runtime`)
+- `@osva/cli` — `osva` CLI built on the Node SDK
+- `osva-sdk` — Python package (`import osva`) for Python >= 3.11
+
+See [`docs/engineering/SDK.md`](docs/engineering/SDK.md).
+
+```text
+export OSVA_BASE_URL=http://127.0.0.1:3000
+export OSVA_WORKSPACE_ID=ws-dev
+pnpm --filter @osva/cli build
+node packages/cli/dist/bin/osva.js agents list
+```
+
+Python checks from `sdks/python`:
+
+```text
+pip install -e ".[dev]"
+ruff format --check .
+ruff check .
+mypy src
+pytest
+python -m build
+```
 
 ### Endpoints and worker behavior
 
@@ -264,45 +295,48 @@ and dispatches canonical Runs through CreateRun; BullMQ repeatable jobs are not
 the schedule authority. Community Alpha misfire policy is `COALESCE_ONE`: after
 downtime at most one overdue occurrence is materialized per Schedule.
 
-### Community Alpha quickstart (no paid model key)
+Workflow API:
 
-Use the trusted echo agent fixture path:
+- `POST /v1/workflows` — create a Workflow (`workspaceId`, `key`, `name`,
+  optional `description`)
+- `GET /v1/workflows` — list Workflows
+- `GET /v1/workflows/:workflowId` — get a Workflow
+- `POST /v1/workflows/:workflowId/versions` — append an immutable WorkflowVersion
+- `GET /v1/workflows/:workflowId/versions` — list versions for a Workflow
+- `GET /v1/workflows/:workflowId/versions/:workflowVersionId` — get a version
+- `POST /v1/workflow-runs` — create a PENDING WorkflowRun
+  (`workspaceId`, `workflowVersionId`, `input`)
+- `GET /v1/workflow-runs/:workflowRunId` — get a WorkflowRun, node runs, and
+  ApprovalRequests
+- `GET /v1/approval-requests/:id?workspaceId=...` — get a workspace-scoped
+  ApprovalRequest
+- `POST /v1/approval-requests/:id/decision` — persist `APPROVED` or `REJECTED`
+  (`workspaceId`, `decision`, optional `comment`); does not advance the workflow
 
-1. `pnpm infra:up` and `pnpm db:migrate`
-2. Set `OSVA_DATABASE_URL`, `OSVA_VALKEY_URL`, and `OSVA_TRUSTED_RUNTIME_ROOT`
-   to a directory containing a trusted TypeScript agent entrypoint
-3. Start `pnpm dev:web`, `pnpm dev:worker`, and `pnpm dev:scheduler`
-4. `POST /v1/agents` and `POST /v1/agents/:id/versions` with a trusted runtime
-   manifest (for example the echo agent under
-   `adapters/runtime-typescript/test/fixtures/echo-agent.ts`)
-5. `POST /v1/schedules` targeting that AgentVersion with cron such as `* * * * *`
-   and timezone `UTC`
-6. Inspect `GET /v1/schedules/:id/occurrences` and resulting Runs under
-   `/v1/runs`
+Creating a WorkflowRun does not execute the workflow inside the HTTP request.
+`apps/workflow-orchestrator` reconciles PostgreSQL WorkflowRun state, materializes
+WorkflowNodeRuns, and creates canonical child Runs for AGENT nodes through
+CreateRun. V1 linear AGENT graphs remain executable. V2 adds BRANCH, PARALLEL,
+JOIN, and APPROVAL. Node output follows the DAG; APPROVAL is pass-through.
+A failed child Run or rejected approval fails the WorkflowRun and later nodes
+do not start. Agents cannot invoke other agents; multi-agent execution is
+workflow composition only.
 
-Community Alpha includes Agent registry, immutable AgentVersions, Runs,
-RunAttempts, BullMQ transport, trusted TypeScript runtime, ModelGateway,
-OpenAI provider, ToolGateway, internal tools, RunSteps, usage/cost estimation,
-JSON_EXACT_MATCH evaluation, and recurring scheduling.
-
-Community Alpha does not yet include auth/RBAC, untrusted sandboxing, workflow
-engine, multi-agent workflows, human approvals, MCP, side-effecting external
-tools, deployment objects, automatic logical retries, Run cancellation,
-OpenTelemetry backend, dashboards, LLM-as-judge, evaluation datasets,
-billing/invoicing, budgets, multi-provider production support, or a hosted
-control plane.
+First Agent / Run walkthrough, workflow, MCP, memory, evaluation, scheduling,
+AI Office, and OpenTelemetry examples live in
+[`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md).
 
 ### Quality commands
 
 ```text
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm test:integration
-pnpm infra:down
+pnpm verify:quick
+pnpm verify:ci:clean
+pnpm verify:community-beta   # alias for verify:ci:clean
 ```
+
+`pnpm verify:quick` is the inner development loop. `pnpm verify:ci:clean` is
+the authoritative Stage 2 release gate. GitHub CI runs the same `pnpm verify:ci`
+and `pnpm verify:python` commands. See `docs/engineering/DEVELOPMENT_GATES.md`.
 
 ## Contributing
 

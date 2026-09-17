@@ -1,9 +1,11 @@
 import type {
   InternalToolImplementationId,
+  McpToolVersionConfig,
   ToolId,
   ToolType,
   ToolVersionId,
 } from "@osva/contracts";
+import { MCP_TOOL_IMPLEMENTATION } from "@osva/contracts";
 
 import type { Tool } from "../tool.js";
 import type { ToolVersion } from "../tool-version.js";
@@ -16,7 +18,9 @@ export interface AppendToolVersionInput {
   readonly id: ToolVersionId;
   readonly toolId: ToolId;
   readonly type: ToolType;
-  readonly implementation: InternalToolImplementationId;
+  readonly implementation:
+    InternalToolImplementationId | typeof MCP_TOOL_IMPLEMENTATION;
+  readonly mcp?: McpToolVersionConfig;
   readonly createdAt: Date;
 }
 

@@ -16,6 +16,24 @@ const HOST_POSTGRES_CONNECT_TIMEOUT_SECONDS = 2;
 const execFileAsync = promisify(execFile);
 
 const STAGE0_TABLES = [
+  "assignments",
+  "team_memberships",
+  "goals",
+  "office_workers",
+  "roles",
+  "teams",
+  "approval_requests",
+  "evaluation_case_results",
+  "evaluation_runs",
+  "evaluation_cases",
+  "evaluation_suite_versions",
+  "evaluation_suites",
+  "memory_records",
+  "memory_namespaces",
+  "workflow_node_runs",
+  "workflow_runs",
+  "workflow_versions",
+  "workflows",
   "evaluations",
   "run_steps",
   "run_attempts",
@@ -29,6 +47,8 @@ const STAGE0_TABLES = [
   "model_profiles",
   "tool_versions",
   "tools",
+  "connector_versions",
+  "connectors",
   "workspaces",
 ] as const;
 

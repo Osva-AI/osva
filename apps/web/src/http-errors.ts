@@ -2,15 +2,22 @@ import type { ServerResponse } from "node:http";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
+  ConnectorNotFoundError,
+  ConnectorVersionNotFoundError,
   DomainInvariantError,
   DuplicateAgentKeyError,
+  DuplicateConnectorKeyError,
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
   DuplicateScheduleKeyError,
+  DuplicateWorkflowKeyError,
   EvaluationNotFoundError,
   InvalidRunAttemptStateError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
+  InvalidWorkflowNodeRunTransitionError,
+  InvalidWorkflowRunTransitionError,
+  InvalidApprovalRequestTransitionError,
   LifecycleConflictError,
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
@@ -21,6 +28,11 @@ import {
   RunStepNotFoundError,
   ScheduleNotFoundError,
   WorkspaceNotFoundError,
+  ApprovalRequestNotFoundError,
+  WorkflowNotFoundError,
+  WorkflowNodeRunNotFoundError,
+  WorkflowRunNotFoundError,
+  WorkflowVersionNotFoundError,
 } from "@osva/domain";
 import {
   AgentNotFoundError as OrchestrationAgentNotFoundError,
@@ -45,6 +57,8 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof WorkspaceNotFoundError ||
     error instanceof RunNotFoundError ||
     error instanceof RunAttemptNotFoundError ||
+    error instanceof ConnectorNotFoundError ||
+    error instanceof ConnectorVersionNotFoundError ||
     error instanceof ModelProfileNotFoundError ||
     error instanceof ModelProfileVersionNotFoundError ||
     error instanceof ToolNotFoundError ||
@@ -52,6 +66,11 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof RunStepNotFoundError ||
     error instanceof EvaluationNotFoundError ||
     error instanceof ScheduleNotFoundError ||
+    error instanceof WorkflowNotFoundError ||
+    error instanceof WorkflowVersionNotFoundError ||
+    error instanceof WorkflowRunNotFoundError ||
+    error instanceof WorkflowNodeRunNotFoundError ||
+    error instanceof ApprovalRequestNotFoundError ||
     error instanceof OrchestrationAgentNotFoundError ||
     error instanceof OrchestrationAgentVersionNotFoundError ||
     error instanceof OrchestrationRunNotFoundError ||
@@ -63,9 +82,11 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
 
   if (
     error instanceof DuplicateAgentKeyError ||
+    error instanceof DuplicateConnectorKeyError ||
     error instanceof DuplicateModelProfileKeyError ||
     error instanceof DuplicateToolKeyError ||
     error instanceof DuplicateScheduleKeyError ||
+    error instanceof DuplicateWorkflowKeyError ||
     error instanceof LifecycleConflictError ||
     error instanceof InvalidRunAttemptStateError
   ) {
@@ -77,7 +98,10 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof DomainInvariantError ||
     error instanceof BindingMismatchError ||
     error instanceof InvalidRunTransitionError ||
-    error instanceof InvalidRunAttemptTransitionError
+    error instanceof InvalidRunAttemptTransitionError ||
+    error instanceof InvalidWorkflowRunTransitionError ||
+    error instanceof InvalidWorkflowNodeRunTransitionError ||
+    error instanceof InvalidApprovalRequestTransitionError
   ) {
     sendJson(response, 400, { status: "invalid_request" });
     return;

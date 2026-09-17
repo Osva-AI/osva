@@ -1,6 +1,11 @@
 import type {
   AgentId,
   AgentVersionId,
+  EvaluationCaseId,
+  EvaluationRunId,
+  MemoryAccessMode,
+  MemoryNamespaceBinding,
+  MemoryNamespaceId,
   ModelProfileVersionId,
   ToolVersionId,
   RunId,
@@ -24,6 +29,9 @@ export function runToRow(run: Run) {
     modelProfileVersionBindings:
       run.effectiveBindings.modelProfileVersionBindings,
     toolVersionBindings: run.effectiveBindings.toolVersionBindings,
+    memoryNamespaceBindings: run.effectiveBindings.memoryNamespaceBindings,
+    evaluationRunId: run.evaluationRunId ?? null,
+    evaluationCaseId: run.evaluationCaseId ?? null,
     input: run.input,
     idempotencyKey: run.idempotencyKey ?? null,
     createdAt: run.createdAt,
@@ -43,11 +51,18 @@ export function runFromRow(row: RunRow): Run {
         row.modelProfileVersionBindings,
       ),
       toolVersionBindings: toToolVersionBindings(row.toolVersionBindings),
+      memoryNamespaceBindings: toMemoryNamespaceBindings(
+        row.memoryNamespaceBindings,
+      ),
     }),
     input: row.input,
     createdAt: toDomainDate(row.createdAt),
     updatedAt: toDomainDate(row.updatedAt),
     idempotencyKey: row.idempotencyKey ?? undefined,
+    evaluationRunId:
+      (row.evaluationRunId as EvaluationRunId | null) ?? undefined,
+    evaluationCaseId:
+      (row.evaluationCaseId as EvaluationCaseId | null) ?? undefined,
   });
 }
 
@@ -94,6 +109,50 @@ function toToolVersionBindings(
     }
 
     bindings[key] = binding as ToolVersionId;
+  }
+
+  return bindings;
+}
+
+function toMemoryNamespaceBindings(
+  value: unknown,
+): Readonly<Record<string, MemoryNamespaceBinding>> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new DomainInvariantError(
+      "Persisted memoryNamespaceBindings must be a map.",
+    );
+  }
+
+  const bindings: Record<string, MemoryNamespaceBinding> = {};
+
+  for (const [key, binding] of Object.entries(value)) {
+    if (
+      binding === null ||
+      typeof binding !== "object" ||
+      Array.isArray(binding)
+    ) {
+      throw new DomainInvariantError(
+        "Persisted memoryNamespaceBindings values must be objects.",
+      );
+    }
+
+    const namespaceId = (binding as { namespaceId?: unknown }).namespaceId;
+    const access = (binding as { access?: unknown }).access;
+    if (typeof namespaceId !== "string" || namespaceId.length === 0) {
+      throw new DomainInvariantError(
+        "Persisted memoryNamespaceBindings.namespaceId must be a non-empty string.",
+      );
+    }
+    if (access !== "READ_ONLY" && access !== "READ_WRITE") {
+      throw new DomainInvariantError(
+        "Persisted memoryNamespaceBindings.access must be READ_ONLY or READ_WRITE.",
+      );
+    }
+
+    bindings[key] = {
+      namespaceId: namespaceId as MemoryNamespaceId,
+      access: access as MemoryAccessMode,
+    };
   }
 
   return bindings;
