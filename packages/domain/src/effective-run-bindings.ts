@@ -1,5 +1,6 @@
 import type {
   AgentVersionId,
+  MemoryNamespaceBinding,
   ModelProfileVersionId,
   ToolVersionId,
 } from "@osva/contracts";
@@ -13,6 +14,9 @@ export interface EffectiveRunBindingsProps {
     Record<string, ModelProfileVersionId>
   >;
   readonly toolVersionBindings: Readonly<Record<string, ToolVersionId>>;
+  readonly memoryNamespaceBindings: Readonly<
+    Record<string, MemoryNamespaceBinding>
+  >;
 }
 
 export class EffectiveRunBindings {
@@ -21,11 +25,15 @@ export class EffectiveRunBindings {
     Record<string, ModelProfileVersionId>
   >;
   readonly toolVersionBindings: Readonly<Record<string, ToolVersionId>>;
+  readonly memoryNamespaceBindings: Readonly<
+    Record<string, MemoryNamespaceBinding>
+  >;
 
   private constructor(props: EffectiveRunBindingsProps) {
     this.agentVersionId = props.agentVersionId;
     this.modelProfileVersionBindings = props.modelProfileVersionBindings;
     this.toolVersionBindings = props.toolVersionBindings;
+    this.memoryNamespaceBindings = props.memoryNamespaceBindings;
   }
 
   static create(props: EffectiveRunBindingsProps): EffectiveRunBindings {
@@ -55,6 +63,16 @@ export class EffectiveRunBindings {
       );
     }
 
+    if (
+      props.memoryNamespaceBindings === null ||
+      typeof props.memoryNamespaceBindings !== "object" ||
+      Array.isArray(props.memoryNamespaceBindings)
+    ) {
+      throw new DomainInvariantError(
+        "EffectiveRunBindings.memoryNamespaceBindings must be a map.",
+      );
+    }
+
     return Object.freeze(
       new EffectiveRunBindings({
         agentVersionId: props.agentVersionId,
@@ -62,6 +80,7 @@ export class EffectiveRunBindings {
           props.modelProfileVersionBindings,
         ),
         toolVersionBindings: freezeRecord(props.toolVersionBindings),
+        memoryNamespaceBindings: freezeRecord(props.memoryNamespaceBindings),
       }),
     );
   }

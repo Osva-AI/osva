@@ -2,6 +2,8 @@ import type { JobQueue } from "@osva/contracts";
 import type {
   AgentId,
   AgentVersionId,
+  EvaluationCaseId,
+  EvaluationRunId,
   RunAttemptId,
   RunId,
   WorkspaceId,
@@ -10,6 +12,7 @@ import {
   EffectiveRunBindings,
   Run,
   RunAttempt,
+  memoryNamespaceBindingsFromManifest,
   modelProfileVersionBindingsFromManifest,
   toolVersionBindingsFromManifest,
   type AgentRepository,
@@ -32,6 +35,8 @@ export interface CreateRunCommand {
   readonly agentVersionId: AgentVersionId;
   readonly input: unknown;
   readonly idempotencyKey?: string;
+  readonly evaluationRunId?: EvaluationRunId;
+  readonly evaluationCaseId?: EvaluationCaseId;
   readonly now: Date;
 }
 
@@ -80,6 +85,8 @@ export class CreateRun {
       input: command.input,
       createdAt: command.now,
       idempotencyKey: command.idempotencyKey,
+      evaluationRunId: command.evaluationRunId,
+      evaluationCaseId: command.evaluationCaseId,
     });
     const attempt = RunAttempt.createFirst({
       id: command.runAttemptId,
@@ -149,5 +156,8 @@ function resolveEffectiveBindings(
       agentVersion.manifest,
     ),
     toolVersionBindings: toolVersionBindingsFromManifest(agentVersion.manifest),
+    memoryNamespaceBindings: memoryNamespaceBindingsFromManifest(
+      agentVersion.manifest,
+    ),
   });
 }

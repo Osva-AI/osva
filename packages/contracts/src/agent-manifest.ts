@@ -1,4 +1,9 @@
-import type { ModelProfileVersionId, ToolVersionId } from "./ids.js";
+import type {
+  MemoryNamespaceId,
+  ModelProfileVersionId,
+  ToolVersionId,
+} from "./ids.js";
+import type { MemoryAccessMode } from "./memory-gateway.js";
 import type { JsonSchemaRecord } from "./json-schema.js";
 import type { SecretReference } from "./secret-reference.js";
 
@@ -93,6 +98,11 @@ export interface AgentManifestToolBinding {
   readonly toolVersionId: ToolVersionId;
 }
 
+export interface AgentManifestMemoryBinding {
+  readonly namespaceId: MemoryNamespaceId;
+  readonly access: MemoryAccessMode;
+}
+
 /**
  * Executable contract of an AgentVersion.
  * The document has no plaintext-secret field; secret values are SecretReferences elsewhere.
@@ -116,4 +126,9 @@ export interface AgentManifestV1 {
    * on CreateRun. Binding names are identifiers, not implementation IDs.
    */
   readonly tools?: Readonly<Record<string, AgentManifestToolBinding>>;
+  /**
+   * Optional logical memory bindings. Absent or empty maps freeze as `{}`
+   * on CreateRun. Binding names are identifiers, not namespace database IDs.
+   */
+  readonly memory?: Readonly<Record<string, AgentManifestMemoryBinding>>;
 }

@@ -67,6 +67,24 @@ export function isToolBindingName(value: string): boolean {
   return MODEL_BINDING_NAME_PATTERN.test(value);
 }
 
+export function isMemoryBindingName(value: string): boolean {
+  return MODEL_BINDING_NAME_PATTERN.test(value);
+}
+
+export const MemoryErrorCode = {
+  MEMORY_BINDING_NOT_FOUND: "MEMORY_BINDING_NOT_FOUND",
+  MEMORY_PERMISSION_DENIED: "MEMORY_PERMISSION_DENIED",
+  MEMORY_KEY_NOT_FOUND: "MEMORY_KEY_NOT_FOUND",
+  MEMORY_CONFLICT: "MEMORY_CONFLICT",
+  MEMORY_INVALID_VALUE: "MEMORY_INVALID_VALUE",
+  MEMORY_UNAVAILABLE: "MEMORY_UNAVAILABLE",
+  MEMORY_CANCELLED: "MEMORY_CANCELLED",
+  MEMORY_TIMEOUT: "MEMORY_TIMEOUT",
+} as const;
+
+export type MemoryErrorCode =
+  (typeof MemoryErrorCode)[keyof typeof MemoryErrorCode];
+
 export const CHILD_ENV_ALLOWLIST = [
   "PATH",
   "PATHEXT",

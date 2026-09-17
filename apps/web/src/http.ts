@@ -3,6 +3,7 @@ import http from "node:http";
 import type {
   AgentApplication,
   ConnectorApplication,
+  MemoryApplication,
   ModelProfileApplication,
   ToolApplication,
   WorkflowApplication,
@@ -10,7 +11,12 @@ import type {
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
 import { handleConnectorRegistryRequest } from "./connector-http.js";
+import {
+  handleEvaluationRegistryRequest,
+  type EvaluationHttpServices,
+} from "./evaluation-http.js";
 import { sendJson } from "./json.js";
+import { handleMemoryRegistryRequest } from "./memory-http.js";
 import { handleModelProfileRegistryRequest } from "./model-profile-http.js";
 import { handleToolRegistryRequest } from "./tool-http.js";
 import {
@@ -30,6 +36,8 @@ export interface CreateWebApplicationOptions {
   readonly readinessCheck: ReadinessCheck;
   readonly agents: AgentApplication;
   readonly connectors: ConnectorApplication;
+  readonly memory: MemoryApplication;
+  readonly evaluations: EvaluationHttpServices;
   readonly modelProfiles: ModelProfileApplication;
   readonly tools: ToolApplication;
   readonly runs: RunHttpServices;
@@ -48,6 +56,8 @@ export function createWebApplication(
       options.readinessCheck,
       options.agents,
       options.connectors,
+      options.memory,
+      options.evaluations,
       options.modelProfiles,
       options.tools,
       options.runs,
@@ -64,6 +74,8 @@ async function handleRequest(
   readinessCheck: ReadinessCheck,
   agents: AgentApplication,
   connectors: ConnectorApplication,
+  memory: MemoryApplication,
+  evaluations: EvaluationHttpServices,
   modelProfiles: ModelProfileApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
@@ -147,6 +159,30 @@ async function handleRequest(
     connectors,
   );
   if (handledConnectors) {
+    return;
+  }
+
+  const handledMemory = await handleMemoryRegistryRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    memory,
+  );
+  if (handledMemory) {
+    return;
+  }
+
+  const handledEvaluations = await handleEvaluationRegistryRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    evaluations,
+  );
+  if (handledEvaluations) {
     return;
   }
 

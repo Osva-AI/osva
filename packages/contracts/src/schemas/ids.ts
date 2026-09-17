@@ -29,5 +29,13 @@ export const modelProfileIdSchema = osvaIdSchema<"ModelProfileId">();
 export const modelProfileVersionIdSchema =
   osvaIdSchema<"ModelProfileVersionId">();
 export const evaluationIdSchema = osvaIdSchema<"EvaluationId">();
+export const memoryNamespaceIdSchema = osvaIdSchema<"MemoryNamespaceId">();
+export const evaluationSuiteIdSchema = osvaIdSchema<"EvaluationSuiteId">();
+export const evaluationSuiteVersionIdSchema =
+  osvaIdSchema<"EvaluationSuiteVersionId">();
+export const evaluationCaseIdSchema = osvaIdSchema<"EvaluationCaseId">();
+export const evaluationRunIdSchema = osvaIdSchema<"EvaluationRunId">();
+export const evaluationCaseResultIdSchema =
+  osvaIdSchema<"EvaluationCaseResultId">();
 export const artifactIdSchema = osvaIdSchema<"ArtifactId">();
 export const eventIdSchema = osvaIdSchema<"EventId">();

@@ -71,3 +71,22 @@ export const PERSISTED_APPROVAL_REQUEST_STATES = [
   "APPROVED",
   "REJECTED",
 ] as const;
+
+export const PERSISTED_EVALUATION_RUN_STATES = [
+  "PENDING",
+  "RUNNING",
+  "COMPLETED",
+  "FAILED",
+  "CANCELLED",
+] as const;
+
+export const PERSISTED_EVALUATION_RUN_TARGET_TYPES = [
+  "AGENT_VERSION",
+  "WORKFLOW_VERSION",
+] as const;
+
+export const PERSISTED_EVALUATION_CASE_OUTCOMES = [
+  "PASS",
+  "FAIL",
+  "ERROR",
+] as const;

@@ -17,6 +17,7 @@ const validRequest = {
   effectiveConfig: {},
   modelProfileVersionBindings: {},
   toolVersionBindings: {},
+  memoryNamespaceBindings: {},
   toolGrants: [],
   timeoutMs: 30_000,
   policyContext: {},

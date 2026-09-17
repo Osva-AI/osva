@@ -104,6 +104,7 @@ async function seedRunningExecution(options?: {
       agentVersionId,
       modelProfileVersionBindings: { primary: modelProfileVersionId },
       toolVersionBindings: { echo: toolVersionId },
+      memoryNamespaceBindings: {},
     }),
     input: { prompt: "hello" },
     createdAt: NOW,
@@ -204,6 +205,7 @@ describe("RuntimeCapabilityBridge", () => {
       },
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
     });
     const server = await startRuntimeCapabilityServer({
       handler: bridge.handle,
@@ -261,6 +263,7 @@ describe("RuntimeCapabilityBridge", () => {
       clock: { now: () => NOW },
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
     });
     const server = await startRuntimeCapabilityServer({
       handler: bridge.handle,
@@ -304,6 +307,7 @@ describe("RuntimeCapabilityBridge", () => {
           ids: { createId: () => randomUUID() },
         }).wrapModelGateway(inner),
       createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
     });
     const server = await startRuntimeCapabilityServer({
       handler: bridge.handle,
@@ -377,6 +381,7 @@ describe("RuntimeCapabilityBridge", () => {
           clock: { now: () => NOW },
           ids: { createId: () => randomUUID() },
         }).wrapToolGateway(toolGateway),
+      createScopedMemoryGateway: () => undefined,
     });
     const server = await startRuntimeCapabilityServer({
       handler: bridge.handle,

@@ -1,4 +1,10 @@
-import type { AgentId, RunId, WorkspaceId } from "@osva/contracts";
+import type {
+  AgentId,
+  EvaluationCaseId,
+  EvaluationRunId,
+  RunId,
+  WorkspaceId,
+} from "@osva/contracts";
 import type { RunState } from "@osva/contracts";
 
 import { DomainInvariantError } from "./errors.js";
@@ -18,6 +24,8 @@ export interface RunCreateProps {
   readonly input: unknown;
   readonly createdAt: Date;
   readonly idempotencyKey?: string;
+  readonly evaluationRunId?: EvaluationRunId;
+  readonly evaluationCaseId?: EvaluationCaseId;
 }
 
 export interface RunRehydrateProps {
@@ -30,6 +38,8 @@ export interface RunRehydrateProps {
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly idempotencyKey?: string;
+  readonly evaluationRunId?: EvaluationRunId;
+  readonly evaluationCaseId?: EvaluationCaseId;
 }
 
 export class Run {
@@ -42,6 +52,8 @@ export class Run {
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly idempotencyKey: string | undefined;
+  readonly evaluationRunId: EvaluationRunId | undefined;
+  readonly evaluationCaseId: EvaluationCaseId | undefined;
 
   private constructor(props: {
     readonly id: RunId;
@@ -53,6 +65,8 @@ export class Run {
     readonly createdAt: Date;
     readonly updatedAt: Date;
     readonly idempotencyKey: string | undefined;
+    readonly evaluationRunId: EvaluationRunId | undefined;
+    readonly evaluationCaseId: EvaluationCaseId | undefined;
   }) {
     this.id = props.id;
     this.workspaceId = props.workspaceId;
@@ -63,6 +77,14 @@ export class Run {
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.idempotencyKey = props.idempotencyKey;
+    this.evaluationRunId = props.evaluationRunId;
+    this.evaluationCaseId = props.evaluationCaseId;
+  }
+
+  get isEvaluationChildRun(): boolean {
+    return (
+      this.evaluationRunId !== undefined && this.evaluationCaseId !== undefined
+    );
   }
 
   static create(props: RunCreateProps): Run {
@@ -76,6 +98,8 @@ export class Run {
       createdAt: props.createdAt,
       updatedAt: props.createdAt,
       idempotencyKey: props.idempotencyKey,
+      evaluationRunId: props.evaluationRunId,
+      evaluationCaseId: props.evaluationCaseId,
     });
   }
 
@@ -90,6 +114,8 @@ export class Run {
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
       idempotencyKey: props.idempotencyKey,
+      evaluationRunId: props.evaluationRunId,
+      evaluationCaseId: props.evaluationCaseId,
     });
   }
 
@@ -106,6 +132,8 @@ export class Run {
       createdAt: this.createdAt,
       updatedAt: now,
       idempotencyKey: this.idempotencyKey,
+      evaluationRunId: this.evaluationRunId,
+      evaluationCaseId: this.evaluationCaseId,
     });
   }
 
@@ -119,6 +147,8 @@ export class Run {
     readonly createdAt: Date;
     readonly updatedAt: Date;
     readonly idempotencyKey: string | undefined;
+    readonly evaluationRunId: EvaluationRunId | undefined;
+    readonly evaluationCaseId: EvaluationCaseId | undefined;
   }): Run {
     if (!props.id) {
       throw new DomainInvariantError("Run.id is required.");
@@ -165,6 +195,8 @@ export class Run {
           props.idempotencyKey === undefined
             ? undefined
             : requireNonEmptyString(props.idempotencyKey, "Run.idempotencyKey"),
+        evaluationRunId: props.evaluationRunId,
+        evaluationCaseId: props.evaluationCaseId,
       }),
     );
   }

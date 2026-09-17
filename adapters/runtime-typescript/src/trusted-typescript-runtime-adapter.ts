@@ -11,7 +11,15 @@ import type {
   ToolInvokeRequest,
   TrustedTypeScriptRuntime,
 } from "@osva/contracts";
+import type {
+  MemoryAuthorization,
+  MemoryDeleteRequest,
+  MemoryGetRequest,
+  MemoryListRequest,
+  MemorySetRequest,
+} from "@osva/contracts";
 import {
+  MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
   TOOL_ERROR_CODES,
   isCanonicalJsonValue,
@@ -29,9 +37,17 @@ import {
 } from "./public-error.js";
 import {
   isChildResultMessage,
+  isMemoryDeleteRequestMessage,
+  isMemoryGetRequestMessage,
+  isMemoryListRequestMessage,
+  isMemorySetRequestMessage,
   isModelGenerateRequestMessage,
   isToolInvokeRequestMessage,
   type ExecuteChildRequest,
+  type MemoryDeleteRequestMessage,
+  type MemoryGetRequestMessage,
+  type MemoryListRequestMessage,
+  type MemorySetRequestMessage,
   type ModelGenerateRequestMessage,
   type ToolInvokeRequestMessage,
 } from "./protocol.js";
@@ -62,6 +78,44 @@ export interface TrustedTypeScriptRuntimeAdapterOptions {
   readonly createScopedToolGateway?: (
     execution: ExecutionRequest,
   ) => RuntimeToolGateway | undefined;
+  readonly memoryGateway?: RuntimeMemoryGateway;
+  readonly createScopedMemoryGateway?: (
+    execution: ExecutionRequest,
+  ) => RuntimeMemoryGateway | undefined;
+}
+
+export interface RuntimeMemoryGateway {
+  get(
+    request: MemoryGetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<{
+    readonly key: string;
+    readonly value: JsonValue;
+    readonly revision: number;
+  }>;
+  set(
+    request: MemorySetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<{
+    readonly key: string;
+    readonly value: JsonValue;
+    readonly revision: number;
+  }>;
+  delete(
+    request: MemoryDeleteRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<void>;
+  list(
+    request: MemoryListRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<{
+    readonly items: readonly {
+      readonly key: string;
+      readonly value: JsonValue;
+      readonly revision: number;
+    }[];
+    readonly nextCursor?: string;
+  }>;
 }
 
 /**
@@ -96,6 +150,10 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
   private readonly createScopedToolGateway:
     | ((execution: ExecutionRequest) => RuntimeToolGateway | undefined)
     | undefined;
+  private readonly memoryGateway: RuntimeMemoryGateway | undefined;
+  private readonly createScopedMemoryGateway:
+    | ((execution: ExecutionRequest) => RuntimeMemoryGateway | undefined)
+    | undefined;
   private readonly liveExecutions = new Set<LiveExecution>();
   private closed = false;
 
@@ -107,6 +165,8 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
     this.toolGateway = options.toolGateway;
     this.createScopedModelGateway = options.createScopedModelGateway;
     this.createScopedToolGateway = options.createScopedToolGateway;
+    this.memoryGateway = options.memoryGateway;
+    this.createScopedMemoryGateway = options.createScopedMemoryGateway;
   }
 
   async execute(request: ExecutionRequest): Promise<ExecutionResult> {
@@ -245,6 +305,8 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
           this.createScopedModelGateway?.(request) ?? this.modelGateway,
         toolGateway:
           this.createScopedToolGateway?.(request) ?? this.toolGateway,
+        memoryGateway:
+          this.createScopedMemoryGateway?.(request) ?? this.memoryGateway,
         modelBindings: request.modelProfileVersionBindings,
         toolBindings: request.toolVersionBindings,
         execution: request,
@@ -271,6 +333,7 @@ function waitForChildResult(options: {
   readonly abort: AbortController;
   readonly modelGateway: RuntimeModelGateway | undefined;
   readonly toolGateway: RuntimeToolGateway | undefined;
+  readonly memoryGateway: RuntimeMemoryGateway | undefined;
   readonly modelBindings: ExecutionRequest["modelProfileVersionBindings"];
   readonly toolBindings: ExecutionRequest["toolVersionBindings"];
   readonly execution: ExecutionRequest;
@@ -283,6 +346,7 @@ function waitForChildResult(options: {
     abort,
     modelGateway,
     toolGateway,
+    memoryGateway,
     modelBindings,
     toolBindings,
     execution,
@@ -336,6 +400,54 @@ function waitForChildResult(options: {
           abort,
           toolGateway,
           bindings: toolBindings,
+          execution,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isMemoryGetRequestMessage(raw)) {
+        void handleMemoryGetRequest({
+          child,
+          message: raw,
+          memoryGateway,
+          execution,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isMemorySetRequestMessage(raw)) {
+        void handleMemorySetRequest({
+          child,
+          message: raw,
+          memoryGateway,
+          execution,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isMemoryDeleteRequestMessage(raw)) {
+        void handleMemoryDeleteRequest({
+          child,
+          message: raw,
+          memoryGateway,
+          execution,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isMemoryListRequestMessage(raw)) {
+        void handleMemoryListRequest({
+          child,
+          message: raw,
+          memoryGateway,
           execution,
           logger,
           isSettled: () => settled,
@@ -574,6 +686,293 @@ async function handleToolInvokeRequest(options: {
     const mapped = mapToolGatewayFailure(error);
     sendFailure(mapped.code, mapped.message);
   }
+}
+
+function memoryAuthorization(execution: ExecutionRequest): MemoryAuthorization {
+  return {
+    workspaceId: execution.workspaceId,
+    memoryNamespaceBindings: execution.memoryNamespaceBindings,
+    allowPersistentMutation: execution.evaluationContext === undefined,
+  };
+}
+
+async function handleMemoryGetRequest(options: {
+  readonly child: ChildProcess;
+  readonly message: MemoryGetRequestMessage;
+  readonly memoryGateway: RuntimeMemoryGateway | undefined;
+  readonly execution: ExecutionRequest;
+  readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
+  readonly isSettled: () => boolean;
+}): Promise<void> {
+  const { child, message, memoryGateway, execution, logger, isSettled } =
+    options;
+
+  const sendFailure = (code: string, errorMessage: string) => {
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "memory.get.failed",
+      callId: message.callId,
+      error: {
+        code,
+        message: sanitizePublicErrorMessage(errorMessage, "Memory get failed."),
+      },
+    });
+  };
+
+  if (memoryGateway === undefined) {
+    sendFailure(
+      MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+      "Memory capability is unavailable.",
+    );
+    return;
+  }
+
+  try {
+    const record = await memoryGateway.get(
+      { bindingName: message.binding, key: message.key },
+      memoryAuthorization(execution),
+    );
+
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "memory.get.succeeded",
+      callId: message.callId,
+      record,
+    });
+  } catch (error) {
+    logger?.error("runtime.memory_get_failed", error);
+    const mapped = mapMemoryGatewayFailure(error);
+    sendFailure(mapped.code, mapped.message);
+  }
+}
+
+async function handleMemorySetRequest(options: {
+  readonly child: ChildProcess;
+  readonly message: MemorySetRequestMessage;
+  readonly memoryGateway: RuntimeMemoryGateway | undefined;
+  readonly execution: ExecutionRequest;
+  readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
+  readonly isSettled: () => boolean;
+}): Promise<void> {
+  const { child, message, memoryGateway, execution, logger, isSettled } =
+    options;
+
+  const sendFailure = (code: string, errorMessage: string) => {
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "memory.set.failed",
+      callId: message.callId,
+      error: {
+        code,
+        message: sanitizePublicErrorMessage(errorMessage, "Memory set failed."),
+      },
+    });
+  };
+
+  if (memoryGateway === undefined) {
+    sendFailure(
+      MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+      "Memory capability is unavailable.",
+    );
+    return;
+  }
+
+  try {
+    const record = await memoryGateway.set(
+      {
+        bindingName: message.binding,
+        key: message.key,
+        value: message.value,
+        expectedRevision: message.expectedRevision,
+      },
+      memoryAuthorization(execution),
+    );
+
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "memory.set.succeeded",
+      callId: message.callId,
+      record,
+    });
+  } catch (error) {
+    logger?.error("runtime.memory_set_failed", error);
+    const mapped = mapMemoryGatewayFailure(error);
+    sendFailure(mapped.code, mapped.message);
+  }
+}
+
+async function handleMemoryDeleteRequest(options: {
+  readonly child: ChildProcess;
+  readonly message: MemoryDeleteRequestMessage;
+  readonly memoryGateway: RuntimeMemoryGateway | undefined;
+  readonly execution: ExecutionRequest;
+  readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
+  readonly isSettled: () => boolean;
+}): Promise<void> {
+  const { child, message, memoryGateway, execution, logger, isSettled } =
+    options;
+
+  const sendFailure = (code: string, errorMessage: string) => {
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "memory.delete.failed",
+      callId: message.callId,
+      error: {
+        code,
+        message: sanitizePublicErrorMessage(
+          errorMessage,
+          "Memory delete failed.",
+        ),
+      },
+    });
+  };
+
+  if (memoryGateway === undefined) {
+    sendFailure(
+      MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+      "Memory capability is unavailable.",
+    );
+    return;
+  }
+
+  try {
+    await memoryGateway.delete(
+      {
+        bindingName: message.binding,
+        key: message.key,
+        expectedRevision: message.expectedRevision,
+      },
+      memoryAuthorization(execution),
+    );
+
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "memory.delete.succeeded",
+      callId: message.callId,
+    });
+  } catch (error) {
+    logger?.error("runtime.memory_delete_failed", error);
+    const mapped = mapMemoryGatewayFailure(error);
+    sendFailure(mapped.code, mapped.message);
+  }
+}
+
+async function handleMemoryListRequest(options: {
+  readonly child: ChildProcess;
+  readonly message: MemoryListRequestMessage;
+  readonly memoryGateway: RuntimeMemoryGateway | undefined;
+  readonly execution: ExecutionRequest;
+  readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
+  readonly isSettled: () => boolean;
+}): Promise<void> {
+  const { child, message, memoryGateway, execution, logger, isSettled } =
+    options;
+
+  const sendFailure = (code: string, errorMessage: string) => {
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "memory.list.failed",
+      callId: message.callId,
+      error: {
+        code,
+        message: sanitizePublicErrorMessage(
+          errorMessage,
+          "Memory list failed.",
+        ),
+      },
+    });
+  };
+
+  if (memoryGateway === undefined) {
+    sendFailure(
+      MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+      "Memory capability is unavailable.",
+    );
+    return;
+  }
+
+  try {
+    const result = await memoryGateway.list(
+      {
+        bindingName: message.binding,
+        prefix: message.prefix,
+        limit: message.limit,
+        cursor: message.cursor,
+      },
+      memoryAuthorization(execution),
+    );
+
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "memory.list.succeeded",
+      callId: message.callId,
+      items: result.items,
+      ...(result.nextCursor === undefined
+        ? {}
+        : { nextCursor: result.nextCursor }),
+    });
+  } catch (error) {
+    logger?.error("runtime.memory_list_failed", error);
+    const mapped = mapMemoryGatewayFailure(error);
+    sendFailure(mapped.code, mapped.message);
+  }
+}
+
+function mapMemoryGatewayFailure(error: unknown): {
+  readonly code: string;
+  readonly message: string;
+} {
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.length > 0
+  ) {
+    const message =
+      error instanceof Error ? error.message : "Memory operation failed.";
+    return {
+      code: error.code,
+      message: sanitizePublicErrorMessage(message, "Memory operation failed."),
+    };
+  }
+
+  return {
+    code: MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+    message: "Memory operation failed.",
+  };
 }
 
 function mapToolGatewayFailure(error: unknown): {

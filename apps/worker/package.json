@@ -22,6 +22,7 @@
     "@osva/adapters-runtime-typescript": "workspace:*",
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
+    "@osva/memory-gateway": "workspace:*",
     "@osva/model-gateway": "workspace:*",
     "@osva/observability": "workspace:*",
     "@osva/runtime-core": "workspace:*",

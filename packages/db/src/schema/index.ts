@@ -19,6 +19,13 @@ export { workflowVersions } from "./workflow-versions.js";
 export { workflowRuns } from "./workflow-runs.js";
 export { workflowNodeRuns } from "./workflow-node-runs.js";
 export { approvalRequests } from "./approval-requests.js";
+export { memoryNamespaces } from "./memory-namespaces.js";
+export { memoryRecords } from "./memory-records.js";
+export { evaluationSuites } from "./evaluation-suites.js";
+export { evaluationSuiteVersions } from "./evaluation-suite-versions.js";
+export { evaluationCases } from "./evaluation-cases.js";
+export { evaluationRuns } from "./evaluation-runs.js";
+export { evaluationCaseResults } from "./evaluation-case-results.js";
 export {
   PERSISTED_EVALUATOR_TYPES,
   PERSISTED_CONNECTOR_KINDS,
@@ -32,4 +39,7 @@ export {
   PERSISTED_APPROVAL_REQUEST_STATES,
   PERSISTED_WORKFLOW_NODE_RUN_STATES,
   PERSISTED_WORKFLOW_RUN_STATES,
+  PERSISTED_EVALUATION_RUN_STATES,
+  PERSISTED_EVALUATION_RUN_TARGET_TYPES,
+  PERSISTED_EVALUATION_CASE_OUTCOMES,
 } from "./states.js";

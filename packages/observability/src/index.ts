@@ -5,6 +5,7 @@ export {
   type RunStepRecorderDependencies,
   type RunStepRecorderIds,
   type RunStepRecorderLogger,
+  type RuntimeMemoryGateway,
   type RuntimeModelGateway,
   type RuntimeToolGateway,
   type ScopedRunStepRecorder,

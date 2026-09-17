@@ -17,6 +17,13 @@ const execFileAsync = promisify(execFile);
 
 const STAGE0_TABLES = [
   "approval_requests",
+  "evaluation_case_results",
+  "evaluation_runs",
+  "evaluation_cases",
+  "evaluation_suite_versions",
+  "evaluation_suites",
+  "memory_records",
+  "memory_namespaces",
   "workflow_node_runs",
   "workflow_runs",
   "workflow_versions",

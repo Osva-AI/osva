@@ -17,3 +17,5 @@ export { MemoryScheduleRepository } from "./memory-schedule-repository.js";
 export { MemoryWorkflowRepository } from "./memory-workflow-repository.js";
 export { MemoryWorkflowRunRepository } from "./memory-workflow-run-repository.js";
 export { MemoryApprovalRequestRepository } from "./memory-approval-request-repository.js";
+export { MemoryMemoryNamespaceRepository } from "./memory-memory-namespace-repository.js";
+export { MemoryEvaluationSuiteRepository } from "./memory-evaluation-suite-repository.js";

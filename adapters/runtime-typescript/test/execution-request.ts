@@ -28,6 +28,7 @@ export function createTrustedRequest(
     effectiveConfig: {},
     modelProfileVersionBindings: {},
     toolVersionBindings: {},
+    memoryNamespaceBindings: {},
     toolGrants: [],
     timeoutMs: 5_000,
     policyContext: {},

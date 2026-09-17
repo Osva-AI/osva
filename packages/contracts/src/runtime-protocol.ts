@@ -1,8 +1,19 @@
 import type { AgentId, AgentVersionId, RunAttemptId, RunId } from "./ids.js";
 import type { WorkspaceId } from "./ids.js";
 import type { AgentRuntime } from "./agent-manifest.js";
-import type { ModelProfileVersionId, ToolVersionId } from "./ids.js";
+import type {
+  EvaluationCaseId,
+  EvaluationRunId,
+  ModelProfileVersionId,
+  ToolVersionId,
+} from "./ids.js";
+import type { MemoryNamespaceBinding } from "./memory-gateway.js";
 import type { ToolGrant } from "./tool.js";
+
+export interface ExecutionEvaluationContext {
+  readonly evaluationRunId: EvaluationRunId;
+  readonly evaluationCaseId: EvaluationCaseId;
+}
 
 export interface ExecutionRequest {
   readonly runId: RunId;
@@ -17,9 +28,13 @@ export interface ExecutionRequest {
     Record<string, ModelProfileVersionId>
   >;
   readonly toolVersionBindings: Readonly<Record<string, ToolVersionId>>;
+  readonly memoryNamespaceBindings: Readonly<
+    Record<string, MemoryNamespaceBinding>
+  >;
   readonly toolGrants: readonly ToolGrant[];
   readonly timeoutMs: number;
   readonly policyContext: Readonly<Record<string, unknown>>;
+  readonly evaluationContext?: ExecutionEvaluationContext;
 }
 
 export interface ExecutionError {

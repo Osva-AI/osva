@@ -32,16 +32,20 @@ import {
   createDatabase,
   PostgresAgentRepository,
   PostgresConnectorRepository,
+  PostgresEvaluationSuiteRepository,
+  PostgresMemoryNamespaceRepository,
   PostgresModelProfileRepository,
   PostgresToolRepository,
   PostgresRunRepository,
   type Database,
 } from "@osva/db";
+import { createEvaluationRunApplication } from "@osva/domain";
+import { MemoryGateway } from "@osva/memory-gateway";
 import { ModelGateway, type ModelProviderAdapter } from "@osva/model-gateway";
 import { createRunStepRecorder } from "@osva/observability";
+import { EvaluationCoordinator, ExecuteRunAttempt } from "@osva/orchestration";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
-import { ExecuteRunAttempt } from "@osva/orchestration";
 
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
 import { createExecuteRunAttemptHandler } from "./execute-run-attempt-handler.js";
@@ -119,6 +123,8 @@ export function createWorkerProcess(
       const runsRepository = new PostgresRunRepository(database);
       const agents = new PostgresAgentRepository(database);
       const connectors = new PostgresConnectorRepository(database);
+      const memoryNamespaces = new PostgresMemoryNamespaceRepository(database);
+      const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
       mcpClientPool = createMcpClientPool({
         secretResolver: new ProcessEnvSecretResolver(env),
       });
@@ -132,6 +138,7 @@ export function createWorkerProcess(
         mcpClientPool,
         policy: new DefaultToolPolicy(),
       });
+      const memoryGateway = new MemoryGateway({ memoryNamespaces });
       const recorderDeps = {
         runs: runsRepository,
         modelProfiles,
@@ -154,6 +161,12 @@ export function createWorkerProcess(
         createRunStepRecorder(execution, recorderDeps).wrapToolGateway(
           toolGateway,
         );
+      const scopedMemory = (
+        execution: Parameters<typeof createRunStepRecorder>[0],
+      ) =>
+        createRunStepRecorder(execution, recorderDeps).wrapMemoryGateway(
+          memoryGateway,
+        );
 
       let capabilityBaseUrl = config.runtimeCapabilityBaseUrl;
       if (config.runtimeCapabilitySecret !== undefined) {
@@ -168,6 +181,7 @@ export function createWorkerProcess(
           },
           createScopedModelGateway: scopedModel,
           createScopedToolGateway: scopedTool,
+          createScopedMemoryGateway: scopedMemory,
         });
         capabilityServer = await startRuntimeCapabilityServer({
           host: config.runtimeCapabilityHost,
@@ -193,8 +207,10 @@ export function createWorkerProcess(
               },
               modelGateway,
               toolGateway,
+              memoryGateway,
               createScopedModelGateway: scopedModel,
               createScopedToolGateway: scopedTool,
+              createScopedMemoryGateway: scopedMemory,
             }),
             REMOTE_HTTP: new RemoteHttpRuntimeAdapter({
               secretResolver: new ProcessEnvSecretResolver(env),
@@ -214,8 +230,22 @@ export function createWorkerProcess(
         agents,
         runtime,
       });
+      const evaluationCoordinator = new EvaluationCoordinator(
+        createEvaluationRunApplication({
+          evaluationSuites,
+          runs: runsRepository,
+          agents,
+          queue,
+          clock,
+          ids: { createId: () => randomUUID() },
+        }).reconcileEvaluationCase,
+      );
       await queue.consume(
-        createExecuteRunAttemptHandler(executeRunAttempt, clock),
+        createExecuteRunAttemptHandler(
+          executeRunAttempt,
+          clock,
+          evaluationCoordinator,
+        ),
       );
       consumeStarted = true;
     },

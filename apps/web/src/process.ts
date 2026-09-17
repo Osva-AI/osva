@@ -12,6 +12,8 @@ import {
   PostgresWorkflowRepository,
   PostgresWorkflowRunRepository,
   PostgresApprovalRequestRepository,
+  PostgresEvaluationSuiteRepository,
+  PostgresMemoryNamespaceRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
@@ -19,6 +21,9 @@ import {
   createAgentApplication,
   createConnectorApplication,
   createEvaluationApplication,
+  createEvaluationRunApplication,
+  createEvaluationSuiteApplication,
+  createMemoryApplication,
   createModelProfileApplication,
   createRunApplication,
   createRunObservabilityApplication,
@@ -67,6 +72,8 @@ export function createWebProcess(
   const approvalRequestRepository = new PostgresApprovalRequestRepository(
     database,
   );
+  const memoryNamespaces = new PostgresMemoryNamespaceRepository(database);
+  const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
   const mcpClientPool = createMcpClientPool({
@@ -79,6 +86,7 @@ export function createWebProcess(
       workspaces,
       modelProfiles,
       tools,
+      memoryNamespaces,
       clock,
       ids,
     }),
@@ -102,6 +110,28 @@ export function createWebProcess(
       clock,
       ids,
     }),
+    memory: createMemoryApplication({
+      memoryNamespaces,
+      workspaces,
+      clock,
+      ids,
+    }),
+    evaluations: {
+      suites: createEvaluationSuiteApplication({
+        evaluationSuites,
+        workspaces,
+        clock,
+        ids,
+      }),
+      runs: createEvaluationRunApplication({
+        evaluationSuites,
+        runs,
+        agents,
+        queue,
+        clock,
+        ids,
+      }),
+    },
     runs: {
       runs: createRunApplication({ runs }),
       createRun: new CreateRun({

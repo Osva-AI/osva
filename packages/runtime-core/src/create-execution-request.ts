@@ -45,8 +45,18 @@ export function createExecutionRequest(
     modelProfileVersionBindings:
       source.run.effectiveBindings.modelProfileVersionBindings,
     toolVersionBindings: source.run.effectiveBindings.toolVersionBindings,
+    memoryNamespaceBindings:
+      source.run.effectiveBindings.memoryNamespaceBindings,
     toolGrants: Object.freeze([]),
     timeoutMs: source.agentVersion.manifest.execution.timeoutMs,
     policyContext: Object.freeze({}),
+    evaluationContext:
+      source.run.evaluationRunId !== undefined &&
+      source.run.evaluationCaseId !== undefined
+        ? Object.freeze({
+            evaluationRunId: source.run.evaluationRunId,
+            evaluationCaseId: source.run.evaluationCaseId,
+          })
+        : undefined,
   });
 }

@@ -3,6 +3,14 @@ import {
   RUNTIME_CAPABILITY_PATHS,
   RUNTIME_PROTOCOL_ERROR_CODES,
   RUNTIME_PROTOCOL_VERSION,
+  runtimeMemoryDeleteRequestSchema,
+  runtimeMemoryDeleteResponseSchema,
+  runtimeMemoryGetRequestSchema,
+  runtimeMemoryGetResponseSchema,
+  runtimeMemoryListRequestSchema,
+  runtimeMemoryListResponseSchema,
+  runtimeMemorySetRequestSchema,
+  runtimeMemorySetResponseSchema,
   runtimeModelGenerateTextRequestSchema,
   runtimeModelGenerateTextResponseSchema,
   runtimeToolInvokeRequestSchema,
@@ -24,6 +32,37 @@ export interface InvokeToolOptions {
   readonly idempotencyKey?: string;
 }
 
+export interface MemoryGetOptions {
+  readonly binding: string;
+  readonly key: string;
+}
+
+export interface MemorySetOptions {
+  readonly binding: string;
+  readonly key: string;
+  readonly value: JsonValue;
+  readonly expectedRevision?: number;
+}
+
+export interface MemoryDeleteOptions {
+  readonly binding: string;
+  readonly key: string;
+  readonly expectedRevision?: number;
+}
+
+export interface MemoryListOptions {
+  readonly binding: string;
+  readonly prefix?: string;
+  readonly limit?: number;
+  readonly cursor?: string;
+}
+
+export interface MemoryRecordView {
+  readonly key: string;
+  readonly value: JsonValue;
+  readonly revision: number;
+}
+
 export interface RuntimeContext {
   /**
    * Opaque runtime idempotency identity mapped 1:1 to the canonical RunAttempt.
@@ -36,6 +75,15 @@ export interface RuntimeContext {
   };
   readonly tools: {
     invoke(options: InvokeToolOptions): Promise<JsonValue>;
+  };
+  readonly memory: {
+    get(options: MemoryGetOptions): Promise<MemoryRecordView>;
+    set(options: MemorySetOptions): Promise<MemoryRecordView>;
+    delete(options: MemoryDeleteOptions): Promise<void>;
+    list(options: MemoryListOptions): Promise<{
+      readonly items: readonly MemoryRecordView[];
+      readonly nextCursor?: string;
+    }>;
   };
 }
 
@@ -88,6 +136,135 @@ export function createRuntimeContext(
           );
         }
         return parsed.result;
+      },
+    },
+    memory: {
+      get: async (input) => {
+        const payload = runtimeMemoryGetRequestSchema.parse({
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: options.executionId,
+          bindingName: input.binding,
+          key: input.key,
+        });
+
+        const response = await postCapability(
+          fetchImpl,
+          options.credential,
+          RUNTIME_CAPABILITY_PATHS.memoryGet,
+          payload,
+          timeoutMs,
+        );
+        const parsed = runtimeMemoryGetResponseSchema.parse(response);
+        if (parsed.executionId !== options.executionId) {
+          throw new RuntimeCapabilityError(
+            "Capability response executionId mismatch.",
+          );
+        }
+        if (parsed.outcome === "FAILED") {
+          throw new RuntimeCapabilityError(
+            parsed.error.message,
+            parsed.error.code,
+          );
+        }
+        return parsed.record;
+      },
+      set: async (input) => {
+        const payload = runtimeMemorySetRequestSchema.parse({
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: options.executionId,
+          bindingName: input.binding,
+          key: input.key,
+          value: input.value,
+          ...(input.expectedRevision === undefined
+            ? {}
+            : { expectedRevision: input.expectedRevision }),
+        });
+
+        const response = await postCapability(
+          fetchImpl,
+          options.credential,
+          RUNTIME_CAPABILITY_PATHS.memorySet,
+          payload,
+          timeoutMs,
+        );
+        const parsed = runtimeMemorySetResponseSchema.parse(response);
+        if (parsed.executionId !== options.executionId) {
+          throw new RuntimeCapabilityError(
+            "Capability response executionId mismatch.",
+          );
+        }
+        if (parsed.outcome === "FAILED") {
+          throw new RuntimeCapabilityError(
+            parsed.error.message,
+            parsed.error.code,
+          );
+        }
+        return parsed.record;
+      },
+      delete: async (input) => {
+        const payload = runtimeMemoryDeleteRequestSchema.parse({
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: options.executionId,
+          bindingName: input.binding,
+          key: input.key,
+          ...(input.expectedRevision === undefined
+            ? {}
+            : { expectedRevision: input.expectedRevision }),
+        });
+
+        const response = await postCapability(
+          fetchImpl,
+          options.credential,
+          RUNTIME_CAPABILITY_PATHS.memoryDelete,
+          payload,
+          timeoutMs,
+        );
+        const parsed = runtimeMemoryDeleteResponseSchema.parse(response);
+        if (parsed.executionId !== options.executionId) {
+          throw new RuntimeCapabilityError(
+            "Capability response executionId mismatch.",
+          );
+        }
+        if (parsed.outcome === "FAILED") {
+          throw new RuntimeCapabilityError(
+            parsed.error.message,
+            parsed.error.code,
+          );
+        }
+      },
+      list: async (input) => {
+        const payload = runtimeMemoryListRequestSchema.parse({
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: options.executionId,
+          bindingName: input.binding,
+          ...(input.prefix === undefined ? {} : { prefix: input.prefix }),
+          ...(input.limit === undefined ? {} : { limit: input.limit }),
+          ...(input.cursor === undefined ? {} : { cursor: input.cursor }),
+        });
+
+        const response = await postCapability(
+          fetchImpl,
+          options.credential,
+          RUNTIME_CAPABILITY_PATHS.memoryList,
+          payload,
+          timeoutMs,
+        );
+        const parsed = runtimeMemoryListResponseSchema.parse(response);
+        if (parsed.executionId !== options.executionId) {
+          throw new RuntimeCapabilityError(
+            "Capability response executionId mismatch.",
+          );
+        }
+        if (parsed.outcome === "FAILED") {
+          throw new RuntimeCapabilityError(
+            parsed.error.message,
+            parsed.error.code,
+          );
+        }
+        return {
+          items: parsed.items,
+          nextCursor: parsed.nextCursor,
+        };
       },
     },
     tools: {

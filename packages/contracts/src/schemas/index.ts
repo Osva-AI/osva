@@ -4,8 +4,14 @@ export {
   approvalRequestIdSchema,
   artifactIdSchema,
   deploymentIdSchema,
+  evaluationCaseIdSchema,
+  evaluationCaseResultIdSchema,
   evaluationIdSchema,
+  evaluationRunIdSchema,
+  evaluationSuiteIdSchema,
+  evaluationSuiteVersionIdSchema,
   eventIdSchema,
+  memoryNamespaceIdSchema,
   modelProfileIdSchema,
   modelProfileVersionIdSchema,
   runAttemptIdSchema,
@@ -186,6 +192,32 @@ export {
   workflowVersionListResourceSchema,
   workflowVersionResourceSchema,
 } from "./workflow-registry.js";
+
+export {
+  createMemoryNamespaceRequestSchema,
+  listMemoryRecordsQuerySchema,
+  memoryNamespaceListResourceSchema,
+  memoryNamespaceResourceSchema,
+  memoryRecordListResourceSchema,
+  memoryRecordResourceSchema,
+} from "./memory-registry.js";
+
+export {
+  createEvaluationRunRequestSchema,
+  createEvaluationSuiteRequestSchema,
+  createEvaluationSuiteVersionRequestSchema,
+  evaluationCaseDefinitionSchema,
+  evaluationCaseResourceSchema,
+  evaluationCaseResultListResourceSchema,
+  evaluationCaseResultResourceSchema,
+  evaluationRunDetailResourceSchema,
+  evaluationRunResourceSchema,
+  evaluationRunSummarySchema,
+  evaluationSuiteListResourceSchema,
+  evaluationSuiteResourceSchema,
+  evaluationSuiteVersionListResourceSchema,
+  evaluationSuiteVersionResourceSchema,
+} from "./evaluation-suite.js";
 
 export {
   createScheduleRequestSchema,

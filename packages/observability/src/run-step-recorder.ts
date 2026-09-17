@@ -5,10 +5,22 @@ import type {
   GenerateTextRequest,
   GenerateTextResult,
   JsonValue,
+  MemoryAuthorization,
+  MemoryDeleteRequest,
+  MemoryGetRequest,
+  MemoryListRequest,
+  MemoryListResult,
+  MemoryRecordView,
+  MemorySetRequest,
   RunStepId,
   ToolInvokeRequest,
 } from "@osva/contracts";
-import { MODEL_ERROR_CODES, TOOL_ERROR_CODES } from "@osva/contracts";
+import {
+  MEMORY_ERROR_CODES,
+  MODEL_ERROR_CODES,
+  TOOL_ERROR_CODES,
+} from "@osva/contracts";
+import type { MemoryGateway } from "@osva/contracts";
 import {
   RunStep,
   estimateModelCostUsdMicros,
@@ -39,9 +51,29 @@ export interface RunStepRecorderDependencies {
   readonly logger?: RunStepRecorderLogger;
 }
 
+export interface RuntimeMemoryGateway {
+  get(
+    request: MemoryGetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryRecordView>;
+  set(
+    request: MemorySetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryRecordView>;
+  delete(
+    request: MemoryDeleteRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<void>;
+  list(
+    request: MemoryListRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryListResult>;
+}
+
 export interface ScopedRunStepRecorder {
   wrapModelGateway(modelGateway: ModelGateway): RuntimeModelGateway;
   wrapToolGateway(toolGateway: ToolGateway): RuntimeToolGateway;
+  wrapMemoryGateway(memoryGateway: MemoryGateway): RuntimeMemoryGateway;
 }
 
 /**
@@ -69,6 +101,9 @@ export function createRunStepRecorder(
     },
     wrapToolGateway(toolGateway) {
       return new ObservabilityToolGateway(execution, deps, toolGateway);
+    },
+    wrapMemoryGateway(memoryGateway) {
+      return new ObservabilityMemoryGateway(execution, deps, memoryGateway);
     },
   };
 }
@@ -265,6 +300,130 @@ function mapModelErrorCode(error: unknown): string {
   }
 
   return MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR;
+}
+
+class ObservabilityMemoryGateway implements RuntimeMemoryGateway {
+  constructor(
+    private readonly execution: ExecutionRequest,
+    private readonly deps: RunStepRecorderDependencies,
+    private readonly inner: MemoryGateway,
+  ) {}
+
+  async get(
+    request: MemoryGetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryRecordView> {
+    return this.record("memory.get", request.bindingName, () =>
+      this.inner.get(request, authorization),
+    );
+  }
+
+  async set(
+    request: MemorySetRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryRecordView> {
+    return this.record("memory.set", request.bindingName, () =>
+      this.inner.set(request, authorization),
+    );
+  }
+
+  async delete(
+    request: MemoryDeleteRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<void> {
+    await this.record("memory.delete", request.bindingName, () =>
+      this.inner.delete(request, authorization),
+    );
+  }
+
+  async list(
+    request: MemoryListRequest,
+    authorization: MemoryAuthorization,
+  ): Promise<MemoryListResult> {
+    return this.record("memory.list", request.bindingName, () =>
+      this.inner.list(request, authorization),
+    );
+  }
+
+  private async record<T>(
+    operation: string,
+    bindingName: string,
+    invoke: () => Promise<T>,
+  ): Promise<T> {
+    const startedAt = this.deps.clock.now();
+    const runStepId = this.deps.ids.createId() as RunStepId;
+
+    const running = RunStep.start({
+      id: runStepId,
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      kind: "MEMORY",
+      bindingName,
+      startedAt,
+    });
+
+    try {
+      await this.deps.runs.insertRunningRunStep(running);
+    } catch (error) {
+      this.deps.logger?.error("observability.run_step_start_failed", error);
+    }
+
+    this.deps.logger?.info("observability.memory_step_started", {
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      runStepId,
+      kind: "MEMORY",
+      bindingName,
+      operation,
+    });
+
+    try {
+      const result = await invoke();
+      await this.finalizeSafely(runStepId, {
+        status: "SUCCEEDED",
+        completedAt: this.deps.clock.now(),
+      });
+      return result;
+    } catch (error) {
+      await this.finalizeSafely(runStepId, {
+        status: "FAILED",
+        completedAt: this.deps.clock.now(),
+        errorCode: mapMemoryErrorCode(error),
+      });
+      throw error;
+    }
+  }
+
+  private async finalizeSafely(
+    runStepId: RunStepId,
+    finalize: Parameters<RunStep["finalize"]>[0],
+  ): Promise<void> {
+    try {
+      await this.deps.runs.finalizeRunStep(runStepId, finalize);
+      this.deps.logger?.info("observability.memory_step_finalized", {
+        runId: this.execution.runId,
+        runAttemptId: this.execution.runAttemptId,
+        runStepId,
+        status: finalize.status,
+      });
+    } catch (error) {
+      this.deps.logger?.error("observability.run_step_finalize_failed", error);
+    }
+  }
+}
+
+function mapMemoryErrorCode(error: unknown): string {
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.length > 0
+  ) {
+    return error.code;
+  }
+
+  return MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE;
 }
 
 function mapToolErrorCode(error: unknown): string {

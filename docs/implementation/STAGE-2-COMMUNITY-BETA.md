@@ -27,9 +27,11 @@
   (versioned `Connector` / immutable `ConnectorVersion`; Streamable HTTP and
   stdio transports; explicit MCP tool discovery into immutable MCP
   `ToolVersion` snapshots; execution only through ToolGateway);
-- memory namespaces;
+- ✅ Slice 2.8: Memory namespaces and EvaluationSuites
+  (durable JSON key/value memory through MemoryGateway; immutable
+  EvaluationSuiteVersion; EvaluationRun coordinates ordinary child Runs;
+  evaluation child Runs cannot mutate persistent memory by default);
 - OpenTelemetry;
-- EvaluationSuites;
 - basic AI Office entities.
 
 Workflow Definition remains pre-1.0 but versioned.
@@ -178,3 +180,33 @@ Slice 2.7 does not implement MCP resources, prompts, sampling, roots,
 elicitation/input-required interaction, MCP Tasks, subscriptions, OAuth flows,
 legacy SSE as an OSVA connector transport, OSVA-as-MCP-server, provider-specific
 connectors, runtime-direct MCP APIs, or a connector marketplace.
+
+## Slice 2.8
+
+Stage 2.8 adds durable JSON key/value memory namespaces and immutable
+EvaluationSuites that execute through the existing Run path.
+
+```text
+AgentVersion memory binding
+  → MemoryGateway
+  → MemoryNamespace
+  → MemoryRecord
+  → PostgreSQL
+```
+
+Memory namespace contents may change over time, but AgentVersion memory
+bindings are immutable execution snapshots frozen on CreateRun. Runtimes use
+logical binding names only; they never receive namespace database IDs or SQL.
+
+EvaluationSuites are control-plane definitions with immutable versions and
+cases. An EvaluationRun coordinates one ordinary child Run per case through
+the existing queue and ExecutionWorker. PASS/FAIL/ERROR are case outcomes,
+not EvaluationRun infrastructure failure.
+
+Evaluation child Runs may read bound memory according to AgentVersion access
+but cannot mutate persistent memory by default, even when the binding is
+READ_WRITE. Normal Runs retain full binding permissions.
+
+Slice 2.8 does not implement vector memory, semantic search, RAG, LLM-as-judge
+evaluators, dataset import, tool mocks, or a separate evaluation execution
+engine.

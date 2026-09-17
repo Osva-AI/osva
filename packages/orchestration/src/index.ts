@@ -37,6 +37,10 @@ export {
   type WorkflowOrchestratorTickDependencies,
 } from "./workflow-orchestrator-tick.js";
 export {
+  EvaluationCoordinator,
+  type ReconcileEvaluationCaseCommand,
+} from "./evaluation-coordinator.js";
+export {
   AgentNotFoundError,
   AgentVersionNotFoundError,
   BindingMismatchError,

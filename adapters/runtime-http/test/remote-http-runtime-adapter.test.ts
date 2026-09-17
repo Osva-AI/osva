@@ -28,6 +28,7 @@ function remoteRequest(
     effectiveConfig: {},
     modelProfileVersionBindings: {},
     toolVersionBindings: {},
+    memoryNamespaceBindings: {},
     toolGrants: [],
     timeoutMs: 2_000,
     policyContext: {},

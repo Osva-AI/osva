@@ -95,6 +95,7 @@ describe("in-process walking skeleton", () => {
       input: RUN_INPUT,
       effectiveConfig: {},
       toolVersionBindings: {},
+      memoryNamespaceBindings: {},
       toolGrants: [],
       timeoutMs: 12_345,
       policyContext: {},

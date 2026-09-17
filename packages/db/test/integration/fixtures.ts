@@ -65,5 +65,6 @@ export function createBindings(
         `${modelProfileVersionId}_secondary` as ModelProfileVersionId,
     },
     toolVersionBindings: {},
+    memoryNamespaceBindings: {},
   });
 }

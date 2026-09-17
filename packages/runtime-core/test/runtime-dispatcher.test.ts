@@ -27,6 +27,7 @@ const trustedRequest: ExecutionRequest = {
   effectiveConfig: {},
   modelProfileVersionBindings: {},
   toolVersionBindings: {},
+  memoryNamespaceBindings: {},
   toolGrants: [],
   timeoutMs: 5_000,
   policyContext: {},

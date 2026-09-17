@@ -10,13 +10,16 @@ import type { AgentVersion } from "./agent-version.js";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
+  InvalidMemoryBindingError,
   InvalidModelBindingError,
   InvalidToolBindingError,
   WorkspaceNotFoundError,
 } from "./errors.js";
+import { memoryNamespaceBindingsFromManifest } from "./memory-bindings.js";
 import { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 import { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 import type { AgentRepository } from "./ports/agent-repository.js";
+import type { MemoryNamespaceRepository } from "./ports/memory-namespace-repository.js";
 import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
 import type { ToolRepository } from "./ports/tool-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
@@ -34,6 +37,7 @@ export interface AgentApplicationDependencies {
   readonly workspaces: WorkspaceRepository;
   readonly modelProfiles: ModelProfileRepository;
   readonly tools: ToolRepository;
+  readonly memoryNamespaces: MemoryNamespaceRepository;
   readonly clock: AgentApplicationClock;
   readonly ids: AgentApplicationIds;
 }
@@ -136,6 +140,11 @@ export class AppendAgentVersion {
     );
     await assertToolBindings(
       this.deps.tools,
+      agent.workspaceId,
+      command.manifest,
+    );
+    await assertMemoryBindings(
+      this.deps.memoryNamespaces,
       agent.workspaceId,
       command.manifest,
     );
@@ -251,6 +260,30 @@ async function assertToolBindings(
     if (tool === null || tool.workspaceId !== workspaceId) {
       throw new InvalidToolBindingError(
         `Tool binding '${name}' does not belong to workspace '${workspaceId}'.`,
+      );
+    }
+  }
+}
+
+async function assertMemoryBindings(
+  memoryNamespaces: MemoryNamespaceRepository,
+  workspaceId: WorkspaceId,
+  manifest: AgentManifestV1,
+): Promise<void> {
+  const bindings = memoryNamespaceBindingsFromManifest(manifest);
+  for (const [name, binding] of Object.entries(bindings)) {
+    const namespace = await memoryNamespaces.findNamespaceById(
+      binding.namespaceId,
+    );
+    if (namespace === null) {
+      throw new InvalidMemoryBindingError(
+        `Memory binding '${name}' references unknown MemoryNamespace '${binding.namespaceId}'.`,
+      );
+    }
+
+    if (namespace.workspaceId !== workspaceId) {
+      throw new InvalidMemoryBindingError(
+        `Memory binding '${name}' does not belong to workspace '${workspaceId}'.`,
       );
     }
   }

@@ -42,6 +42,7 @@ function createBindings(
       "tool.summarize": secondaryModelProfileVersionId,
     },
     toolVersionBindings: {},
+    memoryNamespaceBindings: {},
   });
 }
 
@@ -111,6 +112,7 @@ describe("createExecutionRequest", () => {
       modelProfileVersionBindings:
         run.effectiveBindings.modelProfileVersionBindings,
       toolVersionBindings: run.effectiveBindings.toolVersionBindings,
+      memoryNamespaceBindings: run.effectiveBindings.memoryNamespaceBindings,
       toolGrants: [],
       timeoutMs: 45_000,
       policyContext: {},

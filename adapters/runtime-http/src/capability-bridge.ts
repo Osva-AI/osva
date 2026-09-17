@@ -1,11 +1,17 @@
 import type {
   ExecutionRequest,
+  MemoryAuthorization,
   RunAttemptId,
   WorkspaceId,
 } from "@osva/contracts";
-import { MODEL_ERROR_CODES, TOOL_ERROR_CODES } from "@osva/contracts";
+import {
+  MEMORY_ERROR_CODES,
+  MODEL_ERROR_CODES,
+  TOOL_ERROR_CODES,
+} from "@osva/contracts";
 import type { AgentRepository, RunRepository } from "@osva/domain";
 import type {
+  RuntimeMemoryGateway,
   RuntimeModelGateway,
   RuntimeToolGateway,
 } from "@osva/observability";
@@ -14,6 +20,10 @@ import {
   RUNTIME_CAPABILITY_PATHS,
   RUNTIME_PROTOCOL_ERROR_CODES,
   RUNTIME_PROTOCOL_VERSION,
+  runtimeMemoryDeleteRequestSchema,
+  runtimeMemoryGetRequestSchema,
+  runtimeMemoryListRequestSchema,
+  runtimeMemorySetRequestSchema,
   runtimeModelGenerateTextRequestSchema,
   runtimeToolInvokeRequestSchema,
 } from "@osva/runtime-protocol";
@@ -47,6 +57,9 @@ export interface RuntimeCapabilityBridgeOptions {
   readonly createScopedToolGateway: (
     execution: ExecutionRequest,
   ) => RuntimeToolGateway | undefined;
+  readonly createScopedMemoryGateway: (
+    execution: ExecutionRequest,
+  ) => RuntimeMemoryGateway | undefined;
 }
 
 export class RuntimeCapabilityBridge {
@@ -57,6 +70,7 @@ export class RuntimeCapabilityBridge {
   private readonly logger: RuntimeCapabilityBridgeLogger | undefined;
   private readonly createScopedModelGateway: RuntimeCapabilityBridgeOptions["createScopedModelGateway"];
   private readonly createScopedToolGateway: RuntimeCapabilityBridgeOptions["createScopedToolGateway"];
+  private readonly createScopedMemoryGateway: RuntimeCapabilityBridgeOptions["createScopedMemoryGateway"];
 
   constructor(options: RuntimeCapabilityBridgeOptions) {
     this.secret = options.secret;
@@ -66,6 +80,7 @@ export class RuntimeCapabilityBridge {
     this.logger = options.logger;
     this.createScopedModelGateway = options.createScopedModelGateway;
     this.createScopedToolGateway = options.createScopedToolGateway;
+    this.createScopedMemoryGateway = options.createScopedMemoryGateway;
   }
 
   handle: RuntimeCapabilityHttpHandler = async (request) => {
@@ -81,6 +96,22 @@ export class RuntimeCapabilityBridge {
 
     if (request.pathname === RUNTIME_CAPABILITY_PATHS.invokeTool) {
       return this.handleInvokeTool(request);
+    }
+
+    if (request.pathname === RUNTIME_CAPABILITY_PATHS.memoryGet) {
+      return this.handleMemoryGet(request);
+    }
+
+    if (request.pathname === RUNTIME_CAPABILITY_PATHS.memorySet) {
+      return this.handleMemorySet(request);
+    }
+
+    if (request.pathname === RUNTIME_CAPABILITY_PATHS.memoryDelete) {
+      return this.handleMemoryDelete(request);
+    }
+
+    if (request.pathname === RUNTIME_CAPABILITY_PATHS.memoryList) {
+      return this.handleMemoryList(request);
     }
 
     return jsonStatus(404, {
@@ -241,6 +272,241 @@ export class RuntimeCapabilityBridge {
     }
   }
 
+  private async handleMemoryGet(
+    request: RuntimeCapabilityHttpRequest,
+  ): Promise<RuntimeCapabilityHttpResponse> {
+    const parsed = runtimeMemoryGetRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return protocolInvalid("Capability request is invalid.");
+    }
+
+    const authorized = await this.authorize(
+      request.authorization,
+      parsed.data.executionId,
+    );
+    if (authorized.error !== undefined) {
+      return authorized.error;
+    }
+
+    const gateway = this.createScopedMemoryGateway(authorized.execution);
+    if (gateway === undefined) {
+      return capabilityFailed(
+        parsed.data.executionId,
+        MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+        "Memory capability is unavailable.",
+      );
+    }
+
+    try {
+      const record = await gateway.get(
+        {
+          bindingName: parsed.data.bindingName,
+          key: parsed.data.key,
+        },
+        memoryAuthorization(authorized.execution),
+      );
+      return {
+        status: 200,
+        body: {
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: parsed.data.executionId,
+          outcome: "SUCCEEDED",
+          record,
+        },
+      };
+    } catch (error) {
+      this.logger?.error("runtime.capability.memory_get_failed", error);
+      const mapped = mapGatewayFailure(
+        error,
+        MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+        "Memory get failed.",
+      );
+      return capabilityFailed(
+        parsed.data.executionId,
+        mapped.code,
+        mapped.message,
+      );
+    }
+  }
+
+  private async handleMemorySet(
+    request: RuntimeCapabilityHttpRequest,
+  ): Promise<RuntimeCapabilityHttpResponse> {
+    const parsed = runtimeMemorySetRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return protocolInvalid("Capability request is invalid.");
+    }
+
+    const authorized = await this.authorize(
+      request.authorization,
+      parsed.data.executionId,
+    );
+    if (authorized.error !== undefined) {
+      return authorized.error;
+    }
+
+    const gateway = this.createScopedMemoryGateway(authorized.execution);
+    if (gateway === undefined) {
+      return capabilityFailed(
+        parsed.data.executionId,
+        MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+        "Memory capability is unavailable.",
+      );
+    }
+
+    try {
+      const record = await gateway.set(
+        {
+          bindingName: parsed.data.bindingName,
+          key: parsed.data.key,
+          value: parsed.data.value,
+          expectedRevision: parsed.data.expectedRevision,
+        },
+        memoryAuthorization(authorized.execution),
+      );
+      return {
+        status: 200,
+        body: {
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: parsed.data.executionId,
+          outcome: "SUCCEEDED",
+          record,
+        },
+      };
+    } catch (error) {
+      this.logger?.error("runtime.capability.memory_set_failed", error);
+      const mapped = mapGatewayFailure(
+        error,
+        MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+        "Memory set failed.",
+      );
+      return capabilityFailed(
+        parsed.data.executionId,
+        mapped.code,
+        mapped.message,
+      );
+    }
+  }
+
+  private async handleMemoryDelete(
+    request: RuntimeCapabilityHttpRequest,
+  ): Promise<RuntimeCapabilityHttpResponse> {
+    const parsed = runtimeMemoryDeleteRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return protocolInvalid("Capability request is invalid.");
+    }
+
+    const authorized = await this.authorize(
+      request.authorization,
+      parsed.data.executionId,
+    );
+    if (authorized.error !== undefined) {
+      return authorized.error;
+    }
+
+    const gateway = this.createScopedMemoryGateway(authorized.execution);
+    if (gateway === undefined) {
+      return capabilityFailed(
+        parsed.data.executionId,
+        MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+        "Memory capability is unavailable.",
+      );
+    }
+
+    try {
+      await gateway.delete(
+        {
+          bindingName: parsed.data.bindingName,
+          key: parsed.data.key,
+          expectedRevision: parsed.data.expectedRevision,
+        },
+        memoryAuthorization(authorized.execution),
+      );
+      return {
+        status: 200,
+        body: {
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: parsed.data.executionId,
+          outcome: "SUCCEEDED",
+        },
+      };
+    } catch (error) {
+      this.logger?.error("runtime.capability.memory_delete_failed", error);
+      const mapped = mapGatewayFailure(
+        error,
+        MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+        "Memory delete failed.",
+      );
+      return capabilityFailed(
+        parsed.data.executionId,
+        mapped.code,
+        mapped.message,
+      );
+    }
+  }
+
+  private async handleMemoryList(
+    request: RuntimeCapabilityHttpRequest,
+  ): Promise<RuntimeCapabilityHttpResponse> {
+    const parsed = runtimeMemoryListRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return protocolInvalid("Capability request is invalid.");
+    }
+
+    const authorized = await this.authorize(
+      request.authorization,
+      parsed.data.executionId,
+    );
+    if (authorized.error !== undefined) {
+      return authorized.error;
+    }
+
+    const gateway = this.createScopedMemoryGateway(authorized.execution);
+    if (gateway === undefined) {
+      return capabilityFailed(
+        parsed.data.executionId,
+        MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+        "Memory capability is unavailable.",
+      );
+    }
+
+    try {
+      const result = await gateway.list(
+        {
+          bindingName: parsed.data.bindingName,
+          prefix: parsed.data.prefix,
+          limit: parsed.data.limit,
+          cursor: parsed.data.cursor,
+        },
+        memoryAuthorization(authorized.execution),
+      );
+      return {
+        status: 200,
+        body: {
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: parsed.data.executionId,
+          outcome: "SUCCEEDED",
+          items: result.items,
+          ...(result.nextCursor === undefined
+            ? {}
+            : { nextCursor: result.nextCursor }),
+        },
+      };
+    } catch (error) {
+      this.logger?.error("runtime.capability.memory_list_failed", error);
+      const mapped = mapGatewayFailure(
+        error,
+        MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
+        "Memory list failed.",
+      );
+      return capabilityFailed(
+        parsed.data.executionId,
+        mapped.code,
+        mapped.message,
+      );
+    }
+  }
+
   private async authorize(
     authorization: string | undefined,
     claimedExecutionId: string,
@@ -385,6 +651,14 @@ function capabilityFailed(
       ),
     },
   });
+}
+
+function memoryAuthorization(execution: ExecutionRequest): MemoryAuthorization {
+  return {
+    workspaceId: execution.workspaceId,
+    memoryNamespaceBindings: execution.memoryNamespaceBindings,
+    allowPersistentMutation: execution.evaluationContext === undefined,
+  };
 }
 
 function mapGatewayFailure(

@@ -3,6 +3,11 @@ import type { WorkspaceId } from "@osva/contracts";
 import { OsvaHttpClient, type OsvaHttpClientOptions } from "./http-client.js";
 import { AgentsResource } from "./resources/agents.js";
 import { ApprovalsResource } from "./resources/approvals.js";
+import {
+  EvaluationRunsResource,
+  EvaluationSuitesResource,
+} from "./resources/evaluation.js";
+import { MemoryNamespacesResource } from "./resources/memory-namespaces.js";
 import { RunsResource } from "./resources/runs.js";
 import { SchedulesResource } from "./resources/schedules.js";
 import { WorkflowRunsResource } from "./resources/workflow-runs.js";
@@ -20,6 +25,9 @@ export class OsvaClient {
   readonly workflowRuns: WorkflowRunsResource;
   readonly approvals: ApprovalsResource;
   readonly schedules: SchedulesResource;
+  readonly memoryNamespaces: MemoryNamespacesResource;
+  readonly evaluationSuites: EvaluationSuitesResource;
+  readonly evaluationRuns: EvaluationRunsResource;
 
   private readonly http: OsvaHttpClient;
 
@@ -35,5 +43,11 @@ export class OsvaClient {
     );
     this.approvals = new ApprovalsResource(this.http, options.workspaceId);
     this.schedules = new SchedulesResource(this.http, options.workspaceId);
+    this.memoryNamespaces = new MemoryNamespacesResource(this.http);
+    this.evaluationSuites = new EvaluationSuitesResource(this.http);
+    this.evaluationRuns = new EvaluationRunsResource(
+      this.http,
+      options.workspaceId,
+    );
   }
 }

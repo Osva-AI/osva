@@ -12,6 +12,8 @@ import {
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
   MemoryApprovalRequestRepository,
+  MemoryEvaluationSuiteRepository,
+  MemoryMemoryNamespaceRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import {
@@ -19,6 +21,9 @@ import {
   createAgentApplication,
   createConnectorApplication,
   createEvaluationApplication,
+  createEvaluationRunApplication,
+  createEvaluationSuiteApplication,
+  createMemoryApplication,
   createModelProfileApplication,
   createRunApplication,
   createRunObservabilityApplication,
@@ -51,6 +56,8 @@ export async function createTestWebApplication(options?: {
   const workflowRepository = new MemoryWorkflowRepository();
   const workflowRunRepository = new MemoryWorkflowRunRepository();
   const approvalRequestRepository = new MemoryApprovalRequestRepository();
+  const memoryNamespaces = new MemoryMemoryNamespaceRepository();
+  const evaluationSuites = new MemoryEvaluationSuiteRepository();
   const queue = new MemoryJobQueue();
   const clock = { now: () => TEST_NOW };
   let counter = 0;
@@ -90,6 +97,7 @@ export async function createTestWebApplication(options?: {
       workspaces,
       modelProfiles,
       tools,
+      memoryNamespaces,
       clock,
       ids,
     }),
@@ -113,6 +121,28 @@ export async function createTestWebApplication(options?: {
       clock,
       ids,
     }),
+    memory: createMemoryApplication({
+      memoryNamespaces,
+      workspaces,
+      clock,
+      ids,
+    }),
+    evaluations: {
+      suites: createEvaluationSuiteApplication({
+        evaluationSuites,
+        workspaces,
+        clock,
+        ids,
+      }),
+      runs: createEvaluationRunApplication({
+        evaluationSuites,
+        runs,
+        agents,
+        queue,
+        clock,
+        ids,
+      }),
+    },
     runs: runServices,
     runObservability: {
       observability: createRunObservabilityApplication({ runs }),

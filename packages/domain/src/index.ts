@@ -50,13 +50,21 @@ export {
   DomainInvariantError,
   DuplicateAgentKeyError,
   DuplicateConnectorKeyError,
+  DuplicateEvaluationSuiteKeyError,
+  DuplicateMemoryNamespaceKeyError,
   DuplicateModelProfileKeyError,
   DuplicateToolKeyError,
   DuplicateScheduleKeyError,
   DuplicateWorkflowKeyError,
+  EvaluationCaseNotFoundError,
   EvaluationNotFoundError,
+  EvaluationRunNotFoundError,
+  EvaluationSuiteNotFoundError,
+  EvaluationSuiteVersionNotFoundError,
   InvalidApprovalRequestTransitionError,
+  InvalidEvaluationRunTransitionError,
   InvalidAttemptSequenceError,
+  InvalidMemoryBindingError,
   InvalidModelBindingError,
   InvalidRunAttemptStateError,
   InvalidToolBindingError,
@@ -67,6 +75,9 @@ export {
   InvalidWorkflowNodeRunTransitionError,
   InvalidWorkflowRunTransitionError,
   LifecycleConflictError,
+  MemoryNamespaceNotFoundError,
+  MemoryRecordConflictError,
+  MemoryRecordNotFoundError,
   ConnectorNotFoundError,
   ConnectorVersionNotFoundError,
   ModelProfileNotFoundError,
@@ -99,6 +110,7 @@ export {
   isSameMcpToolVersionConfig,
   type ToolVersionProps,
 } from "./tool-version.js";
+export { memoryNamespaceBindingsFromManifest } from "./memory-bindings.js";
 export { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 export { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 export {
@@ -121,6 +133,33 @@ export {
   type RunStepProps,
 } from "./run-step.js";
 export { Evaluation, type EvaluationProps } from "./evaluation.js";
+export {
+  EvaluationSuite,
+  type EvaluationSuiteProps,
+} from "./evaluation-suite.js";
+export {
+  EvaluationSuiteVersion,
+  type EvaluationSuiteVersionProps,
+} from "./evaluation-suite-version.js";
+export { EvaluationCase, type EvaluationCaseProps } from "./evaluation-case.js";
+export {
+  EvaluationRun,
+  type EvaluationRunCreateProps,
+  type EvaluationRunRehydrateProps,
+} from "./evaluation-run.js";
+export {
+  EvaluationCaseResult,
+  type EvaluationCaseResultProps,
+} from "./evaluation-case-result.js";
+export {
+  MemoryNamespace,
+  type MemoryNamespaceProps,
+} from "./memory-namespace.js";
+export {
+  MemoryRecord,
+  MEMORY_RECORD_INITIAL_REVISION,
+  type MemoryRecordProps,
+} from "./memory-record.js";
 export { estimateModelCostUsdMicros } from "./model-cost.js";
 export { jsonValuesEqual } from "./json-equality.js";
 export {
@@ -220,6 +259,12 @@ export {
   isLegalApprovalRequestTransition,
   isTerminalApprovalRequestState,
 } from "./approval-request-state-machine.js";
+export {
+  LEGAL_EVALUATION_RUN_TRANSITIONS,
+  assertLegalEvaluationRunTransition,
+  isEvaluationRunState,
+  isLegalEvaluationRunTransition,
+} from "./evaluation-run-state-machine.js";
 
 export type {
   AgentMetadataUpdate,
@@ -231,7 +276,13 @@ export type {
   AppendToolVersionInput,
   ConnectorMetadataUpdate,
   ConnectorRepository,
+  DeleteMemoryRecordInput,
   EvaluationRepository,
+  EvaluationSuiteRepository,
+  ListMemoryRecordsQuery,
+  ListMemoryRecordsResult,
+  MemoryNamespaceRepository,
+  SetMemoryRecordInput,
   ListRunStepsQuery,
   ListRunStepsResult,
   ListRunsQuery,
@@ -265,8 +316,10 @@ export {
   MAX_RUN_STEP_LIST_LIMIT,
   DEFAULT_SCHEDULE_LIST_LIMIT,
   DEFAULT_SCHEDULE_OCCURRENCE_LIST_LIMIT,
+  DEFAULT_MEMORY_RECORD_LIST_LIMIT,
   MAX_SCHEDULE_LIST_LIMIT,
   MAX_SCHEDULE_OCCURRENCE_LIST_LIMIT,
+  MAX_MEMORY_RECORD_LIST_LIMIT,
 } from "./ports/index.js";
 
 export {
@@ -321,6 +374,52 @@ export {
   type EvaluationApplicationIds,
   type GetEvaluationCommand,
 } from "./evaluation-application.js";
+
+export {
+  AppendEvaluationSuiteVersion,
+  CreateEvaluationSuite,
+  GetEvaluationSuite,
+  GetEvaluationSuiteVersion,
+  ListEvaluationSuiteVersions,
+  ListEvaluationSuites,
+  createEvaluationSuiteApplication,
+  type AppendEvaluationSuiteVersionCommand,
+  type CreateEvaluationSuiteCommand,
+  type EvaluationSuiteApplication,
+  type EvaluationSuiteApplicationClock,
+  type EvaluationSuiteApplicationDependencies,
+  type EvaluationSuiteApplicationIds,
+  type GetEvaluationSuiteVersionCommand,
+} from "./evaluation-suite-application.js";
+
+export {
+  GetEvaluationRun,
+  LaunchEvaluationRun,
+  ListEvaluationCaseResults,
+  ReconcileEvaluationCase,
+  createEvaluationRunApplication,
+  type EvaluationRunApplication,
+  type EvaluationRunApplicationClock,
+  type EvaluationRunApplicationDependencies,
+  type EvaluationRunApplicationIds,
+  type EvaluationRunSummary,
+  type LaunchEvaluationRunCommand,
+  type ReconcileEvaluationCaseCommand,
+} from "./evaluation-run-application.js";
+
+export {
+  CreateMemoryNamespace,
+  GetMemoryNamespace,
+  ListMemoryNamespaces,
+  ListMemoryRecords,
+  createMemoryApplication,
+  type CreateMemoryNamespaceCommand,
+  type ListMemoryRecordsCommand,
+  type MemoryApplication,
+  type MemoryApplicationClock,
+  type MemoryApplicationDependencies,
+  type MemoryApplicationIds,
+} from "./memory-application.js";
 
 export { Connector } from "./connector.js";
 export { ConnectorVersion } from "./connector-version.js";

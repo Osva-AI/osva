@@ -5,7 +5,13 @@ import type {
   ApprovalRequestState,
   ConnectorId,
   ConnectorVersionId,
+  EvaluationCaseId,
   EvaluationId,
+  EvaluationRunId,
+  EvaluationRunState,
+  EvaluationSuiteId,
+  EvaluationSuiteVersionId,
+  MemoryNamespaceId,
   ModelProfileId,
   ModelProfileVersionId,
   RunAttemptId,
@@ -193,6 +199,125 @@ export class DuplicateConnectorKeyError extends DomainInvariantError {
   }
 }
 
+export class MemoryNamespaceNotFoundError extends DomainError {
+  readonly memoryNamespaceId: MemoryNamespaceId;
+
+  constructor(memoryNamespaceId: MemoryNamespaceId) {
+    super(`MemoryNamespace ${memoryNamespaceId} was not found.`);
+    this.memoryNamespaceId = memoryNamespaceId;
+  }
+}
+
+export class DuplicateMemoryNamespaceKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `Memory namespace key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class MemoryRecordNotFoundError extends DomainError {
+  readonly namespaceId: MemoryNamespaceId;
+  readonly key: string;
+
+  constructor(namespaceId: MemoryNamespaceId, key: string) {
+    super(
+      `Memory record '${key}' was not found in namespace '${namespaceId}'.`,
+    );
+    this.namespaceId = namespaceId;
+    this.key = key;
+  }
+}
+
+export class MemoryRecordConflictError extends DomainInvariantError {
+  readonly namespaceId: MemoryNamespaceId;
+  readonly key: string;
+  readonly expectedRevision: number | undefined;
+  readonly actualRevision: number | undefined;
+
+  constructor(
+    namespaceId: MemoryNamespaceId,
+    key: string,
+    expectedRevision: number | undefined,
+    actualRevision: number | undefined,
+  ) {
+    super(
+      expectedRevision === undefined
+        ? `Memory record '${key}' already exists in namespace '${namespaceId}'.`
+        : `Memory record '${key}' revision conflict in namespace '${namespaceId}'. Expected ${String(expectedRevision)}, found ${actualRevision === undefined ? "none" : String(actualRevision)}.`,
+    );
+    this.namespaceId = namespaceId;
+    this.key = key;
+    this.expectedRevision = expectedRevision;
+    this.actualRevision = actualRevision;
+  }
+}
+
+export class DuplicateEvaluationSuiteKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `EvaluationSuite key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class EvaluationSuiteNotFoundError extends DomainError {
+  readonly evaluationSuiteId: EvaluationSuiteId;
+
+  constructor(evaluationSuiteId: EvaluationSuiteId) {
+    super(`EvaluationSuite ${evaluationSuiteId} was not found.`);
+    this.evaluationSuiteId = evaluationSuiteId;
+  }
+}
+
+export class EvaluationSuiteVersionNotFoundError extends DomainError {
+  readonly evaluationSuiteVersionId: EvaluationSuiteVersionId;
+
+  constructor(evaluationSuiteVersionId: EvaluationSuiteVersionId) {
+    super(`EvaluationSuiteVersion ${evaluationSuiteVersionId} was not found.`);
+    this.evaluationSuiteVersionId = evaluationSuiteVersionId;
+  }
+}
+
+export class EvaluationCaseNotFoundError extends DomainError {
+  readonly evaluationCaseId: EvaluationCaseId;
+
+  constructor(evaluationCaseId: EvaluationCaseId) {
+    super(`EvaluationCase ${evaluationCaseId} was not found.`);
+    this.evaluationCaseId = evaluationCaseId;
+  }
+}
+
+export class EvaluationRunNotFoundError extends DomainError {
+  readonly evaluationRunId: EvaluationRunId;
+
+  constructor(evaluationRunId: EvaluationRunId) {
+    super(`EvaluationRun ${evaluationRunId} was not found.`);
+    this.evaluationRunId = evaluationRunId;
+  }
+}
+
+export class InvalidEvaluationRunTransitionError extends DomainError {
+  readonly from: EvaluationRunState;
+  readonly to: EvaluationRunState;
+
+  constructor(from: EvaluationRunState, to: EvaluationRunState) {
+    super(`Invalid evaluation run transition from ${from} to ${to}.`);
+    this.from = from;
+    this.to = to;
+  }
+}
+
 export class InvalidConnectorTransportError extends DomainInvariantError {}
 
 export class DuplicateScheduleKeyError extends DomainInvariantError {
@@ -218,6 +343,8 @@ export class ScheduleNotFoundError extends DomainError {
 }
 
 export class InvalidToolBindingError extends DomainInvariantError {}
+
+export class InvalidMemoryBindingError extends DomainInvariantError {}
 
 export class InvalidSubsequentAttemptError extends DomainInvariantError {
   readonly previousStatus: RunAttemptState;
@@ -387,20 +514,23 @@ export class LifecycleConflictError extends DomainError {
     | "runStep"
     | "workflowRun"
     | "workflowNodeRun"
-    | "approvalRequest";
+    | "approvalRequest"
+    | "evaluationRun";
   readonly id:
     | RunId
     | RunAttemptId
     | RunStepId
     | WorkflowRunId
     | WorkflowNodeRunId
-    | ApprovalRequestId;
+    | ApprovalRequestId
+    | EvaluationRunId;
   readonly expectedStatus:
     | RunState
     | RunAttemptState
     | WorkflowRunState
     | WorkflowNodeRunState
     | ApprovalRequestState
+    | EvaluationRunState
     | "RUNNING";
 
   constructor(
@@ -410,20 +540,23 @@ export class LifecycleConflictError extends DomainError {
       | "runStep"
       | "workflowRun"
       | "workflowNodeRun"
-      | "approvalRequest",
+      | "approvalRequest"
+      | "evaluationRun",
     id:
       | RunId
       | RunAttemptId
       | RunStepId
       | WorkflowRunId
       | WorkflowNodeRunId
-      | ApprovalRequestId,
+      | ApprovalRequestId
+      | EvaluationRunId,
     expectedStatus:
       | RunState
       | RunAttemptState
       | WorkflowRunState
       | WorkflowNodeRunState
       | ApprovalRequestState
+      | EvaluationRunState
       | "RUNNING",
   ) {
     super(

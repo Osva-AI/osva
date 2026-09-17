@@ -26,4 +26,8 @@ export type RuntimeProtocolOutcome = (typeof RUNTIME_PROTOCOL_OUTCOMES)[number];
 export const RUNTIME_CAPABILITY_PATHS = {
   generateText: "/v1/runtime/capabilities/models/generate-text",
   invokeTool: "/v1/runtime/capabilities/tools/invoke",
+  memoryGet: "/v1/runtime/capabilities/memory/get",
+  memorySet: "/v1/runtime/capabilities/memory/set",
+  memoryDelete: "/v1/runtime/capabilities/memory/delete",
+  memoryList: "/v1/runtime/capabilities/memory/list",
 } as const;

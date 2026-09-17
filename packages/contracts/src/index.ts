@@ -18,6 +18,12 @@ export type {
   ToolVersionId,
   ConnectorId,
   ConnectorVersionId,
+  EvaluationCaseId,
+  EvaluationCaseResultId,
+  EvaluationRunId,
+  EvaluationSuiteId,
+  EvaluationSuiteVersionId,
+  MemoryNamespaceId,
   WorkflowId,
   WorkflowNodeRunId,
   WorkflowRunId,
@@ -138,6 +144,7 @@ export type {
   AgentManifestCapabilities,
   AgentManifestExecution,
   AgentManifestIO,
+  AgentManifestMemoryBinding,
   AgentManifestModelBinding,
   AgentManifestToolBinding,
   AgentManifestSchemaVersion,
@@ -162,12 +169,69 @@ export {
 
 export type {
   ExecutionError,
+  ExecutionEvaluationContext,
   ExecutionFailure,
   ExecutionRequest,
   ExecutionResult,
   ExecutionSuccess,
   RuntimeAdapter,
 } from "./runtime-protocol.js";
+
+export {
+  MEMORY_ACCESS_MODES,
+  MEMORY_BINDING_NAME_PATTERN,
+  MEMORY_ERROR_CODES,
+  isMemoryAccessMode,
+  isMemoryBindingName,
+  isMemoryErrorCode,
+} from "./memory-gateway.js";
+export type {
+  MemoryAccessMode,
+  MemoryAuthorization,
+  MemoryDeleteRequest,
+  MemoryErrorCode,
+  MemoryGateway,
+  MemoryGetRequest,
+  MemoryListRequest,
+  MemoryListResult,
+  MemoryNamespaceBinding,
+  MemoryRecordView,
+  MemorySetRequest,
+} from "./memory-gateway.js";
+
+export type {
+  CreateMemoryNamespaceRequestV1,
+  ListMemoryRecordsQueryV1,
+  MemoryNamespaceListResourceV1,
+  MemoryNamespaceResourceV1,
+  MemoryRecordListResourceV1,
+  MemoryRecordResourceV1,
+} from "./memory-registry.js";
+
+export {
+  EVALUATION_CASE_OUTCOMES,
+  EVALUATION_RUN_STATES,
+  EVALUATION_RUN_TARGET_TYPES,
+} from "./evaluation-suite.js";
+export type {
+  CreateEvaluationRunRequestV1,
+  CreateEvaluationSuiteRequestV1,
+  CreateEvaluationSuiteVersionRequestV1,
+  EvaluationCaseDefinitionV1,
+  EvaluationCaseOutcome,
+  EvaluationCaseResourceV1,
+  EvaluationCaseResultListResourceV1,
+  EvaluationCaseResultResourceV1,
+  EvaluationRunDetailResourceV1,
+  EvaluationRunResourceV1,
+  EvaluationRunState,
+  EvaluationRunSummaryV1,
+  EvaluationRunTargetType,
+  EvaluationSuiteListResourceV1,
+  EvaluationSuiteResourceV1,
+  EvaluationSuiteVersionListResourceV1,
+  EvaluationSuiteVersionResourceV1,
+} from "./evaluation-suite.js";
 
 export { EVENT_ENVELOPE_SCHEMA_VERSION } from "./event-envelope.js";
 export type {
