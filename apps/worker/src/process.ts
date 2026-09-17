@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
+import {
+  createOpenTelemetryLifecycle,
+  type OpenTelemetryLifecycle,
+} from "@osva/adapters-opentelemetry";
 import { createMcpClientPool } from "@osva/adapters-mcp-client";
 import {
   AnthropicProviderAdapter,
@@ -42,7 +46,10 @@ import {
 import { createEvaluationRunApplication } from "@osva/domain";
 import { MemoryGateway } from "@osva/memory-gateway";
 import { ModelGateway, type ModelProviderAdapter } from "@osva/model-gateway";
-import { createRunStepRecorder } from "@osva/observability";
+import {
+  createInstrumentedRuntimeAdapter,
+  createRunStepRecorder,
+} from "@osva/observability";
 import { EvaluationCoordinator, ExecuteRunAttempt } from "@osva/orchestration";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
@@ -66,6 +73,7 @@ export interface WorkerProcess {
 export interface WorkerProcessDependencies {
   readonly databaseFactory?: (connectionString: string) => Database;
   readonly queueFactory?: (valkeyUrl: string) => PingableJobQueue;
+  readonly telemetry?: OpenTelemetryLifecycle;
   readonly runtime?: RuntimeAdapter;
   readonly clock?: { now(): Date };
   readonly openai?: Omit<OpenAIProviderAdapterOptions, "apiKey"> & {
@@ -87,12 +95,16 @@ export function createWorkerProcess(
   dependencies: WorkerProcessDependencies = {},
 ): WorkerProcess {
   const config = loadWorkerConfig(env);
+  const telemetryLifecycle =
+    dependencies.telemetry ?? createOpenTelemetryLifecycle(env);
+  const instrumentation = telemetryLifecycle.instrumentation;
   const createDatabaseHandle = dependencies.databaseFactory ?? databaseFactory;
   const createQueue =
     dependencies.queueFactory ??
     ((valkeyUrl: string) =>
       new BullMqJobQueue({
         url: valkeyUrl,
+        instrumentation,
         logger: {
           info: logEvent,
           error: logError,
@@ -144,6 +156,7 @@ export function createWorkerProcess(
         modelProfiles,
         clock,
         ids: { createId: () => randomUUID() },
+        instrumentation,
         logger: {
           info: logEvent,
           error: logError,
@@ -195,7 +208,7 @@ export function createWorkerProcess(
         });
       }
 
-      runtime =
+      const baseRuntime =
         injectedRuntime ??
         new RuntimeDispatcher({
           executors: {
@@ -225,13 +238,15 @@ export function createWorkerProcess(
             }),
           },
         });
+      runtime = createInstrumentedRuntimeAdapter(baseRuntime, instrumentation);
       const executeRunAttempt = new ExecuteRunAttempt({
         runs: runsRepository,
         agents,
         runtime,
+        instrumentation,
       });
-      const evaluationCoordinator = new EvaluationCoordinator(
-        createEvaluationRunApplication({
+      const evaluationCoordinator = new EvaluationCoordinator({
+        reconcileEvaluationCase: createEvaluationRunApplication({
           evaluationSuites,
           runs: runsRepository,
           agents,
@@ -239,7 +254,8 @@ export function createWorkerProcess(
           clock,
           ids: { createId: () => randomUUID() },
         }).reconcileEvaluationCase,
-      );
+        instrumentation,
+      });
       await queue.consume(
         createExecuteRunAttemptHandler(
           executeRunAttempt,
@@ -261,6 +277,7 @@ export function createWorkerProcess(
       }
       await queue.shutdown();
       await database.close();
+      await telemetryLifecycle.shutdown();
     },
   });
 

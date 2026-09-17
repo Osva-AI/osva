@@ -39,3 +39,8 @@ export const evaluationCaseResultIdSchema =
   osvaIdSchema<"EvaluationCaseResultId">();
 export const artifactIdSchema = osvaIdSchema<"ArtifactId">();
 export const eventIdSchema = osvaIdSchema<"EventId">();
+export const officeWorkerIdSchema = osvaIdSchema<"OfficeWorkerId">();
+export const roleIdSchema = osvaIdSchema<"RoleId">();
+export const teamIdSchema = osvaIdSchema<"TeamId">();
+export const goalIdSchema = osvaIdSchema<"GoalId">();
+export const assignmentIdSchema = osvaIdSchema<"AssignmentId">();

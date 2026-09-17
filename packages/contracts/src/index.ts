@@ -29,6 +29,11 @@ export type {
   WorkflowRunId,
   WorkflowVersionId,
   WorkspaceId,
+  OfficeWorkerId,
+  RoleId,
+  TeamId,
+  GoalId,
+  AssignmentId,
 } from "./ids.js";
 
 export type { JsonSchemaRecord } from "./json-schema.js";
@@ -426,3 +431,40 @@ export type {
   WorkflowVersionListResourceV1,
   WorkflowVersionResourceV1,
 } from "./workflow-registry.js";
+
+export {
+  ASSIGNMENT_STATES,
+  ASSIGNMENT_TARGET_TYPES,
+  GOAL_STATES,
+} from "./office-state.js";
+export type {
+  AssignmentState,
+  AssignmentTargetType,
+  GoalState,
+} from "./office-state.js";
+
+export type {
+  AddTeamMembershipRequestV1,
+  AssignmentListResourceV1,
+  AssignmentResourceV1,
+  CreateAssignmentRequestV1,
+  CreateGoalRequestV1,
+  CreateOfficeWorkerRequestV1,
+  CreateRoleRequestV1,
+  CreateTeamRequestV1,
+  GoalListResourceV1,
+  GoalResourceV1,
+  OfficeWorkerListResourceV1,
+  OfficeWorkerResourceV1,
+  RoleListResourceV1,
+  RoleResourceV1,
+  TeamListResourceV1,
+  TeamMembershipListResourceV1,
+  TeamMembershipResourceV1,
+  TeamResourceV1,
+  UpdateAssignmentRequestV1,
+  UpdateGoalRequestV1,
+  UpdateOfficeWorkerRequestV1,
+  UpdateRoleRequestV1,
+  UpdateTeamRequestV1,
+} from "./office-registry.js";

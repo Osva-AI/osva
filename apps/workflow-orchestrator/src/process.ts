@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
+import { createOpenTelemetryLifecycle } from "@osva/adapters-opentelemetry";
 import type {
   ApprovalRequestId,
   RunAttemptId,
@@ -56,12 +57,15 @@ export function createWorkflowOrchestratorProcess(
   dependencies: WorkflowOrchestratorProcessDependencies = {},
 ): WorkflowOrchestratorProcess {
   const config = loadWorkflowOrchestratorConfig(env);
+  const telemetryLifecycle = createOpenTelemetryLifecycle(env);
+  const instrumentation = telemetryLifecycle.instrumentation;
   const createDatabaseHandle = dependencies.databaseFactory ?? databaseFactory;
   const createQueue =
     dependencies.queueFactory ??
     ((valkeyUrl: string) =>
       new BullMqJobQueue({
         url: valkeyUrl,
+        instrumentation,
         logger: {
           info: logEvent,
           error: logError,
@@ -75,7 +79,7 @@ export function createWorkflowOrchestratorProcess(
   const workflows = new PostgresWorkflowRepository(database);
   const workflowRuns = new PostgresWorkflowRunRepository(database);
   const approvalRequests = new PostgresApprovalRequestRepository(database);
-  const createRun = new CreateRun({ runs, agents, queue });
+  const createRun = new CreateRun({ runs, agents, queue, instrumentation });
   const reconcile = new ReconcileWorkflowRun({
     workflows,
     workflowRuns,
@@ -84,6 +88,7 @@ export function createWorkflowOrchestratorProcess(
     runs,
     createRun,
     queue,
+    instrumentation,
     logger: {
       info: logEvent,
       error: logEvent,
@@ -116,6 +121,7 @@ export function createWorkflowOrchestratorProcess(
       onClose: async () => {
         await queue.shutdown();
         await database.close();
+        await telemetryLifecycle.shutdown();
       },
     });
 

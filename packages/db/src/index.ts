@@ -18,3 +18,4 @@ export { PostgresWorkflowRunRepository } from "./repositories/postgres-workflow-
 export { PostgresApprovalRequestRepository } from "./repositories/postgres-approval-request-repository.js";
 export { PostgresMemoryNamespaceRepository } from "./repositories/postgres-memory-namespace-repository.js";
 export { PostgresEvaluationSuiteRepository } from "./repositories/postgres-evaluation-suite-repository.js";
+export { PostgresOfficeRepository } from "./repositories/postgres-office-repository.js";

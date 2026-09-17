@@ -9,6 +9,7 @@ Architecturally significant files only (~50). Use as canonical precedents when i
 | `apps/web/src/run-http.ts` | Run CRUD API | HTTP router | CreateRun, RunApplication | POST /v1/runs entry |
 | `apps/web/src/workflow-http.ts` | Workflow + WorkflowRun API | HTTP router | WorkflowApplication | Creates WorkflowRuns |
 | `apps/web/src/evaluation-http.ts` | EvaluationSuite/Run API | HTTP router | EvaluationSuiteApplication, EvaluationRunApplication | Starts evaluation coordination |
+| `apps/web/src/office-http.ts` | AI Office API | HTTP router | OfficeApplication, LaunchAssignment | Assignment launch reuses CreateRun |
 | `apps/worker/src/process.ts` | Execution-plane composition root | `main.ts` | gateways, runtime adapters, ExecuteRunAttempt | Full gateway + capability server wiring |
 | `apps/worker/src/execute-run-attempt-handler.ts` | BullMQ handler wrapper | worker consume loop | ExecuteRunAttempt, EvaluationCoordinator | Post-terminal evaluation hook |
 | `apps/worker/src/worker.ts` | Queue consumer lifecycle | `process.ts` | JobQueue | Readiness + graceful shutdown |
@@ -20,6 +21,10 @@ Architecturally significant files only (~50). Use as canonical precedents when i
 | `packages/orchestration/src/reconcile-workflow-run.ts` | DAG workflow reconciler | workflow-orchestrator | CreateRun, WorkflowRunRepository | AGENT nodes only create Runs; APPROVAL durable |
 | `packages/orchestration/src/evaluation-coordinator.ts` | Post-terminal evaluation hook | worker handler | ReconcileEvaluationCase | Thin coordinator, not execution engine |
 | `packages/orchestration/src/scheduler-tick.ts` | Schedule occurrence processing | scheduler | DispatchScheduleOccurrence | Idempotent occurrence dispatch |
+| `packages/orchestration/src/launch-assignment.ts` | Assignment launch orchestration | web office-http | CreateRun, ReconcileAssignment | No Assignment queue; idempotent Run link |
+| `packages/orchestration/src/reconcile-assignment.ts` | Assignment status from Run/WorkflowRun | web GET assignment | RunRepository, WorkflowRunRepository | Derived lifecycle only |
+| `packages/domain/src/office-application.ts` | AI Office CRUD + invariants | web office-http | OfficeRepository | Workspace isolation; Role is metadata |
+| `packages/db/src/repositories/postgres-office-repository.ts` | AI Office persistence | web, orchestration | office schema tables | PostgreSQL canonical |
 | `packages/domain/src/run.ts` | Run aggregate | CreateRun, ExecuteRunAttempt | EffectiveRunBindings | Owns frozen bindings snapshot |
 | `packages/domain/src/run-attempt.ts` | RunAttempt aggregate | CreateRun, ExecuteRunAttempt | — | Canonical attempt identity |
 | `packages/domain/src/run-state-machine.ts` | Run transitions | Run aggregate, ExecuteRunAttempt | — | PENDING→QUEUED→RUNNING→terminal |
@@ -38,6 +43,8 @@ Architecturally significant files only (~50). Use as canonical precedents when i
 | `packages/tool-gateway/src/policy/default-tool-policy.ts` | Default authorization rules | ToolGateway | — | Server-side permissions |
 | `packages/memory-gateway/src/memory-gateway.ts` | Memory mediation | worker, run-step recorder | MemoryNamespaceRepository | Evaluation read-only via allowPersistentMutation |
 | `packages/observability/src/run-step-recorder.ts` | RunStep + usage/cost recording | worker capability wiring | gateways, RunRepository | Wraps gateway calls |
+| `packages/observability/src/instrumentation.ts` | Optional span/metric helpers | adapters-opentelemetry, orchestration | — | Auxiliary to RunStep authority |
+| `adapters/opentelemetry/src/opentelemetry-instrumentation.ts` | OTLP SDK wiring | worker/web when enabled | OpenTelemetry SDK | Disabled by default |
 | `adapters/bullmq/src/bullmq-job-queue.ts` | BullMQ JobQueue adapter | web, worker, orchestrator | bullmq | Payload is runAttemptId only |
 | `adapters/bullmq/src/job-id.ts` | BullMQ job ID encoding | bullmq-job-queue | — | Not an OSVA identity |
 | `adapters/runtime-typescript/src/trusted-typescript-runtime-adapter.ts` | Trusted TS runtime | worker RuntimeDispatcher | child-runner | In-process capabilities |

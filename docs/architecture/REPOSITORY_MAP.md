@@ -1,6 +1,6 @@
 # Repository Map
 
-Architecturally meaningful packages after Stage 2.8. Paths are relative to repo root.
+Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are relative to repo root.
 
 ## apps/
 
@@ -14,7 +14,7 @@ Architecturally meaningful packages after Stage 2.8. Paths are relative to repo 
 
 **Depends on:** `@osva/domain`, `@osva/orchestration` (CreateRun), `@osva/db`, `@osva/adapters-bullmq`, `@osva/adapters-mcp-client` (discovery only).
 
-**Key files:** `src/process.ts`, `src/http.ts`, `src/run-http.ts`, `src/workflow-http.ts`.
+**Key files:** `src/process.ts`, `src/http.ts`, `src/run-http.ts`, `src/workflow-http.ts`, `src/office-http.ts`.
 
 ### apps/worker
 
@@ -78,7 +78,7 @@ Architecturally meaningful packages after Stage 2.8. Paths are relative to repo 
 
 **Purpose:** Cross-aggregate write orchestration (no HTTP).
 
-**Owns:** `CreateRun`, `ExecuteRunAttempt`, `ReconcileWorkflowRun`, `SchedulerTick`, `EvaluationCoordinator`.
+**Owns:** `CreateRun`, `ExecuteRunAttempt`, `ReconcileWorkflowRun`, `SchedulerTick`, `EvaluationCoordinator`, `LaunchAssignment`, `ReconcileAssignment`.
 
 **Does not own:** Infrastructure adapters, HTTP routing.
 
@@ -225,6 +225,16 @@ Architecturally meaningful packages after Stage 2.8. Paths are relative to repo 
 **Does not own:** ToolGateway policy, ToolVersion snapshots.
 
 **Depends on:** `@osva/contracts` MCP types.
+
+### adapters/opentelemetry
+
+**Purpose:** Optional OpenTelemetry SDK wiring for OTLP traces and metrics.
+
+**Owns:** `OsvaInstrumentation` adapter, env-based config, BullMQ trace propagation helpers.
+
+**Does not own:** RunStep persistence, Run lifecycle.
+
+**Depends on:** `@osva/observability`, OpenTelemetry SDK packages.
 
 ### adapters/memory
 

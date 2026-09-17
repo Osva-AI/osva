@@ -14,6 +14,7 @@ import {
   MemoryApprovalRequestRepository,
   MemoryEvaluationSuiteRepository,
   MemoryMemoryNamespaceRepository,
+  MemoryOfficeRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import {
@@ -30,8 +31,13 @@ import {
   createScheduleApplication,
   createToolApplication,
   createWorkflowApplication,
+  createOfficeApplication,
 } from "@osva/domain";
-import { CreateRun } from "@osva/orchestration";
+import {
+  CreateRun,
+  LaunchAssignment,
+  ReconcileAssignment,
+} from "@osva/orchestration";
 
 import { createMcpClientPool } from "@osva/adapters-mcp-client";
 
@@ -58,6 +64,7 @@ export async function createTestWebApplication(options?: {
   const approvalRequestRepository = new MemoryApprovalRequestRepository();
   const memoryNamespaces = new MemoryMemoryNamespaceRepository();
   const evaluationSuites = new MemoryEvaluationSuiteRepository();
+  const officeRepository = new MemoryOfficeRepository();
   const queue = new MemoryJobQueue();
   const clock = { now: () => TEST_NOW };
   let counter = 0;
@@ -79,9 +86,24 @@ export async function createTestWebApplication(options?: {
     );
   }
 
+  const createRun = new CreateRun({ runs, agents, queue });
+  const reconcileAssignment = new ReconcileAssignment({
+    office: officeRepository,
+    runs,
+    workflowRuns: workflowRunRepository,
+  });
+  const launchAssignment = new LaunchAssignment({
+    office: officeRepository,
+    agents,
+    workflows: workflowRepository,
+    workflowRuns: workflowRunRepository,
+    runs,
+    createRun,
+    reconcileAssignment,
+  });
   const runServices: RunHttpServices = {
     runs: createRunApplication({ runs }),
-    createRun: new CreateRun({ runs, agents, queue }),
+    createRun,
     clock,
     ids,
   };
@@ -173,6 +195,20 @@ export async function createTestWebApplication(options?: {
       clock,
       ids,
     }),
+    office: {
+      office: createOfficeApplication({
+        office: officeRepository,
+        workspaces,
+        agents,
+        workflows: workflowRepository,
+        clock,
+        ids,
+      }),
+      launchAssignment,
+      reconcileAssignment,
+      clock,
+      ids,
+    },
   });
 
   return {

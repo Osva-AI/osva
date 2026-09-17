@@ -39,7 +39,7 @@ export const PERSISTED_CONNECTOR_TRANSPORTS = [
   "STDIO",
 ] as const;
 
-export const PERSISTED_RUN_STEP_KINDS = ["MODEL", "TOOL"] as const;
+export const PERSISTED_RUN_STEP_KINDS = ["MODEL", "TOOL", "MEMORY"] as const;
 
 export const PERSISTED_RUN_STEP_STATUSES = [
   "RUNNING",
@@ -89,4 +89,24 @@ export const PERSISTED_EVALUATION_CASE_OUTCOMES = [
   "PASS",
   "FAIL",
   "ERROR",
+] as const;
+
+export const PERSISTED_GOAL_STATES = [
+  "OPEN",
+  "ACTIVE",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+
+export const PERSISTED_ASSIGNMENT_STATES = [
+  "PENDING",
+  "RUNNING",
+  "COMPLETED",
+  "FAILED",
+  "CANCELLED",
+] as const;
+
+export const PERSISTED_ASSIGNMENT_TARGET_TYPES = [
+  "AGENT_VERSION",
+  "WORKFLOW_VERSION",
 ] as const;

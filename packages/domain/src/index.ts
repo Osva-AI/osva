@@ -93,6 +93,18 @@ export {
   WorkflowNodeRunNotFoundError,
   WorkflowRunNotFoundError,
   WorkflowVersionNotFoundError,
+  OfficeWorkerNotFoundError,
+  DuplicateOfficeWorkerKeyError,
+  RoleNotFoundError,
+  DuplicateRoleKeyError,
+  TeamNotFoundError,
+  DuplicateTeamKeyError,
+  DuplicateTeamMembershipError,
+  GoalNotFoundError,
+  DuplicateGoalKeyError,
+  AssignmentNotFoundError,
+  InvalidGoalTransitionError,
+  InvalidAssignmentTransitionError,
 } from "./errors.js";
 
 export { Workspace, type WorkspaceProps } from "./workspace.js";
@@ -173,6 +185,53 @@ export {
   type CreateScheduleOccurrenceProps,
   type ScheduleOccurrenceProps,
 } from "./schedule-occurrence.js";
+export {
+  OfficeWorker,
+  type CreateOfficeWorkerProps,
+  type OfficeWorkerProps,
+  type UpdateOfficeWorkerProps,
+} from "./office-worker.js";
+export {
+  Role,
+  type CreateRoleProps,
+  type RoleProps,
+  type UpdateRoleProps,
+} from "./role.js";
+export {
+  Team,
+  type CreateTeamProps,
+  type TeamProps,
+  type UpdateTeamProps,
+} from "./team.js";
+export { TeamMembership, type TeamMembershipProps } from "./team-membership.js";
+export {
+  Goal,
+  type CreateGoalProps,
+  type GoalProps,
+  type UpdateGoalProps,
+} from "./goal.js";
+export {
+  Assignment,
+  type AssignmentProps,
+  type CreateAssignmentProps,
+  type LaunchAssignmentProps,
+  type UpdateAssignmentProps,
+} from "./assignment.js";
+export {
+  assertLegalGoalTransition,
+  isGoalState,
+  isLegalGoalTransition,
+  LEGAL_GOAL_TRANSITIONS,
+} from "./goal-state-machine.js";
+export {
+  assertLegalAssignmentTransition,
+  isAssignmentState,
+  isLegalAssignmentTransition,
+  isTerminalAssignmentState,
+  LEGAL_ASSIGNMENT_TRANSITIONS,
+  TERMINAL_ASSIGNMENT_STATES,
+  type TerminalAssignmentState,
+} from "./assignment-state-machine.js";
 export { Workflow, type WorkflowProps } from "./workflow.js";
 export {
   WorkflowVersion,
@@ -279,6 +338,7 @@ export type {
   DeleteMemoryRecordInput,
   EvaluationRepository,
   EvaluationSuiteRepository,
+  OfficeRepository,
   ListMemoryRecordsQuery,
   ListMemoryRecordsResult,
   MemoryNamespaceRepository,
@@ -526,3 +586,45 @@ export {
   type WorkflowApplicationIds,
   type WorkflowRunView,
 } from "./workflow-application.js";
+
+export {
+  AddTeamMembership,
+  CreateAssignment,
+  CreateGoal,
+  CreateOfficeWorker,
+  CreateRole,
+  CreateTeam,
+  GetAssignment,
+  GetGoal,
+  GetOfficeWorker,
+  GetRole,
+  GetTeam,
+  ListAssignments,
+  ListGoals,
+  ListOfficeWorkers,
+  ListRoles,
+  ListTeamMemberships,
+  ListTeams,
+  CancelAssignment,
+  UpdateAssignment,
+  UpdateGoal,
+  UpdateOfficeWorker,
+  UpdateRole,
+  UpdateTeam,
+  createOfficeApplication,
+  type AddTeamMembershipCommand,
+  type CreateAssignmentCommand,
+  type CreateGoalCommand,
+  type CreateOfficeWorkerCommand,
+  type CreateRoleCommand,
+  type CreateTeamCommand,
+  type OfficeApplication,
+  type OfficeApplicationClock,
+  type OfficeApplicationDependencies,
+  type OfficeApplicationIds,
+  type UpdateAssignmentCommand,
+  type UpdateGoalCommand,
+  type UpdateOfficeWorkerCommand,
+  type UpdateRoleCommand,
+  type UpdateTeamCommand,
+} from "./office-application.js";

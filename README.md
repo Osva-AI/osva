@@ -6,18 +6,13 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** Community Beta in progress (Stage 2 Slice 2.5 complete). OSVA
-> supports Agent registry, immutable AgentVersions, Run lifecycle, BullMQ
-> execution transport, trusted TypeScript runtime, Remote HTTP runtime via
-> Runtime Protocol V1, ModelGateway, ToolGateway, RunSteps, usage/cost,
-> JSON_EXACT_MATCH evaluation, recurring scheduling, versioned sequential
-> Workflows, DAG orchestration (BRANCH / PARALLEL / JOIN), multi-agent
-> workflow composition, and durable human APPROVAL gates.
-> Requires PostgreSQL, Valkey, and `OSVA_TRUSTED_RUNTIME_ROOT`. Start `web`,
-> `worker`, `scheduler`, and `workflow-orchestrator`. `OPENAI_API_KEY` is
-> optional and worker-only. Remote HTTP also needs
-> `OSVA_RUNTIME_CAPABILITY_SECRET` on the worker. Private remote runtime
-> destinations require operator `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS`.
+> **Status:** **Community Beta complete** (Stage 2, 9/9 slices). OSVA supports
+> Agent registry, immutable AgentVersions, Run lifecycle, trusted TypeScript and
+> Remote HTTP runtimes, ModelGateway (OpenAI / Anthropic / Gemini), ToolGateway
+> (internal tools + MCP), persistent memory, EvaluationSuites, scheduling,
+> versioned workflows (sequential + DAG + approval), Node/Python SDKs, CLI,
+> optional OpenTelemetry, and basic AI Office. See
+> [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md).
 
 ## Why OSVA?
 
@@ -99,16 +94,21 @@ AI Office
 
 See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
+## Community Beta quickstart
+
+1. [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) — authoritative local setup
+2. [`docs/COMMUNITY-BETA.md`](docs/COMMUNITY-BETA.md) — capability matrix and non-goals
+
 ## Documentation
 
 Start with:
 
 1. [`docs/00-DOCUMENTATION-MAP.md`](docs/00-DOCUMENTATION-MAP.md)
 2. [`docs/product/PRODUCT_VISION.md`](docs/product/PRODUCT_VISION.md)
-3. [`docs/architecture/REFERENCE_ARCHITECTURE.md`](docs/architecture/REFERENCE_ARCHITECTURE.md)
+3. [`docs/architecture/ARCHITECTURE_OVERVIEW.md`](docs/architecture/ARCHITECTURE_OVERVIEW.md)
 4. [`docs/architecture/ARCHITECTURAL_INVARIANTS.md`](docs/architecture/ARCHITECTURAL_INVARIANTS.md)
 5. [`docs/contracts/README.md`](docs/contracts/README.md)
-6. [`docs/implementation/STAGE-0-FOUNDATION.md`](docs/implementation/STAGE-0-FOUNDATION.md)
+6. [`docs/roadmap/IMPLEMENTATION_TRACKER.md`](docs/roadmap/IMPLEMENTATION_TRACKER.md)
 
 ## Initial implementation direction
 
@@ -125,13 +125,7 @@ Stage 1 is expected to use:
 
 These are implementation choices, not permanent domain dependencies.
 
-## Stage 0 Development
-
-Stage 0 is the architectural foundation: public contracts, domain, PostgreSQL
-persistence, a walking orchestration skeleton, and process shells. It is not a
-usable Agent product. Deeper notes live in
-[`docs/implementation/STAGE-0-FOUNDATION.md`](docs/implementation/STAGE-0-FOUNDATION.md)
-and [`docs/roadmap/IMPLEMENTATION_TRACKER.md`](docs/roadmap/IMPLEMENTATION_TRACKER.md).
+## Local development
 
 ### Prerequisites
 
@@ -328,48 +322,21 @@ A failed child Run or rejected approval fails the WorkflowRun and later nodes
 do not start. Agents cannot invoke other agents; multi-agent execution is
 workflow composition only.
 
-### Community Alpha quickstart (no paid model key)
-
-Use the trusted echo agent fixture path:
-
-1. `pnpm infra:up` and `pnpm db:migrate`
-2. Set `OSVA_DATABASE_URL`, `OSVA_VALKEY_URL`, and `OSVA_TRUSTED_RUNTIME_ROOT`
-   to a directory containing a trusted TypeScript agent entrypoint
-3. Start `pnpm dev:web`, `pnpm dev:worker`, `pnpm dev:scheduler`, and
-   `pnpm dev:workflow-orchestrator`
-4. `POST /v1/agents` and `POST /v1/agents/:id/versions` with a trusted runtime
-   manifest (for example the echo agent under
-   `adapters/runtime-typescript/test/fixtures/echo-agent.ts`)
-5. `POST /v1/schedules` targeting that AgentVersion with cron such as `* * * * *`
-   and timezone `UTC`
-6. Inspect `GET /v1/schedules/:id/occurrences` and resulting Runs under
-   `/v1/runs`
-
-Community Alpha includes Agent registry, immutable AgentVersions, Runs,
-RunAttempts, BullMQ transport, trusted TypeScript runtime, ModelGateway,
-OpenAI provider, ToolGateway, internal tools, RunSteps, usage/cost estimation,
-JSON_EXACT_MATCH evaluation, and recurring scheduling.
-
-Slice 2.1–2.3 add versioned sequential Workflows, DAG orchestration, multi-agent
-composition, and durable APPROVAL gates. Community Beta does not yet include
-MCP, additional runtimes, OpenTelemetry, public SDKs, or a hosted control plane.
-
-Community Alpha does not yet include auth/RBAC, untrusted sandboxing,
-side-effecting external tools, deployment objects, automatic logical retries,
-Run cancellation, dashboards, LLM-as-judge, evaluation datasets,
-billing/invoicing, budgets, multi-provider production support, or a hosted
-control plane.
+First Agent / Run walkthrough, workflow, MCP, memory, evaluation, scheduling,
+AI Office, and OpenTelemetry examples live in
+[`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md).
 
 ### Quality commands
 
 ```text
 pnpm verify:quick
 pnpm verify:ci:clean
+pnpm verify:community-beta   # alias for verify:ci:clean
 ```
 
 `pnpm verify:quick` is the inner development loop. `pnpm verify:ci:clean` is
-the local gate before review. GitHub CI runs the same `pnpm verify:ci` and
-`pnpm verify:python` commands. See `docs/engineering/DEVELOPMENT_GATES.md`.
+the authoritative Stage 2 release gate. GitHub CI runs the same `pnpm verify:ci`
+and `pnpm verify:python` commands. See `docs/engineering/DEVELOPMENT_GATES.md`.
 
 ## Contributing
 

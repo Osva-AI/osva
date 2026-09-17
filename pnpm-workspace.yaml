@@ -15,11 +15,6 @@ catalog:
   vitest: 5.0.0
   zod: 4.6.5
 
-onlyBuiltDependencies:
-  - esbuild
-  - turbo
-  - msgpackr-extract
-
 minimumReleaseAgeExclude:
   - "@turbo/darwin-64@2.10.13"
   - "@turbo/darwin-arm64@2.10.13"
@@ -33,3 +28,4 @@ minimumReleaseAgeExclude:
 allowBuilds:
   esbuild: true
   msgpackr-extract: true
+  protobufjs: true

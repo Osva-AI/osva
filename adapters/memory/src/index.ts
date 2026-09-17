@@ -19,3 +19,4 @@ export { MemoryWorkflowRunRepository } from "./memory-workflow-run-repository.js
 export { MemoryApprovalRequestRepository } from "./memory-approval-request-repository.js";
 export { MemoryMemoryNamespaceRepository } from "./memory-memory-namespace-repository.js";
 export { MemoryEvaluationSuiteRepository } from "./memory-evaluation-suite-repository.js";
+export { MemoryOfficeRepository } from "./memory-office-repository.js";

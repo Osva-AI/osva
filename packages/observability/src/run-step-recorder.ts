@@ -30,6 +30,15 @@ import {
 import type { ModelGateway } from "@osva/model-gateway";
 import type { ToolGateway } from "@osva/tool-gateway";
 
+import { OSVA_ATTR } from "./attributes.js";
+import {
+  elapsedMs,
+  resolveInstrumentation,
+  type OsvaInstrumentation,
+} from "./instrumentation.js";
+import { OSVA_METRIC } from "./metrics.js";
+import { OSVA_SPAN } from "./span-names.js";
+
 export interface RunStepRecorderLogger {
   info(event: string, fields?: Readonly<Record<string, unknown>>): void;
   error(event: string, error: unknown): void;
@@ -49,6 +58,7 @@ export interface RunStepRecorderDependencies {
   readonly clock: RunStepRecorderClock;
   readonly ids: RunStepRecorderIds;
   readonly logger?: RunStepRecorderLogger;
+  readonly instrumentation?: OsvaInstrumentation;
 }
 
 export interface RuntimeMemoryGateway {
@@ -119,11 +129,13 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
     request: GenerateTextRequest,
     options?: { readonly signal?: AbortSignal },
   ): Promise<GenerateTextResult> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
     const bindingName = findModelBindingName(
       this.execution.modelProfileVersionBindings,
       request.modelProfileVersionId,
     );
     const startedAt = this.deps.clock.now();
+    const perfStartedAt = performance.now();
     const runStepId = this.deps.ids.createId() as RunStepId;
 
     const running = RunStep.start({
@@ -150,41 +162,86 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
       bindingName,
     });
 
-    try {
-      const outcome = await this.inner.generateTextOutcome(request, options);
-      const version = await this.deps.modelProfiles.findModelProfileVersionById(
-        request.modelProfileVersionId,
-      );
-      const estimatedCostUsdMicros =
-        outcome.usage === undefined
-          ? null
-          : estimateModelCostUsdMicros(
-              {
-                inputTokens: outcome.usage.inputTokens,
-                outputTokens: outcome.usage.outputTokens,
-              },
-              version?.pricing,
+    return telemetry.withSpan(
+      OSVA_SPAN.MODEL_GENERATE_TEXT,
+      {
+        [OSVA_ATTR.RUN_ID]: this.execution.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: this.execution.runAttemptId,
+        [OSVA_ATTR.MODEL_PROFILE_VERSION_ID]: request.modelProfileVersionId,
+        [OSVA_ATTR.OPERATION]: "generate_text",
+      },
+      async (span) => {
+        try {
+          const outcome = await this.inner.generateTextOutcome(
+            request,
+            options,
+          );
+          const version =
+            await this.deps.modelProfiles.findModelProfileVersionById(
+              request.modelProfileVersionId,
             );
+          if (version !== null) {
+            span.setAttributes({
+              [OSVA_ATTR.PROVIDER]: version.provider,
+            });
+          }
+          const estimatedCostUsdMicros =
+            outcome.usage === undefined
+              ? null
+              : estimateModelCostUsdMicros(
+                  {
+                    inputTokens: outcome.usage.inputTokens,
+                    outputTokens: outcome.usage.outputTokens,
+                  },
+                  version?.pricing,
+                );
 
-      await this.finalizeSafely(runStepId, {
-        status: "SUCCEEDED",
-        completedAt: this.deps.clock.now(),
-        inputTokens: outcome.usage?.inputTokens,
-        outputTokens: outcome.usage?.outputTokens,
-        totalTokens: outcome.usage?.totalTokens,
-        cachedInputTokens: outcome.usage?.cachedInputTokens,
-        estimatedCostUsdMicros,
-      });
+          await this.finalizeSafely(runStepId, {
+            status: "SUCCEEDED",
+            completedAt: this.deps.clock.now(),
+            inputTokens: outcome.usage?.inputTokens,
+            outputTokens: outcome.usage?.outputTokens,
+            totalTokens: outcome.usage?.totalTokens,
+            cachedInputTokens: outcome.usage?.cachedInputTokens,
+            estimatedCostUsdMicros,
+          });
 
-      return { text: outcome.text };
-    } catch (error) {
-      await this.finalizeSafely(runStepId, {
-        status: "FAILED",
-        completedAt: this.deps.clock.now(),
-        errorCode: mapModelErrorCode(error),
-      });
-      throw error;
-    }
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.MODEL_CALLS, 1, {
+            provider: version?.provider ?? "unknown",
+          });
+          telemetry.recordHistogram(
+            OSVA_METRIC.MODEL_DURATION_MS,
+            elapsedMs(perfStartedAt, performance.now()),
+            { provider: version?.provider ?? "unknown" },
+          );
+          if (outcome.usage !== undefined) {
+            telemetry.recordHistogram(
+              OSVA_METRIC.MODEL_INPUT_TOKENS,
+              outcome.usage.inputTokens,
+              { provider: version?.provider ?? "unknown" },
+            );
+            telemetry.recordHistogram(
+              OSVA_METRIC.MODEL_OUTPUT_TOKENS,
+              outcome.usage.outputTokens,
+              { provider: version?.provider ?? "unknown" },
+            );
+          }
+
+          return { text: outcome.text };
+        } catch (error) {
+          const errorCategory = mapModelErrorCode(error);
+          await this.finalizeSafely(runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          span.setStatus(false, errorCategory);
+          span.recordException(error);
+          throw error;
+        }
+      },
+    );
   }
 
   private async finalizeSafely(
@@ -213,7 +270,9 @@ class ObservabilityToolGateway implements RuntimeToolGateway {
   ) {}
 
   async invoke(request: ToolInvokeRequest): Promise<JsonValue> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
     const startedAt = this.deps.clock.now();
+    const perfStartedAt = performance.now();
     const runStepId = this.deps.ids.createId() as RunStepId;
 
     const running = RunStep.start({
@@ -240,21 +299,51 @@ class ObservabilityToolGateway implements RuntimeToolGateway {
       bindingName: request.authorization.bindingName,
     });
 
-    try {
-      const output = await this.inner.invoke(request);
-      await this.finalizeSafely(runStepId, {
-        status: "SUCCEEDED",
-        completedAt: this.deps.clock.now(),
-      });
-      return output;
-    } catch (error) {
-      await this.finalizeSafely(runStepId, {
-        status: "FAILED",
-        completedAt: this.deps.clock.now(),
-        errorCode: mapToolErrorCode(error),
-      });
-      throw error;
-    }
+    const executionKind = "gateway";
+
+    return telemetry.withSpan(
+      OSVA_SPAN.TOOL_INVOKE,
+      {
+        [OSVA_ATTR.RUN_ID]: this.execution.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: this.execution.runAttemptId,
+        [OSVA_ATTR.TOOL_VERSION_ID]: request.toolVersionId,
+        [OSVA_ATTR.OPERATION]: "invoke",
+        [OSVA_ATTR.TOOL_EXECUTION_KIND]: executionKind,
+      },
+      async (span) => {
+        try {
+          const output = await this.inner.invoke(request);
+          await this.finalizeSafely(runStepId, {
+            status: "SUCCEEDED",
+            completedAt: this.deps.clock.now(),
+          });
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.TOOL_CALLS, 1, {
+            tool_execution_kind: executionKind,
+          });
+          telemetry.recordHistogram(
+            OSVA_METRIC.TOOL_DURATION_MS,
+            elapsedMs(perfStartedAt, performance.now()),
+            { tool_execution_kind: executionKind },
+          );
+          return output;
+        } catch (error) {
+          const errorCategory = mapToolErrorCode(error);
+          await this.finalizeSafely(runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          span.setStatus(false, errorCategory);
+          span.recordException(error);
+          telemetry.recordCounter(OSVA_METRIC.TOOL_ERRORS, 1, {
+            tool_execution_kind: executionKind,
+            error_category: errorCategory,
+          });
+          throw error;
+        }
+      },
+    );
   }
 
   private async finalizeSafely(
@@ -350,8 +439,10 @@ class ObservabilityMemoryGateway implements RuntimeMemoryGateway {
     bindingName: string,
     invoke: () => Promise<T>,
   ): Promise<T> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
     const startedAt = this.deps.clock.now();
     const runStepId = this.deps.ids.createId() as RunStepId;
+    const memoryOperation = operation.replace(/^memory\./, "");
 
     const running = RunStep.start({
       id: runStepId,
@@ -377,21 +468,38 @@ class ObservabilityMemoryGateway implements RuntimeMemoryGateway {
       operation,
     });
 
-    try {
-      const result = await invoke();
-      await this.finalizeSafely(runStepId, {
-        status: "SUCCEEDED",
-        completedAt: this.deps.clock.now(),
-      });
-      return result;
-    } catch (error) {
-      await this.finalizeSafely(runStepId, {
-        status: "FAILED",
-        completedAt: this.deps.clock.now(),
-        errorCode: mapMemoryErrorCode(error),
-      });
-      throw error;
-    }
+    return telemetry.withSpan(
+      OSVA_SPAN.MEMORY_OPERATION,
+      {
+        [OSVA_ATTR.RUN_ID]: this.execution.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: this.execution.runAttemptId,
+        [OSVA_ATTR.OPERATION]: memoryOperation,
+      },
+      async (span) => {
+        try {
+          const result = await invoke();
+          await this.finalizeSafely(runStepId, {
+            status: "SUCCEEDED",
+            completedAt: this.deps.clock.now(),
+          });
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.MEMORY_OPERATIONS, 1, {
+            operation: memoryOperation,
+          });
+          return result;
+        } catch (error) {
+          const errorCategory = mapMemoryErrorCode(error);
+          await this.finalizeSafely(runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          span.setStatus(false, errorCategory);
+          span.recordException(error);
+          throw error;
+        }
+      },
+    );
   }
 
   private async finalizeSafely(

@@ -52,6 +52,10 @@
 - `engineering/SDK.md`
 - `engineering/OSS_LICENSE_STRATEGY.md`
 
+## Community Beta
+- `COMMUNITY-BETA-QUICKSTART.md`
+- `COMMUNITY-BETA.md`
+
 ## Roadmap
 - `roadmap/STAGE_ROADMAP.md`
 - `roadmap/STAGE_COMPONENT_MATRIX.md`

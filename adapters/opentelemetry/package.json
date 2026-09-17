@@ -1,0 +1,46 @@
+{
+  "name": "@osva/adapters-opentelemetry",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/core": "2.0.0",
+    "@opentelemetry/context-async-hooks": "2.0.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "0.200.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.200.0",
+    "@opentelemetry/resources": "2.0.0",
+    "@opentelemetry/sdk-metrics": "2.0.0",
+    "@opentelemetry/sdk-node": "0.200.0",
+    "@opentelemetry/sdk-trace-base": "2.0.0",
+    "@opentelemetry/semantic-conventions": "1.30.0",
+    "@osva/observability": "workspace:*"
+  },
+  "devDependencies": {
+    "@osva/adapters-memory": "workspace:*",
+    "@osva/contracts": "workspace:*",
+    "@osva/domain": "workspace:*",
+    "@osva/model-gateway": "workspace:*",
+    "@osva/tool-gateway": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

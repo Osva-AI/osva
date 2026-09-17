@@ -70,3 +70,4 @@ export {
   MAX_MEMORY_RECORD_LIST_LIMIT,
 } from "./memory-namespace-repository.js";
 export type { EvaluationSuiteRepository } from "./evaluation-suite-repository.js";
+export type { OfficeRepository } from "./office-repository.js";

@@ -34,11 +34,15 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ 2.6 Additional model providers
 - ✅ 2.7 MCP client and connector foundation
 - ✅ 2.8 Memory namespaces and EvaluationSuites
-- 2.9 OpenTelemetry and basic AI Office entities
+- ✅ 2.9A OpenTelemetry foundation
+- ✅ 2.9B Basic AI Office
+- ✅ 2.9C Community Beta readiness
 
 ## Totals
 
 - Stage 0: 8/8 complete
 - Stage 1: 8/8 complete
-- Stage 2: 8/9 complete
-- Overall: 24/33 slices complete
+- Stage 2: 9/9 complete
+- Overall: 25/33 slices complete
+
+**Community Beta:** complete

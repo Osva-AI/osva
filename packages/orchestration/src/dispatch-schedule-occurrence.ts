@@ -10,6 +10,12 @@ import {
   type ScheduleRepository,
 } from "@osva/domain";
 
+import {
+  OSVA_SPAN,
+  resolveInstrumentation,
+  type OsvaInstrumentation,
+} from "@osva/observability";
+
 import { CreateRun, type CreateRunCommand } from "./create-run.js";
 import { EnqueueFailedError } from "./errors.js";
 import { scheduleOccurrenceRunIdempotencyKey } from "./schedule-idempotency.js";
@@ -26,6 +32,7 @@ export interface DispatchScheduleOccurrenceDependencies {
   readonly runs: RunRepository;
   readonly createRun: CreateRun;
   readonly queue: JobQueue;
+  readonly instrumentation?: OsvaInstrumentation;
   readonly logger?: {
     info(event: string, fields: Record<string, string>): void;
     error(event: string, fields: Record<string, string>): void;
@@ -36,6 +43,16 @@ export class DispatchScheduleOccurrence {
   constructor(private readonly deps: DispatchScheduleOccurrenceDependencies) {}
 
   async execute(command: DispatchScheduleOccurrenceCommand): Promise<void> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+
+    await telemetry.withSpan(OSVA_SPAN.SCHEDULE_DISPATCH, undefined, async () =>
+      this.executeInner(command),
+    );
+  }
+
+  private async executeInner(
+    command: DispatchScheduleOccurrenceCommand,
+  ): Promise<void> {
     const occurrence = command.occurrence;
     const idempotencyKey = scheduleOccurrenceRunIdempotencyKey(
       occurrence.scheduleId,

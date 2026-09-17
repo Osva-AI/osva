@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
+  createOpenTelemetryLifecycle,
+  type OpenTelemetryLifecycle,
+} from "@osva/adapters-opentelemetry";
+import {
   createDatabase,
   PostgresAgentRepository,
   PostgresConnectorRepository,
@@ -14,6 +18,7 @@ import {
   PostgresApprovalRequestRepository,
   PostgresEvaluationSuiteRepository,
   PostgresMemoryNamespaceRepository,
+  PostgresOfficeRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
@@ -30,11 +35,16 @@ import {
   createScheduleApplication,
   createToolApplication,
   createWorkflowApplication,
+  createOfficeApplication,
 } from "@osva/domain";
 import { PostgresEvaluationRepository } from "@osva/db";
 import { createMcpClientPool } from "@osva/adapters-mcp-client";
 import { ProcessEnvSecretResolver } from "@osva/adapters-runtime-http";
-import { CreateRun } from "@osva/orchestration";
+import {
+  CreateRun,
+  LaunchAssignment,
+  ReconcileAssignment,
+} from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
 import { createWebApplication } from "./http.js";
@@ -49,17 +59,28 @@ export interface WebProcess {
   stop(): Promise<void>;
 }
 
+export interface WebProcessDependencies {
+  readonly telemetry?: OpenTelemetryLifecycle;
+}
+
 export function createWebProcess(
   env: NodeJS.ProcessEnv = process.env,
   databaseFactory: (connectionString: string) => Database = (
     connectionString,
   ) => createDatabase({ connectionString }),
-  queueFactory: (valkeyUrl: string) => PingableJobQueue = (valkeyUrl) =>
-    new BullMqJobQueue({ url: valkeyUrl }),
+  queueFactory?: (valkeyUrl: string) => PingableJobQueue,
+  dependencies: WebProcessDependencies = {},
 ): WebProcess {
   const config = loadWebConfig(env);
+  const telemetryLifecycle =
+    dependencies.telemetry ?? createOpenTelemetryLifecycle(env);
+  const instrumentation = telemetryLifecycle.instrumentation;
   const database = databaseFactory(config.databaseUrl);
-  const queue = queueFactory(config.valkeyUrl);
+  const createQueue =
+    queueFactory ??
+    ((valkeyUrl: string) =>
+      new BullMqJobQueue({ url: valkeyUrl, instrumentation }));
+  const queue = createQueue(config.valkeyUrl);
   const agents = new PostgresAgentRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
   const modelProfiles = new PostgresModelProfileRepository(database);
@@ -74,8 +95,30 @@ export function createWebProcess(
   );
   const memoryNamespaces = new PostgresMemoryNamespaceRepository(database);
   const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
+  const officeRepository = new PostgresOfficeRepository(database);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
+  const createRun = new CreateRun({
+    runs,
+    agents,
+    queue,
+    instrumentation,
+  });
+  const reconcileAssignment = new ReconcileAssignment({
+    office: officeRepository,
+    runs,
+    workflowRuns: workflowRunRepository,
+  });
+  const launchAssignment = new LaunchAssignment({
+    office: officeRepository,
+    agents,
+    workflows: workflowRepository,
+    workflowRuns: workflowRunRepository,
+    runs,
+    createRun,
+    reconcileAssignment,
+    instrumentation,
+  });
   const mcpClientPool = createMcpClientPool({
     secretResolver: new ProcessEnvSecretResolver(env),
   });
@@ -134,11 +177,7 @@ export function createWebProcess(
     },
     runs: {
       runs: createRunApplication({ runs }),
-      createRun: new CreateRun({
-        runs,
-        agents,
-        queue,
-      }),
+      createRun,
       clock,
       ids,
     },
@@ -171,6 +210,20 @@ export function createWebProcess(
       clock,
       ids,
     }),
+    office: {
+      office: createOfficeApplication({
+        office: officeRepository,
+        workspaces,
+        agents,
+        workflows: workflowRepository,
+        clock,
+        ids,
+      }),
+      launchAssignment,
+      reconcileAssignment,
+      clock,
+      ids,
+    },
   });
 
   let stopping: Promise<void> | undefined;
@@ -193,6 +246,7 @@ export function createWebProcess(
         await closeHttpServer(server);
         await queue.shutdown();
         await database.close();
+        await telemetryLifecycle.shutdown();
         logEvent("web.shutdown_complete");
       })();
 

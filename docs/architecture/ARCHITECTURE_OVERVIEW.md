@@ -1,10 +1,10 @@
 # Architecture Overview
 
-OSVA after Stage 2.8 (Community Beta): a control plane that owns product state and intent, and an execution plane that runs Agent code through runtime adapters. PostgreSQL is lifecycle authority; BullMQ/Valkey transports execution work.
+OSVA after Stage 2.9 (Community Beta): a control plane that owns product state and intent, and an execution plane that runs Agent code through runtime adapters. PostgreSQL is lifecycle authority; BullMQ/Valkey transports execution work.
 
 ## Planes
 
-**Control plane** (`apps/web`): HTTP API for agents, runs, workflows, schedules, tools, connectors, memory namespaces, evaluations. Persists intent, then enqueues execution jobs. Does not execute agent code in request handlers.
+**Control plane** (`apps/web`): HTTP API for agents, runs, workflows, schedules, tools, connectors, memory namespaces, evaluations, and AI Office entities. Persists intent, then enqueues execution jobs. Does not execute agent code in request handlers.
 
 **Execution plane** (`apps/worker`): Consumes BullMQ jobs keyed by `RunAttemptId`, drives `ExecuteRunAttempt`, dispatches to runtime adapters, and exposes model/tool/memory capabilities to remote runtimes.
 
@@ -26,6 +26,8 @@ OSVA after Stage 2.8 (Community Beta): a control plane that owns product state a
 | MemoryNamespace / MemoryRecord | Durable JSON key/value memory |
 | EvaluationSuite / EvaluationSuiteVersion | Immutable evaluation definition |
 | EvaluationRun | Coordinator over ordinary child Runs |
+| OfficeWorker / Role / Team / Goal | AI Office organizational metadata (workspace-scoped) |
+| Assignment | Organizational work item; freezes AgentVersion/WorkflowVersion and links to Run/WorkflowRun |
 
 ## Run lifecycle
 
@@ -80,7 +82,32 @@ EvaluationRun coordinates one ordinary child Run per EvaluationCase. No separate
 
 ## Observability
 
-RunSteps capture step type, timing, normalized payloads, token usage, and estimated cost (where model pricing exists). Unpriced provider usage is recorded without cost.
+**Durable product observability** lives in PostgreSQL as Run / RunAttempt / RunStep
+records. RunSteps capture step type, timing, normalized usage, token counts, and
+estimated cost (where model pricing exists). Unpriced provider usage is recorded
+without cost. RunSteps deliberately exclude prompts, tool payloads, and memory
+values.
+
+**Exportable diagnostics** (Stage 2.9A) are optional OpenTelemetry traces and
+metrics via `@osva/adapters-opentelemetry`. OTLP export is vendor-neutral and
+disabled by default. Spans and metrics are auxiliary: export failure or missing
+configuration never changes Run lifecycle authority. BullMQ may carry W3C trace
+context in transport-only job metadata; trace IDs are not RunAttempt IDs.
+
+## AI Office (Stage 2.9B)
+
+AI Office is an organizational layer above execution. It does not introduce a
+new runtime, queue, or permission system.
+
+```text
+Goal (optional) → Assignment → OfficeWorker → Agent identity
+Assignment → frozen AgentVersion | WorkflowVersion
+Assignment launch → CreateRun | WorkflowRun (existing orchestration)
+```
+
+`OfficeWorker` references an `Agent` identity but is not executable. `Role` is
+organizational metadata, not security RBAC. `Team` is grouping only — Assignments
+cannot target Teams. See `docs/platform/AI_OFFICE_LAYER.md`.
 
 ## High-level diagram
 

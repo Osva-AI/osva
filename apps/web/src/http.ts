@@ -29,6 +29,7 @@ import {
   type ScheduleHttpServices,
 } from "./schedule-http.js";
 import { handleWorkflowRequest } from "./workflow-http.js";
+import { handleOfficeRequest, type OfficeHttpServices } from "./office-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
@@ -44,6 +45,7 @@ export interface CreateWebApplicationOptions {
   readonly runObservability: RunObservabilityHttpServices;
   readonly schedules: ScheduleHttpServices;
   readonly workflows: WorkflowApplication;
+  readonly office: OfficeHttpServices;
 }
 
 export function createWebApplication(
@@ -64,6 +66,7 @@ export function createWebApplication(
       options.runObservability,
       options.schedules,
       options.workflows,
+      options.office,
     );
   });
 }
@@ -82,6 +85,7 @@ async function handleRequest(
   runObservability: RunObservabilityHttpServices,
   schedules: ScheduleHttpServices,
   workflows: WorkflowApplication,
+  office: OfficeHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -242,6 +246,18 @@ async function handleRequest(
     url.searchParams,
   );
   if (handledWorkflows) {
+    return;
+  }
+
+  const handledOffice = await handleOfficeRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    office,
+  );
+  if (handledOffice) {
     return;
   }
 

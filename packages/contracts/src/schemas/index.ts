@@ -28,6 +28,11 @@ export {
   workflowRunIdSchema,
   workflowVersionIdSchema,
   workspaceIdSchema,
+  officeWorkerIdSchema,
+  roleIdSchema,
+  teamIdSchema,
+  goalIdSchema,
+  assignmentIdSchema,
 } from "./ids.js";
 
 export { jsonSchemaRecordSchema } from "./json-schema.js";
@@ -229,3 +234,33 @@ export {
   scheduleResourceSchema,
   updateScheduleRequestSchema,
 } from "./schedule-registry.js";
+
+export {
+  addTeamMembershipRequestSchema,
+  assignmentListResourceSchema,
+  assignmentResourceSchema,
+  assignmentStateSchema,
+  assignmentTargetTypeSchema,
+  createAssignmentRequestSchema,
+  createGoalRequestSchema,
+  createOfficeWorkerRequestSchema,
+  createRoleRequestSchema,
+  createTeamRequestSchema,
+  goalListResourceSchema,
+  goalResourceSchema,
+  goalStateSchema,
+  listOfficeResourcesQuerySchema,
+  officeWorkerListResourceSchema,
+  officeWorkerResourceSchema,
+  roleListResourceSchema,
+  roleResourceSchema,
+  teamListResourceSchema,
+  teamMembershipListResourceSchema,
+  teamMembershipResourceSchema,
+  teamResourceSchema,
+  updateAssignmentRequestSchema,
+  updateGoalRequestSchema,
+  updateOfficeWorkerRequestSchema,
+  updateRoleRequestSchema,
+  updateTeamRequestSchema,
+} from "./office-registry.js";

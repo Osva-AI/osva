@@ -31,8 +31,13 @@
   (durable JSON key/value memory through MemoryGateway; immutable
   EvaluationSuiteVersion; EvaluationRun coordinates ordinary child Runs;
   evaluation child Runs cannot mutate persistent memory by default);
-- OpenTelemetry;
-- basic AI Office entities.
+- ✅ Slice 2.9A: OpenTelemetry foundation (optional OTLP traces/metrics;
+  RunStep remains durable observability authority; BullMQ trace propagation);
+- ✅ Slice 2.9B: basic AI Office entities (OfficeWorker, Role, Team,
+  TeamMembership, Goal, Assignment; assignment launch reuses CreateRun/workflow
+  execution; explicit immutable AgentVersion/WorkflowVersion targets);
+- ✅ Slice 2.9C: Community Beta readiness packaging (quickstart, capability
+  matrix, smoke test, final verification).
 
 Workflow Definition remains pre-1.0 but versioned.
 
@@ -210,3 +215,23 @@ READ_WRITE. Normal Runs retain full binding permissions.
 Slice 2.8 does not implement vector memory, semantic search, RAG, LLM-as-judge
 evaluators, dataset import, tool mocks, or a separate evaluation execution
 engine.
+
+## Slice 2.9A
+
+Stage 2.9A adds optional OpenTelemetry export without changing Run lifecycle
+authority. RunStep records in PostgreSQL remain the durable product observability
+source. OTLP traces and metrics are auxiliary and disabled by default.
+
+## Slice 2.9B
+
+Stage 2.9B adds basic AI Office organizational entities: OfficeWorker, Role,
+Team, TeamMembership, Goal, and Assignment. Assignment is the only object that
+connects to execution; it freezes an explicit AgentVersion or WorkflowVersion and
+launches through existing CreateRun / workflow paths. No Assignment queue,
+worker, or workforce planner.
+
+## Slice 2.9C
+
+Stage 2.9C packages Community Beta readiness: authoritative quickstart,
+environment documentation, capability matrix, non-goals, architecture doc sync,
+Community Beta smoke integration test, and final `pnpm verify:ci:clean` gate.

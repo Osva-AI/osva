@@ -38,6 +38,14 @@ import {
   type WorkflowVersion,
 } from "@osva/domain";
 
+import {
+  OSVA_ATTR,
+  OSVA_METRIC,
+  OSVA_SPAN,
+  resolveInstrumentation,
+  type OsvaInstrumentation,
+} from "@osva/observability";
+
 import { CreateRun, type CreateRunCommand } from "./create-run.js";
 import { EnqueueFailedError } from "./errors.js";
 import { workflowNodeRunIdempotencyKey } from "./workflow-idempotency.js";
@@ -63,6 +71,7 @@ export interface ReconcileWorkflowRunDependencies {
   readonly runs: RunRepository;
   readonly createRun: CreateRun;
   readonly queue: JobQueue;
+  readonly instrumentation?: OsvaInstrumentation;
   readonly logger?: {
     info(event: string, fields: Record<string, string>): void;
     error(event: string, fields: Record<string, string>): void;
@@ -73,6 +82,24 @@ export class ReconcileWorkflowRun {
   constructor(private readonly deps: ReconcileWorkflowRunDependencies) {}
 
   async execute(command: ReconcileWorkflowRunCommand): Promise<void> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+
+    await telemetry.withSpan(
+      OSVA_SPAN.WORKFLOW_RECONCILE,
+      {
+        [OSVA_ATTR.WORKFLOW_RUN_ID]: command.workflowRun.id,
+        [OSVA_ATTR.WORKFLOW_VERSION_ID]: command.workflowRun.workflowVersionId,
+      },
+      async () => {
+        await this.executeInner(command);
+        telemetry.recordCounter(OSVA_METRIC.WORKFLOW_RECONCILIATIONS, 1);
+      },
+    );
+  }
+
+  private async executeInner(
+    command: ReconcileWorkflowRunCommand,
+  ): Promise<void> {
     const version = await this.loadVersion(
       command.workflowRun.workflowVersionId,
     );
@@ -612,8 +639,18 @@ export class ReconcileWorkflowRun {
       now: input.command.now,
     };
 
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+
     try {
-      const created = await this.deps.createRun.execute(createCommand);
+      const created = await telemetry.withSpan(
+        OSVA_SPAN.WORKFLOW_NODE_EXECUTE,
+        {
+          [OSVA_ATTR.WORKFLOW_RUN_ID]: input.workflowRun.id,
+          [OSVA_ATTR.WORKFLOW_NODE_RUN_ID]: input.nodeRun.id,
+          [OSVA_ATTR.AGENT_VERSION_ID]: input.agentVersionId,
+        },
+        async () => this.deps.createRun.execute(createCommand),
+      );
       return { run: created.run, enqueued: true };
     } catch (error) {
       if (

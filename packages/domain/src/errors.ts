@@ -29,6 +29,13 @@ import type {
   WorkflowRunState,
   WorkflowVersionId,
   WorkspaceId,
+  OfficeWorkerId,
+  RoleId,
+  TeamId,
+  GoalId,
+  AssignmentId,
+  AssignmentState,
+  GoalState,
 } from "@osva/contracts";
 
 export class DomainError extends Error {
@@ -507,6 +514,132 @@ export class InvalidApprovalRequestTransitionError extends DomainError {
 
 export class InvalidWorkflowDefinitionError extends DomainInvariantError {}
 
+export class OfficeWorkerNotFoundError extends DomainError {
+  readonly officeWorkerId: OfficeWorkerId;
+
+  constructor(officeWorkerId: OfficeWorkerId) {
+    super(`OfficeWorker ${officeWorkerId} was not found.`);
+    this.officeWorkerId = officeWorkerId;
+  }
+}
+
+export class DuplicateOfficeWorkerKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `OfficeWorker key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class RoleNotFoundError extends DomainError {
+  readonly roleId: RoleId;
+
+  constructor(roleId: RoleId) {
+    super(`Role ${roleId} was not found.`);
+    this.roleId = roleId;
+  }
+}
+
+export class DuplicateRoleKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(`Role key '${key}' already exists in workspace '${workspaceId}'.`);
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class TeamNotFoundError extends DomainError {
+  readonly teamId: TeamId;
+
+  constructor(teamId: TeamId) {
+    super(`Team ${teamId} was not found.`);
+    this.teamId = teamId;
+  }
+}
+
+export class DuplicateTeamKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(`Team key '${key}' already exists in workspace '${workspaceId}'.`);
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class DuplicateTeamMembershipError extends DomainInvariantError {
+  readonly teamId: TeamId;
+  readonly officeWorkerId: OfficeWorkerId;
+
+  constructor(teamId: TeamId, officeWorkerId: OfficeWorkerId) {
+    super(
+      `OfficeWorker ${officeWorkerId} is already a member of Team ${teamId}.`,
+    );
+    this.teamId = teamId;
+    this.officeWorkerId = officeWorkerId;
+  }
+}
+
+export class GoalNotFoundError extends DomainError {
+  readonly goalId: GoalId;
+
+  constructor(goalId: GoalId) {
+    super(`Goal ${goalId} was not found.`);
+    this.goalId = goalId;
+  }
+}
+
+export class DuplicateGoalKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(`Goal key '${key}' already exists in workspace '${workspaceId}'.`);
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class AssignmentNotFoundError extends DomainError {
+  readonly assignmentId: AssignmentId;
+
+  constructor(assignmentId: AssignmentId) {
+    super(`Assignment ${assignmentId} was not found.`);
+    this.assignmentId = assignmentId;
+  }
+}
+
+export class InvalidGoalTransitionError extends DomainError {
+  readonly from: GoalState;
+  readonly to: GoalState;
+
+  constructor(from: GoalState, to: GoalState) {
+    super(`Invalid goal transition from ${from} to ${to}.`);
+    this.from = from;
+    this.to = to;
+  }
+}
+
+export class InvalidAssignmentTransitionError extends DomainError {
+  readonly from: AssignmentState;
+  readonly to: AssignmentState;
+
+  constructor(from: AssignmentState, to: AssignmentState) {
+    super(`Invalid assignment transition from ${from} to ${to}.`);
+    this.from = from;
+    this.to = to;
+  }
+}
+
 export class LifecycleConflictError extends DomainError {
   readonly entity:
     | "run"
@@ -515,7 +648,8 @@ export class LifecycleConflictError extends DomainError {
     | "workflowRun"
     | "workflowNodeRun"
     | "approvalRequest"
-    | "evaluationRun";
+    | "evaluationRun"
+    | "assignment";
   readonly id:
     | RunId
     | RunAttemptId
@@ -523,7 +657,8 @@ export class LifecycleConflictError extends DomainError {
     | WorkflowRunId
     | WorkflowNodeRunId
     | ApprovalRequestId
-    | EvaluationRunId;
+    | EvaluationRunId
+    | AssignmentId;
   readonly expectedStatus:
     | RunState
     | RunAttemptState
@@ -531,6 +666,7 @@ export class LifecycleConflictError extends DomainError {
     | WorkflowNodeRunState
     | ApprovalRequestState
     | EvaluationRunState
+    | AssignmentState
     | "RUNNING";
 
   constructor(
@@ -541,7 +677,8 @@ export class LifecycleConflictError extends DomainError {
       | "workflowRun"
       | "workflowNodeRun"
       | "approvalRequest"
-      | "evaluationRun",
+      | "evaluationRun"
+      | "assignment",
     id:
       | RunId
       | RunAttemptId
@@ -549,7 +686,8 @@ export class LifecycleConflictError extends DomainError {
       | WorkflowRunId
       | WorkflowNodeRunId
       | ApprovalRequestId
-      | EvaluationRunId,
+      | EvaluationRunId
+      | AssignmentId,
     expectedStatus:
       | RunState
       | RunAttemptState
@@ -557,6 +695,7 @@ export class LifecycleConflictError extends DomainError {
       | WorkflowNodeRunState
       | ApprovalRequestState
       | EvaluationRunState
+      | AssignmentState
       | "RUNNING",
   ) {
     super(

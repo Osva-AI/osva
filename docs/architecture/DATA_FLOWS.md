@@ -1,6 +1,6 @@
 # Data Flows
 
-Index of major OSVA execution flows after Stage 2.8.
+Index of major OSVA execution flows after Stage 2.9 (Community Beta).
 
 ## run-execution
 
@@ -86,10 +86,23 @@ Index of major OSVA execution flows after Stage 2.8.
 
 **Detailed flow:** [flows/evaluation-run.md](./flows/evaluation-run.md)
 
+## assignment-launch
+
+**Purpose:** Launch an AI Office Assignment through existing Run or WorkflowRun execution.
+
+**Entry point:** `POST /v1/assignments/:id/launch` → `LaunchAssignment`
+
+**Main components:** `OfficeApplication`, `CreateRun`, `ReconcileAssignment`, existing worker/workflow paths
+
+**State authority:** PostgreSQL (Assignment). Run/WorkflowRun remain execution authority.
+
+**Notes:** Idempotent via `assignment:{assignmentId}`; no Assignment queue or worker.
+
 ## Supporting flows (no dedicated doc)
 
 | Flow | Entry | Notes |
 |------|-------|-------|
 | Schedule tick | `apps/scheduler` | Cron → `SchedulerTick` → `CreateRun` |
 | MCP discovery | `POST /v1/connectors/.../discover` | Control plane; creates ToolVersion snapshots |
-| Run observability | `GET /v1/runs/:id/steps` | Read-only RunStep API |
+| Run observability | `GET /v1/runs/:id/attempts/:attemptId/steps` | Read-only RunStep API |
+| OpenTelemetry export | Worker/web optional OTLP | Auxiliary; RunStep remains durable authority |

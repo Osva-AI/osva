@@ -12,6 +12,11 @@ import { RunsResource } from "./resources/runs.js";
 import { SchedulesResource } from "./resources/schedules.js";
 import { WorkflowRunsResource } from "./resources/workflow-runs.js";
 import { WorkflowsResource } from "./resources/workflows.js";
+import { OfficeWorkersResource } from "./resources/office-workers.js";
+import { RolesResource } from "./resources/office-roles.js";
+import { TeamsResource } from "./resources/office-teams.js";
+import { GoalsResource } from "./resources/goals.js";
+import { AssignmentsResource } from "./resources/assignments.js";
 
 export interface OsvaClientOptions extends OsvaHttpClientOptions {
   readonly workspaceId: WorkspaceId;
@@ -28,6 +33,11 @@ export class OsvaClient {
   readonly memoryNamespaces: MemoryNamespacesResource;
   readonly evaluationSuites: EvaluationSuitesResource;
   readonly evaluationRuns: EvaluationRunsResource;
+  readonly officeWorkers: OfficeWorkersResource;
+  readonly roles: RolesResource;
+  readonly teams: TeamsResource;
+  readonly goals: GoalsResource;
+  readonly assignments: AssignmentsResource;
 
   private readonly http: OsvaHttpClient;
 
@@ -49,5 +59,10 @@ export class OsvaClient {
       this.http,
       options.workspaceId,
     );
+    this.officeWorkers = new OfficeWorkersResource(this.http);
+    this.roles = new RolesResource(this.http);
+    this.teams = new TeamsResource(this.http);
+    this.goals = new GoalsResource(this.http);
+    this.assignments = new AssignmentsResource(this.http);
   }
 }

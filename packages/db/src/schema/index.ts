@@ -26,6 +26,12 @@ export { evaluationSuiteVersions } from "./evaluation-suite-versions.js";
 export { evaluationCases } from "./evaluation-cases.js";
 export { evaluationRuns } from "./evaluation-runs.js";
 export { evaluationCaseResults } from "./evaluation-case-results.js";
+export { officeWorkers } from "./office-workers.js";
+export { roles } from "./roles.js";
+export { teams } from "./teams.js";
+export { teamMemberships } from "./team-memberships.js";
+export { goals } from "./goals.js";
+export { assignments } from "./assignments.js";
 export {
   PERSISTED_EVALUATOR_TYPES,
   PERSISTED_CONNECTOR_KINDS,
@@ -42,4 +48,7 @@ export {
   PERSISTED_EVALUATION_RUN_STATES,
   PERSISTED_EVALUATION_RUN_TARGET_TYPES,
   PERSISTED_EVALUATION_CASE_OUTCOMES,
+  PERSISTED_GOAL_STATES,
+  PERSISTED_ASSIGNMENT_STATES,
+  PERSISTED_ASSIGNMENT_TARGET_TYPES,
 } from "./states.js";
