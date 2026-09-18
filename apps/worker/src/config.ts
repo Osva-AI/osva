@@ -1,3 +1,9 @@
+import {
+  resolveContainerCapabilityBaseUrl,
+  validateContainerCapabilityBaseUrl,
+  type ContainerResourcePolicy,
+} from "@osva/adapters-runtime-container";
+
 export interface WorkerConfig {
   readonly databaseUrl: string;
   readonly valkeyUrl: string;
@@ -11,6 +17,10 @@ export interface WorkerConfig {
    * AgentVersion configuration cannot enable this.
    */
   readonly remoteHttpAllowPrivateNetworks: boolean;
+  readonly containerEnabled: boolean;
+  readonly containerNetworkMode: string;
+  readonly containerCapabilityBaseUrl?: string;
+  readonly containerResourcePolicy?: ContainerResourcePolicy;
 }
 
 export function loadWorkerConfig(
@@ -23,7 +33,24 @@ export function loadWorkerConfig(
   const runtimeCapabilityHost =
     env.OSVA_RUNTIME_CAPABILITY_HOST?.trim() || "127.0.0.1";
   const runtimeCapabilityBaseUrl = env.OSVA_RUNTIME_CAPABILITY_BASE_URL?.trim();
-  return {
+  const containerCapabilityBaseUrl =
+    env.OSVA_CONTAINER_CAPABILITY_BASE_URL?.trim();
+  const containerEnabled = readOptionalBoolean(
+    env.OSVA_CONTAINER_ENABLED,
+    "OSVA_CONTAINER_ENABLED",
+  );
+  const containerNetworkMode =
+    env.OSVA_CONTAINER_NETWORK_MODE?.trim() || "bridge";
+  if (
+    containerEnabled &&
+    (containerNetworkMode === "host" || containerNetworkMode === "none")
+  ) {
+    throw new Error(
+      "OSVA_CONTAINER_NETWORK_MODE must not be host or none when container execution is enabled.",
+    );
+  }
+
+  const config: WorkerConfig = {
     databaseUrl,
     valkeyUrl,
     trustedRuntimeRoot:
@@ -49,7 +76,90 @@ export function loadWorkerConfig(
       env.OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS,
       "OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS",
     ),
+    containerEnabled,
+    containerNetworkMode,
+    containerCapabilityBaseUrl:
+      containerCapabilityBaseUrl === undefined ||
+      containerCapabilityBaseUrl.length === 0
+        ? undefined
+        : containerCapabilityBaseUrl,
+    containerResourcePolicy: containerEnabled
+      ? readContainerResourcePolicy(env)
+      : undefined,
   };
+
+  if (config.containerEnabled && config.runtimeCapabilitySecret !== undefined) {
+    const explicitCapabilityBaseUrl = resolveContainerCapabilityBaseUrl({
+      containerCapabilityBaseUrl: config.containerCapabilityBaseUrl,
+      runtimeCapabilityBaseUrl: config.runtimeCapabilityBaseUrl,
+    });
+    if (explicitCapabilityBaseUrl !== undefined) {
+      validateContainerCapabilityBaseUrl(
+        explicitCapabilityBaseUrl,
+        config.containerNetworkMode,
+      );
+    }
+  }
+
+  return config;
+}
+
+function readContainerResourcePolicy(
+  env: NodeJS.ProcessEnv,
+): ContainerResourcePolicy {
+  return {
+    defaults: {
+      cpuMillis: readPositiveInt(
+        env.OSVA_CONTAINER_DEFAULT_CPU_MILLIS,
+        500,
+        "OSVA_CONTAINER_DEFAULT_CPU_MILLIS",
+      ),
+      memoryMiB: readPositiveInt(
+        env.OSVA_CONTAINER_DEFAULT_MEMORY_MIB,
+        256,
+        "OSVA_CONTAINER_DEFAULT_MEMORY_MIB",
+      ),
+      pids: readPositiveInt(
+        env.OSVA_CONTAINER_DEFAULT_PIDS,
+        128,
+        "OSVA_CONTAINER_DEFAULT_PIDS",
+      ),
+    },
+    maximums: {
+      cpuMillis: readPositiveInt(
+        env.OSVA_CONTAINER_MAX_CPU_MILLIS,
+        2_000,
+        "OSVA_CONTAINER_MAX_CPU_MILLIS",
+      ),
+      memoryMiB: readPositiveInt(
+        env.OSVA_CONTAINER_MAX_MEMORY_MIB,
+        1_024,
+        "OSVA_CONTAINER_MAX_MEMORY_MIB",
+      ),
+      pids: readPositiveInt(
+        env.OSVA_CONTAINER_MAX_PIDS,
+        512,
+        "OSVA_CONTAINER_MAX_PIDS",
+      ),
+    },
+  };
+}
+
+function readPositiveInt(
+  value: string | undefined,
+  fallback: number,
+  name: string,
+): number {
+  if (value === undefined || value.trim().length === 0) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return parsed;
 }
 
 function readRequired(value: string | undefined, name: string): string {

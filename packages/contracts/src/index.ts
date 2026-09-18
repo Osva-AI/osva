@@ -138,6 +138,7 @@ export type {
 } from "./run-state.js";
 
 export {
+  AGENT_CONTAINER_PROTOCOL_VERSION,
   AGENT_EXECUTION_DEFAULT_TIMEOUT_MS,
   AGENT_EXECUTION_MAX_TIMEOUT_MS,
   AGENT_EXECUTION_MIN_TIMEOUT_MS,
@@ -146,6 +147,7 @@ export {
   AGENT_RUNTIME_TYPES,
 } from "./agent-manifest.js";
 export type {
+  AgentContainerProtocolVersion,
   AgentManifestCapabilities,
   AgentManifestExecution,
   AgentManifestIO,
@@ -158,9 +160,15 @@ export type {
   AgentRuntime,
   AgentRuntimeType,
   BuiltinPackageRuntime,
+  ContainerRuntime,
+  ContainerRuntimeResources,
   RemoteHttpRuntime,
   TrustedTypeScriptRuntime,
 } from "./agent-manifest.js";
+export {
+  OCI_SHA256_DIGEST_PREFIX,
+  isDigestPinnedOciImageReference,
+} from "./container-runtime.js";
 export {
   REMOTE_RUNTIME_ENDPOINT_MAX_LENGTH,
   isAllowedRemoteRuntimeEndpoint,

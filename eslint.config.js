@@ -962,4 +962,62 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["adapters/runtime-container/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/domain",
+              message: "The container runtime cannot import domain.",
+            },
+            {
+              name: "@osva/orchestration",
+              message: "The container runtime cannot import orchestration.",
+            },
+            {
+              name: "@osva/model-gateway",
+              message: "The container runtime cannot import gateways.",
+            },
+            {
+              name: "@osva/tool-gateway",
+              message: "The container runtime cannot import gateways.",
+            },
+            {
+              name: "@osva/memory-gateway",
+              message: "The container runtime cannot import gateways.",
+            },
+            {
+              name: "@osva/db",
+              message: "The container runtime cannot import persistence.",
+            },
+            {
+              name: "@osva/web",
+              message: "The container runtime cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "The container runtime cannot import apps.",
+            },
+            {
+              name: "bullmq",
+              message: "The container runtime cannot import BullMQ.",
+            },
+            {
+              name: "openai",
+              message: "The container runtime cannot import provider SDKs.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@anthropic-ai/*"],
+              message: "The container runtime cannot import provider SDKs.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

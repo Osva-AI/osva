@@ -13,9 +13,17 @@ export {
   type StartRuntimeCapabilityServerOptions,
 } from "./capability-server.js";
 export {
+  buildRuntimeExecutionBootstrapUrl,
+  RuntimeExecutionBootstrapStore,
+} from "./execution-bootstrap-store.js";
+export {
   CAPABILITY_TOKEN_SKEW_MS,
+  issueBootstrapToken,
   issueCapabilityToken,
+  RUNTIME_BOOTSTRAP_TOKEN_AUD,
+  verifyBootstrapToken,
   verifyCapabilityToken,
+  type BootstrapTokenClaims,
   type CapabilityTokenClaims,
 } from "./capability-token.js";
 export { OversizedBodyError, SecretNotFoundError } from "./errors.js";

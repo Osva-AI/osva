@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  issueBootstrapToken,
   issueCapabilityToken,
+  verifyBootstrapToken,
   verifyCapabilityToken,
 } from "../src/capability-token.js";
 
@@ -48,5 +50,17 @@ describe("capability tokens", () => {
       ),
     ).toBeUndefined();
     expect(verifyCapabilityToken(SECRET, `${token}x`, NOW)).toBeUndefined();
+  });
+
+  it("separates bootstrap tokens from capability tokens", () => {
+    const bootstrap = issueBootstrapToken(SECRET, {
+      executionId: "attempt-1",
+      exp: NOW.getTime() + 30_000,
+    });
+
+    expect(verifyBootstrapToken(SECRET, bootstrap, NOW)).toMatchObject({
+      executionId: "attempt-1",
+    });
+    expect(verifyCapabilityToken(SECRET, bootstrap, NOW)).toBeUndefined();
   });
 });

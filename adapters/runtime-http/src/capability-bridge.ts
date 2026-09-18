@@ -20,6 +20,7 @@ import {
   RUNTIME_CAPABILITY_PATHS,
   RUNTIME_PROTOCOL_ERROR_CODES,
   RUNTIME_PROTOCOL_VERSION,
+  runtimeExecuteRequestSchema,
   runtimeMemoryDeleteRequestSchema,
   runtimeMemoryGetRequestSchema,
   runtimeMemoryListRequestSchema,
@@ -28,7 +29,11 @@ import {
   runtimeToolInvokeRequestSchema,
 } from "@osva/runtime-protocol";
 
-import { verifyCapabilityToken } from "./capability-token.js";
+import { RuntimeExecutionBootstrapStore } from "./execution-bootstrap-store.js";
+import {
+  verifyBootstrapToken,
+  verifyCapabilityToken,
+} from "./capability-token.js";
 import type {
   RuntimeCapabilityHttpHandler,
   RuntimeCapabilityHttpRequest,
@@ -49,6 +54,7 @@ export interface RuntimeCapabilityBridgeOptions {
   readonly secret: string;
   readonly runs: RunRepository;
   readonly agents: AgentRepository;
+  readonly executionBootstrap?: RuntimeExecutionBootstrapStore;
   readonly clock?: RuntimeCapabilityBridgeClock;
   readonly logger?: RuntimeCapabilityBridgeLogger;
   readonly createScopedModelGateway: (
@@ -71,11 +77,14 @@ export class RuntimeCapabilityBridge {
   private readonly createScopedModelGateway: RuntimeCapabilityBridgeOptions["createScopedModelGateway"];
   private readonly createScopedToolGateway: RuntimeCapabilityBridgeOptions["createScopedToolGateway"];
   private readonly createScopedMemoryGateway: RuntimeCapabilityBridgeOptions["createScopedMemoryGateway"];
+  private readonly executionBootstrap: RuntimeExecutionBootstrapStore;
 
   constructor(options: RuntimeCapabilityBridgeOptions) {
     this.secret = options.secret;
     this.runs = options.runs;
     this.agents = options.agents;
+    this.executionBootstrap =
+      options.executionBootstrap ?? new RuntimeExecutionBootstrapStore();
     this.clock = options.clock ?? { now: () => new Date() };
     this.logger = options.logger;
     this.createScopedModelGateway = options.createScopedModelGateway;
@@ -90,6 +99,10 @@ export class RuntimeCapabilityBridge {
   private async dispatch(
     request: RuntimeCapabilityHttpRequest,
   ): Promise<RuntimeCapabilityHttpResponse> {
+    if (request.pathname === RUNTIME_CAPABILITY_PATHS.executionBootstrap) {
+      return this.handleExecutionBootstrap(request);
+    }
+
     if (request.pathname === RUNTIME_CAPABILITY_PATHS.generateText) {
       return this.handleGenerateText(request);
     }
@@ -122,6 +135,54 @@ export class RuntimeCapabilityBridge {
         message: "Unknown capability path.",
       },
     });
+  }
+
+  private handleExecutionBootstrap(
+    request: RuntimeCapabilityHttpRequest,
+  ): RuntimeCapabilityHttpResponse {
+    if (request.method !== "GET") {
+      return jsonStatus(405, { status: "method_not_allowed" });
+    }
+
+    const executionId = request.searchParams.get("executionId")?.trim();
+    if (executionId === undefined || executionId.length === 0) {
+      return protocolInvalid("Execution bootstrap request is invalid.");
+    }
+
+    const token = bearerToken(request.authorization);
+    if (token === undefined) {
+      return unauthorized("Bootstrap credential is invalid.");
+    }
+
+    const claims = verifyBootstrapToken(this.secret, token, this.clock.now());
+    if (claims === undefined) {
+      return unauthorized("Bootstrap credential is invalid.");
+    }
+
+    if (claims.executionId !== executionId) {
+      return forbidden("Bootstrap credential does not match this execution.");
+    }
+
+    const pending = this.executionBootstrap.consume(
+      executionId,
+      this.clock.now().getTime(),
+    );
+    if (pending === undefined) {
+      return forbidden(
+        "Bootstrap credential is outside its execution boundary.",
+      );
+    }
+
+    const validated = runtimeExecuteRequestSchema.safeParse(pending);
+    if (!validated.success) {
+      return protocolInvalid("Execution bootstrap request is invalid.");
+    }
+
+    this.logger?.info("runtime.execution_bootstrap.delivered", {
+      executionId,
+    });
+
+    return { status: 200, body: validated.data };
   }
 
   private async handleGenerateText(

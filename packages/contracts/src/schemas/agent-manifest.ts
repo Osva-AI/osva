@@ -1,11 +1,13 @@
 import { z } from "zod";
 
 import {
+  AGENT_CONTAINER_PROTOCOL_VERSION,
   AGENT_EXECUTION_MAX_TIMEOUT_MS,
   AGENT_EXECUTION_MIN_TIMEOUT_MS,
   AGENT_MANIFEST_SCHEMA_VERSION,
   AGENT_REMOTE_HTTP_PROTOCOL_VERSION,
 } from "../agent-manifest.js";
+import { isDigestPinnedOciImageReference } from "../container-runtime.js";
 import { MODEL_BINDING_NAME_PATTERN } from "../model-gateway.js";
 import { isAllowedRemoteRuntimeEndpoint } from "../remote-runtime.js";
 import {
@@ -56,10 +58,28 @@ const remoteHttpRuntimeSchema = z.strictObject({
     .optional(),
 });
 
+const containerRuntimeResourcesSchema = z.strictObject({
+  cpuMillis: z.int().positive().optional(),
+  memoryMiB: z.int().positive().optional(),
+  pids: z.int().positive().optional(),
+});
+
+const containerRuntimeSchema = z.strictObject({
+  type: z.literal("CONTAINER"),
+  protocolVersion: z.literal(AGENT_CONTAINER_PROTOCOL_VERSION),
+  image: z.string().min(1).refine(isDigestPinnedOciImageReference, {
+    message:
+      "runtime.image must be a digest-pinned OCI reference ending with @sha256:<64-hex>.",
+  }),
+  command: z.array(z.string().min(1)).min(1).optional(),
+  resources: containerRuntimeResourcesSchema.optional(),
+});
+
 export const agentRuntimeSchema = z.discriminatedUnion("type", [
   builtinPackageRuntimeSchema,
   trustedTypeScriptRuntimeSchema,
   remoteHttpRuntimeSchema,
+  containerRuntimeSchema,
 ]);
 
 const agentManifestIoSchema = z.strictObject({
