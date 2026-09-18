@@ -14,6 +14,18 @@ Index of major OSVA execution flows after Stage 2.9 (Community Beta).
 
 **Detailed flow:** [flows/run-execution.md](./flows/run-execution.md)
 
+## container-runtime-execution
+
+**Purpose:** Execute a `CONTAINER` AgentVersion in one ephemeral OCI container per RunAttempt using Runtime Protocol V1 with bootstrap HTTP request delivery and stdout/log response transport.
+
+**Entry point:** Same as run-execution when `AgentVersion.manifest.runtime.type === "CONTAINER"`.
+
+**Main components:** `ContainerRuntimeAdapter`, `DockerEngineAdapter`, Runtime Capability Bridge, PostgreSQL
+
+**State authority:** PostgreSQL (Run, RunAttempt, RunStep). Container IDs are infrastructure metadata only.
+
+**Detailed flow:** [flows/container-runtime-execution.md](./flows/container-runtime-execution.md)
+
 ## workflow-execution
 
 **Purpose:** Execute a WorkflowVersion as a durable WorkflowRun with AGENT, BRANCH, PARALLEL, JOIN, and APPROVAL nodes.
@@ -30,7 +42,7 @@ Index of major OSVA execution flows after Stage 2.9 (Community Beta).
 
 **Purpose:** Agent runtime invokes a bound model through ModelGateway to a provider adapter.
 
-**Entry point:** Runtime capability (trusted TS or remote HTTP bridge)
+**Entry point:** Runtime capability (trusted TS, remote HTTP bridge, or container bridge)
 
 **Main components:** `RunStepRecorder`, `ModelGateway`, provider adapters, `RunStep`
 

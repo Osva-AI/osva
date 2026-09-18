@@ -32,6 +32,20 @@ const validTrustedRuntime = {
   integrity: `sha256:${"a".repeat(64)}`,
 };
 
+const validContainerDigest = `sha256:${"b".repeat(64)}`;
+
+const validContainerRuntime = {
+  type: "CONTAINER",
+  protocolVersion: "1",
+  image: `registry.example.com/agent@${validContainerDigest}`,
+  command: ["node", "dist/index.js"],
+  resources: {
+    cpuMillis: 500,
+    memoryMiB: 256,
+    pids: 128,
+  },
+};
+
 describe("Agent Manifest v1", () => {
   it("parses a valid manifest", () => {
     const parsed = agentManifestSchema.parse(validManifest);
@@ -244,5 +258,64 @@ describe("Agent Manifest v1", () => {
       },
     });
     expect(parsed.success).toBe(false);
+  });
+
+  it("parses a valid CONTAINER runtime descriptor", () => {
+    const parsed = agentManifestSchema.parse({
+      ...validManifest,
+      runtime: validContainerRuntime,
+    });
+    expect(parsed.runtime).toEqual(validContainerRuntime);
+  });
+
+  it("parses a CONTAINER runtime without optional command or resources", () => {
+    const runtime = {
+      type: "CONTAINER",
+      protocolVersion: "1",
+      image: `registry.example.com/agent@${validContainerDigest}`,
+    };
+    const parsed = agentManifestSchema.parse({
+      ...validManifest,
+      runtime,
+    });
+    expect(parsed.runtime).toEqual(runtime);
+  });
+
+  it.each(["agent:latest", "agent:v1", `agent:tag@${validContainerDigest}`])(
+    "rejects mutable or tag-suffixed CONTAINER image %j",
+    (image) => {
+      const parsed = agentManifestSchema.safeParse({
+        ...validManifest,
+        runtime: {
+          type: "CONTAINER",
+          protocolVersion: "1",
+          image,
+        },
+      });
+      expect(parsed.success).toBe(false);
+    },
+  );
+
+  it("rejects unsupported CONTAINER protocol versions and extra runtime fields", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validManifest,
+        runtime: {
+          type: "CONTAINER",
+          protocolVersion: "2",
+          image: `registry.example.com/agent@${validContainerDigest}`,
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      agentManifestSchema.safeParse({
+        ...validManifest,
+        runtime: {
+          ...validContainerRuntime,
+          timeoutMs: 15_000,
+        },
+      }).success,
+    ).toBe(false);
   });
 });

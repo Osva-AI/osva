@@ -19,6 +19,7 @@
     "@osva/adapters-model-anthropic": "workspace:*",
     "@osva/adapters-model-gemini": "workspace:*",
     "@osva/adapters-model-openai": "workspace:*",
+    "@osva/adapters-runtime-container": "workspace:*",
     "@osva/adapters-runtime-http": "workspace:*",
     "@osva/adapters-runtime-typescript": "workspace:*",
     "@osva/contracts": "workspace:*",

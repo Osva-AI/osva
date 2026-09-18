@@ -72,6 +72,14 @@ domain / orchestration / gateways / runtime-core (services)
 - Capability bridge receives gateway **instances** from worker composition root.
 - Secret resolver reads env at adapter boundary.
 
+### adapters/runtime-container
+
+- Depends on runtime-protocol, runtime-core, and runtime-http (capability token issuance only).
+- `ContainerEngine` is an internal infrastructure seam; Docker/dockerode stay behind it.
+- Must not import domain aggregates, gateway implementations, or provider SDKs.
+- Worker composition root supplies operator network/resource policy and container-reachable capability URL.
+- Container code receives scoped capability tokens only; worker signing secrets never enter containers.
+
 ## Cross-cutting rules
 
 | Concern | Authority | Transport |

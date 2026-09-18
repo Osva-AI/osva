@@ -18,8 +18,8 @@ Create a Run, snapshot immutable bindings, enqueue execution, drive one RunAttem
 5. **Worker consume:** `apps/worker` handler receives payload, calls `ExecuteRunAttempt.execute`.
 6. **Load persisted state:** Worker loads Run, RunAttempt, AgentVersion; verifies binding consistency.
 7. **Build request:** `createExecutionRequest` produces frozen `ExecutionRequest` from DB snapshots (including `evaluationContext` when present).
-8. **Dispatch runtime:** `RuntimeDispatcher` selects adapter from `AgentVersion.manifest.runtime`.
-9. **Execute:** Runtime adapter runs agent code; model/tool/memory calls go through gateway-wrapped capabilities.
+8. **Dispatch runtime:** `RuntimeDispatcher` selects adapter from `AgentVersion.manifest.runtime` (`TRUSTED_TYPESCRIPT`, `REMOTE_HTTP`, or `CONTAINER`).
+9. **Execute:** Runtime adapter runs agent code; model/tool/memory calls go through gateway-wrapped capabilities (in-process, remote HTTP, or container capability bridge).
 10. **Persist terminal:** RunAttempt → terminal; Run → matching terminal state. Adapter throws are normalized to FAILED, not left RUNNING.
 11. **RunSteps:** Gateway wrappers persist step records with usage/cost where available.
 12. **Evaluation hook:** If evaluation child Run, `EvaluationCoordinator.reconcileTerminalChildRun` after terminal attempt.
@@ -77,6 +77,7 @@ sequenceDiagram
 - `packages/runtime-core/src/create-execution-request.ts`
 - `packages/runtime-core/src/runtime-dispatcher.ts`
 - `adapters/bullmq/src/bullmq-job-queue.ts`
+- `adapters/runtime-container/src/container-runtime-adapter.ts`
 - `apps/worker/src/execute-run-attempt-handler.ts`
 - `packages/domain/src/effective-run-bindings.ts`
 - `packages/domain/src/run-state-machine.ts`

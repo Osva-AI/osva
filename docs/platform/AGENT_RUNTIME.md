@@ -84,3 +84,35 @@ Production workers compose `@osva/adapters-runtime-typescript` behind
   Run input, and workflow input cannot enable it. Redirects remain disabled.
 
 See Runtime Protocol v1 and Agent Manifest v1.
+
+## Container runtime
+
+`CONTAINER` AgentVersions execute through `@osva/adapters-runtime-container`.
+
+- Image references must be OSVA-canonical digest-pinned OCI references:
+  `repository@sha256:<64-hex>`.
+- One ephemeral OCI container represents one RunAttempt execution (`executionId`
+  equals the canonical RunAttemptId). One adapter `execute()` performs at most
+  one container execution; no automatic post-start replay.
+- Runtime Protocol V1 request/response schemas apply; CONTAINER transport uses
+  bootstrap HTTP GET for `RuntimeExecuteRequest` and container stdout (via Docker
+  logs) for `RuntimeExecuteResponse`; stderr is diagnostics only.
+- Model/tool/memory access uses the existing Runtime Capability Bridge with
+  execution-scoped HMAC capability tokens delivered in the bootstrapped
+  RuntimeExecuteRequest payload.
+- Container environment receives bootstrap variables only (plus image-defined
+  env); worker `process.env` is never inherited.
+- Bootstrap URL/token are short-lived, execution-scoped, and single-use; Docker
+  host/operator inspect access is trusted infrastructure for Stage 3.1.
+- CPU/memory/PID limits are operator-controlled with defaults and maximums.
+- Docker network mode is operator-owned (`ContainerNetworkConfig`). AgentVersion
+  cannot select host networking or infrastructure networks.
+- Bridge containers cannot reach capability servers advertised on loopback. Set
+  `OSVA_CONTAINER_CAPABILITY_BASE_URL` to a container-reachable URL when enabling
+  container execution.
+- Container isolation is stronger than Trusted TypeScript but is not a complete
+  hostile-code sandbox. Non-root images and rootless-compatible Docker engines
+  are recommended for production.
+
+See `docs/implementation/STAGE-3-1-CONTAINER-RUNTIME.md` and
+`docs/architecture/flows/container-runtime-execution.md`.

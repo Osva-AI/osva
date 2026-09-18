@@ -21,8 +21,8 @@ import {
 import type { ModelProvider } from "@osva/contracts";
 import {
   ProcessEnvSecretResolver,
-  RemoteHttpRuntimeAdapter,
   RuntimeCapabilityBridge,
+  RuntimeExecutionBootstrapStore,
   startRuntimeCapabilityServer,
   type RuntimeCapabilityServer,
 } from "@osva/adapters-runtime-http";
@@ -54,7 +54,14 @@ import { EvaluationCoordinator, ExecuteRunAttempt } from "@osva/orchestration";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
 
+import {
+  assertDockerEngineAvailable,
+  resolveContainerCapabilityBaseUrl,
+  suggestContainerCapabilityBaseUrl,
+} from "@osva/adapters-runtime-container";
+
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
+import { composeRuntimeExecutors } from "./runtime-composition.js";
 import { createExecuteRunAttemptHandler } from "./execute-run-attempt-handler.js";
 import { logError, logEvent } from "./log.js";
 import {
@@ -128,6 +135,9 @@ export function createWorkerProcess(
         await assertTrustedTypeScriptRuntimeReady({
           trustedRuntimeRoot: config.trustedRuntimeRoot ?? "",
         });
+        if (config.containerEnabled) {
+          await assertDockerEngineAvailable();
+        }
       }
     },
     onStart: async () => {
@@ -182,11 +192,13 @@ export function createWorkerProcess(
         );
 
       let capabilityBaseUrl = config.runtimeCapabilityBaseUrl;
+      const executionBootstrapStore = new RuntimeExecutionBootstrapStore();
       if (config.runtimeCapabilitySecret !== undefined) {
         const bridge = new RuntimeCapabilityBridge({
           secret: config.runtimeCapabilitySecret,
           runs: runsRepository,
           agents,
+          executionBootstrap: executionBootstrapStore,
           clock,
           logger: {
             info: logEvent,
@@ -196,37 +208,52 @@ export function createWorkerProcess(
           createScopedToolGateway: scopedTool,
           createScopedMemoryGateway: scopedMemory,
         });
+        const capabilityHost = config.containerEnabled
+          ? "0.0.0.0"
+          : config.runtimeCapabilityHost;
         capabilityServer = await startRuntimeCapabilityServer({
-          host: config.runtimeCapabilityHost,
+          host: capabilityHost,
           port: config.runtimeCapabilityPort,
           handler: bridge.handle,
         });
         capabilityBaseUrl = capabilityBaseUrl ?? capabilityServer.origin;
         logEvent("worker.runtime_capability_listening", {
-          host: config.runtimeCapabilityHost,
+          host: capabilityHost,
           port: capabilityServer.port,
         });
       }
 
+      const containerCapabilityBaseUrl = resolveContainerCapabilityBaseUrl({
+        containerCapabilityBaseUrl: config.containerCapabilityBaseUrl,
+        runtimeCapabilityBaseUrl: capabilityBaseUrl,
+        suggestedBaseUrl:
+          capabilityServer === undefined
+            ? undefined
+            : suggestContainerCapabilityBaseUrl(capabilityServer.port),
+      });
+
       const baseRuntime =
         injectedRuntime ??
         new RuntimeDispatcher({
-          executors: {
-            TRUSTED_TYPESCRIPT: new TrustedTypeScriptRuntimeAdapter({
+          executors: composeRuntimeExecutors({
+            config,
+            trusted: {
               trustedRuntimeRoot: config.trustedRuntimeRoot ?? "",
-              logger: {
-                info: logEvent,
-                error: logError,
-              },
-              modelGateway,
-              toolGateway,
-              memoryGateway,
-              createScopedModelGateway: scopedModel,
-              createScopedToolGateway: scopedTool,
-              createScopedMemoryGateway: scopedMemory,
-            }),
-            REMOTE_HTTP: new RemoteHttpRuntimeAdapter({
-              secretResolver: new ProcessEnvSecretResolver(env),
+              trustedAdapter: new TrustedTypeScriptRuntimeAdapter({
+                trustedRuntimeRoot: config.trustedRuntimeRoot ?? "",
+                logger: {
+                  info: logEvent,
+                  error: logError,
+                },
+                modelGateway,
+                toolGateway,
+                memoryGateway,
+                createScopedModelGateway: scopedModel,
+                createScopedToolGateway: scopedTool,
+                createScopedMemoryGateway: scopedMemory,
+              }),
+            },
+            remoteHttp: {
               getCapabilityBaseUrl: () => capabilityBaseUrl,
               capabilitySecret: config.runtimeCapabilitySecret ?? "",
               allowPrivateNetworks: config.remoteHttpAllowPrivateNetworks,
@@ -235,8 +262,21 @@ export function createWorkerProcess(
                 info: logEvent,
                 error: logError,
               },
-            }),
-          },
+            },
+            container: config.containerEnabled
+              ? {
+                  getCapabilityBaseUrl: () => containerCapabilityBaseUrl,
+                  capabilitySecret: config.runtimeCapabilitySecret ?? "",
+                  executionBootstrap: executionBootstrapStore,
+                  clock,
+                  logger: {
+                    info: logEvent,
+                    error: logError,
+                  },
+                }
+              : undefined,
+            secretResolver: new ProcessEnvSecretResolver(env),
+          }),
         });
       runtime = createInstrumentedRuntimeAdapter(baseRuntime, instrumentation);
       const executeRunAttempt = new ExecuteRunAttempt({

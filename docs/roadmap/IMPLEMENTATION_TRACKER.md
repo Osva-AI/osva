@@ -38,11 +38,16 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ 2.9B Basic AI Office
 - ✅ 2.9C Community Beta readiness
 
+## Stage 3
+
+- ✅ 3.1 Container Runtime and Execution Isolation
+
 ## Totals
 
 - Stage 0: 8/8 complete
 - Stage 1: 8/8 complete
 - Stage 2: 9/9 complete
-- Overall: 25/33 slices complete
+- Stage 3: 1/8+ complete (see `STAGE_ROADMAP.md` for remaining OSS 1.0 slices)
+- Overall: 26/34+ slices complete
 
 **Community Beta:** complete

@@ -61,10 +61,15 @@ Agent runtimes never receive provider credentials, DB handles, or gateway intern
 
 ## Runtime implementations
 
-Runtime choice is immutable AgentVersion state (`TRUSTED_TYPESCRIPT` or `REMOTE_HTTP`).
+Runtime choice is immutable AgentVersion state (`TRUSTED_TYPESCRIPT`,
+`REMOTE_HTTP`, or `CONTAINER`).
 
 - **Trusted TypeScript**: child-process adapter; in-process capability hooks to gateways.
 - **Remote HTTP**: synchronous Runtime Protocol V1 POST; `executionId` = `RunAttemptId`; capabilities re-enter OSVA via `RuntimeCapabilityBridge`.
+- **Container**: ephemeral OCI container per RunAttempt; RuntimeExecuteRequest via bootstrap HTTP GET; RuntimeExecuteResponse on container stdout (Docker logs); capabilities re-enter OSVA via the same bridge using container-reachable operator configuration.
+
+Runtime Protocol V1 defines schemas and semantics; transport is adapter-specific
+(see `docs/implementation/STAGE-3-1-CONTAINER-RUNTIME.md`).
 
 Workflows and approvals are runtime-agnostic.
 

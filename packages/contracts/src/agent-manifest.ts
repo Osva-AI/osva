@@ -15,12 +15,18 @@ export const AGENT_RUNTIME_TYPES = [
   "BUILTIN_PACKAGE",
   "TRUSTED_TYPESCRIPT",
   "REMOTE_HTTP",
+  "CONTAINER",
 ] as const;
 
 export const AGENT_REMOTE_HTTP_PROTOCOL_VERSION = "1" as const;
 
+export const AGENT_CONTAINER_PROTOCOL_VERSION = "1" as const;
+
 export type AgentRemoteHttpProtocolVersion =
   typeof AGENT_REMOTE_HTTP_PROTOCOL_VERSION;
+
+export type AgentContainerProtocolVersion =
+  typeof AGENT_CONTAINER_PROTOCOL_VERSION;
 
 export type AgentRuntimeType = (typeof AGENT_RUNTIME_TYPES)[number];
 
@@ -50,6 +56,33 @@ export interface TrustedTypeScriptRuntime {
   readonly integrity: string;
 }
 
+export interface ContainerRuntimeResources {
+  readonly cpuMillis?: number;
+  readonly memoryMiB?: number;
+  readonly pids?: number;
+}
+
+export interface ContainerRuntime {
+  readonly type: "CONTAINER";
+  /**
+   * Runtime Protocol version executed inside the container.
+   * Slice 3.1 supports `"1"` only.
+   */
+  readonly protocolVersion: AgentContainerProtocolVersion;
+  /**
+   * OSVA canonical digest-pinned OCI image reference in the form
+   * `repository@sha256:<64-hex>`. Tag-only and `repository:tag@sha256:<digest>`
+   * references are rejected even when a digest suffix is present.
+   */
+  readonly image: string;
+  /**
+   * Optional container command override. Execution timeout remains
+   * `execution.timeoutMs` on the AgentManifest.
+   */
+  readonly command?: readonly string[];
+  readonly resources?: ContainerRuntimeResources;
+}
+
 export interface RemoteHttpRuntime {
   readonly type: "REMOTE_HTTP";
   /**
@@ -74,7 +107,10 @@ export interface RemoteHttpRuntime {
 }
 
 export type AgentRuntime =
-  BuiltinPackageRuntime | TrustedTypeScriptRuntime | RemoteHttpRuntime;
+  | BuiltinPackageRuntime
+  | TrustedTypeScriptRuntime
+  | RemoteHttpRuntime
+  | ContainerRuntime;
 
 export interface AgentManifestIO {
   readonly schema: JsonSchemaRecord;

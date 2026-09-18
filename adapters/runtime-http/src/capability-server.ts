@@ -5,7 +5,10 @@ import {
   type ServerResponse,
 } from "node:http";
 
-import { RUNTIME_PROTOCOL_MAX_BODY_BYTES } from "@osva/runtime-protocol";
+import {
+  RUNTIME_CAPABILITY_PATHS,
+  RUNTIME_PROTOCOL_MAX_BODY_BYTES,
+} from "@osva/runtime-protocol";
 
 import { OversizedBodyError } from "./errors.js";
 import { isJsonContentType, readLimitedNodeBody } from "./limited-body.js";
@@ -13,6 +16,7 @@ import { isJsonContentType, readLimitedNodeBody } from "./limited-body.js";
 export interface RuntimeCapabilityHttpRequest {
   readonly method: string;
   readonly pathname: string;
+  readonly searchParams: URLSearchParams;
   readonly authorization: string | undefined;
   readonly body: unknown;
 }
@@ -69,7 +73,24 @@ async function handleCapabilityHttp(
   maxBodyBytes: number,
 ): Promise<void> {
   const method = request.method ?? "GET";
-  const pathname = pathnameOf(request.url ?? "/");
+  const url = request.url ?? "/";
+  const pathname = pathnameOf(url);
+  const searchParams = searchParamsOf(url);
+
+  if (
+    method === "GET" &&
+    pathname === RUNTIME_CAPABILITY_PATHS.executionBootstrap
+  ) {
+    const result = await handler({
+      method,
+      pathname,
+      searchParams,
+      authorization: headerValue(request.headers.authorization),
+      body: undefined,
+    });
+    writeJson(response, result.status, result.body);
+    return;
+  }
 
   if (method !== "POST") {
     writeJson(response, 405, { status: "method_not_allowed" });
@@ -104,6 +125,7 @@ async function handleCapabilityHttp(
   const result = await handler({
     method,
     pathname,
+    searchParams,
     authorization: headerValue(request.headers.authorization),
     body,
   });
@@ -113,6 +135,14 @@ async function handleCapabilityHttp(
 function pathnameOf(url: string): string {
   const path = url.split("?", 1)[0] ?? "/";
   return path.length === 0 ? "/" : path;
+}
+
+function searchParamsOf(url: string): URLSearchParams {
+  const queryIndex = url.indexOf("?");
+  if (queryIndex < 0) {
+    return new URLSearchParams();
+  }
+  return new URLSearchParams(url.slice(queryIndex + 1));
 }
 
 function headerValue(

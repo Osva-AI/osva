@@ -24,6 +24,7 @@ export const RUNTIME_PROTOCOL_OUTCOMES = ["SUCCEEDED", "FAILED"] as const;
 export type RuntimeProtocolOutcome = (typeof RUNTIME_PROTOCOL_OUTCOMES)[number];
 
 export const RUNTIME_CAPABILITY_PATHS = {
+  executionBootstrap: "/v1/runtime/executions/bootstrap",
   generateText: "/v1/runtime/capabilities/models/generate-text",
   invokeTool: "/v1/runtime/capabilities/tools/invoke",
   memoryGet: "/v1/runtime/capabilities/memory/get",

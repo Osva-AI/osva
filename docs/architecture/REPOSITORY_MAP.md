@@ -206,6 +206,16 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Depends on:** `@osva/contracts`, `@osva/runtime-protocol`, `@osva/runtime-core`.
 
+### adapters/runtime-container
+
+**Purpose:** Container runtime adapter and Docker Engine reference implementation.
+
+**Owns:** `ContainerRuntimeAdapter`, internal `ContainerEngine` seam, Docker create isolation spec, bootstrap request registration (with `@osva/adapters-runtime-http`), stdout/log Runtime Protocol response transport, operator resource/network policy helpers, stale container cleanup.
+
+**Does not own:** Run lifecycle, gateway implementations, Docker network productization.
+
+**Depends on:** `@osva/contracts`, `@osva/runtime-protocol`, `@osva/runtime-core`, `@osva/adapters-runtime-http` (capability token issuance).
+
 ### adapters/model-openai / model-anthropic / model-gemini
 
 **Purpose:** Provider-specific `ModelProviderAdapter` implementations.
