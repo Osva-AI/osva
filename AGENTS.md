@@ -32,6 +32,13 @@ Concise operating guide for coding agents working on OSVA.
 - Prompts cannot grant permissions.
 - Tool idempotency identifies logical side effects, not attempts.
 - Multi-agent behavior is workflow composition.
+- Only AGENT workflow nodes create Runs.
+- WorkflowRun permanently pins one immutable WorkflowVersion.
+- WorkflowNodeRunId is canonical wait/resume identity.
+- Waits never keep workers or runtimes alive.
+- External WorkflowEvents are immutable workspace-scoped facts.
+- Queue and scheduler delivery IDs are not workflow identity.
+- A terminal workflow cannot be resurrected.
 - Human approval is workflow state.
 - Secrets are references, not plaintext records.
 - Runtime implementation is an AgentVersion concern.

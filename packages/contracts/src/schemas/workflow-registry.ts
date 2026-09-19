@@ -16,18 +16,20 @@ import { APPROVAL_DECISION_COMMENT_MAX_LENGTH } from "../approval.js";
 export const workflowRunStateSchema = z.enum([
   "PENDING",
   "RUNNING",
-  "WAITING_FOR_APPROVAL",
+  "WAITING",
   "SUCCEEDED",
   "FAILED",
+  "CANCELLED",
 ]);
 
 export const workflowNodeRunStateSchema = z.enum([
   "PENDING",
   "RUNNING",
-  "WAITING_FOR_APPROVAL",
+  "WAITING",
   "SUCCEEDED",
   "FAILED",
   "SKIPPED",
+  "CANCELLED",
 ]);
 
 export const approvalRequestStateSchema = z.enum([

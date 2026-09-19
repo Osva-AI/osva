@@ -352,4 +352,101 @@ describe("PostgreSQL workflow repositories", () => {
     const reloadedRoute = await workflowRuns.findWorkflowNodeRunById(route.id);
     expect(reloadedRoute?.selectedTargetKey).toBe("sales");
   });
+
+  it("persists WAITING and CANCELLED workflow lifecycle states", async () => {
+    const ids = createIds("workflow-waiting");
+    await workspaces.save(
+      Workspace.create({
+        id: ids.workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: ids.agentId,
+        workspaceId: ids.workspaceId,
+        key: "example-agent",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: ids.agentVersionId,
+        agentId: ids.agentId,
+        version: 1,
+        manifest: createManifest(),
+        createdAt: NOW,
+      }),
+    );
+    const workflow = Workflow.create({
+      id: "workflow-waiting" as WorkflowId,
+      workspaceId: ids.workspaceId,
+      key: "approval-flow",
+      name: "Approval Flow",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await workflows.saveWorkflow(workflow);
+    const version = await workflows.appendWorkflowVersion({
+      id: "workflow-version-waiting" as WorkflowVersionId,
+      workflowId: workflow.id,
+      definition: {
+        schemaVersion: "1",
+        nodes: [
+          {
+            key: "step",
+            type: "AGENT",
+            agentVersionId: ids.agentVersionId as AgentVersionId,
+          },
+        ],
+        edges: [],
+      },
+      createdAt: NOW,
+    });
+    const workflowRun = WorkflowRun.create({
+      id: "workflow-run-waiting" as never,
+      workspaceId: ids.workspaceId,
+      workflowId: workflow.id,
+      workflowVersionId: version.id,
+      input: {},
+      createdAt: NOW,
+    });
+    await workflowRuns.saveWorkflowRun(workflowRun);
+
+    const waitingRun = await workflowRuns.transitionWorkflowRun(
+      "PENDING",
+      workflowRun.markWaiting(NOW),
+    );
+    expect(waitingRun.status).toBe("WAITING");
+
+    const cancelledRun = await workflowRuns.transitionWorkflowRun(
+      "WAITING",
+      waitingRun.markCancelled(NOW),
+    );
+    expect(cancelledRun.status).toBe("CANCELLED");
+    expect(cancelledRun.completedAt).toEqual(NOW);
+
+    const nodeRun = WorkflowNodeRun.create({
+      id: "node-run-waiting" as WorkflowNodeRunId,
+      workspaceId: ids.workspaceId,
+      workflowRunId: workflowRun.id,
+      workflowNodeKey: "review",
+      sequence: 1,
+      input: {},
+      createdAt: NOW,
+    });
+    await workflowRuns.saveWorkflowNodeRun(nodeRun);
+    const waitingNode = await workflowRuns.saveWorkflowNodeRunTransition(
+      "PENDING",
+      nodeRun.markWaiting(NOW),
+    );
+    expect(waitingNode.status).toBe("WAITING");
+    const cancelledNode = await workflowRuns.saveWorkflowNodeRunTransition(
+      "WAITING",
+      waitingNode.markCancelled(NOW),
+    );
+    expect(cancelledNode.status).toBe("CANCELLED");
+  });
 });

@@ -58,13 +58,7 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
     const rows = await this.database.db
       .select()
       .from(workflowRuns)
-      .where(
-        inArray(workflowRuns.status, [
-          "PENDING",
-          "RUNNING",
-          "WAITING_FOR_APPROVAL",
-        ]),
-      )
+      .where(inArray(workflowRuns.status, ["PENDING", "RUNNING", "WAITING"]))
       .orderBy(asc(workflowRuns.createdAt), asc(workflowRuns.id))
       .limit(limit);
 

@@ -7,6 +7,10 @@ import { z } from "zod";
 export const UTC_ISO8601_INSTANT_PATTERN =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
 
+export function isValidUtcIso8601Instant(value: string): boolean {
+  return UTC_ISO8601_INSTANT_PATTERN.test(value);
+}
+
 export const utcIso8601TimestampSchema = z
   .string()
   .regex(

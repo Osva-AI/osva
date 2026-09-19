@@ -32,7 +32,7 @@ describe("ApprovalRequest HTTP API", () => {
       sequence: 1,
       input: { campaign: "launch" },
       createdAt: TEST_NOW,
-    }).markWaitingForApproval(TEST_NOW);
+    }).markWaiting(TEST_NOW);
     await workflowRuns.saveWorkflowNodeRun(nodeRun);
     const pending = ApprovalRequest.create({
       id: "approval-1" as ApprovalRequestId,

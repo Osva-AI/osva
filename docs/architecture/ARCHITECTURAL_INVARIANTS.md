@@ -33,7 +33,7 @@
 31. Multi-agent execution is Workflow composition. An agent cannot directly create another agent execution; cross-agent execution is created only by workflow orchestration.
 32. APPROVAL is an OSVA orchestration primitive. One APPROVAL WorkflowNodeRun maps to one ApprovalRequest. Approval waiting state is durable PostgreSQL state and never creates a Run or RunAttempt.
 33. ApprovalRequest decisions are immutable after resolution. The approval API persists decisions; the workflow reconciler advances execution.
-34. Rejected approval fails the WorkflowRun in Slice 2.3. WAITING_FOR_APPROVAL means human input is the actual blocker for workflow progress.
+34. Rejected approval fails the WorkflowRun in Slice 2.3. WorkflowRun `WAITING` means no independently progressing work remains and an external condition (today: human approval) blocks progress.
 35. Runtime implementation is an immutable AgentVersion execution concern. ExecutionWorker dispatches through a runtime abstraction. Trusted TypeScript is one RuntimeAdapter implementation.
 36. Runtime Protocol V1 is JSON-safe and language-neutral. Its executionId has one-to-one logical identity with RunAttempt. Queue redelivery reuses that executionId; a new logical RunAttempt creates a new one.
 37. Remote HTTP Protocol V1 execution is synchronous. It does not own Run or RunAttempt lifecycle and does not create a remote job lifecycle. The HTTP adapter does not automatically retry execute POSTs.

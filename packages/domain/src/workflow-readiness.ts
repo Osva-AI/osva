@@ -141,7 +141,7 @@ export function isWorkflowBlockedOnApproval(
 
   for (const [nodeKey, node] of graph.nodesByKey) {
     const existing = nodeRuns.get(nodeKey);
-    if (existing?.status === "WAITING_FOR_APPROVAL") {
+    if (existing?.status === "WAITING") {
       waiting = true;
       continue;
     }

@@ -14,7 +14,8 @@ import {
   DomainInvariantError,
   LifecycleConflictError,
   WorkflowNodeRun,
-  buildWorkflowGraph,
+  assertWorkflowDefinitionExecutable,
+  buildExecutableWorkflowGraph,
   hasFailedNode,
   inputForNode,
   isNodeReady,
@@ -30,7 +31,7 @@ import {
   type Run,
   type RunAttempt,
   type RunRepository,
-  type WorkflowGraph,
+  type ExecutableWorkflowGraph,
   type WorkflowRepository,
   type WorkflowRun,
   type WorkflowRunError,
@@ -103,7 +104,9 @@ export class ReconcileWorkflowRun {
     const version = await this.loadVersion(
       command.workflowRun.workflowVersionId,
     );
-    const graph = buildWorkflowGraph(version.definition);
+    const definition = version.definition;
+    assertWorkflowDefinitionExecutable(definition);
+    const graph = buildExecutableWorkflowGraph(definition);
 
     await this.observeExistingAgents(graph, command);
 
@@ -247,7 +250,7 @@ export class ReconcileWorkflowRun {
   }
 
   private async observeExistingAgents(
-    graph: WorkflowGraph,
+    graph: ExecutableWorkflowGraph,
     command: ReconcileWorkflowRunCommand,
   ): Promise<void> {
     const nodeRuns = await this.deps.workflowRuns.listWorkflowNodeRuns(
@@ -273,7 +276,7 @@ export class ReconcileWorkflowRun {
   }
 
   private async propagateSkips(
-    graph: WorkflowGraph,
+    graph: ExecutableWorkflowGraph,
     command: ReconcileWorkflowRunCommand,
   ): Promise<void> {
     const workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
@@ -319,7 +322,7 @@ export class ReconcileWorkflowRun {
   }
 
   private async resolveOrchestrationNodes(
-    graph: WorkflowGraph,
+    graph: ExecutableWorkflowGraph,
     command: ReconcileWorkflowRunCommand,
   ): Promise<void> {
     const limit = graph.nodesByKey.size;
@@ -364,7 +367,7 @@ export class ReconcileWorkflowRun {
   }
 
   private async resolveOrchestrationNode(input: {
-    readonly graph: WorkflowGraph;
+    readonly graph: ExecutableWorkflowGraph;
     readonly workflowRun: WorkflowRun;
     readonly nodeKey: string;
     readonly node: WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2;
@@ -429,7 +432,7 @@ export class ReconcileWorkflowRun {
   }
 
   private async startReadyAgents(
-    graph: WorkflowGraph,
+    graph: ExecutableWorkflowGraph,
     version: WorkflowVersion,
     command: ReconcileWorkflowRunCommand,
   ): Promise<void> {
@@ -756,7 +759,7 @@ export class ReconcileWorkflowRun {
   }
 
   private async observeApprovalDecisions(
-    graph: WorkflowGraph,
+    graph: ExecutableWorkflowGraph,
     command: ReconcileWorkflowRunCommand,
   ): Promise<void> {
     const nodeRuns = await this.deps.workflowRuns.listWorkflowNodeRuns(
@@ -766,10 +769,7 @@ export class ReconcileWorkflowRun {
     await Promise.all(
       nodeRuns.map(async (nodeRun) => {
         const node = graph.nodesByKey.get(nodeRun.workflowNodeKey);
-        if (
-          node?.type !== "APPROVAL" ||
-          nodeRun.status !== "WAITING_FOR_APPROVAL"
-        ) {
+        if (node?.type !== "APPROVAL" || nodeRun.status !== "WAITING") {
           return;
         }
 
@@ -798,7 +798,7 @@ export class ReconcileWorkflowRun {
   }
 
   private async materializeReadyApprovals(
-    graph: WorkflowGraph,
+    graph: ExecutableWorkflowGraph,
     command: ReconcileWorkflowRunCommand,
   ): Promise<void> {
     const workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
@@ -847,7 +847,7 @@ export class ReconcileWorkflowRun {
     if (current.status === "PENDING") {
       const waiting = await this.transitionNode(
         current,
-        current.markWaitingForApproval(command.now),
+        current.markWaiting(command.now),
       );
       if (waiting === null) {
         return;
@@ -856,7 +856,7 @@ export class ReconcileWorkflowRun {
       current = waiting;
     }
 
-    if (current.status !== "WAITING_FOR_APPROVAL") {
+    if (current.status !== "WAITING") {
       return;
     }
 
@@ -904,7 +904,7 @@ export class ReconcileWorkflowRun {
   }
 
   private async deriveActiveWorkflowStatus(
-    graph: WorkflowGraph,
+    graph: ExecutableWorkflowGraph,
     workflowRun: WorkflowRun,
     nodeRuns: ReadonlyMap<string, WorkflowNodeRun>,
     now: Date,
@@ -915,16 +915,14 @@ export class ReconcileWorkflowRun {
     }
 
     const target = isWorkflowBlockedOnApproval(graph, nodeRuns)
-      ? "WAITING_FOR_APPROVAL"
+      ? "WAITING"
       : "RUNNING";
     if (latest.status === target) {
       return;
     }
 
     const next =
-      target === "WAITING_FOR_APPROVAL"
-        ? latest.markWaitingForApproval(now)
-        : latest.markRunning(now);
+      target === "WAITING" ? latest.markWaiting(now) : latest.markRunning(now);
 
     try {
       await this.deps.workflowRuns.transitionWorkflowRun(latest.status, next);
@@ -961,10 +959,7 @@ export class ReconcileWorkflowRun {
       }
     }
 
-    if (
-      current.status !== "RUNNING" &&
-      current.status !== "WAITING_FOR_APPROVAL"
-    ) {
+    if (current.status !== "RUNNING" && current.status !== "WAITING") {
       return;
     }
 
@@ -1005,10 +1000,7 @@ export class ReconcileWorkflowRun {
       return;
     }
 
-    if (
-      current.status !== "RUNNING" &&
-      current.status !== "WAITING_FOR_APPROVAL"
-    ) {
+    if (current.status !== "RUNNING" && current.status !== "WAITING") {
       return;
     }
 

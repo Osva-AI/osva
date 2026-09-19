@@ -224,7 +224,7 @@ describe("workflow-orchestrator end-to-end", () => {
         const view = await workflowRuns.findWorkflowRunById(
           registered.workflowRunId as never,
         );
-        return view?.status === "WAITING_FOR_APPROVAL";
+        return view?.status === "WAITING";
       });
 
       const waiting = await fetchJson(
@@ -243,7 +243,7 @@ describe("workflow-orchestrator end-to-end", () => {
           status: string;
         }>;
       };
-      expect(waitingBody.status).toBe("WAITING_FOR_APPROVAL");
+      expect(waitingBody.status).toBe("WAITING");
       expect(waitingBody.approvalRequests).toHaveLength(1);
       expect(waitingBody.approvalRequests[0]?.status).toBe("PENDING");
       const byKey = Object.fromEntries(
@@ -251,7 +251,7 @@ describe("workflow-orchestrator end-to-end", () => {
       );
       expect(byKey.a?.status).toBe("SUCCEEDED");
       expect(byKey.a?.childRunId).toBeTruthy();
-      expect(byKey.review?.status).toBe("WAITING_FOR_APPROVAL");
+      expect(byKey.review?.status).toBe("WAITING");
       expect(byKey.review?.childRunId).toBeUndefined();
       expect(byKey.b).toBeUndefined();
 
@@ -272,9 +272,7 @@ describe("workflow-orchestrator end-to-end", () => {
       const stillWaiting = await fetchJson(
         `${origin}/v1/workflow-runs/${registered.workflowRunId}`,
       );
-      expect((stillWaiting.body as { status: string }).status).toBe(
-        "WAITING_FOR_APPROVAL",
-      );
+      expect((stillWaiting.body as { status: string }).status).toBe("WAITING");
 
       await waitUntil(async () => {
         await orchestrator!.tickOnce();
@@ -462,7 +460,7 @@ describe("workflow-orchestrator end-to-end", () => {
         const view = await workflowRuns.findWorkflowRunById(
           registered.workflowRunId as never,
         );
-        return view?.status === "WAITING_FOR_APPROVAL";
+        return view?.status === "WAITING";
       });
 
       const waiting = await fetchJson(
@@ -473,7 +471,7 @@ describe("workflow-orchestrator end-to-end", () => {
         approvalRequests: ReadonlyArray<{ id: string; status: string }>;
         nodeRuns: ReadonlyArray<{ workflowNodeKey: string; status: string }>;
       };
-      expect(waitingBody.status).toBe("WAITING_FOR_APPROVAL");
+      expect(waitingBody.status).toBe("WAITING");
       expect(waitingBody.approvalRequests[0]?.status).toBe("PENDING");
 
       const decided = await fetchJson(

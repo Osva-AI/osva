@@ -52,12 +52,12 @@ describe("approval and multi-agent workflow orchestration", () => {
     await waitUntilWaiting(harness, workflowRun.id);
     const waiting = await harness.app.getWorkflowRun.execute(workflowRun.id);
     const byKey = byNodeKey(waiting.nodeRuns);
-    expect(waiting.workflowRun.status).toBe("WAITING_FOR_APPROVAL");
+    expect(waiting.workflowRun.status).toBe("WAITING");
     expect(byKey.research?.status).toBe("SUCCEEDED");
     expect(byKey.research?.childRunId).toBeTruthy();
     expect(byKey.analysis?.status).toBe("SUCCEEDED");
     expect(byKey.analysis?.childRunId).toBeTruthy();
-    expect(byKey.review?.status).toBe("WAITING_FOR_APPROVAL");
+    expect(byKey.review?.status).toBe("WAITING");
     expect(byKey.review?.childRunId).toBeUndefined();
     expect(byKey.publish).toBeUndefined();
     expect(waiting.approvalRequests).toHaveLength(1);
@@ -85,11 +85,11 @@ describe("approval and multi-agent workflow orchestration", () => {
     const afterDecision = await harness.app.getWorkflowRun.execute(
       workflowRun.id,
     );
-    expect(afterDecision.workflowRun.status).toBe("WAITING_FOR_APPROVAL");
+    expect(afterDecision.workflowRun.status).toBe("WAITING");
     expect(
       afterDecision.nodeRuns.find((node) => node.workflowNodeKey === "review")
         ?.status,
-    ).toBe("WAITING_FOR_APPROVAL");
+    ).toBe("WAITING");
 
     await runUntilTerminal(harness, workflowRun.id);
     const succeeded = await harness.app.getWorkflowRun.execute(workflowRun.id);
@@ -161,7 +161,7 @@ describe("approval and multi-agent workflow orchestration", () => {
         const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
         const byKey = byNodeKey(view.nodeRuns);
         return (
-          byKey.review?.status === "WAITING_FOR_APPROVAL" &&
+          byKey.review?.status === "WAITING" &&
           byKey.agent?.status === "RUNNING"
         );
       },
@@ -174,7 +174,7 @@ describe("approval and multi-agent workflow orchestration", () => {
 
     await waitUntilWaiting(harness, workflowRun.id);
     const waiting = await harness.app.getWorkflowRun.execute(workflowRun.id);
-    expect(waiting.workflowRun.status).toBe("WAITING_FOR_APPROVAL");
+    expect(waiting.workflowRun.status).toBe("WAITING");
     expect(byNodeKey(waiting.nodeRuns).agent?.status).toBe("SUCCEEDED");
   });
 
@@ -216,7 +216,7 @@ describe("approval and multi-agent workflow orchestration", () => {
       const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
       return (
         byNodeKey(view.nodeRuns).finance?.status === "SUCCEEDED" &&
-        view.workflowRun.status === "WAITING_FOR_APPROVAL"
+        view.workflowRun.status === "WAITING"
       );
     });
     const oneApproved = await harness.app.getWorkflowRun.execute(
@@ -287,7 +287,7 @@ describe("approval and multi-agent workflow orchestration", () => {
     const stillWaiting = await harness.app.getWorkflowRun.execute(
       workflowRun.id,
     );
-    expect(stillWaiting.workflowRun.status).toBe("WAITING_FOR_APPROVAL");
+    expect(stillWaiting.workflowRun.status).toBe("WAITING");
     expect(stillWaiting.approvalRequests).toHaveLength(1);
 
     await harness.app.decideApprovalRequest.execute({
@@ -589,7 +589,7 @@ async function waitUntilWaiting(
 ): Promise<void> {
   await waitUntil(harness, async () => {
     const view = await harness.app.getWorkflowRun.execute(workflowRunId);
-    return view.workflowRun.status === "WAITING_FOR_APPROVAL";
+    return view.workflowRun.status === "WAITING";
   });
 }
 

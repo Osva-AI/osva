@@ -72,6 +72,12 @@ export {
   InvalidRunTransitionError,
   InvalidSubsequentAttemptError,
   InvalidWorkflowDefinitionError,
+  WorkflowDefinitionNotExecutableError,
+  WorkflowWaitCorrelationResolutionError,
+  WorkflowWaitResolutionConflictError,
+  WorkflowWaitResolutionNotDueError,
+  WorkflowWaitEventNotEligibleError,
+  WorkflowEventIdempotencyConflictError,
   InvalidWorkflowNodeRunTransitionError,
   InvalidWorkflowRunTransitionError,
   LifecycleConflictError,
@@ -257,13 +263,41 @@ export {
   assertDagWorkflowDefinition,
   assertSequentialWorkflowDefinition,
   assertWorkflowDefinition,
+  assertWorkflowDefinitionExecutable,
+  buildExecutableWorkflowGraph,
   buildWorkflowGraph,
   listAgentNodes,
   orderedSequentialNodeKeys,
   predecessorKeysInDefinitionOrder,
+  type ExecutableWorkflowGraph,
+  type WorkflowDefinitionNodeForDefinition,
   type WorkflowGraph,
 } from "./workflow-definition.js";
 export { selectBranchTarget } from "./workflow-branch.js";
+export {
+  WorkflowWait,
+  armWorkflowWait,
+  type ArmWorkflowWaitCommand,
+  type WorkflowWaitKind,
+  type WorkflowWaitRehydrateProps,
+  type WorkflowWaitResolution,
+} from "./workflow-wait.js";
+export {
+  decideWorkflowEventWait,
+  isWorkflowEventEligibleForWait,
+  matchesWorkflowEventWait,
+  selectWorkflowEventForWait,
+  type WorkflowEventWaitDecision,
+} from "./workflow-wait-event.js";
+export {
+  WorkflowEvent,
+  assertWorkflowEventEquivalentRetry,
+  hasWorkflowEventIngestionIdentity,
+  isEquivalentWorkflowEventRetry,
+  type WorkflowEventCreateProps,
+  type WorkflowEventRehydrateProps,
+  type WorkflowEventSubmission,
+} from "./workflow-event.js";
 export {
   hasFailedNode,
   inputForNode,

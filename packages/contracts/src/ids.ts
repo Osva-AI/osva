@@ -18,6 +18,7 @@ export type WorkflowVersionId = OsvaId<"WorkflowVersionId">;
 export type WorkflowRunId = OsvaId<"WorkflowRunId">;
 export type WorkflowNodeRunId = OsvaId<"WorkflowNodeRunId">;
 export type ApprovalRequestId = OsvaId<"ApprovalRequestId">;
+export type WorkflowEventId = OsvaId<"WorkflowEventId">;
 export type ToolId = OsvaId<"ToolId">;
 export type ToolVersionId = OsvaId<"ToolVersionId">;
 export type ConnectorId = OsvaId<"ConnectorId">;

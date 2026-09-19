@@ -27,7 +27,10 @@ import type { WorkflowRepository } from "./ports/workflow-repository.js";
 import type { WorkflowRunRepository } from "./ports/workflow-run-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 import { Workflow } from "./workflow.js";
-import { listAgentNodes } from "./workflow-definition.js";
+import {
+  listAgentNodes,
+  assertWorkflowDefinitionExecutable,
+} from "./workflow-definition.js";
 import { WorkflowRun } from "./workflow-run.js";
 import type { WorkflowNodeRun } from "./workflow-node-run.js";
 import type { WorkflowVersion } from "./workflow-version.js";
@@ -222,6 +225,8 @@ export class CreateWorkflowRun {
     if (workflow === null) {
       throw new WorkflowNotFoundError(version.workflowId);
     }
+
+    assertWorkflowDefinitionExecutable(version.definition);
 
     const workflowRun = WorkflowRun.create({
       id: this.deps.ids.createId() as WorkflowRunId,

@@ -190,6 +190,172 @@ describe("Workflow Definition v2 schema", () => {
   });
 });
 
+describe("Workflow Definition v3 schema", () => {
+  it("parses a minimal AGENT workflow", () => {
+    const parsed = workflowDefinitionSchema.parse({
+      schemaVersion: "3",
+      nodes: [
+        { key: "step", type: "AGENT", agentVersionId: "agent-version-1" },
+      ],
+      edges: [],
+    });
+    expect(parsed.schemaVersion).toBe("3");
+  });
+
+  it("parses WAIT DURATION, UNTIL, and EVENT configurations", () => {
+    workflowDefinitionSchema.parse({
+      schemaVersion: "3",
+      nodes: [
+        {
+          key: "delay",
+          type: "WAIT",
+          wait: { kind: "DURATION", durationMs: 1_800_000 },
+        },
+      ],
+      edges: [],
+    });
+
+    workflowDefinitionSchema.parse({
+      schemaVersion: "3",
+      nodes: [
+        {
+          key: "delay",
+          type: "WAIT",
+          wait: { kind: "UNTIL", until: "2026-10-01T10:00:00Z" },
+        },
+      ],
+      edges: [],
+    });
+
+    workflowDefinitionSchema.parse({
+      schemaVersion: "3",
+      nodes: [
+        {
+          key: "delay",
+          type: "WAIT",
+          wait: {
+            kind: "EVENT",
+            source: "payments",
+            eventType: "payment.completed",
+            correlation: { kind: "LITERAL", value: "order_123" },
+          },
+        },
+      ],
+      edges: [],
+    });
+
+    workflowDefinitionSchema.parse({
+      schemaVersion: "3",
+      nodes: [
+        {
+          key: "delay",
+          type: "WAIT",
+          wait: {
+            kind: "EVENT",
+            source: "payments",
+            eventType: "payment.completed",
+            correlation: { kind: "INPUT_POINTER", pointer: "/orderId" },
+            timeoutMs: 86_400_000,
+          },
+        },
+      ],
+      edges: [],
+    });
+  });
+
+  it("rejects invalid V3 nodes and wait shapes", () => {
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "3",
+        nodes: [{ key: "tool", type: "TOOL" }],
+        edges: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "3",
+        nodes: [
+          {
+            key: "delay",
+            type: "WAIT",
+            wait: { kind: "DURATION", durationMs: 0 },
+          },
+        ],
+        edges: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "3",
+        nodes: [
+          {
+            key: "delay",
+            type: "WAIT",
+            wait: { kind: "UNTIL", until: "not-a-timestamp" },
+          },
+        ],
+        edges: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "3",
+        nodes: [
+          {
+            key: "delay",
+            type: "WAIT",
+            wait: {
+              kind: "EVENT",
+              source: "",
+              eventType: "payment.completed",
+              correlation: { kind: "LITERAL", value: "x" },
+            },
+          },
+        ],
+        edges: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "3",
+        nodes: [
+          {
+            key: "delay",
+            type: "WAIT",
+            wait: {
+              kind: "EVENT",
+              source: "payments",
+              eventType: "payment.completed",
+              correlation: { kind: "INPUT_POINTER", pointer: "orderId" },
+            },
+          },
+        ],
+        edges: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      workflowDefinitionSchema.safeParse({
+        schemaVersion: "3",
+        nodes: [
+          {
+            key: "delay",
+            type: "WAIT",
+            wait: {
+              kind: "PAUSE",
+            },
+          },
+        ],
+        edges: [],
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("Workflow registry request schemas", () => {
   it("parses a create Workflow request", () => {
     const parsed = createWorkflowRequestSchema.parse({
