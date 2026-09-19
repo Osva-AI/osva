@@ -125,7 +125,7 @@ descriptions are literal; there is no interpolation, JSONPath, or
 node-output templating.
 
 When an APPROVAL node becomes ready, the reconciler materializes one
-WorkflowNodeRun, transitions it to `WAITING_FOR_APPROVAL`, and creates
+WorkflowNodeRun, transitions it to `WAITING`, and creates
 exactly one `ApprovalRequest`. It does not enqueue BullMQ work.
 
 `APPROVAL.input` is the predecessor output. On approval,
@@ -155,13 +155,13 @@ principal identity, and Slice 2.3 does not invent User/RBAC entities.
 This is workflow-progression approval. It is not tool-call authorization and
 does not change ToolGateway permission flow.
 
-WorkflowRun becomes `WAITING_FOR_APPROVAL` only when at least one APPROVAL
+WorkflowRun becomes `WAITING` only when at least one APPROVAL
 node is waiting and no non-approval work can make independent progress. A
 parallel agent still running keeps WorkflowRun `RUNNING`.
 
 Inactive APPROVAL paths are durably `SKIPPED` and do not create an
 ApprovalRequest. Activation vs skip is compare-and-set: a node already
-`WAITING_FOR_APPROVAL` is not skipped.
+`WAITING` is not skipped.
 
 ## SKIPPED
 

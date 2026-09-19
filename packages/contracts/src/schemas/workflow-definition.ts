@@ -5,10 +5,20 @@ import {
   WORKFLOW_APPROVAL_TITLE_MAX_LENGTH,
   WORKFLOW_DEFINITION_SCHEMA_VERSION,
   WORKFLOW_DEFINITION_SCHEMA_VERSION_V2,
+  WORKFLOW_DEFINITION_SCHEMA_VERSION_V3,
   WORKFLOW_EXECUTABLE_NODE_TYPES,
 } from "../workflow-definition.js";
 import { isValidJsonPointer } from "../json-pointer.js";
 import { agentVersionIdSchema } from "./ids.js";
+import { utcIso8601TimestampSchema } from "./utc-instant.js";
+
+const positiveSafeIntegerSchema = z
+  .number()
+  .int()
+  .positive()
+  .refine(Number.isSafeInteger, {
+    message: "must be a safe integer",
+  });
 
 export const workflowDefinitionNodeSchema = z.strictObject({
   key: z.string().min(1),
@@ -90,7 +100,70 @@ export const workflowDefinitionV2Schema = z.strictObject({
   edges: z.array(workflowDefinitionEdgeSchema),
 });
 
+export const workflowWaitCorrelationLiteralSchema = z.strictObject({
+  kind: z.literal("LITERAL"),
+  value: z.string().min(1),
+});
+
+export const workflowWaitCorrelationInputPointerSchema = z.strictObject({
+  kind: z.literal("INPUT_POINTER"),
+  pointer: z.string().refine(isValidJsonPointer, {
+    message: "INPUT_POINTER must be a valid JSON Pointer.",
+  }),
+});
+
+export const workflowWaitCorrelationSchema = z.discriminatedUnion("kind", [
+  workflowWaitCorrelationLiteralSchema,
+  workflowWaitCorrelationInputPointerSchema,
+]);
+
+export const workflowWaitDurationSchema = z.strictObject({
+  kind: z.literal("DURATION"),
+  durationMs: positiveSafeIntegerSchema,
+});
+
+export const workflowWaitUntilSchema = z.strictObject({
+  kind: z.literal("UNTIL"),
+  until: utcIso8601TimestampSchema,
+});
+
+export const workflowWaitEventSchema = z.strictObject({
+  kind: z.literal("EVENT"),
+  source: z.string().min(1),
+  eventType: z.string().min(1),
+  correlation: workflowWaitCorrelationSchema,
+  timeoutMs: positiveSafeIntegerSchema.optional(),
+});
+
+export const workflowWaitConfigurationSchema = z.discriminatedUnion("kind", [
+  workflowWaitDurationSchema,
+  workflowWaitUntilSchema,
+  workflowWaitEventSchema,
+]);
+
+export const workflowDefinitionWaitNodeV3Schema = z.strictObject({
+  key: z.string().min(1),
+  type: z.literal("WAIT"),
+  wait: workflowWaitConfigurationSchema,
+});
+
+export const workflowDefinitionV3NodeSchema = z.discriminatedUnion("type", [
+  workflowDefinitionAgentNodeV2Schema,
+  workflowDefinitionBranchNodeV2Schema,
+  workflowDefinitionParallelNodeV2Schema,
+  workflowDefinitionJoinNodeV2Schema,
+  workflowDefinitionApprovalNodeV2Schema,
+  workflowDefinitionWaitNodeV3Schema,
+]);
+
+export const workflowDefinitionV3Schema = z.strictObject({
+  schemaVersion: z.literal(WORKFLOW_DEFINITION_SCHEMA_VERSION_V3),
+  nodes: z.array(workflowDefinitionV3NodeSchema),
+  edges: z.array(workflowDefinitionEdgeSchema),
+});
+
 export const workflowDefinitionSchema = z.discriminatedUnion("schemaVersion", [
   workflowDefinitionV1Schema,
   workflowDefinitionV2Schema,
+  workflowDefinitionV3Schema,
 ]);

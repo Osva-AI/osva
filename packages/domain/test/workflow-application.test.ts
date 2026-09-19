@@ -2,6 +2,7 @@ import type {
   AgentId,
   AgentVersionId,
   ApprovalRequestState,
+  WorkflowDefinition,
   WorkflowDefinitionV1,
   WorkflowId,
   WorkflowVersionId,
@@ -14,6 +15,7 @@ import { AgentVersion } from "../src/agent-version.js";
 import {
   AgentVersionNotFoundError,
   DomainInvariantError,
+  WorkflowDefinitionNotExecutableError,
   WorkspaceNotFoundError,
 } from "../src/errors.js";
 import type { ApprovalRequest } from "../src/approval-request.js";
@@ -104,6 +106,39 @@ describe("workflow application", () => {
       },
     });
     expect(version.definition.schemaVersion).toBe("2");
+  });
+
+  it("accepts a valid V3 WorkflowVersion but rejects CreateWorkflowRun", async () => {
+    const app = await createApp();
+    const workflow = await app.createWorkflow.execute({
+      workspaceId,
+      key: "wait-flow",
+      name: "Wait Flow",
+    });
+    const version = await app.appendWorkflowVersion.execute({
+      workflowId: workflow.id,
+      definition: {
+        schemaVersion: "3",
+        nodes: [
+          { key: "step", type: "AGENT", agentVersionId },
+          {
+            key: "delay",
+            type: "WAIT",
+            wait: { kind: "DURATION", durationMs: 60_000 },
+          },
+        ],
+        edges: [{ from: "step", to: "delay" }],
+      },
+    });
+    expect(version.definition.schemaVersion).toBe("3");
+
+    await expect(
+      app.createWorkflowRun.execute({
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      }),
+    ).rejects.toBeInstanceOf(WorkflowDefinitionNotExecutableError);
   });
 
   it("rejects unknown AgentVersion bindings", async () => {
@@ -320,7 +355,7 @@ class InMemoryWorkflowRepository implements WorkflowRepository {
   async appendWorkflowVersion(input: {
     readonly id: WorkflowVersionId;
     readonly workflowId: WorkflowId;
-    readonly definition: WorkflowDefinitionV1;
+    readonly definition: WorkflowDefinition;
     readonly createdAt: Date;
   }): Promise<WorkflowVersion> {
     const workflow = this.workflows.get(input.workflowId);

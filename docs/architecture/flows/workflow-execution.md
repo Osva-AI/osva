@@ -21,7 +21,7 @@ Execute an immutable WorkflowVersion as a durable WorkflowRun: sequential (V1) o
 7. **AGENT nodes:** When ready, reconciler creates WorkflowNodeRun transition and calls `CreateRun` for canonical child Run (one AGENT node → one child Run).
 8. **Child execution:** Child Run follows [run-execution.md](./run-execution.md); BullMQ transports RunAttempt only.
 9. **Completion wiring:** Terminal child Run output becomes WorkflowNodeRun output; reconciler runs again.
-10. **APPROVAL nodes:** When ready, create ApprovalRequest; WorkflowNodeRun → WAITING_FOR_APPROVAL. No Run created. Human decision via API; reconciler resumes or fails WorkflowRun (APPROVAL_REJECTED).
+10. **APPROVAL nodes:** When ready, create ApprovalRequest; WorkflowNodeRun → WAITING. No Run created. Human decision via API; reconciler resumes or fails WorkflowRun (APPROVAL_REJECTED).
 11. **Workflow terminal:** All required nodes terminal → WorkflowRun SUCCEEDED or first failure → FAILED.
 
 ## Persisted objects
@@ -46,7 +46,7 @@ Execute an immutable WorkflowVersion as a durable WorkflowRun: sequential (V1) o
 - Fail-fast: first FAILED AGENT node fails WorkflowRun; in-flight sibling Runs are not cancelled.
 - Sibling success cannot resurrect a FAILED WorkflowRun.
 - Rejected approval fails WorkflowRun with APPROVAL_REJECTED.
-- WAITING_FOR_APPROVAL on WorkflowRun means human input is the blocker (not BullMQ).
+- WAITING on WorkflowRun means no active work can progress without an external condition (today: human approval via ApprovalRequest; V3 WAIT will use WorkflowWait). It is not a BullMQ wait. V3 execution is not live; see Stage 3.2 semantics doc.
 
 ## Multi-agent composition
 

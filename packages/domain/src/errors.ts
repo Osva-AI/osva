@@ -514,6 +514,79 @@ export class InvalidApprovalRequestTransitionError extends DomainError {
 
 export class InvalidWorkflowDefinitionError extends DomainInvariantError {}
 
+export class WorkflowDefinitionNotExecutableError extends DomainInvariantError {
+  readonly schemaVersion: string;
+
+  constructor(schemaVersion: string) {
+    super(
+      `Workflow definition schemaVersion '${schemaVersion}' is valid but not yet executable.`,
+    );
+    this.schemaVersion = schemaVersion;
+  }
+}
+
+export class WorkflowWaitCorrelationResolutionError extends DomainInvariantError {}
+
+export class WorkflowWaitResolutionConflictError extends DomainInvariantError {
+  readonly existing: string;
+  readonly attempted: string;
+
+  constructor(existing: string, attempted: string) {
+    super(
+      `WorkflowWait already resolved as ${existing}; cannot resolve as ${attempted}.`,
+    );
+    this.existing = existing;
+    this.attempted = attempted;
+  }
+}
+
+export class WorkflowWaitResolutionNotDueError extends DomainInvariantError {
+  readonly resolution: string;
+  readonly dueAt: Date;
+  readonly now: Date;
+
+  constructor(resolution: string, dueAt: Date, now: Date) {
+    super(
+      `WorkflowWait ${resolution} resolution is not due until ${dueAt.toISOString()}.`,
+    );
+    this.resolution = resolution;
+    this.dueAt = dueAt;
+    this.now = now;
+  }
+}
+
+export class WorkflowWaitEventNotEligibleError extends DomainInvariantError {
+  readonly workflowNodeRunId: string;
+  readonly workflowEventId: string;
+
+  constructor(workflowNodeRunId: string, workflowEventId: string) {
+    super(
+      `WorkflowEvent '${workflowEventId}' is not eligible for WorkflowWait '${workflowNodeRunId}'.`,
+    );
+    this.workflowNodeRunId = workflowNodeRunId;
+    this.workflowEventId = workflowEventId;
+  }
+}
+
+export class WorkflowEventIdempotencyConflictError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly source: string;
+  readonly idempotencyKey: string;
+
+  constructor(
+    workspaceId: WorkspaceId,
+    source: string,
+    idempotencyKey: string,
+  ) {
+    super(
+      `WorkflowEvent ingestion identity '${workspaceId}/${source}/${idempotencyKey}' conflicts with an existing event.`,
+    );
+    this.workspaceId = workspaceId;
+    this.source = source;
+    this.idempotencyKey = idempotencyKey;
+  }
+}
+
 export class OfficeWorkerNotFoundError extends DomainError {
   readonly officeWorkerId: OfficeWorkerId;
 

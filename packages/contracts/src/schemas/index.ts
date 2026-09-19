@@ -27,6 +27,7 @@ export {
   workflowNodeRunIdSchema,
   workflowRunIdSchema,
   workflowVersionIdSchema,
+  workflowEventIdSchema,
   workspaceIdSchema,
   officeWorkerIdSchema,
   roleIdSchema,

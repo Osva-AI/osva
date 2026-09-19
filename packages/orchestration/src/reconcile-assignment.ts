@@ -111,7 +111,7 @@ export class ReconcileAssignment {
 
     if (
       workflowRun.status === "RUNNING" ||
-      workflowRun.status === "WAITING_FOR_APPROVAL" ||
+      workflowRun.status === "WAITING" ||
       workflowRun.status === "PENDING"
     ) {
       return assignment.status === "PENDING" ? "RUNNING" : "RUNNING";

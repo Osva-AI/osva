@@ -77,7 +77,7 @@ workflow_node_runs
 `workflow_node_runs` is unique on `(workflow_run_id, workflow_node_key)` and
 may attach at most one canonical child `runs.id`. Slice 2.2 adds durable
 `SKIPPED` status and optional `selected_target_key` for BRANCH routing
-decisions. Slice 2.3 adds `WAITING_FOR_APPROVAL` on both `workflow_runs` and
+decisions. Stage 3.2 Pass 3.2.2 generalizes approval suspension to `WAITING` on both `workflow_runs` and
 `workflow_node_runs`, plus `approval_requests` with unique
 `(workflow_node_run_id)`. Orchestration state remains these rows plus the
 immutable WorkflowVersion graph; there is no edge-execution table.

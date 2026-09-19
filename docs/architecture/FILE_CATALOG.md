@@ -31,7 +31,7 @@ Architecturally significant files only (~50). Use as canonical precedents when i
 | `packages/domain/src/run-attempt-state-machine.ts` | Attempt transitions | RunAttempt aggregate | — | Mirrors execution progress |
 | `packages/domain/src/effective-run-bindings.ts` | Immutable binding snapshot | Run.create | — | model/tool/memory bindings frozen at CreateRun |
 | `packages/domain/src/workflow-definition.ts` | V1/V2 definition validation | WorkflowVersion | — | DAG graph building input |
-| `packages/domain/src/workflow-run-state-machine.ts` | WorkflowRun transitions | reconciler | — | Includes WAITING_FOR_APPROVAL |
+| `packages/domain/src/workflow-run-state-machine.ts` | WorkflowRun transitions | reconciler | — | Includes WAITING and CANCELLED |
 | `packages/domain/src/evaluation-run-application.ts` | EvaluationRun lifecycle | web, domain | EvaluationSuiteRepository | Starts child Runs via CreateRun |
 | `packages/domain/src/memory-application.ts` | Memory namespace CRUD | web | MemoryNamespaceRepository | Control-plane only |
 | `packages/runtime-core/src/create-execution-request.ts` | Build ExecutionRequest from DB state | ExecuteRunAttempt, capability bridge | Run, RunAttempt, AgentVersion | Includes evaluationContext when present |

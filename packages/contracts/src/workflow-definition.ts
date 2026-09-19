@@ -2,8 +2,15 @@ import type { AgentVersionId } from "./ids.js";
 
 export const WORKFLOW_DEFINITION_SCHEMA_VERSION = "1" as const;
 export const WORKFLOW_DEFINITION_SCHEMA_VERSION_V2 = "2" as const;
+export const WORKFLOW_DEFINITION_SCHEMA_VERSION_V3 = "3" as const;
 
 export const WORKFLOW_DEFINITION_SCHEMA_VERSIONS = [
+  WORKFLOW_DEFINITION_SCHEMA_VERSION,
+  WORKFLOW_DEFINITION_SCHEMA_VERSION_V2,
+  WORKFLOW_DEFINITION_SCHEMA_VERSION_V3,
+] as const;
+
+export const WORKFLOW_EXECUTABLE_DEFINITION_SCHEMA_VERSIONS = [
   WORKFLOW_DEFINITION_SCHEMA_VERSION,
   WORKFLOW_DEFINITION_SCHEMA_VERSION_V2,
 ] as const;
@@ -13,6 +20,14 @@ export type WorkflowDefinitionSchemaVersion =
 
 export type WorkflowDefinitionSchemaVersionV2 =
   typeof WORKFLOW_DEFINITION_SCHEMA_VERSION_V2;
+
+export type WorkflowDefinitionSchemaVersionV3 =
+  typeof WORKFLOW_DEFINITION_SCHEMA_VERSION_V3;
+
+export type WorkflowDefinitionSchemaVersionAny =
+  | WorkflowDefinitionSchemaVersion
+  | WorkflowDefinitionSchemaVersionV2
+  | WorkflowDefinitionSchemaVersionV3;
 
 /**
  * Conceptual node types for the pre-1.0 Workflow Definition.
@@ -59,6 +74,28 @@ export const WORKFLOW_V2_ORCHESTRATION_NODE_TYPES = [
 
 export type WorkflowV2OrchestrationNodeType =
   (typeof WORKFLOW_V2_ORCHESTRATION_NODE_TYPES)[number];
+
+export const WORKFLOW_V3_NODE_TYPES = [
+  "AGENT",
+  "BRANCH",
+  "PARALLEL",
+  "JOIN",
+  "APPROVAL",
+  "WAIT",
+] as const;
+
+export type WorkflowV3NodeType = (typeof WORKFLOW_V3_NODE_TYPES)[number];
+
+export const WORKFLOW_V3_ORCHESTRATION_NODE_TYPES = [
+  "BRANCH",
+  "PARALLEL",
+  "JOIN",
+  "APPROVAL",
+  "WAIT",
+] as const;
+
+export type WorkflowV3OrchestrationNodeType =
+  (typeof WORKFLOW_V3_ORCHESTRATION_NODE_TYPES)[number];
 
 export type WorkflowBranchEqualsValue = string | number | boolean | null;
 
@@ -149,7 +186,77 @@ export interface WorkflowDefinitionV2 {
   readonly edges: readonly WorkflowDefinitionEdgeV2[];
 }
 
-export type WorkflowDefinition = WorkflowDefinitionV1 | WorkflowDefinitionV2;
+export interface WorkflowDefinitionWaitDurationV3 {
+  readonly kind: "DURATION";
+  readonly durationMs: number;
+}
+
+export interface WorkflowDefinitionWaitUntilV3 {
+  readonly kind: "UNTIL";
+  readonly until: string;
+}
+
+export interface WorkflowDefinitionWaitCorrelationLiteralV3 {
+  readonly kind: "LITERAL";
+  readonly value: string;
+}
+
+export interface WorkflowDefinitionWaitCorrelationInputPointerV3 {
+  readonly kind: "INPUT_POINTER";
+  readonly pointer: string;
+}
+
+export type WorkflowDefinitionWaitCorrelationV3 =
+  | WorkflowDefinitionWaitCorrelationLiteralV3
+  | WorkflowDefinitionWaitCorrelationInputPointerV3;
+
+export interface WorkflowDefinitionWaitEventV3 {
+  readonly kind: "EVENT";
+  readonly source: string;
+  readonly eventType: string;
+  readonly correlation: WorkflowDefinitionWaitCorrelationV3;
+  readonly timeoutMs?: number;
+}
+
+export type WorkflowDefinitionWaitConfigurationV3 =
+  | WorkflowDefinitionWaitDurationV3
+  | WorkflowDefinitionWaitUntilV3
+  | WorkflowDefinitionWaitEventV3;
+
+export interface WorkflowDefinitionWaitNodeV3 {
+  readonly key: string;
+  readonly type: "WAIT";
+  readonly wait: WorkflowDefinitionWaitConfigurationV3;
+}
+
+export type WorkflowDefinitionNodeV3 =
+  | WorkflowDefinitionAgentNodeV2
+  | WorkflowDefinitionBranchNodeV2
+  | WorkflowDefinitionParallelNodeV2
+  | WorkflowDefinitionJoinNodeV2
+  | WorkflowDefinitionApprovalNodeV2
+  | WorkflowDefinitionWaitNodeV3;
+
+export type WorkflowDefinitionEdgeV3 = WorkflowDefinitionEdgeV1;
+
+/**
+ * Stage 3.2 stable OSS Workflow Definition (persisted schemaVersion 3).
+ *
+ * V3 adds WAIT orchestration nodes. Execution of V3 graphs is gated separately
+ * until wait semantics are implemented.
+ */
+export interface WorkflowDefinitionV3 {
+  readonly schemaVersion: WorkflowDefinitionSchemaVersionV3;
+  readonly nodes: readonly WorkflowDefinitionNodeV3[];
+  readonly edges: readonly WorkflowDefinitionEdgeV3[];
+}
+
+export type WorkflowDefinition =
+  WorkflowDefinitionV1 | WorkflowDefinitionV2 | WorkflowDefinitionV3;
+
+/** Workflow definitions that the current orchestrator may execute (V1/V2 only). */
+export type ExecutableWorkflowDefinition =
+  WorkflowDefinitionV1 | WorkflowDefinitionV2;
 
 export function isWorkflowDefinitionV1(
   definition: WorkflowDefinition,
@@ -163,14 +270,40 @@ export function isWorkflowDefinitionV2(
   return definition.schemaVersion === WORKFLOW_DEFINITION_SCHEMA_VERSION_V2;
 }
 
+export function isWorkflowDefinitionV3(
+  definition: WorkflowDefinition,
+): definition is WorkflowDefinitionV3 {
+  return definition.schemaVersion === WORKFLOW_DEFINITION_SCHEMA_VERSION_V3;
+}
+
+export function isExecutableWorkflowDefinition(
+  definition: WorkflowDefinition,
+): definition is ExecutableWorkflowDefinition {
+  return (
+    isWorkflowDefinitionV1(definition) || isWorkflowDefinitionV2(definition)
+  );
+}
+
 export function isWorkflowAgentNode(
-  node: WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2,
+  node:
+    | WorkflowDefinitionNodeV1
+    | WorkflowDefinitionNodeV2
+    | WorkflowDefinitionNodeV3,
 ): node is WorkflowDefinitionNodeV1 | WorkflowDefinitionAgentNodeV2 {
   return node.type === "AGENT";
 }
 
 export function isWorkflowApprovalNode(
-  node: WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2,
+  node:
+    | WorkflowDefinitionNodeV1
+    | WorkflowDefinitionNodeV2
+    | WorkflowDefinitionNodeV3,
 ): node is WorkflowDefinitionApprovalNodeV2 {
   return node.type === "APPROVAL";
+}
+
+export function isWorkflowWaitNode(
+  node: WorkflowDefinitionNodeV3,
+): node is WorkflowDefinitionWaitNodeV3 {
+  return node.type === "WAIT";
 }

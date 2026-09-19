@@ -16,7 +16,7 @@ reconciliation: explicit PARALLEL fan-out, JOIN fan-in, deterministic BRANCH
 routing, SKIPPED skip propagation, and concurrent ready AGENT nodes.
 Slice 2.3 adds multi-agent composition through those same DAG nodes plus a
 durable APPROVAL gate. Human approval is workflow state
-(`WAITING_FOR_APPROVAL` / `ApprovalRequest`), not a queue job and not
+(`WAITING` / `ApprovalRequest`), not a queue job and not
 tool-call authorization.
 
 Slice 2.3 limitations: no approval expiration, assignment, quorum, rejection

@@ -1,10 +1,13 @@
 import type {
+  ExecutableWorkflowDefinition,
   WorkflowDefinition,
   WorkflowDefinitionEdgeV1,
   WorkflowDefinitionNodeV1,
   WorkflowDefinitionNodeV2,
+  WorkflowDefinitionNodeV3,
   WorkflowDefinitionV1,
   WorkflowDefinitionV2,
+  WorkflowDefinitionV3,
   WorkflowBranchEqualsValue,
 } from "@osva/contracts";
 import {
@@ -12,24 +15,45 @@ import {
   WORKFLOW_APPROVAL_TITLE_MAX_LENGTH,
   WORKFLOW_EXECUTABLE_NODE_TYPES,
   WORKFLOW_V2_NODE_TYPES,
+  WORKFLOW_V3_NODE_TYPES,
   isValidJsonPointer,
+  isValidUtcIso8601Instant,
   isWorkflowAgentNode,
   isWorkflowDefinitionV1,
   isWorkflowDefinitionV2,
+  isWorkflowDefinitionV3,
 } from "@osva/contracts";
 
-import { InvalidWorkflowDefinitionError } from "./errors.js";
+import {
+  InvalidWorkflowDefinitionError,
+  WorkflowDefinitionNotExecutableError,
+} from "./errors.js";
+
+type DagWorkflowDefinition = WorkflowDefinitionV2 | WorkflowDefinitionV3;
+type DagWorkflowNode = WorkflowDefinitionNodeV2 | WorkflowDefinitionNodeV3;
+
+export type WorkflowDefinitionNodeForDefinition<D extends WorkflowDefinition> =
+  D extends WorkflowDefinitionV1
+    ? WorkflowDefinitionNodeV1
+    : D extends WorkflowDefinitionV2
+      ? WorkflowDefinitionNodeV2
+      : D extends WorkflowDefinitionV3
+        ? WorkflowDefinitionNodeV3
+        : never;
 
 const EXECUTABLE_NODE_TYPE_SET = new Set<string>(
   WORKFLOW_EXECUTABLE_NODE_TYPES,
 );
 const V2_NODE_TYPE_SET = new Set<string>(WORKFLOW_V2_NODE_TYPES);
+const V3_NODE_TYPE_SET = new Set<string>(WORKFLOW_V3_NODE_TYPES);
 
-export interface WorkflowGraph {
-  readonly definition: WorkflowDefinition;
+export interface WorkflowGraph<
+  D extends WorkflowDefinition = WorkflowDefinition,
+> {
+  readonly definition: D;
   readonly nodesByKey: ReadonlyMap<
     string,
-    WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2
+    WorkflowDefinitionNodeForDefinition<D>
   >;
   readonly incoming: ReadonlyMap<string, readonly string[]>;
   readonly outgoing: ReadonlyMap<string, readonly string[]>;
@@ -37,6 +61,9 @@ export interface WorkflowGraph {
   readonly terminalKey: string;
   readonly sequenceByKey: ReadonlyMap<string, number>;
 }
+
+export type ExecutableWorkflowGraph =
+  WorkflowGraph<ExecutableWorkflowDefinition>;
 
 export function assertWorkflowDefinition(definition: WorkflowDefinition): void {
   if (isWorkflowDefinitionV1(definition)) {
@@ -49,9 +76,22 @@ export function assertWorkflowDefinition(definition: WorkflowDefinition): void {
     return;
   }
 
+  if (isWorkflowDefinitionV3(definition)) {
+    assertDagWorkflowDefinitionV3(definition);
+    return;
+  }
+
   throw new InvalidWorkflowDefinitionError(
     `Unsupported workflow definition schemaVersion '${String((definition as WorkflowDefinition).schemaVersion)}'.`,
   );
+}
+
+export function assertWorkflowDefinitionExecutable(
+  definition: WorkflowDefinition,
+): asserts definition is ExecutableWorkflowDefinition {
+  if (isWorkflowDefinitionV3(definition)) {
+    throw new WorkflowDefinitionNotExecutableError(definition.schemaVersion);
+  }
 }
 
 export function assertSequentialWorkflowDefinition(
@@ -158,7 +198,18 @@ export function assertSequentialWorkflowDefinition(
 export function assertDagWorkflowDefinition(
   definition: WorkflowDefinitionV2,
 ): void {
-  if (definition.schemaVersion !== "2") {
+  assertDagWorkflowDefinitionForSchemaVersion(definition, "2");
+}
+
+function assertDagWorkflowDefinitionV3(definition: WorkflowDefinitionV3): void {
+  assertDagWorkflowDefinitionForSchemaVersion(definition, "3");
+}
+
+function assertDagWorkflowDefinitionForSchemaVersion(
+  definition: DagWorkflowDefinition,
+  expectedSchemaVersion: "2" | "3",
+): void {
+  if (definition.schemaVersion !== expectedSchemaVersion) {
     throw new InvalidWorkflowDefinitionError(
       `Unsupported workflow definition schemaVersion '${String(definition.schemaVersion)}'.`,
     );
@@ -176,9 +227,14 @@ export function assertDagWorkflowDefinition(
     );
   }
 
-  const nodesByKey = new Map<string, WorkflowDefinitionNodeV2>();
+  const nodesByKey = new Map<string, DagWorkflowNode>();
   for (const node of definition.nodes) {
-    assertV2Node(node);
+    if (expectedSchemaVersion === "2") {
+      assertV2Node(node as WorkflowDefinitionNodeV2);
+    } else {
+      assertV3Node(node as WorkflowDefinitionNodeV3);
+    }
+
     if (nodesByKey.has(node.key)) {
       throw new InvalidWorkflowDefinitionError(
         `Workflow node key '${node.key}' is duplicated.`,
@@ -241,7 +297,7 @@ export function assertDagWorkflowDefinition(
   for (const node of definition.nodes) {
     const inCount = incoming.get(node.key)?.length ?? 0;
     const outCount = outgoing.get(node.key)?.length ?? 0;
-    assertV2NodeTopology(
+    assertDagNodeTopology(
       node,
       inCount,
       outCount,
@@ -294,18 +350,15 @@ export function orderedSequentialNodeKeys(
   return keys;
 }
 
-export function buildWorkflowGraph(
-  definition: WorkflowDefinition,
-): WorkflowGraph {
+export function buildWorkflowGraph<D extends WorkflowDefinition>(
+  definition: D,
+): WorkflowGraph<D> {
   assertWorkflowDefinition(definition);
 
-  const nodesByKey = new Map<
-    string,
-    WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2
-  >();
+  const nodesByKey = new Map<string, WorkflowDefinitionNodeForDefinition<D>>();
   const sequenceByKey = new Map<string, number>();
   definition.nodes.forEach((node, index) => {
-    nodesByKey.set(node.key, node);
+    nodesByKey.set(node.key, node as WorkflowDefinitionNodeForDefinition<D>);
     sequenceByKey.set(node.key, index + 1);
   });
 
@@ -344,14 +397,20 @@ export function buildWorkflowGraph(
   };
 }
 
+export function buildExecutableWorkflowGraph(
+  definition: ExecutableWorkflowDefinition,
+): ExecutableWorkflowGraph {
+  return buildWorkflowGraph(definition);
+}
+
 export function listAgentNodes(
   definition: WorkflowDefinition,
-): ReadonlyArray<WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2> {
+): ReadonlyArray<WorkflowDefinitionNodeV1 | DagWorkflowNode> {
   return definition.nodes.filter(isWorkflowAgentNode);
 }
 
-export function predecessorKeysInDefinitionOrder(
-  graph: WorkflowGraph,
+export function predecessorKeysInDefinitionOrder<D extends WorkflowDefinition>(
+  graph: WorkflowGraph<D>,
   nodeKey: string,
 ): readonly string[] {
   const incoming = [...(graph.incoming.get(nodeKey) ?? [])];
@@ -384,6 +443,145 @@ function assertAgentNode(node: WorkflowDefinitionNodeV1): void {
       `Workflow node '${node.key}' must bind an immutable agentVersionId.`,
     );
   }
+}
+
+function assertV3Node(node: WorkflowDefinitionNodeV3): void {
+  if (typeof node.key !== "string" || node.key.trim().length === 0) {
+    throw new InvalidWorkflowDefinitionError(
+      "Workflow node key must be a non-empty string.",
+    );
+  }
+
+  if (!V3_NODE_TYPE_SET.has(node.type)) {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow node '${node.key}' has unsupported type '${String(node.type)}'. Stage 3.2 V3 supports AGENT, BRANCH, PARALLEL, JOIN, APPROVAL, and WAIT.`,
+    );
+  }
+
+  if (node.type === "AGENT") {
+    if (
+      typeof node.agentVersionId !== "string" ||
+      node.agentVersionId.trim().length === 0
+    ) {
+      throw new InvalidWorkflowDefinitionError(
+        `Workflow node '${node.key}' must bind an immutable agentVersionId.`,
+      );
+    }
+  }
+
+  if (node.type === "BRANCH") {
+    assertBranchNode(node);
+  }
+
+  if (node.type === "APPROVAL") {
+    assertApprovalNode(node);
+  }
+
+  if (node.type === "WAIT") {
+    assertWaitNode(node);
+  }
+}
+
+function assertWaitNode(
+  node: Extract<WorkflowDefinitionNodeV3, { type: "WAIT" }>,
+): void {
+  const wait = node.wait;
+  if (wait === null || typeof wait !== "object") {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow WAIT '${node.key}' must declare a wait configuration.`,
+    );
+  }
+
+  if (wait.kind === "DURATION") {
+    if (!isPositiveSafeInteger(wait.durationMs)) {
+      throw new InvalidWorkflowDefinitionError(
+        `Workflow WAIT '${node.key}' durationMs must be a positive safe integer.`,
+      );
+    }
+    return;
+  }
+
+  if (wait.kind === "UNTIL") {
+    if (
+      typeof wait.until !== "string" ||
+      !isValidUtcIso8601Instant(wait.until)
+    ) {
+      throw new InvalidWorkflowDefinitionError(
+        `Workflow WAIT '${node.key}' until must be a canonical UTC ISO-8601 instant.`,
+      );
+    }
+    return;
+  }
+
+  if (wait.kind !== "EVENT") {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow WAIT '${node.key}' has an unsupported wait kind.`,
+    );
+  }
+
+  if (typeof wait.source !== "string" || wait.source.trim().length === 0) {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow WAIT '${node.key}' event source must be a non-empty string.`,
+    );
+  }
+
+  if (
+    typeof wait.eventType !== "string" ||
+    wait.eventType.trim().length === 0
+  ) {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow WAIT '${node.key}' eventType must be a non-empty string.`,
+    );
+  }
+
+  assertWaitCorrelation(node.key, wait.correlation);
+
+  if (wait.timeoutMs !== undefined && !isPositiveSafeInteger(wait.timeoutMs)) {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow WAIT '${node.key}' timeoutMs must be a positive safe integer when present.`,
+    );
+  }
+}
+
+function assertWaitCorrelation(
+  nodeKey: string,
+  correlation: Extract<
+    Extract<WorkflowDefinitionNodeV3, { type: "WAIT" }>["wait"],
+    { kind: "EVENT" }
+  >["correlation"],
+): void {
+  if (correlation.kind === "LITERAL") {
+    if (
+      typeof correlation.value !== "string" ||
+      correlation.value.trim().length === 0
+    ) {
+      throw new InvalidWorkflowDefinitionError(
+        `Workflow WAIT '${nodeKey}' correlation literal must be a non-empty string.`,
+      );
+    }
+    return;
+  }
+
+  if (correlation.kind !== "INPUT_POINTER") {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow WAIT '${nodeKey}' correlation kind is unsupported.`,
+    );
+  }
+
+  if (!isValidJsonPointer(correlation.pointer)) {
+    throw new InvalidWorkflowDefinitionError(
+      `Workflow WAIT '${nodeKey}' correlation pointer must be a valid JSON Pointer.`,
+    );
+  }
+}
+
+function isPositiveSafeInteger(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    Number.isSafeInteger(value)
+  );
 }
 
 function assertV2Node(node: WorkflowDefinitionNodeV2): void {
@@ -497,15 +695,19 @@ function assertApprovalNode(
   }
 }
 
-function assertV2NodeTopology(
-  node: WorkflowDefinitionNodeV2,
+function assertDagNodeTopology(
+  node: DagWorkflowNode,
   inCount: number,
   outCount: number,
   isEntry: boolean,
   isTerminal: boolean,
   outgoingTargets: readonly string[],
 ): void {
-  if (node.type === "AGENT" || node.type === "APPROVAL") {
+  if (
+    node.type === "AGENT" ||
+    node.type === "APPROVAL" ||
+    node.type === "WAIT"
+  ) {
     if (isEntry ? inCount !== 0 : inCount !== 1) {
       throw new InvalidWorkflowDefinitionError(
         `Workflow ${node.type} '${node.key}' cannot have implicit fan-in.`,
@@ -616,7 +818,7 @@ function assertEdge(
 }
 
 function hasCycle(
-  nodesByKey: ReadonlyMap<string, WorkflowDefinitionNodeV2>,
+  nodesByKey: ReadonlyMap<string, DagWorkflowNode>,
   outgoing: ReadonlyMap<string, readonly string[]>,
 ): boolean {
   const visiting = new Set<string>();
