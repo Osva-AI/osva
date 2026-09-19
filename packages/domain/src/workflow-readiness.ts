@@ -133,7 +133,7 @@ export function hasFailedNode(
   return undefined;
 }
 
-export function isWorkflowBlockedOnApproval(
+export function isWorkflowBlockedOnSuspension(
   graph: WorkflowGraph,
   nodeRuns: ReadonlyMap<string, WorkflowNodeRun>,
 ): boolean {
@@ -153,7 +153,7 @@ export function isWorkflowBlockedOnApproval(
       continue;
     }
 
-    if (node.type === "APPROVAL") {
+    if (node.type === "APPROVAL" || node.type === "WAIT") {
       if (existing !== undefined || isNodeReady(graph, nodeKey, nodeRuns)) {
         return false;
       }

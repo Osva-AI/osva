@@ -660,6 +660,76 @@ function assertEventWaitRehydration(
   }
 }
 
+export function hasSameWorkflowWaitArm(
+  persisted: WorkflowWait,
+  expected: WorkflowWait,
+): boolean {
+  if (
+    persisted.workspaceId !== expected.workspaceId ||
+    persisted.workflowRunId !== expected.workflowRunId ||
+    persisted.workflowNodeRunId !== expected.workflowNodeRunId ||
+    persisted.kind !== expected.kind ||
+    persisted.armedAt.getTime() !== expected.armedAt.getTime()
+  ) {
+    return false;
+  }
+
+  if (persisted.kind === "TIMER") {
+    return (
+      persisted.wakeAt !== undefined &&
+      expected.wakeAt !== undefined &&
+      persisted.wakeAt.getTime() === expected.wakeAt.getTime()
+    );
+  }
+
+  return (
+    persisted.eventSource === expected.eventSource &&
+    persisted.eventType === expected.eventType &&
+    persisted.correlationKey === expected.correlationKey &&
+    persisted.eligibleFrom !== undefined &&
+    expected.eligibleFrom !== undefined &&
+    persisted.eligibleFrom.getTime() === expected.eligibleFrom.getTime() &&
+    sameOptionalInstant(persisted.expiresAt, expected.expiresAt)
+  );
+}
+
+function sameOptionalInstant(
+  left: Date | undefined,
+  right: Date | undefined,
+): boolean {
+  if (left === undefined && right === undefined) {
+    return true;
+  }
+
+  if (left === undefined || right === undefined) {
+    return false;
+  }
+
+  return left.getTime() === right.getTime();
+}
+
+export function hasSameDurableWorkflowWaitResolution(
+  persisted: WorkflowWait,
+  attempted: WorkflowWait,
+): boolean {
+  if (
+    persisted.resolution === undefined ||
+    attempted.resolution === undefined
+  ) {
+    return false;
+  }
+
+  if (persisted.resolution !== attempted.resolution) {
+    return false;
+  }
+
+  if (persisted.resolution === "EVENT") {
+    return persisted.resolvedByEventId === attempted.resolvedByEventId;
+  }
+
+  return true;
+}
+
 function requirePersistedIdentityString(
   value: string | undefined,
   field: string,

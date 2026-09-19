@@ -15,6 +15,7 @@ import {
   MemoryRunRepository,
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
+  MemoryWorkflowWaitRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import {
@@ -636,6 +637,7 @@ interface TestHarness {
   readonly runs: MemoryRunRepository;
   readonly workflows: MemoryWorkflowRepository;
   readonly workflowRuns: MemoryWorkflowRunRepository;
+  readonly workflowWaits: MemoryWorkflowWaitRepository;
   readonly approvalRequests: MemoryApprovalRequestRepository;
   readonly queue: MemoryJobQueue;
   tick: WorkflowOrchestratorTick;
@@ -657,6 +659,7 @@ function createTick(harness: TestHarness): WorkflowOrchestratorTick {
     reconcile: new ReconcileWorkflowRun({
       workflows: harness.workflows,
       workflowRuns: harness.workflowRuns,
+      workflowWaits: harness.workflowWaits,
       approvalRequests: harness.approvalRequests,
       agents: harness.agents,
       runs: harness.runs,
@@ -673,6 +676,7 @@ async function createHarness(): Promise<TestHarness> {
   const runs = wrapRunRepository(innerRuns, {});
   const workflows = new MemoryWorkflowRepository();
   const workflowRuns = new MemoryWorkflowRunRepository();
+  const workflowWaits = new MemoryWorkflowWaitRepository();
   const approvalRequests = new MemoryApprovalRequestRepository();
   const queue = new MemoryJobQueue();
   let runCounter = 0;
@@ -717,6 +721,7 @@ async function createHarness(): Promise<TestHarness> {
     runs: innerRuns,
     workflows,
     workflowRuns,
+    workflowWaits,
     approvalRequests,
     queue,
     tick: undefined as unknown as WorkflowOrchestratorTick,

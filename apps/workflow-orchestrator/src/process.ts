@@ -16,12 +16,18 @@ import {
   PostgresRunRepository,
   PostgresWorkflowRepository,
   PostgresWorkflowRunRepository,
+  PostgresWorkflowEventWaitResolutionRepository,
+  PostgresWorkflowTimerWaitResolutionRepository,
+  PostgresWorkflowWaitRepository,
   type Database,
 } from "@osva/db";
 import {
   CreateRun,
+  ProcessDueTimerWaits,
+  ProcessResolvableEventWaits,
   ReconcileWorkflowRun,
   WorkflowOrchestratorTick,
+  WorkflowWaitDriverTick,
 } from "@osva/orchestration";
 
 import {
@@ -34,6 +40,7 @@ import {
   type WorkflowOrchestratorApplication,
   type WorkflowOrchestratorStatus,
 } from "./loop.js";
+import { runWorkflowOrchestratorPipeline } from "./tick-pipeline.js";
 
 export interface WorkflowOrchestratorProcess {
   readonly config: WorkflowOrchestratorConfig;
@@ -78,11 +85,13 @@ export function createWorkflowOrchestratorProcess(
   const agents = new PostgresAgentRepository(database);
   const workflows = new PostgresWorkflowRepository(database);
   const workflowRuns = new PostgresWorkflowRunRepository(database);
+  const workflowWaits = new PostgresWorkflowWaitRepository(database);
   const approvalRequests = new PostgresApprovalRequestRepository(database);
   const createRun = new CreateRun({ runs, agents, queue, instrumentation });
   const reconcile = new ReconcileWorkflowRun({
     workflows,
     workflowRuns,
+    workflowWaits,
     approvalRequests,
     agents,
     runs,
@@ -94,7 +103,23 @@ export function createWorkflowOrchestratorProcess(
       error: logEvent,
     },
   });
-  const tick = new WorkflowOrchestratorTick({
+  const timerWaitResolution = new PostgresWorkflowTimerWaitResolutionRepository(
+    database,
+  );
+  const eventWaitResolution = new PostgresWorkflowEventWaitResolutionRepository(
+    database,
+  );
+  const waitDriver = new WorkflowWaitDriverTick({
+    processDueTimerWaits: new ProcessDueTimerWaits({
+      workflowWaits,
+      timerWaitResolution,
+    }),
+    processResolvableEventWaits: new ProcessResolvableEventWaits({
+      workflowWaits,
+      eventWaitResolution,
+    }),
+  });
+  const workflowTick = new WorkflowOrchestratorTick({
     workflowRuns,
     reconcile,
     logger: {
@@ -111,11 +136,17 @@ export function createWorkflowOrchestratorProcess(
         await queue.ping();
       },
       onTick: async () => {
-        await tick.execute(clock.now(), {
-          createRunId: () => randomUUID() as RunId,
-          createRunAttemptId: () => randomUUID() as RunAttemptId,
-          createWorkflowNodeRunId: () => randomUUID() as WorkflowNodeRunId,
-          createApprovalRequestId: () => randomUUID() as ApprovalRequestId,
+        const now = clock.now();
+        await runWorkflowOrchestratorPipeline({
+          now,
+          waitDriver,
+          workflowTick,
+          ids: {
+            createRunId: () => randomUUID() as RunId,
+            createRunAttemptId: () => randomUUID() as RunAttemptId,
+            createWorkflowNodeRunId: () => randomUUID() as WorkflowNodeRunId,
+            createApprovalRequestId: () => randomUUID() as ApprovalRequestId,
+          },
         });
       },
       onClose: async () => {

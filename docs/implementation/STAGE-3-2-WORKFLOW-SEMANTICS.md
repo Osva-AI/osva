@@ -102,9 +102,9 @@ Deferred explicitly (future or out of scope for OSS stable v1):
 | Wait / event durability | Not implemented | Stage 3.3+ |
 | `WorkflowWait` / `WorkflowEvent` entities | Pure domain + rehydration (3.2.4–3.2.6) | PostgreSQL + ingestion API |
 
-Reconciliation today is implemented in
-`packages/orchestration/src/reconcile-workflow-run.ts` for V1/V2 only. This
-document does not claim WAIT or generic WAITING behavior is live.
+At the completion of Stage 3.2, reconciliation in
+`packages/orchestration/src/reconcile-workflow-run.ts` supported V1/V2 execution only. V3 WAIT execution remained intentionally gated until the durable WAIT/Event backend was implemented in Stage 3.3.
+
 
 ## Conceptual execution model
 

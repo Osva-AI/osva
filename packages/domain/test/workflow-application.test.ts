@@ -15,7 +15,6 @@ import { AgentVersion } from "../src/agent-version.js";
 import {
   AgentVersionNotFoundError,
   DomainInvariantError,
-  WorkflowDefinitionNotExecutableError,
   WorkspaceNotFoundError,
 } from "../src/errors.js";
 import type { ApprovalRequest } from "../src/approval-request.js";
@@ -108,7 +107,7 @@ describe("workflow application", () => {
     expect(version.definition.schemaVersion).toBe("2");
   });
 
-  it("accepts a valid V3 WorkflowVersion but rejects CreateWorkflowRun", async () => {
+  it("accepts a valid V3 WorkflowVersion and CreateWorkflowRun", async () => {
     const app = await createApp();
     const workflow = await app.createWorkflow.execute({
       workspaceId,
@@ -132,13 +131,13 @@ describe("workflow application", () => {
     });
     expect(version.definition.schemaVersion).toBe("3");
 
-    await expect(
-      app.createWorkflowRun.execute({
-        workspaceId,
-        workflowVersionId: version.id,
-        input: { topic: "osva" },
-      }),
-    ).rejects.toBeInstanceOf(WorkflowDefinitionNotExecutableError);
+    const run = await app.createWorkflowRun.execute({
+      workspaceId,
+      workflowVersionId: version.id,
+      input: { topic: "osva" },
+    });
+    expect(run.workflowVersionId).toBe(version.id);
+    expect(run.status).toBe("PENDING");
   });
 
   it("rejects unknown AgentVersion bindings", async () => {

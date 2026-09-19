@@ -48,6 +48,30 @@ export {
   type WorkflowOrchestratorTickDependencies,
 } from "./workflow-orchestrator-tick.js";
 export {
+  ProcessDueTimerWaits,
+  type ProcessDueTimerWaitsDependencies,
+} from "./process-due-timer-waits.js";
+export {
+  IngestWorkflowEvent,
+  type IngestWorkflowEventCommand,
+  type IngestWorkflowEventDependencies,
+} from "./ingest-workflow-event.js";
+export {
+  ProcessResolvableEventWaits,
+  type ProcessResolvableEventWaitsDependencies,
+} from "./process-resolvable-event-waits.js";
+export {
+  WorkflowWaitDriverTick,
+  DEFAULT_WORKFLOW_WAIT_DRIVER_BATCH_LIMIT,
+  type WorkflowWaitDriverTickDependencies,
+} from "./workflow-wait-driver-tick.js";
+export {
+  WorkflowWaitReconciliation,
+  type WorkflowWaitReconciliationCommand,
+  type WorkflowWaitReconciliationDependencies,
+  type WorkflowWaitReconciliationIds,
+} from "./workflow-wait-reconciliation.js";
+export {
   EvaluationCoordinator,
   type EvaluationCoordinatorDependencies,
   type ReconcileEvaluationCaseCommand,

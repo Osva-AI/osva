@@ -32,6 +32,14 @@ WorkflowNodeRun → Run → RunAttempt path.
 ## OSS 1.0
 OSVA adds stable Workflow Definition v1, durable backend adapters, waits, and stronger recovery.
 
+**CURRENTLY IMPLEMENTED:** V2 DAG orchestration with durable APPROVAL (`ApprovalRequest`);
+Stage 3.2 V3 definition validation without WAIT execution.
+
+**Stage 3.3 target (not live):** PostgreSQL-backed `WorkflowWait` / `WorkflowEvent`, wait
+driver, event ingest API, WAIT reconciliation — see
+[`STAGE-3-3-DURABLE-WORKFLOW-BACKEND.md`](../implementation/STAGE-3-3-DURABLE-WORKFLOW-BACKEND.md).
+PostgreSQL remains lifecycle authority; this is not a second workflow engine.
+
 ## Multi-agent
 Multi-agent behavior is normal Workflow composition. An agent cannot
 directly create another agent execution. Cross-agent execution is created

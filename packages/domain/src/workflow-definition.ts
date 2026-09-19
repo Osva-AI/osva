@@ -19,6 +19,7 @@ import {
   isValidJsonPointer,
   isValidUtcIso8601Instant,
   isWorkflowAgentNode,
+  isExecutableWorkflowDefinition,
   isWorkflowDefinitionV1,
   isWorkflowDefinitionV2,
   isWorkflowDefinitionV3,
@@ -89,8 +90,9 @@ export function assertWorkflowDefinition(definition: WorkflowDefinition): void {
 export function assertWorkflowDefinitionExecutable(
   definition: WorkflowDefinition,
 ): asserts definition is ExecutableWorkflowDefinition {
-  if (isWorkflowDefinitionV3(definition)) {
-    throw new WorkflowDefinitionNotExecutableError(definition.schemaVersion);
+  const schemaVersion = definition.schemaVersion;
+  if (!isExecutableWorkflowDefinition(definition)) {
+    throw new WorkflowDefinitionNotExecutableError(schemaVersion);
   }
 }
 

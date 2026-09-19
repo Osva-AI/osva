@@ -13,6 +13,7 @@ export const WORKFLOW_DEFINITION_SCHEMA_VERSIONS = [
 export const WORKFLOW_EXECUTABLE_DEFINITION_SCHEMA_VERSIONS = [
   WORKFLOW_DEFINITION_SCHEMA_VERSION,
   WORKFLOW_DEFINITION_SCHEMA_VERSION_V2,
+  WORKFLOW_DEFINITION_SCHEMA_VERSION_V3,
 ] as const;
 
 export type WorkflowDefinitionSchemaVersion =
@@ -242,8 +243,8 @@ export type WorkflowDefinitionEdgeV3 = WorkflowDefinitionEdgeV1;
 /**
  * Stage 3.2 stable OSS Workflow Definition (persisted schemaVersion 3).
  *
- * V3 adds WAIT orchestration nodes. Execution of V3 graphs is gated separately
- * until wait semantics are implemented.
+ * V3 adds WAIT orchestration nodes. Execution is supported once the durable wait
+ * backend is enabled (Stage 3.3).
  */
 export interface WorkflowDefinitionV3 {
   readonly schemaVersion: WorkflowDefinitionSchemaVersionV3;
@@ -254,9 +255,9 @@ export interface WorkflowDefinitionV3 {
 export type WorkflowDefinition =
   WorkflowDefinitionV1 | WorkflowDefinitionV2 | WorkflowDefinitionV3;
 
-/** Workflow definitions that the current orchestrator may execute (V1/V2 only). */
+/** Workflow definitions that the current orchestrator may execute. */
 export type ExecutableWorkflowDefinition =
-  WorkflowDefinitionV1 | WorkflowDefinitionV2;
+  WorkflowDefinitionV1 | WorkflowDefinitionV2 | WorkflowDefinitionV3;
 
 export function isWorkflowDefinitionV1(
   definition: WorkflowDefinition,
@@ -280,7 +281,9 @@ export function isExecutableWorkflowDefinition(
   definition: WorkflowDefinition,
 ): definition is ExecutableWorkflowDefinition {
   return (
-    isWorkflowDefinitionV1(definition) || isWorkflowDefinitionV2(definition)
+    isWorkflowDefinitionV1(definition) ||
+    isWorkflowDefinitionV2(definition) ||
+    isWorkflowDefinitionV3(definition)
   );
 }
 

@@ -46,7 +46,7 @@ Execute an immutable WorkflowVersion as a durable WorkflowRun: sequential (V1) o
 - Fail-fast: first FAILED AGENT node fails WorkflowRun; in-flight sibling Runs are not cancelled.
 - Sibling success cannot resurrect a FAILED WorkflowRun.
 - Rejected approval fails WorkflowRun with APPROVAL_REJECTED.
-- WAITING on WorkflowRun means no active work can progress without an external condition (today: human approval via ApprovalRequest; V3 WAIT will use WorkflowWait). It is not a BullMQ wait. V3 execution is not live; see Stage 3.2 semantics doc.
+- WAITING on WorkflowRun means no active work can progress without an external condition, including human approval via ApprovalRequest or a durable V3 WAIT via WorkflowWait. It is not a BullMQ wait. Workflow Definition V3 supports durable TIMER and EVENT waits backed by PostgreSQL, including event ingestion, timeout handling, crash recovery, and reconciliation-driven progression. See [`STAGE-3-3-DURABLE-WORKFLOW-BACKEND.md`](../../implementation/STAGE-3-3-DURABLE-WORKFLOW-BACKEND.md) and the Stage 3.2 semantics document.
 
 ## Multi-agent composition
 

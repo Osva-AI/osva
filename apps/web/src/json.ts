@@ -1,9 +1,22 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-export async function readJsonBody(request: IncomingMessage): Promise<unknown> {
+export interface ReadJsonBodyOptions {
+  readonly maxBytes?: number;
+}
+
+export async function readJsonBody(
+  request: IncomingMessage,
+  options: ReadJsonBodyOptions = {},
+): Promise<unknown> {
   const chunks: Buffer[] = [];
+  let totalBytes = 0;
   for await (const chunk of request) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+    const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+    totalBytes += buffer.length;
+    if (options.maxBytes !== undefined && totalBytes > options.maxBytes) {
+      throw new RequestBodyTooLargeError();
+    }
+    chunks.push(buffer);
   }
 
   const raw = Buffer.concat(chunks).toString("utf8").trim();
@@ -37,5 +50,12 @@ export class InvalidJsonBodyError extends Error {
   constructor() {
     super("Request body must be valid JSON.");
     this.name = "InvalidJsonBodyError";
+  }
+}
+
+export class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super("Request body exceeds the allowed size.");
+    this.name = "RequestBodyTooLargeError";
   }
 }

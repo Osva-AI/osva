@@ -33,6 +33,7 @@ import {
   WorkflowNodeRunNotFoundError,
   WorkflowRunNotFoundError,
   WorkflowVersionNotFoundError,
+  WorkflowEventIdempotencyConflictError,
 } from "@osva/domain";
 import {
   AgentNotFoundError as OrchestrationAgentNotFoundError,
@@ -43,11 +44,25 @@ import {
   RunNotFoundError as OrchestrationRunNotFoundError,
 } from "@osva/orchestration";
 
-import { InvalidJsonBodyError, sendJson } from "./json.js";
+import {
+  InvalidJsonBodyError,
+  RequestBodyTooLargeError,
+  sendJson,
+} from "./json.js";
 
 export function sendHttpError(response: ServerResponse, error: unknown): void {
   if (error instanceof InvalidJsonBodyError) {
     sendJson(response, 400, { status: "invalid_request" });
+    return;
+  }
+
+  if (error instanceof RequestBodyTooLargeError) {
+    sendJson(response, 413, { status: "payload_too_large" });
+    return;
+  }
+
+  if (error instanceof WorkflowEventIdempotencyConflictError) {
+    sendJson(response, 409, { status: "conflict" });
     return;
   }
 

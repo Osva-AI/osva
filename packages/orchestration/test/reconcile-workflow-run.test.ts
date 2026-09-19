@@ -11,6 +11,7 @@ import {
   MemoryRunRepository,
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
+  MemoryWorkflowWaitRepository,
   MemoryApprovalRequestRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
@@ -235,6 +236,7 @@ async function createHarness(options?: {
   });
   const workflows = new MemoryWorkflowRepository();
   const workflowRuns = new MemoryWorkflowRunRepository();
+  const workflowWaits = new MemoryWorkflowWaitRepository();
   const approvalRequests = new MemoryApprovalRequestRepository();
   const queue = new MemoryJobQueue();
   let attemptCounter = 0;
@@ -262,6 +264,7 @@ async function createHarness(options?: {
   const reconcile = new ReconcileWorkflowRun({
     workflows,
     workflowRuns,
+    workflowWaits,
     approvalRequests,
     agents,
     runs,

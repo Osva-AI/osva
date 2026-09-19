@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { WorkflowEventId } from "@osva/contracts";
 import type { Server } from "node:http";
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
@@ -16,6 +17,9 @@ import {
   PostgresWorkflowRepository,
   PostgresWorkflowRunRepository,
   PostgresApprovalRequestRepository,
+  PostgresWorkflowEventRepository,
+  PostgresWorkflowEventWaitResolutionRepository,
+  PostgresWorkflowWaitRepository,
   PostgresEvaluationSuiteRepository,
   PostgresMemoryNamespaceRepository,
   PostgresOfficeRepository,
@@ -42,6 +46,7 @@ import { createMcpClientPool } from "@osva/adapters-mcp-client";
 import { ProcessEnvSecretResolver } from "@osva/adapters-runtime-http";
 import {
   CreateRun,
+  IngestWorkflowEvent,
   LaunchAssignment,
   ReconcileAssignment,
 } from "@osva/orchestration";
@@ -93,6 +98,15 @@ export function createWebProcess(
   const approvalRequestRepository = new PostgresApprovalRequestRepository(
     database,
   );
+  const workflowWaitRepository = new PostgresWorkflowWaitRepository(database);
+  const workflowEventRepository = new PostgresWorkflowEventRepository(database);
+  const workflowEventWaitResolution =
+    new PostgresWorkflowEventWaitResolutionRepository(database);
+  const ingestWorkflowEvent = new IngestWorkflowEvent({
+    workflowEvents: workflowEventRepository,
+    workflowWaits: workflowWaitRepository,
+    eventWaitResolution: workflowEventWaitResolution,
+  });
   const memoryNamespaces = new PostgresMemoryNamespaceRepository(database);
   const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
   const officeRepository = new PostgresOfficeRepository(database);
@@ -210,6 +224,13 @@ export function createWebProcess(
       clock,
       ids,
     }),
+    workflowEvents: {
+      ingest: ingestWorkflowEvent,
+      clock,
+      ids: {
+        createWorkflowEventId: () => randomUUID() as WorkflowEventId,
+      },
+    },
     office: {
       office: createOfficeApplication({
         office: officeRepository,
