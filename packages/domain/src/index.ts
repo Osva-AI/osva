@@ -38,6 +38,7 @@ export {
   TERMINAL_RUN_STATES,
   TERMINAL_WORKFLOW_NODE_RUN_STATES,
   TERMINAL_WORKFLOW_RUN_STATES,
+  WORKFLOW_EVENT_TIMEOUT_ERROR_CODE,
   WORKFLOW_NODE_RUN_STATES,
   WORKFLOW_RUN_STATES,
 } from "@osva/contracts";
@@ -75,6 +76,7 @@ export {
   WorkflowDefinitionNotExecutableError,
   WorkflowWaitCorrelationResolutionError,
   WorkflowWaitResolutionConflictError,
+  WorkflowWaitNotFoundError,
   WorkflowWaitResolutionNotDueError,
   WorkflowWaitEventNotEligibleError,
   WorkflowEventIdempotencyConflictError,
@@ -277,6 +279,8 @@ export { selectBranchTarget } from "./workflow-branch.js";
 export {
   WorkflowWait,
   armWorkflowWait,
+  hasSameDurableWorkflowWaitResolution,
+  hasSameWorkflowWaitArm,
   type ArmWorkflowWaitCommand,
   type WorkflowWaitKind,
   type WorkflowWaitRehydrateProps,
@@ -285,10 +289,15 @@ export {
 export {
   decideWorkflowEventWait,
   isWorkflowEventEligibleForWait,
+  listWorkflowEventCandidatesForWait,
   matchesWorkflowEventWait,
   selectWorkflowEventForWait,
   type WorkflowEventWaitDecision,
 } from "./workflow-wait-event.js";
+export {
+  resolveWorkflowEventWaitDecision,
+  type WorkflowEventWaitResolutionOutcome,
+} from "./workflow-event-wait-resolution.js";
 export {
   WorkflowEvent,
   assertWorkflowEventEquivalentRetry,
@@ -303,7 +312,7 @@ export {
   inputForNode,
   isNodeReady,
   isNodeSkippable,
-  isWorkflowBlockedOnApproval,
+  isWorkflowBlockedOnSuspension,
   nodeRunsByKey,
 } from "./workflow-readiness.js";
 export {
@@ -401,6 +410,11 @@ export type {
   AppendWorkflowVersionInput,
   WorkflowRepository,
   WorkflowRunRepository,
+  WorkflowWaitRepository,
+  WorkflowEventWaitMatchQuery,
+  WorkflowEventRepository,
+  WorkflowEventWaitResolutionRepository,
+  WorkflowTimerWaitResolutionRepository,
 } from "./ports/index.js";
 
 export {

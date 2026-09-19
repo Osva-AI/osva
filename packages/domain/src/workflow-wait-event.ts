@@ -74,20 +74,22 @@ export function assertWorkflowEventEligibleForWait(
   }
 }
 
+export function listWorkflowEventCandidatesForWait(
+  wait: WorkflowWait,
+  events: readonly WorkflowEvent[],
+  now: Date,
+): WorkflowEvent[] {
+  return events
+    .filter((event) => isWorkflowEventEligibleForWait(wait, event, now))
+    .sort(compareWorkflowEventsForWaitSelection);
+}
+
 export function selectWorkflowEventForWait(
   wait: WorkflowWait,
   events: readonly WorkflowEvent[],
   now: Date,
 ): WorkflowEvent | null {
-  const eligible = events.filter((event) =>
-    isWorkflowEventEligibleForWait(wait, event, now),
-  );
-
-  if (eligible.length === 0) {
-    return null;
-  }
-
-  const sorted = [...eligible].sort(compareWorkflowEventsForWaitSelection);
+  const sorted = listWorkflowEventCandidatesForWait(wait, events, now);
   return sorted[0] ?? null;
 }
 

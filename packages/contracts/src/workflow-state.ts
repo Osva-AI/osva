@@ -39,3 +39,5 @@ export const TERMINAL_WORKFLOW_NODE_RUN_STATES = [
 
 export type TerminalWorkflowNodeRunState =
   (typeof TERMINAL_WORKFLOW_NODE_RUN_STATES)[number];
+
+export const WORKFLOW_EVENT_TIMEOUT_ERROR_CODE = "WORKFLOW_EVENT_TIMEOUT";

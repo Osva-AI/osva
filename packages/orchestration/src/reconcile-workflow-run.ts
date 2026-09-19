@@ -6,6 +6,7 @@ import type {
   RunId,
   WorkflowDefinitionNodeV1,
   WorkflowDefinitionNodeV2,
+  WorkflowDefinitionNodeV3,
   WorkflowNodeRunId,
 } from "@osva/contracts";
 import {
@@ -23,7 +24,7 @@ import {
   isTerminalRunState,
   isTerminalWorkflowNodeRunState,
   isTerminalWorkflowRunState,
-  isWorkflowBlockedOnApproval,
+  isWorkflowBlockedOnSuspension,
   nodeRunsByKey,
   selectBranchTarget,
   type AgentRepository,
@@ -37,7 +38,10 @@ import {
   type WorkflowRunError,
   type WorkflowRunRepository,
   type WorkflowVersion,
+  type WorkflowWaitRepository,
 } from "@osva/domain";
+
+import { WorkflowWaitReconciliation } from "./workflow-wait-reconciliation.js";
 
 import {
   OSVA_ATTR,
@@ -67,6 +71,7 @@ export interface ReconcileWorkflowRunCommand {
 export interface ReconcileWorkflowRunDependencies {
   readonly workflows: WorkflowRepository;
   readonly workflowRuns: WorkflowRunRepository;
+  readonly workflowWaits: WorkflowWaitRepository;
   readonly approvalRequests: ApprovalRequestRepository;
   readonly agents: AgentRepository;
   readonly runs: RunRepository;
@@ -80,7 +85,15 @@ export interface ReconcileWorkflowRunDependencies {
 }
 
 export class ReconcileWorkflowRun {
-  constructor(private readonly deps: ReconcileWorkflowRunDependencies) {}
+  private readonly workflowWaitReconciliation: WorkflowWaitReconciliation;
+
+  constructor(private readonly deps: ReconcileWorkflowRunDependencies) {
+    this.workflowWaitReconciliation = new WorkflowWaitReconciliation({
+      workflows: deps.workflows,
+      workflowRuns: deps.workflowRuns,
+      workflowWaits: deps.workflowWaits,
+    });
+  }
 
   async execute(command: ReconcileWorkflowRunCommand): Promise<void> {
     const telemetry = resolveInstrumentation(this.deps.instrumentation);
@@ -150,6 +163,16 @@ export class ReconcileWorkflowRun {
       return;
     }
 
+    await this.workflowWaitReconciliation.repairAndObserve(command);
+
+    workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
+    if (
+      workflowRun === null ||
+      isTerminalWorkflowRunState(workflowRun.status)
+    ) {
+      return;
+    }
+
     const failedAfterApproval = hasFailedNode(
       nodeRunsByKey(
         await this.deps.workflowRuns.listWorkflowNodeRuns(workflowRun.id),
@@ -177,6 +200,7 @@ export class ReconcileWorkflowRun {
     await this.resolveOrchestrationNodes(graph, command);
     await this.propagateSkips(graph, command);
     await this.materializeReadyApprovals(graph, command);
+    await this.workflowWaitReconciliation.materializeReady(command);
     await this.startReadyAgents(graph, version, command);
 
     workflowRun = await this.reloadWorkflowRun(command.workflowRun.id);
@@ -342,6 +366,7 @@ export class ReconcileWorkflowRun {
         return (
           node.type !== "AGENT" &&
           node.type !== "APPROVAL" &&
+          node.type !== "WAIT" &&
           isNodeReady(graph, key, nodeRuns)
         );
       });
@@ -370,7 +395,10 @@ export class ReconcileWorkflowRun {
     readonly graph: ExecutableWorkflowGraph;
     readonly workflowRun: WorkflowRun;
     readonly nodeKey: string;
-    readonly node: WorkflowDefinitionNodeV1 | WorkflowDefinitionNodeV2;
+    readonly node:
+      | WorkflowDefinitionNodeV1
+      | WorkflowDefinitionNodeV2
+      | WorkflowDefinitionNodeV3;
     readonly nodeRuns: ReadonlyMap<string, WorkflowNodeRun>;
     readonly command: ReconcileWorkflowRunCommand;
   }): Promise<void> {
@@ -410,6 +438,12 @@ export class ReconcileWorkflowRun {
 
     if (nodeRun.status !== "RUNNING") {
       return;
+    }
+
+    if (input.node.type === "WAIT" || input.node.type === "APPROVAL") {
+      throw new DomainInvariantError(
+        `Orchestration resolver cannot progress ${input.node.type} node '${input.nodeKey}'.`,
+      );
     }
 
     if (input.node.type === "BRANCH") {
@@ -914,7 +948,7 @@ export class ReconcileWorkflowRun {
       return;
     }
 
-    const target = isWorkflowBlockedOnApproval(graph, nodeRuns)
+    const target = isWorkflowBlockedOnSuspension(graph, nodeRuns)
       ? "WAITING"
       : "RUNNING";
     if (latest.status === target) {

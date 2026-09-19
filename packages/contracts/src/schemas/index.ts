@@ -181,6 +181,11 @@ export {
 } from "./workflow-definition.js";
 
 export {
+  ingestWorkflowEventRequestSchema,
+  workflowEventResourceSchema,
+} from "./workflow-event.js";
+
+export {
   approvalDecisionSchema,
   approvalRequestResourceSchema,
   approvalRequestStateSchema,

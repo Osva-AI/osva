@@ -540,6 +540,17 @@ export class WorkflowWaitResolutionConflictError extends DomainInvariantError {
   }
 }
 
+export class WorkflowWaitNotFoundError extends DomainError {
+  readonly workflowNodeRunId: WorkflowNodeRunId;
+
+  constructor(workflowNodeRunId: WorkflowNodeRunId) {
+    super(
+      `WorkflowWait for WorkflowNodeRun '${workflowNodeRunId}' was not found.`,
+    );
+    this.workflowNodeRunId = workflowNodeRunId;
+  }
+}
+
 export class WorkflowWaitResolutionNotDueError extends DomainInvariantError {
   readonly resolution: string;
   readonly dueAt: Date;

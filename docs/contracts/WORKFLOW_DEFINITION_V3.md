@@ -1,6 +1,7 @@
 # Workflow Definition v3 (Stable OSS Workflow Definition v1)
 
-**Status:** Stage 3.2 **contract implemented** (Pass 3.2.3); **execution not enabled**
+**Status:** Stage 3.2 **contract implemented** (Pass 3.2.3); Stage 3.3 **execution
+enabled** (Pass 3.3.17)
 
 **Persisted field:** `"schemaVersion": "3"`
 
@@ -11,9 +12,10 @@ schema version is **3**; do not conflate product naming with the persisted
 **Implemented (Pass 3.2.3):** `@osva/contracts` Zod schemas, domain graph
 validation, WorkflowVersion persistence for valid V3 definitions.
 
-**Not implemented:** V3 `WorkflowRun` creation, WAIT orchestration,
-WorkflowWait / WorkflowEvent, timers, and event ingestion. Executable workflow
-definitions remain `schemaVersion: "1"` and `"2"` only.
+**Implemented (Stage 3.3):** durable **WorkflowWait** / **WorkflowEvent**,
+timer and event wait drivers, **`POST /v1/workflow-events`**, and V3
+**`CreateWorkflowRun`** / reconciliation for WAIT nodes. Executable workflow
+definitions: **`schemaVersion: "1"`, `"2"`, and `"3"`**.
 
 ## Design principles
 
@@ -342,13 +344,13 @@ Not valid node types or definition features in v3:
 | `schemaVersion: "3"` persistence | Yes | Yes (validation on append) |
 | `@osva/contracts` Zod for v3 | Yes | Yes |
 | WAIT node in definition | Yes | Validated only |
-| `CreateWorkflowRun` for V3 | Blocked until execution pass | Rejected (`WorkflowDefinitionNotExecutableError`) |
-| WAIT node execution | Yes | No |
-| WorkflowEvent ingest + match | Yes | No |
-| `WorkflowWait` pure domain (Pass 3.2.4) | Yes | Arming + resolution only; not persisted |
-| `WorkflowEvent` domain (Pass 3.2.5A) | Yes | Entity + ingest idempotency |
-| Event/wait matching (Pass 3.2.5B) | Yes | Pure domain; ingest API + persistence pending |
-| Wait/event rehydration (Pass 3.2.6) | Yes | Domain `rehydrate`; PostgreSQL Stage 3.3 |
+| `CreateWorkflowRun` for V3 | Yes | Yes (Stage 3.3.17) |
+| WAIT node execution | Yes | Yes (PostgreSQL + reconciler) |
+| WorkflowEvent ingest + match | Yes | Yes (`POST /v1/workflow-events` + drivers) |
+| `WorkflowWait` pure domain (Pass 3.2.4) | Yes | Durable PostgreSQL + domain |
+| `WorkflowEvent` domain (Pass 3.2.5A) | Yes | Durable PostgreSQL + HTTP ingest |
+| Event/wait matching (Pass 3.2.5B) | Yes | Ingest fast path + recovery driver |
+| Wait/event rehydration (Pass 3.2.6) | Yes | PostgreSQL repositories |
 
 See [`STAGE-3-2-WORKFLOW-SEMANTICS.md`](../implementation/STAGE-3-2-WORKFLOW-SEMANTICS.md)
 for full orchestration semantics, idempotency, cancellation targets, and Stage

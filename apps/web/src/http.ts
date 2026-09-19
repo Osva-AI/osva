@@ -29,6 +29,10 @@ import {
   type ScheduleHttpServices,
 } from "./schedule-http.js";
 import { handleWorkflowRequest } from "./workflow-http.js";
+import {
+  handleWorkflowEventRequest,
+  type WorkflowEventHttpServices,
+} from "./workflow-event-http.js";
 import { handleOfficeRequest, type OfficeHttpServices } from "./office-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
@@ -45,6 +49,7 @@ export interface CreateWebApplicationOptions {
   readonly runObservability: RunObservabilityHttpServices;
   readonly schedules: ScheduleHttpServices;
   readonly workflows: WorkflowApplication;
+  readonly workflowEvents?: WorkflowEventHttpServices;
   readonly office: OfficeHttpServices;
 }
 
@@ -66,6 +71,7 @@ export function createWebApplication(
       options.runObservability,
       options.schedules,
       options.workflows,
+      options.workflowEvents,
       options.office,
     );
   });
@@ -85,6 +91,7 @@ async function handleRequest(
   runObservability: RunObservabilityHttpServices,
   schedules: ScheduleHttpServices,
   workflows: WorkflowApplication,
+  workflowEvents: WorkflowEventHttpServices | undefined,
   office: OfficeHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
@@ -246,6 +253,17 @@ async function handleRequest(
     url.searchParams,
   );
   if (handledWorkflows) {
+    return;
+  }
+
+  const handledWorkflowEvents = await handleWorkflowEventRequest(
+    request,
+    response,
+    method,
+    path,
+    workflowEvents,
+  );
+  if (handledWorkflowEvents) {
     return;
   }
 

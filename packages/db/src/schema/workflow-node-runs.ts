@@ -60,6 +60,11 @@ export const workflowNodeRuns = pgTable(
       table.workspaceId,
       table.id,
     ),
+    unique("workflow_node_runs_workspace_id_workflow_run_id_id_unique").on(
+      table.workspaceId,
+      table.workflowRunId,
+      table.id,
+    ),
     uniqueIndex("workflow_node_runs_child_run_id_unique")
       .on(table.childRunId)
       .where(sql`${table.childRunId} is not null`),

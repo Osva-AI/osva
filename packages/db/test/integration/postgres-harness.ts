@@ -22,6 +22,8 @@ const STAGE0_TABLES = [
   "office_workers",
   "roles",
   "teams",
+  "workflow_waits",
+  "workflow_events",
   "approval_requests",
   "evaluation_case_results",
   "evaluation_runs",

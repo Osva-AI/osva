@@ -1,4 +1,4 @@
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkflowEventId, WorkspaceId } from "@osva/contracts";
 import {
   MemoryAgentRepository,
   MemoryConnectorRepository,
@@ -12,6 +12,9 @@ import {
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
   MemoryApprovalRequestRepository,
+  MemoryWorkflowEventRepository,
+  MemoryWorkflowEventWaitResolutionRepository,
+  MemoryWorkflowWaitRepository,
   MemoryEvaluationSuiteRepository,
   MemoryMemoryNamespaceRepository,
   MemoryOfficeRepository,
@@ -35,6 +38,7 @@ import {
 } from "@osva/domain";
 import {
   CreateRun,
+  IngestWorkflowEvent,
   LaunchAssignment,
   ReconcileAssignment,
 } from "@osva/orchestration";
@@ -62,6 +66,23 @@ export async function createTestWebApplication(options?: {
   const workflowRepository = new MemoryWorkflowRepository();
   const workflowRunRepository = new MemoryWorkflowRunRepository();
   const approvalRequestRepository = new MemoryApprovalRequestRepository();
+  const workflowEventRepository = new MemoryWorkflowEventRepository();
+  const workflowWaitRepository = new MemoryWorkflowWaitRepository(
+    workflowEventRepository,
+    workflowRunRepository,
+  );
+  const workflowEventWaitResolution =
+    new MemoryWorkflowEventWaitResolutionRepository(
+      workflowWaitRepository,
+      workflowEventRepository,
+      workflowRunRepository,
+    );
+  let workflowEventIdCounter = 0;
+  const ingestWorkflowEvent = new IngestWorkflowEvent({
+    workflowEvents: workflowEventRepository,
+    workflowWaits: workflowWaitRepository,
+    eventWaitResolution: workflowEventWaitResolution,
+  });
   const memoryNamespaces = new MemoryMemoryNamespaceRepository();
   const evaluationSuites = new MemoryEvaluationSuiteRepository();
   const officeRepository = new MemoryOfficeRepository();
@@ -195,6 +216,16 @@ export async function createTestWebApplication(options?: {
       clock,
       ids,
     }),
+    workflowEvents: {
+      ingest: ingestWorkflowEvent,
+      clock,
+      ids: {
+        createWorkflowEventId: () => {
+          workflowEventIdCounter += 1;
+          return `workflow-event-${String(workflowEventIdCounter)}` as WorkflowEventId;
+        },
+      },
+    },
     office: {
       office: createOfficeApplication({
         office: officeRepository,
@@ -223,6 +254,7 @@ export async function createTestWebApplication(options?: {
     workflows: workflowRepository,
     workflowRuns: workflowRunRepository,
     approvalRequests: approvalRequestRepository,
+    workflowEvents: workflowEventRepository,
     queue,
   };
 }

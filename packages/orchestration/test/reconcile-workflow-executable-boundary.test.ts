@@ -15,14 +15,10 @@ import {
   MemoryRunRepository,
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
+  MemoryWorkflowWaitRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
-import {
-  Workflow,
-  WorkflowDefinitionNotExecutableError,
-  WorkflowRun,
-  WorkflowVersion,
-} from "@osva/domain";
+import { Workflow, WorkflowRun, WorkflowVersion } from "@osva/domain";
 import { describe, expect, it } from "vitest";
 
 import { CreateRun } from "../src/create-run.js";
@@ -35,13 +31,14 @@ import {
   wrapRunRepository,
 } from "./fixtures.js";
 
-describe("ReconcileWorkflowRun non-executable definitions", () => {
-  it("fails closed when a WorkflowRun references a V3 WorkflowVersion", async () => {
+describe("ReconcileWorkflowRun executable definitions", () => {
+  it("reconciles a V3 WorkflowRun without rejecting the schema version", async () => {
     const workspaces = new MemoryWorkspaceRepository();
     const agents = new MemoryAgentRepository();
     const runs = wrapRunRepository(new MemoryRunRepository(), {});
     const workflows = new MemoryWorkflowRepository();
     const workflowRuns = new MemoryWorkflowRunRepository();
+    const workflowWaits = new MemoryWorkflowWaitRepository();
     const approvalRequests = new MemoryApprovalRequestRepository();
     const queue = new MemoryJobQueue();
 
@@ -50,8 +47,8 @@ describe("ReconcileWorkflowRun non-executable definitions", () => {
     const workflow = Workflow.create({
       id: "wf-1" as WorkflowId,
       workspaceId,
-      key: "v3-guard",
-      name: "V3 Guard",
+      key: "v3-run",
+      name: "V3 Run",
       createdAt: LATER,
       updatedAt: LATER,
     });
@@ -86,6 +83,7 @@ describe("ReconcileWorkflowRun non-executable definitions", () => {
     const reconcile = new ReconcileWorkflowRun({
       workflows,
       workflowRuns,
+      workflowWaits,
       approvalRequests,
       agents,
       runs,
@@ -104,6 +102,6 @@ describe("ReconcileWorkflowRun non-executable definitions", () => {
           createApprovalRequestId: () => "approval-1" as ApprovalRequestId,
         },
       }),
-    ).rejects.toBeInstanceOf(WorkflowDefinitionNotExecutableError);
+    ).resolves.toBeUndefined();
   });
 });

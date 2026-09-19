@@ -59,6 +59,13 @@ export type {
 export type { WorkflowRunRepository } from "./workflow-run-repository.js";
 export type { ApprovalRequestRepository } from "./approval-request-repository.js";
 export type {
+  WorkflowEventWaitMatchQuery,
+  WorkflowWaitRepository,
+} from "./workflow-wait-repository.js";
+export type { WorkflowEventRepository } from "./workflow-event-repository.js";
+export type { WorkflowEventWaitResolutionRepository } from "./workflow-event-wait-resolution-repository.js";
+export type { WorkflowTimerWaitResolutionRepository } from "./workflow-timer-wait-resolution-repository.js";
+export type {
   DeleteMemoryRecordInput,
   ListMemoryRecordsQuery,
   ListMemoryRecordsResult,

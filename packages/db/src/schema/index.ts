@@ -19,6 +19,8 @@ export { workflowVersions } from "./workflow-versions.js";
 export { workflowRuns } from "./workflow-runs.js";
 export { workflowNodeRuns } from "./workflow-node-runs.js";
 export { approvalRequests } from "./approval-requests.js";
+export { workflowEvents } from "./workflow-events.js";
+export { workflowWaits } from "./workflow-waits.js";
 export { memoryNamespaces } from "./memory-namespaces.js";
 export { memoryRecords } from "./memory-records.js";
 export { evaluationSuites } from "./evaluation-suites.js";
@@ -43,6 +45,8 @@ export {
   PERSISTED_RUN_STEP_KINDS,
   PERSISTED_RUN_STEP_STATUSES,
   PERSISTED_APPROVAL_REQUEST_STATES,
+  PERSISTED_WORKFLOW_WAIT_KINDS,
+  PERSISTED_WORKFLOW_WAIT_RESOLUTIONS,
   PERSISTED_WORKFLOW_NODE_RUN_STATES,
   PERSISTED_WORKFLOW_RUN_STATES,
   PERSISTED_EVALUATION_RUN_STATES,

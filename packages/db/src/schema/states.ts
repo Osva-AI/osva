@@ -74,6 +74,15 @@ export const PERSISTED_APPROVAL_REQUEST_STATES = [
   "REJECTED",
 ] as const;
 
+export const PERSISTED_WORKFLOW_WAIT_KINDS = ["TIMER", "EVENT"] as const;
+
+export const PERSISTED_WORKFLOW_WAIT_RESOLUTIONS = [
+  "TIMER",
+  "EVENT",
+  "TIMEOUT",
+  "CANCELLED",
+] as const;
+
 export const PERSISTED_EVALUATION_RUN_STATES = [
   "PENDING",
   "RUNNING",
