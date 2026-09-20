@@ -105,6 +105,9 @@ jobs:
       OSVA_VALKEY_URL: redis://127.0.0.1:6379
       OSVA_WEB_HOST: 127.0.0.1
       OSVA_WEB_PORT: 3000
+      OSVA_KNOWLEDGE_EMBEDDING_PROVIDER: DETERMINISTIC
+      OSVA_KNOWLEDGE_EMBEDDING_MODEL: deterministic-v1
+      OSVA_KNOWLEDGE_EMBEDDING_DIMENSIONS: 384
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -182,6 +185,13 @@ jobs:
             echo "::endgroup::"
           }
 
+          print_web_log() {
+            sleep 1
+            echo "::group::web log (startup failure)"
+            cat "$WEB_LOG" 2>/dev/null || true
+            echo "::endgroup::"
+          }
+
           trap dump_logs ERR
 
           wait_http_200() {
@@ -191,6 +201,7 @@ jobs:
             for i in $(seq 1 "$attempts"); do
               if ! kill -0 "$WEB_PID" 2>/dev/null; then
                 echo "web process exited before ${url} became reachable" >&2
+                print_web_log
                 return 1
               fi
               code="$(curl -sS -o /dev/null -w "%{http_code}" "$url" || true)"
@@ -201,6 +212,7 @@ jobs:
               sleep 1
             done
             echo "${url} did not return HTTP 200 within ${attempts}s (last=${code:-none})" >&2
+            print_web_log
             return 1
           }
 
@@ -237,10 +249,12 @@ jobs:
           ready_code="$(curl -sS -o /dev/null -w "%{http_code}" "http://127.0.0.1:3000/ready")"
           if [ "$health_code" != "200" ]; then
             echo "GET /health returned HTTP ${health_code}" >&2
+            print_web_log
             exit 1
           fi
           if [ "$ready_code" != "200" ]; then
             echo "GET /ready returned HTTP ${ready_code}" >&2
+            print_web_log
             exit 1
           fi
 
