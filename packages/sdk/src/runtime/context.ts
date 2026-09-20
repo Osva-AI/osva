@@ -23,6 +23,8 @@ import {
   runtimeArtifactGetResponseSchema,
   runtimeToolInvokeRequestSchema,
   runtimeToolInvokeResponseSchema,
+  runtimeKnowledgeSearchRequestSchema,
+  runtimeKnowledgeSearchResponseSchema,
 } from "@osva/runtime-protocol";
 
 import { CapabilityCredential } from "./capability-credential.js";
@@ -92,6 +94,31 @@ export interface OpenArtifactResult {
   readonly stream: ReadableStream<Uint8Array>;
 }
 
+export interface KnowledgeSearchOptions {
+  readonly binding: string;
+  readonly query: string;
+  readonly topK?: number;
+  readonly filter?: JsonObject;
+}
+
+export interface KnowledgeHitView {
+  readonly knowledgeChunkId: string;
+  readonly knowledgeIndexId: string;
+  readonly knowledgeSourceId: string;
+  readonly artifactReference: {
+    readonly type: "artifact";
+    readonly artifactId: string;
+  };
+  readonly text: string;
+  readonly score: number;
+  readonly location?: {
+    readonly page?: number;
+    readonly heading?: string;
+    readonly sourceSegmentOrdinal?: number;
+  };
+  readonly attributes: JsonObject;
+}
+
 export interface MemoryRecordView {
   readonly key: string;
   readonly value: JsonValue;
@@ -124,6 +151,11 @@ export interface RuntimeContext {
     get(artifactId: ArtifactId): Promise<ArtifactView>;
     create(options: CreateArtifactOptions): Promise<ArtifactView>;
     open(artifactId: ArtifactId): Promise<OpenArtifactResult>;
+  };
+  readonly knowledge: {
+    search(
+      options: KnowledgeSearchOptions,
+    ): Promise<readonly KnowledgeHitView[]>;
   };
 }
 
@@ -479,6 +511,39 @@ export function createRuntimeContext(
           );
         }
         return parsed.output;
+      },
+    },
+    knowledge: {
+      search: async (input) => {
+        const payload = runtimeKnowledgeSearchRequestSchema.parse({
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: options.executionId,
+          bindingName: input.binding,
+          query: input.query,
+          ...(input.topK === undefined ? {} : { topK: input.topK }),
+          ...(input.filter === undefined ? {} : { filter: input.filter }),
+        });
+
+        const response = await postCapability(
+          fetchImpl,
+          options.credential,
+          RUNTIME_CAPABILITY_PATHS.knowledgeSearch,
+          payload,
+          timeoutMs,
+        );
+        const parsed = runtimeKnowledgeSearchResponseSchema.parse(response);
+        if (parsed.executionId !== options.executionId) {
+          throw new RuntimeCapabilityError(
+            "Capability response executionId mismatch.",
+          );
+        }
+        if (parsed.outcome === "FAILED") {
+          throw new RuntimeCapabilityError(
+            parsed.error.message,
+            parsed.error.code,
+          );
+        }
+        return parsed.hits;
       },
     },
   };

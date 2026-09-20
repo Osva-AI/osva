@@ -12,6 +12,7 @@ export const OSVA_METRIC = {
   TOOL_DURATION_MS: "osva.tool.duration_ms",
   TOOL_ERRORS: "osva.tool.errors",
   MEMORY_OPERATIONS: "osva.memory.operations",
+  KNOWLEDGE_RETRIEVES: "osva.knowledge.retrieves",
   WORKFLOW_RECONCILIATIONS: "osva.workflow.reconciliations",
   EVALUATION_RECONCILIATIONS: "osva.evaluation.reconciliations",
 } as const;

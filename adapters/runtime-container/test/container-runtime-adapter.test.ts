@@ -32,6 +32,7 @@ function containerRequest(
     modelProfileVersionBindings: { primary: "mpv-1" as never },
     toolVersionBindings: { echo: "tv-1" as never },
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
     toolGrants: [],
     timeoutMs: 2_000,
     policyContext: {},

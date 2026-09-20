@@ -39,7 +39,12 @@ export const PERSISTED_CONNECTOR_TRANSPORTS = [
   "STDIO",
 ] as const;
 
-export const PERSISTED_RUN_STEP_KINDS = ["MODEL", "TOOL", "MEMORY"] as const;
+export const PERSISTED_RUN_STEP_KINDS = [
+  "MODEL",
+  "TOOL",
+  "MEMORY",
+  "KNOWLEDGE",
+] as const;
 
 export const PERSISTED_RUN_STEP_STATUSES = [
   "RUNNING",
@@ -81,6 +86,13 @@ export const PERSISTED_WORKFLOW_WAIT_RESOLUTIONS = [
   "EVENT",
   "TIMEOUT",
   "CANCELLED",
+] as const;
+
+export const PERSISTED_KNOWLEDGE_INDEX_STATES = [
+  "PENDING",
+  "RUNNING",
+  "READY",
+  "FAILED",
 ] as const;
 
 export const PERSISTED_EVALUATION_RUN_STATES = [

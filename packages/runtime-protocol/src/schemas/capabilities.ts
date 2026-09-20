@@ -12,7 +12,14 @@ import {
   MEMORY_BINDING_NAME_PATTERN,
   MODEL_BINDING_NAME_PATTERN,
   TOOL_BINDING_NAME_PATTERN,
+  KNOWLEDGE_BINDING_NAME_PATTERN,
+  KNOWLEDGE_MAX_QUERY_LENGTH,
+  KNOWLEDGE_MAX_TOP_K,
 } from "@osva/contracts";
+import {
+  knowledgeHitSchema,
+  knowledgeRetrieveFilterSchema,
+} from "@osva/contracts/schemas";
 
 import {
   runtimeExecutionIdSchema,
@@ -23,6 +30,9 @@ import {
 const modelBindingNameSchema = z.string().regex(MODEL_BINDING_NAME_PATTERN);
 const toolBindingNameSchema = z.string().regex(TOOL_BINDING_NAME_PATTERN);
 const memoryBindingNameSchema = z.string().regex(MEMORY_BINDING_NAME_PATTERN);
+const knowledgeBindingNameSchema = z
+  .string()
+  .regex(KNOWLEDGE_BINDING_NAME_PATTERN);
 
 const memoryRecordViewSchema = z.strictObject({
   key: z.string().min(1),
@@ -194,6 +204,34 @@ export const runtimeMemoryListResponseSchema = z.discriminatedUnion("outcome", [
   runtimeMemoryListSuccessSchema,
   runtimeMemoryListFailureSchema,
 ]);
+
+export const runtimeKnowledgeSearchRequestSchema = z.strictObject({
+  protocolVersion: runtimeProtocolVersionSchema,
+  executionId: runtimeExecutionIdSchema,
+  bindingName: knowledgeBindingNameSchema,
+  query: z.string().min(1).max(KNOWLEDGE_MAX_QUERY_LENGTH),
+  topK: z.number().int().min(1).max(KNOWLEDGE_MAX_TOP_K).optional(),
+  filter: knowledgeRetrieveFilterSchema.optional(),
+});
+
+export const runtimeKnowledgeSearchSuccessSchema = z.strictObject({
+  protocolVersion: runtimeProtocolVersionSchema,
+  executionId: runtimeExecutionIdSchema,
+  outcome: z.literal("SUCCEEDED"),
+  hits: z.array(knowledgeHitSchema),
+});
+
+export const runtimeKnowledgeSearchFailureSchema = z.strictObject({
+  protocolVersion: runtimeProtocolVersionSchema,
+  executionId: runtimeExecutionIdSchema,
+  outcome: z.literal("FAILED"),
+  error: runtimeProtocolErrorSchema,
+});
+
+export const runtimeKnowledgeSearchResponseSchema = z.discriminatedUnion(
+  "outcome",
+  [runtimeKnowledgeSearchSuccessSchema, runtimeKnowledgeSearchFailureSchema],
+);
 
 const runtimeArtifactViewSchema = z.strictObject({
   id: artifactIdSchema,

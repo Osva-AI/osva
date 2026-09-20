@@ -39,3 +39,6 @@ export type RoleId = OsvaId<"RoleId">;
 export type TeamId = OsvaId<"TeamId">;
 export type GoalId = OsvaId<"GoalId">;
 export type AssignmentId = OsvaId<"AssignmentId">;
+export type KnowledgeSourceId = OsvaId<"KnowledgeSourceId">;
+export type KnowledgeIndexId = OsvaId<"KnowledgeIndexId">;
+export type KnowledgeChunkId = OsvaId<"KnowledgeChunkId">;

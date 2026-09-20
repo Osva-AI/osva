@@ -122,6 +122,46 @@ Index of major OSVA execution flows after Stage 2.9 (Community Beta).
 
 **Notes:** Idempotent via `assignment:{assignmentId}`; no Assignment queue or worker.
 
+## knowledge-ingestion
+
+**Purpose:** Materialize a durable retrieval snapshot (`KnowledgeIndex`) from an immutable source `Artifact`.
+
+**Entry point:** `POST /v1/knowledge-sources/:id/indexes` persists `PENDING` index → `KnowledgeIndexQueue` (`knowledgeIndexId`)
+
+**Main components:** `apps/knowledge-worker`, `KnowledgeIngestionService`, parser adapters, `EmbeddingGateway`, `PgVectorStore`, Artifact application, PostgreSQL
+
+**Flow:**
+
+```text
+Artifact → KnowledgeSource → KnowledgeIndex (PENDING)
+  → knowledge worker claims lease (PostgreSQL)
+  → parser → normalized extraction → derived extraction Artifact
+  → deterministic KnowledgeChunks (PostgreSQL)
+  → embeddings → knowledge_vectors (pgvector projection)
+  → KnowledgeIndex READY
+```
+
+PostgreSQL owns index lifecycle and canonical chunk text. BullMQ/Valkey transports work only. pgvector is not lifecycle or content authority.
+
+## knowledge-retrieval (control plane)
+
+**Purpose:** Semantic retrieval over explicit READY indexes for a workspace.
+
+**Entry point:** `POST /v1/knowledge/retrieve`
+
+**Flow:**
+
+```text
+explicit READY KnowledgeIndex IDs
+  → query embedding (EmbeddingGateway)
+  → VectorStore (chunk IDs + distances)
+  → load canonical KnowledgeChunks from PostgreSQL
+  → join KnowledgeSource / source Artifact provenance
+  → KnowledgeHitV1[]
+```
+
+Runtime agent retrieval (`context.knowledge.search`) resolves logical binding names against frozen `knowledgeIndexBindings` on the Run, then calls `KnowledgeRetriever` in the execution worker. Index IDs are never accepted from runtime input; capability HTTP/IPC is authenticated per RunAttempt.
+
 ## Supporting flows (no dedicated doc)
 
 | Flow | Entry | Notes |

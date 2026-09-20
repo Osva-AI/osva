@@ -8,7 +8,7 @@ OSVA after Stage 2.9 (Community Beta): a control plane that owns product state a
 
 **Execution plane** (`apps/worker`): Consumes BullMQ jobs keyed by `RunAttemptId`, drives `ExecuteRunAttempt`, dispatches to runtime adapters, and exposes model/tool/memory capabilities to remote runtimes.
 
-**Supporting processes**: `apps/workflow-orchestrator` reconciles durable workflow state; `apps/scheduler` fires cron schedules into child Runs.
+**Supporting processes**: `apps/workflow-orchestrator` reconciles durable workflow state; `apps/scheduler` fires cron schedules into child Runs; `apps/knowledge-worker` ingests `KnowledgeIndex` work (separate from `apps/worker` Run execution).
 
 ## Core product objects
 
@@ -56,8 +56,12 @@ Execution must use the persisted Run snapshot, not live AgentVersion rows.
 | ModelGateway | Provider-neutral text generation | OpenAI, Anthropic, Gemini |
 | ToolGateway | Authorization + dispatch | Internal tools + MCP ToolVersions |
 | MemoryGateway | Namespace authorization + CRUD | PostgreSQL-backed JSON memory |
+| EmbeddingGateway | Provider-neutral document/query embeddings for knowledge | OpenAI-compatible adapter; deterministic provider for tests/dev |
+| KnowledgeRetriever | Control-plane semantic retrieval over READY indexes | PostgreSQL chunks + VectorStore matches |
+| Knowledge parsers | Normalize source Artifact bytes to OSVA segments | Plain text, Markdown, PDF (adapter boundary) |
+| VectorStore | Infrastructure projection of chunk embeddings | Community: `adapters/vector-pgvector` (pgvector) |
 
-Agent runtimes never receive provider credentials, DB handles, or gateway internals directly.
+Agent runtimes never receive provider credentials, DB handles, gateway internals, or VectorStore credentials directly. Runtime knowledge uses manifest bindings frozen on the Run, capability HTTP/IPC for remote/container runtimes, and worker-side `KnowledgeRetriever` (no vector credentials in agents).
 
 ## Runtime implementations
 

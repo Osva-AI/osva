@@ -41,6 +41,9 @@ import {
   createToolApplication,
   createWorkflowApplication,
   createOfficeApplication,
+  type KnowledgeApplication,
+  type KnowledgeRepository,
+  type KnowledgeRetriever,
 } from "@osva/domain";
 import {
   CreateRun,
@@ -149,6 +152,42 @@ export async function createTestWebApplication(options?: {
     secretResolver: new MemorySecretResolver(options?.secrets ?? {}),
   });
 
+  const stubKnowledge = {
+    createSource: {
+      execute: async () => {
+        throw new Error("stub");
+      },
+    },
+    getSource: {
+      execute: async () => {
+        throw new Error("stub");
+      },
+    },
+    listSources: { execute: async () => ({ sources: [] }) },
+    createIndex: {
+      execute: async () => {
+        throw new Error("stub");
+      },
+    },
+    getIndex: {
+      execute: async () => {
+        throw new Error("stub");
+      },
+    },
+    listIndexes: { execute: async () => ({ indexes: [] }) },
+    retryIndex: {
+      execute: async () => {
+        throw new Error("stub");
+      },
+    },
+  } as unknown as KnowledgeApplication;
+  const stubRetriever = {
+    retrieve: async () => [],
+  } as unknown as KnowledgeRetriever;
+  const stubKnowledgeRepository = {
+    findIndexById: async () => null,
+  } as unknown as KnowledgeRepository;
+
   const server = createWebApplication({
     readinessCheck: options?.readinessCheck ?? (async () => true),
     agents: createAgentApplication({
@@ -157,6 +196,7 @@ export async function createTestWebApplication(options?: {
       modelProfiles,
       tools,
       memoryNamespaces,
+      knowledge: stubKnowledgeRepository,
       clock,
       ids,
     }),
@@ -265,6 +305,10 @@ export async function createTestWebApplication(options?: {
       reconcileAssignment,
       clock,
       ids,
+    },
+    knowledge: {
+      knowledge: stubKnowledge,
+      retriever: stubRetriever,
     },
   });
 

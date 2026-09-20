@@ -39,3 +39,13 @@
 37. Remote HTTP Protocol V1 execution is synchronous. It does not own Run or RunAttempt lifecycle and does not create a remote job lifecycle. The HTTP adapter does not automatically retry execute POSTs.
 38. Remote runtimes do not receive provider credentials or ToolGateway internals. Model and tool access is mediated by execution-scoped OSVA capabilities. Remote runtimes cannot create Runs, WorkflowRuns, or agent executions. Workflows remain runtime-agnostic.
 39. REMOTE_HTTP outbound destinations are constrained by a worker-owned network policy. By default only public destinations are allowed after DNS resolution. Private or loopback destinations require explicit operator opt-in. AgentVersion, Run input, and workflow input cannot disable the policy. Redirects are not followed.
+40. Artifact is immutable durable bytes and metadata; it is not a knowledge object.
+41. KnowledgeSource is an immutable workspace-scoped declaration over exactly one Artifact.
+42. KnowledgeSource ingestion lifecycle belongs to KnowledgeIndex, not KnowledgeSource.
+43. A READY KnowledgeIndex is sealed; re-indexing creates a new KnowledgeIndex.
+44. KnowledgeChunk is canonical OSVA-owned retrieval content stored in PostgreSQL.
+45. VectorStore records are replaceable infrastructure projections, never lifecycle or content authority.
+46. PostgreSQL owns KnowledgeIndex lifecycle and ingestion recovery state.
+47. BullMQ transports knowledge indexing work but never owns indexing lifecycle.
+48. Runtime retrieval is mediated by OSVA; agents do not receive direct VectorStore credentials or KnowledgeIndex IDs in runtime requests (Run 2).
+49. Parser, embedding-provider, and vector implementation types must not enter public OSVA contracts.

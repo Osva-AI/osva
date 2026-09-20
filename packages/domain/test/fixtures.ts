@@ -63,6 +63,7 @@ export function createBindings(): EffectiveRunBindings {
     },
     toolVersionBindings: {},
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
   });
 }
 

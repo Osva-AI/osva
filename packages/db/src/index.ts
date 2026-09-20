@@ -24,3 +24,4 @@ export { PostgresMemoryNamespaceRepository } from "./repositories/postgres-memor
 export { PostgresEvaluationSuiteRepository } from "./repositories/postgres-evaluation-suite-repository.js";
 export { PostgresOfficeRepository } from "./repositories/postgres-office-repository.js";
 export { PostgresArtifactRepository } from "./repositories/postgres-artifact-repository.js";
+export { PostgresKnowledgeRepository } from "./repositories/postgres-knowledge-repository.js";

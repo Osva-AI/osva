@@ -6,8 +6,8 @@
 |------|--------|
 | Stage 3.2 durable workflow semantics | Complete in repo |
 | Stage 3.3 durable workflow backend | Complete in repo |
-| Stage 3.4 Artifact storage | **Run 2 in progress** (runtime capabilities, S3 factory, worker/SDK wiring) |
-| Stage 3.5 Knowledge | Not started |
+| Stage 3.4 Artifact storage | **Complete** |
+| Stage 3.5 Knowledge retrieval | **Complete** (Run 1 control-plane + Run 2 runtime bindings and `context.knowledge`) |
 
 ## Build/stabilize
 

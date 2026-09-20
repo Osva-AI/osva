@@ -84,6 +84,7 @@ describe("web CreateRun BullMQ integration", () => {
       OSVA_VALKEY_URL: valkey.url,
       OSVA_WEB_HOST: "127.0.0.1",
       OSVA_WEB_PORT: "0",
+      OSVA_ALLOW_DETERMINISTIC_EMBEDDINGS: "true",
     });
     const inspector = new BullMqJobQueue({ url: valkey.url });
 

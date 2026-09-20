@@ -24,6 +24,9 @@ export { workflowWaits } from "./workflow-waits.js";
 export { memoryNamespaces } from "./memory-namespaces.js";
 export { memoryRecords } from "./memory-records.js";
 export { artifacts } from "./artifacts.js";
+export { knowledgeSources } from "./knowledge-sources.js";
+export { knowledgeIndexes } from "./knowledge-indexes.js";
+export { knowledgeChunks } from "./knowledge-chunks.js";
 export { evaluationSuites } from "./evaluation-suites.js";
 export { evaluationSuiteVersions } from "./evaluation-suite-versions.js";
 export { evaluationCases } from "./evaluation-cases.js";
@@ -56,4 +59,5 @@ export {
   PERSISTED_GOAL_STATES,
   PERSISTED_ASSIGNMENT_STATES,
   PERSISTED_ASSIGNMENT_TARGET_TYPES,
+  PERSISTED_KNOWLEDGE_INDEX_STATES,
 } from "./states.js";

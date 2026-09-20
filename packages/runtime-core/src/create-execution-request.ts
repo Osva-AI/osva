@@ -47,6 +47,7 @@ export function createExecutionRequest(
     toolVersionBindings: source.run.effectiveBindings.toolVersionBindings,
     memoryNamespaceBindings:
       source.run.effectiveBindings.memoryNamespaceBindings,
+    knowledgeIndexBindings: source.run.effectiveBindings.knowledgeIndexBindings,
     toolGrants: Object.freeze([]),
     timeoutMs: source.agentVersion.manifest.execution.timeoutMs,
     policyContext: Object.freeze({}),

@@ -11,6 +11,7 @@ import {
   MODEL_TEXT_MAX_MESSAGES,
   MODEL_TEXT_ROLES,
   TRUSTED_RUNTIME_IPC_VERSION,
+  isKnowledgeBindingName,
   isMemoryBindingName,
   isModelBindingName,
   isToolBindingName,
@@ -234,6 +235,54 @@ export interface MemoryListFailedMessage {
 
 export type ParentToChildMemoryListMessage =
   MemoryListSucceededMessage | MemoryListFailedMessage;
+
+export interface KnowledgeSearchRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "knowledge.search.request";
+  readonly callId: string;
+  readonly binding: string;
+  readonly query: string;
+  readonly topK?: number;
+  readonly filter?: Record<string, JsonValue>;
+}
+
+export interface KnowledgeSearchSucceededMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "knowledge.search.succeeded";
+  readonly callId: string;
+  readonly hits: readonly KnowledgeHitViewMessage[];
+}
+
+export interface KnowledgeHitViewMessage {
+  readonly knowledgeChunkId: string;
+  readonly knowledgeIndexId: string;
+  readonly knowledgeSourceId: string;
+  readonly artifactReference: {
+    readonly type: "artifact";
+    readonly artifactId: string;
+  };
+  readonly text: string;
+  readonly score: number;
+  readonly location?: {
+    readonly page?: number;
+    readonly heading?: string;
+    readonly sourceSegmentOrdinal?: number;
+  };
+  readonly attributes: Record<string, JsonValue>;
+}
+
+export interface KnowledgeSearchFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "knowledge.search.failed";
+  readonly callId: string;
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+  };
+}
+
+export type ParentToChildKnowledgeSearchMessage =
+  KnowledgeSearchSucceededMessage | KnowledgeSearchFailedMessage;
 
 export interface RuntimeArtifactViewMessage {
   readonly id: string;
@@ -914,6 +963,103 @@ export function isParentToChildMemoryListMessage(
   }
 
   return record.type === "memory.list.failed" && isNamedError(record.error);
+}
+
+export function isKnowledgeSearchRequestMessage(
+  value: unknown,
+): value is KnowledgeSearchRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    record.type !== "knowledge.search.request" ||
+    !isNonEmptyString(record.callId) ||
+    typeof record.binding !== "string" ||
+    !isKnowledgeBindingName(record.binding) ||
+    typeof record.query !== "string" ||
+    record.query.length === 0
+  ) {
+    return false;
+  }
+
+  if (
+    record.topK !== undefined &&
+    (typeof record.topK !== "number" ||
+      !Number.isInteger(record.topK) ||
+      record.topK < 1)
+  ) {
+    return false;
+  }
+
+  if (record.filter !== undefined) {
+    if (
+      typeof record.filter !== "object" ||
+      record.filter === null ||
+      Array.isArray(record.filter)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function isParentToChildKnowledgeSearchMessage(
+  value: unknown,
+): value is ParentToChildKnowledgeSearchMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  if (record.type === "knowledge.search.succeeded") {
+    return (
+      Array.isArray(record.hits) &&
+      record.hits.every((item) => isKnowledgeHitViewMessage(item))
+    );
+  }
+
+  return (
+    record.type === "knowledge.search.failed" && isNamedError(record.error)
+  );
+}
+
+function isKnowledgeHitViewMessage(
+  value: unknown,
+): value is KnowledgeHitViewMessage {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  const reference = record.artifactReference;
+  return (
+    typeof record.knowledgeChunkId === "string" &&
+    record.knowledgeChunkId.length > 0 &&
+    typeof record.knowledgeIndexId === "string" &&
+    record.knowledgeIndexId.length > 0 &&
+    typeof record.knowledgeSourceId === "string" &&
+    record.knowledgeSourceId.length > 0 &&
+    typeof reference === "object" &&
+    reference !== null &&
+    (reference as Record<string, unknown>).type === "artifact" &&
+    typeof record.text === "string" &&
+    record.text.length > 0 &&
+    typeof record.score === "number" &&
+    typeof record.attributes === "object" &&
+    record.attributes !== null &&
+    !Array.isArray(record.attributes)
+  );
 }
 
 function isTrustedAgentContext(value: unknown): value is TrustedAgentContext {

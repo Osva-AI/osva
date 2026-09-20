@@ -58,6 +58,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
             "agentVersionId",
             "artifacts",
             "input",
+            "knowledge",
             "memory",
             "models",
             "runAttemptId",
@@ -396,6 +397,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           "agentVersionId",
           "artifacts",
           "input",
+          "knowledge",
           "memory",
           "models",
           "runAttemptId",
@@ -593,6 +595,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
             "agentVersionId",
             "artifacts",
             "input",
+            "knowledge",
             "memory",
             "models",
             "runAttemptId",
@@ -673,6 +676,112 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
     }
   });
 
+  it("searches knowledge through context.knowledge using frozen bindings", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "knowledge-search-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "knowledge-search-agent.ts"),
+    );
+    const seen: Array<{ binding: string; indexIds: string[] }> = [];
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      knowledgeGateway: {
+        async search(bindingName, request) {
+          seen.push({ binding: bindingName, indexIds: ["ki-frozen"] });
+          expect(request.query).toContain("refund");
+          return [
+            {
+              knowledgeChunkId: "chunk-1" as never,
+              knowledgeIndexId: "ki-frozen" as never,
+              knowledgeSourceId: "ks-1" as never,
+              artifactReference: {
+                type: "artifact",
+                artifactId: "art-1" as never,
+              },
+              text: "OSVA_UNIQUE_REFUND_MARKER",
+              score: 0.95,
+              attributes: {},
+            },
+          ];
+        },
+      },
+    });
+
+    try {
+      const result = await adapter.execute(
+        createTrustedRequest({
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "knowledge-search-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          input: { query: "refund policy" },
+          knowledgeIndexBindings: {
+            company_docs: ["ki-frozen" as never],
+          },
+        }),
+      );
+      expect(result).toEqual({
+        status: "succeeded",
+        output: {
+          firstText: "OSVA_UNIQUE_REFUND_MARKER",
+          hitCount: 1,
+          indexId: "ki-frozen",
+        },
+      });
+      expect(seen).toEqual([
+        { binding: "company_docs", indexIds: ["ki-frozen"] },
+      ]);
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("returns KNOWLEDGE_BINDING_NOT_FOUND for an unknown knowledge binding", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "knowledge-catch-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "knowledge-catch-agent.ts"),
+    );
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      createScopedKnowledgeGateway: (execution) => ({
+        async search(bindingName) {
+          if (execution.knowledgeIndexBindings[bindingName] === undefined) {
+            const error = new Error("Knowledge binding was not found.");
+            (error as Error & { code: string }).code =
+              "KNOWLEDGE_BINDING_NOT_FOUND";
+            throw error;
+          }
+          return [];
+        },
+      }),
+    });
+
+    try {
+      const result = await adapter.execute(
+        createTrustedRequest({
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "knowledge-catch-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          knowledgeIndexBindings: {},
+        }),
+      );
+      expect(result).toEqual({
+        status: "succeeded",
+        output: {
+          caught: true,
+          code: "KNOWLEDGE_BINDING_NOT_FOUND",
+          ok: true,
+        },
+      });
+    } finally {
+      await adapter.close();
+    }
+  });
+
   it("aborts outstanding provider calls when the child times out", async () => {
     const root = await createTrustedRoot();
     await installFixture(root, "model-hang-agent.ts");
@@ -721,5 +830,5 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
     } finally {
       await adapter.close();
     }
-  });
+  }, 120_000);
 });

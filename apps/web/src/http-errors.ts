@@ -39,6 +39,14 @@ import {
   ArtifactPayloadTooLargeError,
   ArtifactDigestMismatchError,
   ArtifactBlobUnavailableError,
+  KnowledgeError,
+  KnowledgeIdempotencyConflictError,
+  KnowledgeIndexNotFoundError,
+  KnowledgeIndexNotRetryableError,
+  KnowledgeIndexNotReadyError,
+  KnowledgeSourceNotFoundError,
+  KnowledgeInvalidFilterError,
+  KnowledgeIncompatibleIndexesError,
 } from "@osva/domain";
 import {
   AgentNotFoundError as OrchestrationAgentNotFoundError,
@@ -76,6 +84,26 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     return;
   }
 
+  if (error instanceof KnowledgeIdempotencyConflictError) {
+    sendJson(response, 409, { status: "conflict", code: error.code });
+    return;
+  }
+
+  if (error instanceof KnowledgeInvalidFilterError) {
+    sendJson(response, 400, { status: "invalid_request", code: error.code });
+    return;
+  }
+
+  if (error instanceof KnowledgeIncompatibleIndexesError) {
+    sendJson(response, 400, { status: "invalid_request", code: error.code });
+    return;
+  }
+
+  if (error instanceof KnowledgeIndexNotReadyError) {
+    sendJson(response, 409, { status: "conflict", code: error.code });
+    return;
+  }
+
   if (error instanceof ArtifactPayloadTooLargeError) {
     sendJson(response, 413, { status: "payload_too_large" });
     return;
@@ -110,9 +138,24 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof OrchestrationAgentVersionNotFoundError ||
     error instanceof OrchestrationRunNotFoundError ||
     error instanceof OrchestrationRunAttemptNotFoundError ||
-    error instanceof ArtifactNotFoundError
+    error instanceof ArtifactNotFoundError ||
+    error instanceof KnowledgeSourceNotFoundError ||
+    error instanceof KnowledgeIndexNotFoundError
   ) {
     sendJson(response, 404, { status: "not_found" });
+    return;
+  }
+
+  if (error instanceof KnowledgeIndexNotRetryableError) {
+    sendJson(response, 409, {
+      status: "conflict",
+      code: error.code,
+    });
+    return;
+  }
+
+  if (error instanceof KnowledgeError) {
+    sendJson(response, 502, { status: "unavailable", code: error.code });
     return;
   }
 

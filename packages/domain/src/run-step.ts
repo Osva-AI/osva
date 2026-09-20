@@ -257,6 +257,22 @@ function assertKindTarget(props: RunStepIdentityProps): void {
     return;
   }
 
+  if (props.kind === "KNOWLEDGE") {
+    if (props.modelProfileVersionId !== undefined) {
+      throw new DomainInvariantError(
+        "KNOWLEDGE RunStep must not carry modelProfileVersionId.",
+      );
+    }
+
+    if (props.toolVersionId !== undefined) {
+      throw new DomainInvariantError(
+        "KNOWLEDGE RunStep must not carry toolVersionId.",
+      );
+    }
+
+    return;
+  }
+
   if (props.toolVersionId === undefined) {
     throw new DomainInvariantError("TOOL RunStep.toolVersionId is required.");
   }

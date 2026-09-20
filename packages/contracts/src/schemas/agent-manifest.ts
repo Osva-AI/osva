@@ -17,6 +17,12 @@ import {
 import { TOOL_BINDING_NAME_PATTERN } from "../tool-gateway.js";
 import { jsonSchemaRecordSchema } from "./json-schema.js";
 import {
+  KNOWLEDGE_BINDING_NAME_PATTERN,
+  KNOWLEDGE_MAX_INDEX_IDS_PER_BINDING,
+  KNOWLEDGE_MAX_MANIFEST_BINDINGS,
+} from "../knowledge-runtime.js";
+import {
+  knowledgeIndexIdSchema,
   memoryNamespaceIdSchema,
   modelProfileVersionIdSchema,
   toolVersionIdSchema,
@@ -136,6 +142,32 @@ const agentManifestMemorySchema = z.record(
   agentManifestMemoryBindingSchema,
 );
 
+const agentManifestKnowledgeBindingSchema = z.strictObject({
+  knowledgeIndexIds: z
+    .array(knowledgeIndexIdSchema)
+    .min(1)
+    .max(KNOWLEDGE_MAX_INDEX_IDS_PER_BINDING)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "knowledgeIndexIds must not contain duplicates.",
+    }),
+});
+
+const agentManifestKnowledgeSchema = z
+  .record(
+    z.string().regex(KNOWLEDGE_BINDING_NAME_PATTERN, {
+      message:
+        "knowledge binding names must start with a letter and use only letters, digits, '_' or '-'.",
+    }),
+    agentManifestKnowledgeBindingSchema,
+  )
+  .refine(
+    (bindings) =>
+      Object.keys(bindings).length <= KNOWLEDGE_MAX_MANIFEST_BINDINGS,
+    {
+      message: `knowledge may contain at most ${KNOWLEDGE_MAX_MANIFEST_BINDINGS} bindings.`,
+    },
+  );
+
 export const agentManifestSchema = z.strictObject({
   schemaVersion: z.literal(AGENT_MANIFEST_SCHEMA_VERSION),
   key: z.string().min(1),
@@ -148,4 +180,5 @@ export const agentManifestSchema = z.strictObject({
   models: agentManifestModelsSchema.optional(),
   tools: agentManifestToolsSchema.optional(),
   memory: agentManifestMemorySchema.optional(),
+  knowledge: agentManifestKnowledgeSchema.optional(),
 });

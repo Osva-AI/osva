@@ -92,6 +92,7 @@ async function seedRunningExecution() {
       modelProfileVersionBindings: {},
       toolVersionBindings: {},
       memoryNamespaceBindings: {},
+      knowledgeIndexBindings: {},
     }),
     input: {},
     createdAt: NOW,
@@ -124,6 +125,7 @@ describe("execution bootstrap", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
 
     const exp = NOW.getTime() + 5_000 + CAPABILITY_TOKEN_SKEW_MS;
@@ -164,6 +166,7 @@ describe("execution bootstrap", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
 
     const exp = NOW.getTime() + 5_000;
@@ -200,6 +203,7 @@ describe("execution bootstrap", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
 
     const exp = NOW.getTime() + 1_000;
@@ -232,6 +236,7 @@ describe("execution bootstrap", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
 
     const exp = NOW.getTime() + 5_000;
@@ -266,6 +271,7 @@ describe("execution bootstrap", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
 
     const exp = NOW.getTime() + 5_000;
@@ -318,6 +324,7 @@ describe("execution bootstrap", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
 
     const exp = NOW.getTime() + 5_000;

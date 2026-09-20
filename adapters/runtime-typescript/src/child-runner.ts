@@ -11,6 +11,10 @@ import {
   ArtifactCapabilityError,
 } from "./artifact-capability.js";
 import {
+  createTrustedAgentKnowledge,
+  KnowledgeCapabilityError,
+} from "./knowledge-capability.js";
+import {
   createTrustedAgentMemory,
   MemoryCapabilityError,
 } from "./memory-capability.js";
@@ -53,6 +57,7 @@ async function handle(raw: unknown): Promise<void> {
       models: createTrustedAgentModels(),
       tools: createTrustedAgentTools(),
       memory: createTrustedAgentMemory(),
+      knowledge: createTrustedAgentKnowledge(),
       artifacts: createTrustedAgentArtifacts(),
     });
     const output: unknown = await run(context);
@@ -81,6 +86,11 @@ async function handle(raw: unknown): Promise<void> {
     }
 
     if (error instanceof MemoryCapabilityError) {
+      sendFailure(error.code, error.message);
+      return;
+    }
+
+    if (error instanceof KnowledgeCapabilityError) {
       sendFailure(error.code, error.message);
       return;
     }

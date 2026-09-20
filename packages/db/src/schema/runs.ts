@@ -9,7 +9,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { MemoryNamespaceBinding } from "@osva/contracts";
+import type { KnowledgeIndexId, MemoryNamespaceBinding } from "@osva/contracts";
 
 import { agentVersions } from "./agent-versions.js";
 import { agents } from "./agents.js";
@@ -33,6 +33,10 @@ export const runs = pgTable(
       .default({}),
     memoryNamespaceBindings: jsonb("memory_namespace_bindings")
       .$type<Readonly<Record<string, MemoryNamespaceBinding>>>()
+      .notNull()
+      .default({}),
+    knowledgeIndexBindings: jsonb("knowledge_index_bindings")
+      .$type<Readonly<Record<string, readonly KnowledgeIndexId[]>>>()
       .notNull()
       .default({}),
     evaluationRunId: text("evaluation_run_id"),

@@ -27,6 +27,7 @@ import {
   RunNotFoundError,
 } from "./errors.js";
 import { jsonValuesEqual } from "./json-equality.js";
+import { knowledgeIndexBindingsFromManifest } from "./knowledge-index-bindings.js";
 import { memoryNamespaceBindingsFromManifest } from "./memory-bindings.js";
 import { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 import { toolVersionBindingsFromManifest } from "./tool-bindings.js";
@@ -179,6 +180,9 @@ export class LaunchEvaluationRun {
           options.agentVersion.manifest,
         ),
         memoryNamespaceBindings: memoryNamespaceBindingsFromManifest(
+          options.agentVersion.manifest,
+        ),
+        knowledgeIndexBindings: knowledgeIndexBindingsFromManifest(
           options.agentVersion.manifest,
         ),
       }),

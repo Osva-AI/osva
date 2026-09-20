@@ -5,6 +5,7 @@ import type {
   EvaluationRunId,
   MemoryAccessMode,
   MemoryNamespaceBinding,
+  KnowledgeIndexId,
   MemoryNamespaceId,
   ModelProfileVersionId,
   ToolVersionId,
@@ -30,6 +31,7 @@ export function runToRow(run: Run) {
       run.effectiveBindings.modelProfileVersionBindings,
     toolVersionBindings: run.effectiveBindings.toolVersionBindings,
     memoryNamespaceBindings: run.effectiveBindings.memoryNamespaceBindings,
+    knowledgeIndexBindings: run.effectiveBindings.knowledgeIndexBindings,
     evaluationRunId: run.evaluationRunId ?? null,
     evaluationCaseId: run.evaluationCaseId ?? null,
     input: run.input,
@@ -53,6 +55,9 @@ export function runFromRow(row: RunRow): Run {
       toolVersionBindings: toToolVersionBindings(row.toolVersionBindings),
       memoryNamespaceBindings: toMemoryNamespaceBindings(
         row.memoryNamespaceBindings,
+      ),
+      knowledgeIndexBindings: toKnowledgeIndexBindings(
+        row.knowledgeIndexBindings,
       ),
     }),
     input: row.input,
@@ -153,6 +158,44 @@ function toMemoryNamespaceBindings(
       namespaceId: namespaceId as MemoryNamespaceId,
       access: access as MemoryAccessMode,
     };
+  }
+
+  return bindings;
+}
+
+function toKnowledgeIndexBindings(
+  value: unknown,
+): Readonly<Record<string, readonly KnowledgeIndexId[]>> {
+  if (value === null || value === undefined) {
+    return {};
+  }
+
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new DomainInvariantError(
+      "Persisted knowledgeIndexBindings must be a map.",
+    );
+  }
+
+  const bindings: Record<string, readonly KnowledgeIndexId[]> = {};
+
+  for (const [key, ids] of Object.entries(value)) {
+    if (!Array.isArray(ids)) {
+      throw new DomainInvariantError(
+        "Persisted knowledgeIndexBindings values must be arrays.",
+      );
+    }
+
+    const parsed: KnowledgeIndexId[] = [];
+    for (const id of ids) {
+      if (typeof id !== "string" || id.length === 0) {
+        throw new DomainInvariantError(
+          "Persisted knowledgeIndexBindings entries must be non-empty strings.",
+        );
+      }
+      parsed.push(id as KnowledgeIndexId);
+    }
+
+    bindings[key] = parsed;
   }
 
   return bindings;

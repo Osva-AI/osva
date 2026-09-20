@@ -136,10 +136,11 @@ These are implementation choices, not permanent domain dependencies.
 The Compose credentials (`osva` / `osva` / `osva`) are local-development defaults
 only. They are not production-safe.
 
-If Docker is unavailable, `pnpm test:integration` can still use installed
-PostgreSQL 17 binaries or `OSVA_TEST_DATABASE_URL`, and a real Valkey URL via
-`OSVA_TEST_VALKEY_URL`. Those are test fallbacks, not the documented contributor
-path.
+`pnpm test:integration` provisions ephemeral PostgreSQL via Docker
+(`pgvector/pgvector:pg17`) unless you set `OSVA_TEST_DATABASE_URL` to another
+pgvector-capable database. Plain local PostgreSQL without the `vector` extension
+is not supported for integration tests. Valkey integration tests need a real URL
+via `OSVA_TEST_VALKEY_URL`.
 
 ### Setup
 
@@ -281,6 +282,24 @@ ModelProfileVersion IDs. `OPENAI_API_KEY` is read only in the worker process
 when composing the OpenAI provider adapter. If it is absent, the worker still
 starts and model calls fail with `MODEL_PROVIDER_UNAVAILABLE`. ToolGateway is
 not available to agent code.
+
+**Knowledge (Stage 3.5):** bind immutable READY `KnowledgeIndex` IDs in the
+Agent manifest under `knowledge` (logical names such as `company_docs`). CreateRun
+freezes those IDs on the Run; runtime search never accepts arbitrary index IDs
+from agent code. Trusted TypeScript agents call:
+
+```ts
+const hits = await context.knowledge.search(
+  "company_docs",
+  "What is our returns policy?",
+  { topK: 3 },
+);
+```
+
+Remote/container agents use the Node or Python runtime SDK
+(`context.knowledge.search({ binding, query, topK })`). Retrieved chunks are
+untrusted data; OSVA does not inject them into prompts automatically. See
+[`docs/implementation/STAGE-3-5-KNOWLEDGE-RETRIEVAL.md`](docs/implementation/STAGE-3-5-KNOWLEDGE-RETRIEVAL.md).
 
 Schedule API:
 

@@ -35,6 +35,9 @@ export type {
   TeamId,
   GoalId,
   AssignmentId,
+  KnowledgeSourceId,
+  KnowledgeIndexId,
+  KnowledgeChunkId,
 } from "./ids.js";
 
 export type { JsonSchemaRecord } from "./json-schema.js";
@@ -195,6 +198,72 @@ export {
   isArtifactErrorCode,
 } from "./artifact-gateway.js";
 export type { ArtifactErrorCode } from "./artifact-gateway.js";
+
+export {
+  KNOWLEDGE_ATTRIBUTES_MAX_SERIALIZED_BYTES,
+  KNOWLEDGE_CHUNK_TEXT_MAX_BYTES,
+  KNOWLEDGE_LOCATION_MAX_SERIALIZED_BYTES,
+  KNOWLEDGE_MAX_EXTRACTED_BYTES,
+  KNOWLEDGE_MAX_SOURCE_BYTES,
+  KNOWLEDGE_MAX_TEXT_SEGMENTS,
+  KNOWLEDGE_CHUNKER_KEY_RECURSIVE_TEXT,
+  KNOWLEDGE_CHUNKER_VERSION_RECURSIVE_TEXT,
+  KNOWLEDGE_DEFAULT_CHUNK_OVERLAP_CHARS,
+  KNOWLEDGE_DEFAULT_CHUNK_SIZE_CHARS,
+  KNOWLEDGE_DISTANCE_METRICS,
+  KNOWLEDGE_ERROR_CODES,
+  KNOWLEDGE_EXTRACTION_MEDIA_TYPE,
+  KNOWLEDGE_IDEMPOTENCY_KEY_MAX_LENGTH,
+  KNOWLEDGE_INDEX_STATES,
+  KNOWLEDGE_MAX_CHUNKS_PER_INDEX,
+  KNOWLEDGE_MAX_FILTER_KEYS,
+  KNOWLEDGE_MAX_INDEX_IDS_PER_RETRIEVE,
+  KNOWLEDGE_MAX_QUERY_LENGTH,
+  KNOWLEDGE_MAX_TOP_K,
+  KNOWLEDGE_PARSER_KEY_OSVA_NATIVE,
+  KNOWLEDGE_PARSER_VERSION_OSVA_NATIVE,
+  KNOWLEDGE_SOURCE_KEY_MAX_LENGTH,
+  KNOWLEDGE_SOURCE_NAME_MAX_LENGTH,
+  isKnowledgeDistanceMetric,
+  isKnowledgeErrorCode,
+  isKnowledgeIndexState,
+} from "./knowledge.js";
+export type {
+  KnowledgeChunkLocationV1,
+  KnowledgeDistanceMetric,
+  KnowledgeErrorCode,
+  KnowledgeHitV1,
+  KnowledgeIndexResourceV1,
+  KnowledgeIndexState,
+  KnowledgeSourceResourceV1,
+  KnowledgeTextSegmentV1,
+} from "./knowledge.js";
+
+export type {
+  CreateKnowledgeIndexRequestV1,
+  CreateKnowledgeSourceRequestV1,
+  KnowledgeIndexListResourceV1,
+  KnowledgeSourceListResourceV1,
+  ListKnowledgeIndexesQueryV1,
+  ListKnowledgeSourcesQueryV1,
+  RetryKnowledgeIndexRequestV1,
+} from "./knowledge-registry.js";
+
+export type {
+  KnowledgeRetrieveRequestV1,
+  KnowledgeRetrieveResponseV1,
+} from "./knowledge-retrieval.js";
+
+export {
+  KNOWLEDGE_BINDING_NAME_PATTERN,
+  KNOWLEDGE_MAX_INDEX_IDS_PER_BINDING,
+  KNOWLEDGE_MAX_MANIFEST_BINDINGS,
+  isKnowledgeBindingName,
+} from "./knowledge-runtime.js";
+export type {
+  KnowledgeSearchRequestV1,
+  RuntimeKnowledgeCapability,
+} from "./knowledge-runtime.js";
 
 export type {
   ExecutionError,

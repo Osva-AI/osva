@@ -20,6 +20,9 @@ through MemoryGateway. Namespaces are mutable containers; AgentVersion memory
 bindings are immutable execution snapshots. This is not vector or semantic
 memory.
 
-OSS 1.0 introduces general KnowledgeSource/retrieval adapters.
+Stage 3.5 Run 1 (control plane) adds durable KnowledgeSource, KnowledgeIndex,
+KnowledgeChunk, and pgvector projections. Runtime `context.knowledge.search` returns hits as untrusted data; agents choose how to use them (no automatic prompt injection).
+(mediated retrieval; runtimes never receive index IDs or vector credentials).
 
-OSVA does not become a vector database.
+OSVA does not become a vector database; vector rows are infrastructure
+projections of KnowledgeChunk embeddings.

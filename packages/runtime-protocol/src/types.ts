@@ -199,6 +199,32 @@ export interface RuntimeMemoryListFailure {
 export type RuntimeMemoryListResponse =
   RuntimeMemoryListSuccess | RuntimeMemoryListFailure;
 
+export interface RuntimeKnowledgeSearchRequest {
+  readonly protocolVersion: RuntimeProtocolVersion;
+  readonly executionId: string;
+  readonly bindingName: string;
+  readonly query: string;
+  readonly topK?: number;
+  readonly filter?: JsonObject;
+}
+
+export interface RuntimeKnowledgeSearchSuccess {
+  readonly protocolVersion: RuntimeProtocolVersion;
+  readonly executionId: string;
+  readonly outcome: "SUCCEEDED";
+  readonly hits: readonly import("@osva/contracts").KnowledgeHitV1[];
+}
+
+export interface RuntimeKnowledgeSearchFailure {
+  readonly protocolVersion: RuntimeProtocolVersion;
+  readonly executionId: string;
+  readonly outcome: "FAILED";
+  readonly error: RuntimeProtocolError;
+}
+
+export type RuntimeKnowledgeSearchResponse =
+  RuntimeKnowledgeSearchSuccess | RuntimeKnowledgeSearchFailure;
+
 export interface RuntimeArtifactView {
   readonly id: ArtifactId;
   readonly name: string;

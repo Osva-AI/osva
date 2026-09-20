@@ -141,6 +141,20 @@
       "when": 1789512000000,
       "tag": "0019_artifact_storage_slice",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789513000000,
+      "tag": "0020_knowledge_retrieval_slice",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1789514000000,
+      "tag": "0021_knowledge_runtime_slice",
+      "breakpoints": true
     }
   ]
 }

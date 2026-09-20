@@ -16,6 +16,10 @@ export const OSVA_ATTR = {
   TERMINAL_STATUS: "osva.terminal_status",
   ERROR_CATEGORY: "osva.error_category",
   MODEL_PROFILE_VERSION_ID: "osva.model_profile_version.id",
+  KNOWLEDGE_BINDING_NAME: "osva.knowledge.binding_name",
+  KNOWLEDGE_INDEX_COUNT: "osva.knowledge.index_count",
+  KNOWLEDGE_TOP_K: "osva.knowledge.top_k",
+  KNOWLEDGE_RESULT_COUNT: "osva.knowledge.result_count",
 } as const;
 
 /** Metric attribute keys allowed on low-cardinality counters/histograms. */

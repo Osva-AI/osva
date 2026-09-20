@@ -19,6 +19,7 @@ import type {
   MemorySetRequest,
 } from "@osva/contracts";
 import {
+  KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
   TOOL_ERROR_CODES,
@@ -53,6 +54,7 @@ import {
   isMemoryGetRequestMessage,
   isMemoryListRequestMessage,
   isMemorySetRequestMessage,
+  isKnowledgeSearchRequestMessage,
   isModelGenerateRequestMessage,
   isToolInvokeRequestMessage,
   type ExecuteChildRequest,
@@ -60,6 +62,7 @@ import {
   type MemoryGetRequestMessage,
   type MemoryListRequestMessage,
   type MemorySetRequestMessage,
+  type KnowledgeSearchRequestMessage,
   type ModelGenerateRequestMessage,
   type ToolInvokeRequestMessage,
 } from "./protocol.js";
@@ -94,6 +97,10 @@ export interface TrustedTypeScriptRuntimeAdapterOptions {
   readonly createScopedMemoryGateway?: (
     execution: ExecutionRequest,
   ) => RuntimeMemoryGateway | undefined;
+  readonly knowledgeGateway?: RuntimeKnowledgeGateway;
+  readonly createScopedKnowledgeGateway?: (
+    execution: ExecutionRequest,
+  ) => RuntimeKnowledgeGateway | undefined;
   readonly artifactRuntimeApplication?: TrustedRuntimeArtifactApplication;
 }
 
@@ -146,6 +153,17 @@ export interface RuntimeToolGateway {
   invoke(request: ToolInvokeRequest): Promise<JsonValue>;
 }
 
+export interface RuntimeKnowledgeGateway {
+  search(
+    bindingName: string,
+    request: {
+      readonly query: string;
+      readonly topK?: number;
+      readonly filter?: import("@osva/contracts").JsonObject;
+    },
+  ): Promise<readonly import("@osva/contracts").KnowledgeHitV1[]>;
+}
+
 interface LiveExecution {
   readonly child: ChildProcess;
   readonly abort: AbortController;
@@ -167,6 +185,10 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
   private readonly createScopedMemoryGateway:
     | ((execution: ExecutionRequest) => RuntimeMemoryGateway | undefined)
     | undefined;
+  private readonly knowledgeGateway: RuntimeKnowledgeGateway | undefined;
+  private readonly createScopedKnowledgeGateway:
+    | ((execution: ExecutionRequest) => RuntimeKnowledgeGateway | undefined)
+    | undefined;
   private readonly artifactRuntimeApplication:
     TrustedRuntimeArtifactApplication | undefined;
   private readonly liveExecutions = new Set<LiveExecution>();
@@ -182,6 +204,8 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
     this.createScopedToolGateway = options.createScopedToolGateway;
     this.memoryGateway = options.memoryGateway;
     this.createScopedMemoryGateway = options.createScopedMemoryGateway;
+    this.knowledgeGateway = options.knowledgeGateway;
+    this.createScopedKnowledgeGateway = options.createScopedKnowledgeGateway;
     this.artifactRuntimeApplication = options.artifactRuntimeApplication;
   }
 
@@ -323,6 +347,8 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
           this.createScopedToolGateway?.(request) ?? this.toolGateway,
         memoryGateway:
           this.createScopedMemoryGateway?.(request) ?? this.memoryGateway,
+        knowledgeGateway:
+          this.createScopedKnowledgeGateway?.(request) ?? this.knowledgeGateway,
         artifactRuntimeApplication: this.artifactRuntimeApplication,
         modelBindings: request.modelProfileVersionBindings,
         toolBindings: request.toolVersionBindings,
@@ -351,6 +377,7 @@ function waitForChildResult(options: {
   readonly modelGateway: RuntimeModelGateway | undefined;
   readonly toolGateway: RuntimeToolGateway | undefined;
   readonly memoryGateway: RuntimeMemoryGateway | undefined;
+  readonly knowledgeGateway: RuntimeKnowledgeGateway | undefined;
   readonly artifactRuntimeApplication:
     TrustedRuntimeArtifactApplication | undefined;
   readonly modelBindings: ExecutionRequest["modelProfileVersionBindings"];
@@ -366,6 +393,7 @@ function waitForChildResult(options: {
     modelGateway,
     toolGateway,
     memoryGateway,
+    knowledgeGateway,
     artifactRuntimeApplication,
     modelBindings,
     toolBindings,
@@ -470,6 +498,17 @@ function waitForChildResult(options: {
           message: raw,
           memoryGateway,
           execution,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isKnowledgeSearchRequestMessage(raw)) {
+        void handleKnowledgeSearchRequest({
+          child,
+          message: raw,
+          knowledgeGateway,
           logger,
           isSettled: () => settled,
         });
@@ -1043,6 +1082,91 @@ function mapMemoryGatewayFailure(error: unknown): {
   return {
     code: MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
     message: "Memory operation failed.",
+  };
+}
+
+async function handleKnowledgeSearchRequest(options: {
+  readonly child: ChildProcess;
+  readonly message: KnowledgeSearchRequestMessage;
+  readonly knowledgeGateway: RuntimeKnowledgeGateway | undefined;
+  readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
+  readonly isSettled: () => boolean;
+}): Promise<void> {
+  const { child, message, knowledgeGateway, logger, isSettled } = options;
+
+  const sendFailure = (code: string, errorMessage: string) => {
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "knowledge.search.failed",
+      callId: message.callId,
+      error: {
+        code,
+        message: sanitizePublicErrorMessage(
+          errorMessage,
+          "Knowledge search failed.",
+        ),
+      },
+    });
+  };
+
+  if (knowledgeGateway === undefined) {
+    sendFailure(
+      KNOWLEDGE_ERROR_CODES.KNOWLEDGE_UNAVAILABLE,
+      "Knowledge capability is unavailable.",
+    );
+    return;
+  }
+
+  try {
+    const hits = await knowledgeGateway.search(message.binding, {
+      query: message.query,
+      topK: message.topK,
+      filter: message.filter,
+    });
+
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+
+    child.send({
+      v: 1,
+      type: "knowledge.search.succeeded",
+      callId: message.callId,
+      hits,
+    });
+  } catch (error) {
+    logger?.error("runtime.knowledge_search_failed", error);
+    const mapped = mapKnowledgeGatewayFailure(error);
+    sendFailure(mapped.code, mapped.message);
+  }
+}
+
+function mapKnowledgeGatewayFailure(error: unknown): {
+  readonly code: string;
+  readonly message: string;
+} {
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.length > 0
+  ) {
+    const message =
+      error instanceof Error ? error.message : "Knowledge search failed.";
+    return {
+      code: error.code,
+      message: sanitizePublicErrorMessage(message, "Knowledge search failed."),
+    };
+  }
+
+  return {
+    code: KNOWLEDGE_ERROR_CODES.KNOWLEDGE_UNAVAILABLE,
+    message: "Knowledge search failed.",
   };
 }
 

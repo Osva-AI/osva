@@ -113,6 +113,7 @@ describe("createExecutionRequest", () => {
         run.effectiveBindings.modelProfileVersionBindings,
       toolVersionBindings: run.effectiveBindings.toolVersionBindings,
       memoryNamespaceBindings: run.effectiveBindings.memoryNamespaceBindings,
+      knowledgeIndexBindings: run.effectiveBindings.knowledgeIndexBindings,
       toolGrants: [],
       timeoutMs: 45_000,
       policyContext: {},
@@ -131,6 +132,23 @@ describe("createExecutionRequest", () => {
         agentVersion: createVersion(),
       }),
     ).toThrow(DomainInvariantError);
+  });
+
+  it("keeps frozen knowledge bindings when AgentVersion manifest changes later", () => {
+    const indexA = "ki-a" as import("@osva/contracts").KnowledgeIndexId;
+    const run = createRun();
+    const frozen = createExecutionRequest({
+      run: Run.rehydrate({
+        ...run,
+        effectiveBindings: EffectiveRunBindings.create({
+          ...run.effectiveBindings,
+          knowledgeIndexBindings: { company_docs: [indexA] },
+        }),
+      }),
+      runAttempt: createAttempt(),
+      agentVersion: createVersion(agentVersionId, agentId, 30_000),
+    });
+    expect(frozen.knowledgeIndexBindings).toEqual({ company_docs: [indexA] });
   });
 
   it("rejects an AgentVersion that does not match effective bindings", () => {

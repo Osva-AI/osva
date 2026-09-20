@@ -1,4 +1,4 @@
-export const RUN_STEP_KINDS = ["MODEL", "TOOL", "MEMORY"] as const;
+export const RUN_STEP_KINDS = ["MODEL", "TOOL", "MEMORY", "KNOWLEDGE"] as const;
 
 export type RunStepKind = (typeof RUN_STEP_KINDS)[number];
 

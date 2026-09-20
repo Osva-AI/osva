@@ -45,3 +45,6 @@ export const roleIdSchema = osvaIdSchema<"RoleId">();
 export const teamIdSchema = osvaIdSchema<"TeamId">();
 export const goalIdSchema = osvaIdSchema<"GoalId">();
 export const assignmentIdSchema = osvaIdSchema<"AssignmentId">();
+export const knowledgeSourceIdSchema = osvaIdSchema<"KnowledgeSourceId">();
+export const knowledgeIndexIdSchema = osvaIdSchema<"KnowledgeIndexId">();
+export const knowledgeChunkIdSchema = osvaIdSchema<"KnowledgeChunkId">();

@@ -118,6 +118,24 @@ PostgreSQL; they use the BlobStore abstraction (Community filesystem in Run 1).
 - historical Runs are not destructively rewritten.
 - queue-engine tables are infrastructure, not product tables.
 
+## Stage 3.5 knowledge tables (Run 1)
+
+Implemented:
+
+```text
+knowledge_sources
+knowledge_indexes
+knowledge_chunks
+knowledge_vectors
+```
+
+`knowledge_sources` is workspace-owned with unique `(workspace_id, key)` and
+references one `artifacts` row. `knowledge_indexes` owns ingestion lifecycle
+(`PENDING`, `RUNNING`, `READY`, `FAILED`), frozen pipeline configuration, and
+optional `extracted_artifact_id`. `knowledge_chunks` stores canonical retrieval
+text with unique `(knowledge_index_id, ordinal)`. `knowledge_vectors` is a
+pgvector projection keyed by `knowledge_chunk_id`, not a domain aggregate.
+
 ## Stage 0 identifier storage
 
 Stage 0 persists OSVA IDs as PostgreSQL `text`, not `uuid`.

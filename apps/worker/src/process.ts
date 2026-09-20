@@ -44,18 +44,27 @@ import {
   PostgresEvaluationSuiteRepository,
   PostgresMemoryNamespaceRepository,
   PostgresModelProfileRepository,
+  PostgresKnowledgeRepository,
   PostgresToolRepository,
   PostgresRunRepository,
   PostgresArtifactRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
+import { PgVectorStore } from "@osva/adapters-vector-pgvector";
+import { OpenAiCompatibleEmbeddingAdapter } from "@osva/adapters-embedding-openai-compatible";
 import type { ArtifactId, JsonObject } from "@osva/contracts";
 import {
+  KnowledgeRetriever,
+  RuntimeKnowledgeGateway,
   createArtifactApplication,
   createEvaluationRunApplication,
   createRuntimeArtifactApplication,
 } from "@osva/domain";
+import {
+  DeterministicEmbeddingProviderAdapter,
+  EmbeddingGateway,
+} from "@osva/embedding-gateway";
 import { MemoryGateway } from "@osva/memory-gateway";
 import { ModelGateway, type ModelProviderAdapter } from "@osva/model-gateway";
 import {
@@ -174,6 +183,34 @@ export function createWorkerProcess(
         policy: new DefaultToolPolicy(),
       });
       const memoryGateway = new MemoryGateway({ memoryNamespaces });
+      const knowledgeRepository = new PostgresKnowledgeRepository(database);
+      const vectorStore = new PgVectorStore(database);
+      const embeddingProviders: Record<
+        string,
+        DeterministicEmbeddingProviderAdapter | OpenAiCompatibleEmbeddingAdapter
+      > = {
+        DETERMINISTIC: new DeterministicEmbeddingProviderAdapter(),
+      };
+      const openAiKey = env.OSVA_KNOWLEDGE_EMBEDDING_API_KEY?.trim();
+      if (openAiKey !== undefined && openAiKey.length > 0) {
+        embeddingProviders.OPENAI_COMPATIBLE =
+          new OpenAiCompatibleEmbeddingAdapter({
+            provider: "OPENAI_COMPATIBLE",
+            apiKey: openAiKey,
+            baseURL: env.OSVA_KNOWLEDGE_EMBEDDING_BASE_URL?.trim(),
+          });
+      }
+      const embeddingGateway = new EmbeddingGateway({
+        providers: embeddingProviders,
+      });
+      const knowledgeRetriever = new KnowledgeRetriever({
+        knowledge: knowledgeRepository,
+        embeddings: embeddingGateway,
+        vectorStore,
+      });
+      const domainKnowledgeGateway = new RuntimeKnowledgeGateway({
+        retriever: knowledgeRetriever,
+      });
       const workspaces = new PostgresWorkspaceRepository(database);
       const artifactsRepository = new PostgresArtifactRepository(database);
       const artifactBlobStore = createArtifactBlobStore(artifactStorage);
@@ -221,6 +258,12 @@ export function createWorkerProcess(
         createRunStepRecorder(execution, recorderDeps).wrapMemoryGateway(
           memoryGateway,
         );
+      const scopedKnowledge = (
+        execution: Parameters<typeof createRunStepRecorder>[0],
+      ) =>
+        createRunStepRecorder(execution, recorderDeps).wrapKnowledgeGateway(
+          domainKnowledgeGateway,
+        );
 
       let capabilityBaseUrl = config.runtimeCapabilityBaseUrl;
       const executionBootstrapStore = new RuntimeExecutionBootstrapStore();
@@ -238,6 +281,7 @@ export function createWorkerProcess(
           createScopedModelGateway: scopedModel,
           createScopedToolGateway: scopedTool,
           createScopedMemoryGateway: scopedMemory,
+          createScopedKnowledgeGateway: scopedKnowledge,
           artifactApplication: runtimeArtifactApplication,
           maxArtifactBytes: artifactStorage.maxBytes,
         });
@@ -292,6 +336,7 @@ export function createWorkerProcess(
                 createScopedModelGateway: scopedModel,
                 createScopedToolGateway: scopedTool,
                 createScopedMemoryGateway: scopedMemory,
+                createScopedKnowledgeGateway: scopedKnowledge,
                 artifactRuntimeApplication: createTrustedRuntimeArtifactBridge(
                   runtimeArtifactApplication,
                 ),

@@ -5,6 +5,7 @@ export const OSVA_SPAN = {
   RUNTIME_EXECUTE: "osva.runtime.execute",
   MODEL_GENERATE_TEXT: "osva.model.generate_text",
   TOOL_INVOKE: "osva.tool.invoke",
+  KNOWLEDGE_RETRIEVE: "osva.knowledge.retrieve",
   MEMORY_OPERATION: "osva.memory.operation",
   WORKFLOW_RECONCILE: "osva.workflow.reconcile",
   WORKFLOW_NODE_EXECUTE: "osva.workflow.node.execute",

@@ -15,6 +15,7 @@
   "dependencies": {
     "@osva/adapters-artifact-storage": "workspace:*",
     "@osva/adapters-bullmq": "workspace:*",
+    "@osva/adapters-embedding-openai-compatible": "workspace:*",
     "@osva/adapters-opentelemetry": "workspace:*",
     "@osva/adapters-mcp-client": "workspace:*",
     "@osva/adapters-model-anthropic": "workspace:*",
@@ -23,9 +24,11 @@
     "@osva/adapters-runtime-container": "workspace:*",
     "@osva/adapters-runtime-http": "workspace:*",
     "@osva/adapters-runtime-typescript": "workspace:*",
+    "@osva/adapters-vector-pgvector": "workspace:*",
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/domain": "workspace:*",
+    "@osva/embedding-gateway": "workspace:*",
     "@osva/memory-gateway": "workspace:*",
     "@osva/model-gateway": "workspace:*",
     "@osva/observability": "workspace:*",
@@ -36,6 +39,7 @@
   },
   "devDependencies": {
     "@osva/adapters-artifact-filesystem": "workspace:*",
+    "@osva/adapters-knowledge-parser": "workspace:*",
     "@osva/adapters-memory": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva/sdk": "workspace:*",

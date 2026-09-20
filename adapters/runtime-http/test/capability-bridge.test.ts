@@ -19,6 +19,7 @@ import {
   Agent,
   AgentVersion,
   EffectiveRunBindings,
+  KnowledgeBindingNotFoundError,
   ModelProfile,
   ModelProfileVersion,
   Run,
@@ -54,6 +55,9 @@ async function seedRunningExecution(options?: {
   readonly attemptId?: RunAttemptId;
   readonly workspaceId?: WorkspaceId;
   readonly succeedAttempt?: boolean;
+  readonly knowledgeIndexBindings?: Readonly<
+    Record<string, readonly import("@osva/contracts").KnowledgeIndexId[]>
+  >;
 }) {
   const runs = new MemoryRunRepository();
   const agents = new MemoryAgentRepository();
@@ -105,6 +109,7 @@ async function seedRunningExecution(options?: {
       modelProfileVersionBindings: { primary: modelProfileVersionId },
       toolVersionBindings: { echo: toolVersionId },
       memoryNamespaceBindings: {},
+      knowledgeIndexBindings: options?.knowledgeIndexBindings ?? {},
     }),
     input: { prompt: "hello" },
     createdAt: NOW,
@@ -206,6 +211,7 @@ describe("RuntimeCapabilityBridge", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
     const server = await startRuntimeCapabilityServer({
       handler: bridge.handle,
@@ -264,6 +270,7 @@ describe("RuntimeCapabilityBridge", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
     const server = await startRuntimeCapabilityServer({
       handler: bridge.handle,
@@ -308,6 +315,7 @@ describe("RuntimeCapabilityBridge", () => {
         }).wrapModelGateway(inner),
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
     const server = await startRuntimeCapabilityServer({
       handler: bridge.handle,
@@ -382,6 +390,7 @@ describe("RuntimeCapabilityBridge", () => {
           ids: { createId: () => randomUUID() },
         }).wrapToolGateway(toolGateway),
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
     });
     const server = await startRuntimeCapabilityServer({
       handler: bridge.handle,
@@ -431,6 +440,107 @@ describe("RuntimeCapabilityBridge", () => {
           (step) => step.kind === "TOOL" && step.status === "SUCCEEDED",
         ),
       ).toBe(true);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("searches knowledge through the capability endpoint using frozen bindings", async () => {
+    const indexId = "ki-frozen" as import("@osva/contracts").KnowledgeIndexId;
+    const seeded = await seedRunningExecution({
+      knowledgeIndexBindings: { company_docs: [indexId] },
+    });
+
+    const bridge = new RuntimeCapabilityBridge({
+      secret: SECRET,
+      runs: seeded.runs,
+      agents: seeded.agents,
+      clock: { now: () => NOW },
+      createScopedModelGateway: () => undefined,
+      createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: (execution) =>
+        createRunStepRecorder(execution, {
+          runs: seeded.runs,
+          modelProfiles: seeded.modelProfiles,
+          clock: { now: () => NOW },
+          ids: { createId: () => randomUUID() },
+        }).wrapKnowledgeGateway({
+          async search(exec, bindingName, request) {
+            if (bindingName !== "company_docs") {
+              throw new KnowledgeBindingNotFoundError(bindingName);
+            }
+            expect(exec.knowledgeIndexBindings.company_docs).toEqual([indexId]);
+            expect(request.query).toBe("refund policy");
+            return [
+              {
+                knowledgeChunkId: "chunk-1" as never,
+                knowledgeIndexId: indexId,
+                knowledgeSourceId: "ks-1" as never,
+                artifactReference: {
+                  type: "artifact",
+                  artifactId: "art-1" as never,
+                },
+                text: "policy text",
+                score: 0.9,
+                attributes: {},
+              },
+            ];
+          },
+        }),
+    });
+
+    const server = await startRuntimeCapabilityServer({
+      host: "127.0.0.1",
+      port: 0,
+      handler: bridge.handle,
+    });
+
+    try {
+      const response = await fetch(
+        `${server.origin}${RUNTIME_CAPABILITY_PATHS.knowledgeSearch}`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${tokenFor(runAttemptId)}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            protocolVersion: "1",
+            executionId: runAttemptId,
+            bindingName: "company_docs",
+            query: "refund policy",
+            topK: 3,
+          }),
+        },
+      );
+      const body = await response.json();
+      expect(response.status).toBe(200);
+      expect(body).toMatchObject({
+        outcome: "SUCCEEDED",
+        hits: [{ text: "policy text", knowledgeIndexId: indexId }],
+      });
+
+      const unbound = await fetch(
+        `${server.origin}${RUNTIME_CAPABILITY_PATHS.knowledgeSearch}`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${tokenFor(runAttemptId)}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            protocolVersion: "1",
+            executionId: runAttemptId,
+            bindingName: "other",
+            query: "x",
+          }),
+        },
+      );
+      expect((await unbound.json()) as { outcome: string }).toMatchObject({
+        outcome: "FAILED",
+        error: { code: "KNOWLEDGE_BINDING_NOT_FOUND" },
+      });
     } finally {
       await server.close();
     }

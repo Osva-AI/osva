@@ -59,6 +59,7 @@ describe("runtime artifact capabilities", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
       artifactApplication: seeded.runtimeArtifacts,
       maxArtifactBytes: 1_048_576,
     });
@@ -173,6 +174,7 @@ describe("runtime artifact capabilities", () => {
       createScopedModelGateway: () => undefined,
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
       artifactApplication: seeded.runtimeArtifacts,
       maxArtifactBytes: 1_048_576,
     });
@@ -286,6 +288,7 @@ async function seedExecution() {
       modelProfileVersionBindings: {},
       toolVersionBindings: {},
       memoryNamespaceBindings: {},
+      knowledgeIndexBindings: {},
     }),
     input: {},
     createdAt: NOW,
@@ -385,6 +388,7 @@ async function seedCrossWorkspaceExecution(options: {
         modelProfileVersionBindings: {},
         toolVersionBindings: {},
         memoryNamespaceBindings: {},
+        knowledgeIndexBindings: {},
       }),
       input: {},
       createdAt: NOW,

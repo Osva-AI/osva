@@ -5,6 +5,8 @@ import type {
   GenerateTextRequest,
   GenerateTextResult,
   JsonValue,
+  KnowledgeHitV1,
+  KnowledgeSearchRequestV1,
   MemoryAuthorization,
   MemoryDeleteRequest,
   MemoryGetRequest,
@@ -16,6 +18,7 @@ import type {
   ToolInvokeRequest,
 } from "@osva/contracts";
 import {
+  KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
   TOOL_ERROR_CODES,
@@ -80,10 +83,28 @@ export interface RuntimeMemoryGateway {
   ): Promise<MemoryListResult>;
 }
 
+export interface RuntimeKnowledgeGateway {
+  search(
+    bindingName: string,
+    request: KnowledgeSearchRequestV1,
+  ): Promise<readonly KnowledgeHitV1[]>;
+}
+
+export interface KnowledgeGatewayDelegate {
+  search(
+    execution: ExecutionRequest,
+    bindingName: string,
+    request: KnowledgeSearchRequestV1,
+  ): Promise<readonly KnowledgeHitV1[]>;
+}
+
 export interface ScopedRunStepRecorder {
   wrapModelGateway(modelGateway: ModelGateway): RuntimeModelGateway;
   wrapToolGateway(toolGateway: ToolGateway): RuntimeToolGateway;
   wrapMemoryGateway(memoryGateway: MemoryGateway): RuntimeMemoryGateway;
+  wrapKnowledgeGateway(
+    knowledgeGateway: KnowledgeGatewayDelegate,
+  ): RuntimeKnowledgeGateway;
 }
 
 /**
@@ -114,6 +135,13 @@ export function createRunStepRecorder(
     },
     wrapMemoryGateway(memoryGateway) {
       return new ObservabilityMemoryGateway(execution, deps, memoryGateway);
+    },
+    wrapKnowledgeGateway(knowledgeGateway) {
+      return new ObservabilityKnowledgeGateway(
+        execution,
+        deps,
+        knowledgeGateway,
+      );
     },
   };
 }
@@ -532,6 +560,123 @@ function mapMemoryErrorCode(error: unknown): string {
   }
 
   return MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE;
+}
+
+class ObservabilityKnowledgeGateway implements RuntimeKnowledgeGateway {
+  constructor(
+    private readonly execution: ExecutionRequest,
+    private readonly deps: RunStepRecorderDependencies,
+    private readonly inner: KnowledgeGatewayDelegate,
+  ) {}
+
+  async search(
+    bindingName: string,
+    request: KnowledgeSearchRequestV1,
+  ): Promise<readonly KnowledgeHitV1[]> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+    const startedAt = this.deps.clock.now();
+    const runStepId = this.deps.ids.createId() as RunStepId;
+    const indexIds = this.execution.knowledgeIndexBindings[bindingName];
+    const indexCount = indexIds?.length ?? 0;
+    const topK = request.topK ?? 5;
+
+    const running = RunStep.start({
+      id: runStepId,
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      kind: "KNOWLEDGE",
+      bindingName,
+      startedAt,
+    });
+
+    try {
+      await this.deps.runs.insertRunningRunStep(running);
+    } catch (error) {
+      this.deps.logger?.error("observability.run_step_start_failed", error);
+    }
+
+    this.deps.logger?.info("observability.knowledge_step_started", {
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      runStepId,
+      kind: "KNOWLEDGE",
+      bindingName,
+    });
+
+    return telemetry.withSpan(
+      OSVA_SPAN.KNOWLEDGE_RETRIEVE,
+      {
+        [OSVA_ATTR.RUN_ID]: this.execution.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: this.execution.runAttemptId,
+        [OSVA_ATTR.KNOWLEDGE_BINDING_NAME]: bindingName,
+        [OSVA_ATTR.KNOWLEDGE_INDEX_COUNT]: indexCount,
+        [OSVA_ATTR.KNOWLEDGE_TOP_K]: topK,
+        [OSVA_ATTR.OPERATION]: "search",
+      },
+      async (span) => {
+        try {
+          const hits = await this.inner.search(
+            this.execution,
+            bindingName,
+            request,
+          );
+          await this.finalizeSafely(runStepId, {
+            status: "SUCCEEDED",
+            completedAt: this.deps.clock.now(),
+          });
+          span.setAttributes({
+            [OSVA_ATTR.KNOWLEDGE_RESULT_COUNT]: hits.length,
+          });
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.KNOWLEDGE_RETRIEVES, 1, {
+            operation: "search",
+          });
+          return hits;
+        } catch (error) {
+          const errorCategory = mapKnowledgeErrorCode(error);
+          await this.finalizeSafely(runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          span.setStatus(false, errorCategory);
+          span.recordException(error);
+          throw error;
+        }
+      },
+    );
+  }
+
+  private async finalizeSafely(
+    runStepId: RunStepId,
+    finalize: Parameters<RunStep["finalize"]>[0],
+  ): Promise<void> {
+    try {
+      await this.deps.runs.finalizeRunStep(runStepId, finalize);
+      this.deps.logger?.info("observability.knowledge_step_finalized", {
+        runId: this.execution.runId,
+        runAttemptId: this.execution.runAttemptId,
+        runStepId,
+        status: finalize.status,
+      });
+    } catch (error) {
+      this.deps.logger?.error("observability.run_step_finalize_failed", error);
+    }
+  }
+}
+
+function mapKnowledgeErrorCode(error: unknown): string {
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.length > 0
+  ) {
+    return error.code;
+  }
+
+  return KNOWLEDGE_ERROR_CODES.KNOWLEDGE_UNAVAILABLE;
 }
 
 function mapToolErrorCode(error: unknown): string {

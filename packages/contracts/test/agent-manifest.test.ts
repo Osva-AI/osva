@@ -318,4 +318,39 @@ describe("Agent Manifest v1", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("parses optional knowledge bindings with immutable index IDs", () => {
+    const parsed = agentManifestSchema.parse({
+      ...validManifest,
+      knowledge: {
+        company_docs: { knowledgeIndexIds: ["ki-1", "ki-2"] },
+      },
+    });
+    expect(parsed.knowledge?.company_docs?.knowledgeIndexIds).toEqual([
+      "ki-1",
+      "ki-2",
+    ]);
+  });
+
+  it("rejects duplicate knowledge index IDs in one binding", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validManifest,
+        knowledge: {
+          company_docs: { knowledgeIndexIds: ["ki-1", "ki-1"] },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects empty knowledgeIndexIds", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validManifest,
+        knowledge: {
+          company_docs: { knowledgeIndexIds: [] },
+        },
+      }).success,
+    ).toBe(false);
+  });
 });

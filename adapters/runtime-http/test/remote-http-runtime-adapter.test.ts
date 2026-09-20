@@ -29,6 +29,7 @@ function remoteRequest(
     modelProfileVersionBindings: {},
     toolVersionBindings: {},
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
     toolGrants: [],
     timeoutMs: 2_000,
     policyContext: {},

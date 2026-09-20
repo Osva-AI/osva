@@ -88,21 +88,63 @@ function pythonSpec(env) {
   return env.python;
 }
 
+/** Windows CreateProcess argv is ~8191 chars; batch by count and total path length. */
+const PRETTIER_FILE_BATCH_MAX_FILES = process.platform === "win32" ? 12 : 40;
+const PRETTIER_FILE_BATCH_MAX_CHARS =
+  process.platform === "win32" ? 5_000 : 32_000;
+
+function chunkPrettierFiles(files) {
+  const batches = [];
+  let batch = [];
+  let chars = 0;
+  for (const file of files) {
+    const added = file.length + 1;
+    if (
+      batch.length > 0 &&
+      (batch.length >= PRETTIER_FILE_BATCH_MAX_FILES ||
+        chars + added > PRETTIER_FILE_BATCH_MAX_CHARS)
+    ) {
+      batches.push(batch);
+      batch = [];
+      chars = 0;
+    }
+    batch.push(file);
+    chars += added;
+  }
+  if (batch.length > 0) {
+    batches.push(batch);
+  }
+  return batches;
+}
+
 async function formatChanged(env, write) {
   const files = await prettierSupportedChangedFiles();
   if (files.length === 0) {
     console.log("No changed Prettier-supported files.");
     return 0;
   }
-  const args = [
-    "exec",
-    "prettier",
-    write ? "--write" : "--check",
-    "--ignore-unknown",
-    "--",
-    ...files,
-  ];
-  return runPhase("FORMAT", pnpmSpec(env), args, { env: await pnpmEnv(env) });
+  const modeFlag = write ? "--write" : "--check";
+  const batches = chunkPrettierFiles(files);
+  const batchCount = batches.length;
+  let totalMs = 0;
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    const batch = batches[batchIndex];
+    const batchLabel = batchIndex + 1;
+    const stage =
+      batchCount === 1 ? "FORMAT" : `FORMAT (${batchLabel}/${batchCount})`;
+    const args = [
+      "exec",
+      "prettier",
+      modeFlag,
+      "--ignore-unknown",
+      "--",
+      ...batch,
+    ];
+    totalMs += await runPhase(stage, pnpmSpec(env), args, {
+      env: await pnpmEnv(env),
+    });
+  }
+  return totalMs;
 }
 
 async function formatCi(env) {

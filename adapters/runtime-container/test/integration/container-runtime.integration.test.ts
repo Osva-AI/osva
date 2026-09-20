@@ -75,6 +75,7 @@ function containerRequest(
     modelProfileVersionBindings: {},
     toolVersionBindings: { echo: toolVersionId },
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
     toolGrants: [],
     timeoutMs: 15_000,
     policyContext: {},
@@ -151,6 +152,7 @@ describe.skipIf(!dockerAvailable)(
         createScopedModelGateway: () => undefined,
         createScopedToolGateway: () => mockToolGateway,
         createScopedMemoryGateway: () => undefined,
+        createScopedKnowledgeGateway: () => undefined,
       });
 
       capabilityServer = await startRuntimeCapabilityServer({
@@ -186,6 +188,7 @@ describe.skipIf(!dockerAvailable)(
           modelProfileVersionBindings: {},
           toolVersionBindings: { echo: toolVersionId },
           memoryNamespaceBindings: {},
+          knowledgeIndexBindings: {},
         }),
         input: {},
         createdAt: NOW,

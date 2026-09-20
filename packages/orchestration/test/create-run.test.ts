@@ -228,6 +228,9 @@ describe("CreateRun", () => {
       modelProfiles: new MemoryModelProfileRepository(),
       tools: new MemoryToolRepository(),
       memoryNamespaces: new MemoryMemoryNamespaceRepository(),
+      knowledge: {
+        findIndexById: async () => null,
+      } as unknown as import("@osva/domain").KnowledgeRepository,
       clock: { now: () => NOW },
       ids: {
         createId() {
@@ -458,6 +461,69 @@ describe("CreateRun", () => {
     const persisted = await runs.findRunById(runId);
     expect(persisted?.effectiveBindings.toolVersionBindings).toEqual({
       echo: toolVersionId,
+    });
+  });
+
+  it("copies AgentVersion knowledge bindings into immutable Run effectiveBindings", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    const indexA = "ki-a" as import("@osva/contracts").KnowledgeIndexId;
+    const indexB = "ki-b" as import("@osva/contracts").KnowledgeIndexId;
+    await workspaces.save(
+      Workspace.create({
+        id: workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "agent-key",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest({
+          knowledge: {
+            company_docs: { knowledgeIndexIds: [indexA] },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const result = await createRun.execute(createCommand());
+    expect(result.run.effectiveBindings.knowledgeIndexBindings).toEqual({
+      company_docs: [indexA],
+    });
+
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: otherAgentVersionId,
+        agentId,
+        version: 2,
+        manifest: createManifest({
+          knowledge: {
+            company_docs: { knowledgeIndexIds: [indexB] },
+          },
+        }),
+        createdAt: NOW,
+      }),
+    );
+
+    const persisted = await runs.findRunById(runId);
+    expect(persisted?.effectiveBindings.knowledgeIndexBindings).toEqual({
+      company_docs: [indexA],
     });
   });
 });
