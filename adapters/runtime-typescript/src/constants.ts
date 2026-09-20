@@ -85,6 +85,21 @@ export const MemoryErrorCode = {
 export type MemoryErrorCode =
   (typeof MemoryErrorCode)[keyof typeof MemoryErrorCode];
 
+export const TRUSTED_RUNTIME_ARTIFACT_IPC_CHUNK_BYTES = 256 * 1024;
+
+export const ArtifactErrorCode = {
+  ARTIFACT_NOT_FOUND: "ARTIFACT_NOT_FOUND",
+  ARTIFACT_UNAVAILABLE: "ARTIFACT_UNAVAILABLE",
+  ARTIFACT_PAYLOAD_TOO_LARGE: "ARTIFACT_PAYLOAD_TOO_LARGE",
+  ARTIFACT_IDEMPOTENCY_CONFLICT: "ARTIFACT_IDEMPOTENCY_CONFLICT",
+  ARTIFACT_DIGEST_MISMATCH: "ARTIFACT_DIGEST_MISMATCH",
+  ARTIFACT_WORKSPACE_MISMATCH: "ARTIFACT_WORKSPACE_MISMATCH",
+  ARTIFACT_INVALID_REQUEST: "ARTIFACT_INVALID_REQUEST",
+} as const;
+
+export type ArtifactErrorCodeType =
+  (typeof ArtifactErrorCode)[keyof typeof ArtifactErrorCode];
+
 export const CHILD_ENV_ALLOWLIST = [
   "PATH",
   "PATHEXT",

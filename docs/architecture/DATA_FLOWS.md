@@ -74,6 +74,18 @@ Index of major OSVA execution flows after Stage 2.9 (Community Beta).
 
 **Detailed flow:** [flows/mcp-tool-call.md](./flows/mcp-tool-call.md)
 
+## artifact-storage
+
+**Purpose:** Upload, list, and download immutable workspace Artifacts (metadata in PostgreSQL, bytes in BlobStore).
+
+**Entry point:** `POST /v1/artifacts` → `ArtifactApplication` → filesystem BlobStore
+
+**Main components:** `apps/web`, `ArtifactApplication`, `PostgresArtifactRepository`, `@osva/adapters-artifact-filesystem`
+
+**State authority:** PostgreSQL for Artifact rows; BlobStore for bytes only
+
+**Detailed flow:** [flows/artifact-storage.md](./flows/artifact-storage.md)
+
 ## memory-access
 
 **Purpose:** Agent runtime reads/writes durable JSON memory through MemoryGateway.

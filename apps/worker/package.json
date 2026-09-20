@@ -13,6 +13,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@osva/adapters-artifact-storage": "workspace:*",
     "@osva/adapters-bullmq": "workspace:*",
     "@osva/adapters-opentelemetry": "workspace:*",
     "@osva/adapters-mcp-client": "workspace:*",
@@ -24,6 +25,7 @@
     "@osva/adapters-runtime-typescript": "workspace:*",
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
+    "@osva/domain": "workspace:*",
     "@osva/memory-gateway": "workspace:*",
     "@osva/model-gateway": "workspace:*",
     "@osva/observability": "workspace:*",
@@ -33,6 +35,7 @@
     "@osva/orchestration": "workspace:*"
   },
   "devDependencies": {
+    "@osva/adapters-artifact-filesystem": "workspace:*",
     "@osva/adapters-memory": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva/sdk": "workspace:*",

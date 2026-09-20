@@ -8,13 +8,13 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Purpose:** Control-plane HTTP API (`/v1/*`).
 
-**Owns:** Request routing, auth-less Community Beta API surface, persist-then-enqueue for Runs, control-plane CRUD for agents, workflows, tools, connectors, memory, evaluations.
+**Owns:** Request routing, auth-less Community Beta API surface, persist-then-enqueue for Runs, control-plane CRUD for agents, workflows, tools, connectors, memory, evaluations, artifacts (Stage 3.4 Run 1).
 
 **Does not own:** Agent execution, gateway mediation, workflow reconciliation loops.
 
 **Depends on:** `@osva/domain`, `@osva/orchestration` (CreateRun), `@osva/db`, `@osva/adapters-bullmq`, `@osva/adapters-mcp-client` (discovery only).
 
-**Key files:** `src/process.ts`, `src/http.ts`, `src/run-http.ts`, `src/workflow-http.ts`, `src/office-http.ts`.
+**Key files:** `src/process.ts`, `src/http.ts`, `src/run-http.ts`, `src/workflow-http.ts`, `src/artifact-http.ts`, `src/office-http.ts`.
 
 ### apps/worker
 
@@ -68,7 +68,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Purpose:** Entities, state machines, repository ports, application services.
 
-**Owns:** Run/RunAttempt/Workflow/Evaluation aggregates, effective bindings, transition rules, domain applications (`RunApplication`, `WorkflowApplication`, etc.).
+**Owns:** Run/RunAttempt/Workflow/Evaluation/Artifact aggregates, effective bindings, transition rules, domain applications (`RunApplication`, `WorkflowApplication`, `ArtifactApplication`, etc.).
 
 **Does not own:** HTTP, BullMQ, provider SDKs, SQL.
 
@@ -245,6 +245,16 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 **Does not own:** RunStep persistence, Run lifecycle.
 
 **Depends on:** `@osva/observability`, OpenTelemetry SDK packages.
+
+### adapters/artifact-filesystem
+
+**Purpose:** Community Edition local filesystem BlobStore for Artifact bytes.
+
+**Owns:** Streaming write/read/delete with path confinement, temp-then-rename writes, env-driven root and max bytes.
+
+**Does not own:** Artifact metadata, HTTP, workspace authorization.
+
+**Depends on:** `@osva/domain` (`ArtifactBlobStore` port).
 
 ### adapters/memory
 

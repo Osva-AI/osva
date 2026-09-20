@@ -20,9 +20,14 @@ import {
 } from "@osva/adapters-model-openai";
 import type { ModelProvider } from "@osva/contracts";
 import {
+  createArtifactBlobStore,
+  loadArtifactStorageConfig,
+} from "@osva/adapters-artifact-storage";
+import {
   ProcessEnvSecretResolver,
   RuntimeCapabilityBridge,
   RuntimeExecutionBootstrapStore,
+  createArtifactCapabilityRawHandler,
   startRuntimeCapabilityServer,
   type RuntimeCapabilityServer,
 } from "@osva/adapters-runtime-http";
@@ -41,9 +46,16 @@ import {
   PostgresModelProfileRepository,
   PostgresToolRepository,
   PostgresRunRepository,
+  PostgresArtifactRepository,
+  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { createEvaluationRunApplication } from "@osva/domain";
+import type { ArtifactId, JsonObject } from "@osva/contracts";
+import {
+  createArtifactApplication,
+  createEvaluationRunApplication,
+  createRuntimeArtifactApplication,
+} from "@osva/domain";
 import { MemoryGateway } from "@osva/memory-gateway";
 import { ModelGateway, type ModelProviderAdapter } from "@osva/model-gateway";
 import {
@@ -102,6 +114,7 @@ export function createWorkerProcess(
   dependencies: WorkerProcessDependencies = {},
 ): WorkerProcess {
   const config = loadWorkerConfig(env);
+  const artifactStorage = loadArtifactStorageConfig(env);
   const telemetryLifecycle =
     dependencies.telemetry ?? createOpenTelemetryLifecycle(env);
   const instrumentation = telemetryLifecycle.instrumentation;
@@ -161,6 +174,24 @@ export function createWorkerProcess(
         policy: new DefaultToolPolicy(),
       });
       const memoryGateway = new MemoryGateway({ memoryNamespaces });
+      const workspaces = new PostgresWorkspaceRepository(database);
+      const artifactsRepository = new PostgresArtifactRepository(database);
+      const artifactBlobStore = createArtifactBlobStore(artifactStorage);
+      const artifactApplication = createArtifactApplication({
+        artifacts: artifactsRepository,
+        blobStore: artifactBlobStore,
+        workspaces,
+        runs: runsRepository,
+        maxBytes: artifactStorage.maxBytes,
+        clock,
+        ids: { createId: () => randomUUID() },
+        logger: {
+          info: logEvent,
+          warn: logEvent,
+        },
+      });
+      const runtimeArtifactApplication =
+        createRuntimeArtifactApplication(artifactApplication);
       const recorderDeps = {
         runs: runsRepository,
         modelProfiles,
@@ -207,6 +238,8 @@ export function createWorkerProcess(
           createScopedModelGateway: scopedModel,
           createScopedToolGateway: scopedTool,
           createScopedMemoryGateway: scopedMemory,
+          artifactApplication: runtimeArtifactApplication,
+          maxArtifactBytes: artifactStorage.maxBytes,
         });
         const capabilityHost = config.containerEnabled
           ? "0.0.0.0"
@@ -215,6 +248,14 @@ export function createWorkerProcess(
           host: capabilityHost,
           port: config.runtimeCapabilityPort,
           handler: bridge.handle,
+          rawHandler: createArtifactCapabilityRawHandler(bridge, {
+            artifacts: runtimeArtifactApplication,
+            maxBytes: artifactStorage.maxBytes,
+            logger: {
+              info: logEvent,
+              error: logError,
+            },
+          }),
         });
         capabilityBaseUrl = capabilityBaseUrl ?? capabilityServer.origin;
         logEvent("worker.runtime_capability_listening", {
@@ -251,6 +292,9 @@ export function createWorkerProcess(
                 createScopedModelGateway: scopedModel,
                 createScopedToolGateway: scopedTool,
                 createScopedMemoryGateway: scopedMemory,
+                artifactRuntimeApplication: createTrustedRuntimeArtifactBridge(
+                  runtimeArtifactApplication,
+                ),
               }),
             },
             remoteHttp: {
@@ -383,6 +427,65 @@ function composeModelProviders(
   }
 
   return providers;
+}
+
+function createTrustedRuntimeArtifactBridge(
+  artifacts: ReturnType<typeof createRuntimeArtifactApplication>,
+) {
+  return {
+    getRuntimeArtifact: {
+      execute: (
+        artifactId: string,
+        execution: {
+          readonly workspaceId: import("@osva/contracts").WorkspaceId;
+          readonly runId: import("@osva/contracts").RunId;
+          readonly runAttemptId: import("@osva/contracts").RunAttemptId;
+        },
+      ) =>
+        artifacts.getRuntimeArtifact.execute(
+          artifactId as ArtifactId,
+          execution,
+        ),
+    },
+    createRuntimeArtifact: {
+      execute: (command: {
+        readonly execution: {
+          readonly workspaceId: import("@osva/contracts").WorkspaceId;
+          readonly runId: import("@osva/contracts").RunId;
+          readonly runAttemptId: import("@osva/contracts").RunAttemptId;
+        };
+        readonly name: string;
+        readonly mediaType: string;
+        readonly metadata?: JsonObject;
+        readonly content: import("node:stream").PassThrough;
+        readonly idempotencyKey?: string;
+        readonly expectedDigest?: string;
+      }) => artifacts.createRuntimeArtifact.execute(command),
+    },
+    openRuntimeArtifactContent: {
+      execute: async (
+        artifactId: string,
+        execution: {
+          readonly workspaceId: import("@osva/contracts").WorkspaceId;
+          readonly runId: import("@osva/contracts").RunId;
+          readonly runAttemptId: import("@osva/contracts").RunAttemptId;
+        },
+      ) => {
+        const view = await artifacts.getRuntimeArtifact.execute(
+          artifactId as ArtifactId,
+          execution,
+        );
+        const opened = await artifacts.openRuntimeArtifactContent.execute(
+          artifactId as ArtifactId,
+          execution,
+        );
+        return {
+          artifact: view,
+          content: opened.content,
+        };
+      },
+    },
+  };
 }
 
 function isClosableRuntime(

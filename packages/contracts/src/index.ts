@@ -181,6 +181,21 @@ export {
   sha256IntegrityHex,
 } from "./trusted-runtime.js";
 
+export {
+  ARTIFACT_IDEMPOTENCY_KEY_MAX_LENGTH,
+  ARTIFACT_MEDIA_TYPE_MAX_LENGTH,
+  ARTIFACT_METADATA_MAX_SERIALIZED_BYTES,
+  ARTIFACT_NAME_MAX_LENGTH,
+  ARTIFACT_REFERENCE_TYPE,
+  type ArtifactReferenceV1,
+} from "./artifact.js";
+
+export {
+  ARTIFACT_ERROR_CODES,
+  isArtifactErrorCode,
+} from "./artifact-gateway.js";
+export type { ArtifactErrorCode } from "./artifact-gateway.js";
+
 export type {
   ExecutionError,
   ExecutionEvaluationContext,

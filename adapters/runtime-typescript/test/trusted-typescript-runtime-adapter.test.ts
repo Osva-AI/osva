@@ -56,6 +56,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           contextKeys: [
             "agentId",
             "agentVersionId",
+            "artifacts",
             "input",
             "memory",
             "models",
@@ -393,6 +394,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
         contextKeys: [
           "agentId",
           "agentVersionId",
+          "artifacts",
           "input",
           "memory",
           "models",
@@ -589,6 +591,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           contextKeys: [
             "agentId",
             "agentVersionId",
+            "artifacts",
             "input",
             "memory",
             "models",

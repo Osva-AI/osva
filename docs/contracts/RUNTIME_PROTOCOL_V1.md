@@ -183,7 +183,12 @@ credentials, or version IDs. They call:
 ```text
 POST {capabilities.endpoint}/v1/runtime/capabilities/models/generate-text
 POST {capabilities.endpoint}/v1/runtime/capabilities/tools/invoke
+POST {capabilities.endpoint}/v1/runtime/capabilities/artifacts/create   (multipart; streamed file body)
+POST {capabilities.endpoint}/v1/runtime/capabilities/artifacts/get      (JSON metadata)
+GET  {capabilities.endpoint}/v1/runtime/capabilities/artifacts/content  (streamed bytes)
 ```
+
+Artifact bytes **must not** be embedded in Runtime Protocol V1 execute request/response JSON. They use the capability side channel above while metadata and `ArtifactReferenceV1` values may appear in normal Run JSON output.
 
 with `Authorization: Bearer <token>`. The token is opaque, execution-scoped,
 short-lived, and bound to the canonical RunAttempt. It is valid only while

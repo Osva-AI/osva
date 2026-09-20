@@ -36,10 +36,16 @@ export interface RuntimeCapabilityServer {
   close(): Promise<void>;
 }
 
+export type RuntimeCapabilityRawHttpHandler = (
+  request: IncomingMessage,
+  response: ServerResponse,
+) => Promise<boolean>;
+
 export interface StartRuntimeCapabilityServerOptions {
   readonly host?: string;
   readonly port?: number;
   readonly handler: RuntimeCapabilityHttpHandler;
+  readonly rawHandler?: RuntimeCapabilityRawHttpHandler;
   readonly maxBodyBytes?: number;
 }
 
@@ -49,7 +55,13 @@ export async function startRuntimeCapabilityServer(
   const host = options.host ?? "127.0.0.1";
   const maxBodyBytes = options.maxBodyBytes ?? RUNTIME_PROTOCOL_MAX_BODY_BYTES;
   const server = createServer((request, response) => {
-    void handleCapabilityHttp(request, response, options.handler, maxBodyBytes);
+    void handleCapabilityHttp(
+      request,
+      response,
+      options.handler,
+      maxBodyBytes,
+      options.rawHandler,
+    );
   });
 
   await listen(server, host, options.port ?? 0);
@@ -71,11 +83,19 @@ async function handleCapabilityHttp(
   response: ServerResponse,
   handler: RuntimeCapabilityHttpHandler,
   maxBodyBytes: number,
+  rawHandler?: RuntimeCapabilityRawHttpHandler,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = request.url ?? "/";
   const pathname = pathnameOf(url);
   const searchParams = searchParamsOf(url);
+
+  if (rawHandler !== undefined) {
+    const handled = await rawHandler(request, response);
+    if (handled) {
+      return;
+    }
+  }
 
   if (
     method === "GET" &&

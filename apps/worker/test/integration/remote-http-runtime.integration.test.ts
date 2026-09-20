@@ -345,6 +345,84 @@ describe("remote HTTP runtime end-to-end", () => {
       await remote.close();
     }
   });
+
+  it("creates artifacts through the remote runtime SDK capability path", async () => {
+    const artifactRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-remote-artifact-store-"),
+    );
+    const remote = await startFakeRemoteRuntime({ callArtifact: true });
+    const trustedRuntimeRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-remote-artifact-e2e-"),
+    );
+    const web = createWebProcess({
+      OSVA_DATABASE_URL: postgres.connectionString,
+      OSVA_VALKEY_URL: valkey.url,
+      OSVA_WEB_HOST: "127.0.0.1",
+      OSVA_WEB_PORT: "0",
+      OSVA_ARTIFACT_FILESYSTEM_ROOT: artifactRoot,
+    });
+    const worker = createWorkerProcess({
+      OSVA_DATABASE_URL: postgres.connectionString,
+      OSVA_VALKEY_URL: valkey.url,
+      OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+      OSVA_RUNTIME_CAPABILITY_SECRET: "capability-secret",
+      OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS: "true",
+      OSVA_ARTIFACT_FILESYSTEM_ROOT: artifactRoot,
+    });
+    const inspector = new BullMqJobQueue({ url: valkey.url });
+    const payload = "remote-http-artifact-round-trip";
+
+    try {
+      const port = await web.listen();
+      await worker.start();
+      const origin = `http://127.0.0.1:${String(port)}`;
+      const created = await createRemoteRun(
+        origin,
+        `${remote.origin}/execute`,
+        { content: payload },
+      );
+
+      await waitUntil(async () => {
+        const run = await fetchJson(`${origin}/v1/runs/${created.runId}`);
+        return (run.body as { status?: string }).status === "SUCCEEDED";
+      });
+
+      const attempt = await fetchJson(
+        `${origin}/v1/runs/${created.runId}/attempts/${created.runAttemptId}`,
+      );
+      const output = (
+        attempt.body as { output: { reference: unknown; roundTrip: string } }
+      ).output;
+      expect(output.roundTrip).toBe(payload);
+      expect(output.reference).toMatchObject({
+        type: "artifact",
+        artifactId: expect.any(String),
+      });
+
+      const artifactId = (output.reference as { artifactId: string })
+        .artifactId;
+      const metadata = await fetchJson(`${origin}/v1/artifacts/${artifactId}`);
+      expect(metadata.body).toMatchObject({
+        workspaceId: WORKSPACE_ID,
+        producer: {
+          runId: created.runId,
+          runAttemptId: created.runAttemptId,
+        },
+      });
+
+      const download = await fetch(
+        `${origin}/v1/artifacts/${artifactId}/content`,
+      );
+      expect(download.status).toBe(200);
+      expect(await download.text()).toBe(payload);
+      expect(await inspector.countActiveJobs()).toBe(0);
+    } finally {
+      await worker.stop();
+      await inspector.shutdown();
+      await web.stop();
+      await remote.close();
+    }
+  });
 });
 
 async function createRemoteRun(

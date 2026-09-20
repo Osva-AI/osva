@@ -34,6 +34,11 @@ import {
   WorkflowRunNotFoundError,
   WorkflowVersionNotFoundError,
   WorkflowEventIdempotencyConflictError,
+  ArtifactNotFoundError,
+  ArtifactIdempotencyConflictError,
+  ArtifactPayloadTooLargeError,
+  ArtifactDigestMismatchError,
+  ArtifactBlobUnavailableError,
 } from "@osva/domain";
 import {
   AgentNotFoundError as OrchestrationAgentNotFoundError,
@@ -66,6 +71,21 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     return;
   }
 
+  if (error instanceof ArtifactIdempotencyConflictError) {
+    sendJson(response, 409, { status: "conflict" });
+    return;
+  }
+
+  if (error instanceof ArtifactPayloadTooLargeError) {
+    sendJson(response, 413, { status: "payload_too_large" });
+    return;
+  }
+
+  if (error instanceof ArtifactDigestMismatchError) {
+    sendJson(response, 400, { status: "invalid_request" });
+    return;
+  }
+
   if (
     error instanceof AgentNotFoundError ||
     error instanceof AgentVersionNotFoundError ||
@@ -89,7 +109,8 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof OrchestrationAgentNotFoundError ||
     error instanceof OrchestrationAgentVersionNotFoundError ||
     error instanceof OrchestrationRunNotFoundError ||
-    error instanceof OrchestrationRunAttemptNotFoundError
+    error instanceof OrchestrationRunAttemptNotFoundError ||
+    error instanceof ArtifactNotFoundError
   ) {
     sendJson(response, 404, { status: "not_found" });
     return;
@@ -124,6 +145,11 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
 
   if (error instanceof EnqueueFailedError) {
     sendJson(response, 500, { status: "internal_error" });
+    return;
+  }
+
+  if (error instanceof ArtifactBlobUnavailableError) {
+    sendJson(response, 503, { status: "unavailable" });
     return;
   }
 

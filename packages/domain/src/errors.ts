@@ -3,6 +3,7 @@ import type {
   AgentVersionId,
   ApprovalRequestId,
   ApprovalRequestState,
+  ArtifactId,
   ConnectorId,
   ConnectorVersionId,
   EvaluationCaseId,
@@ -788,5 +789,79 @@ export class LifecycleConflictError extends DomainError {
     this.entity = entity;
     this.id = id;
     this.expectedStatus = expectedStatus;
+  }
+}
+
+export class ArtifactNotFoundError extends DomainError {
+  readonly artifactId: ArtifactId;
+
+  constructor(artifactId: ArtifactId) {
+    super(`Artifact ${artifactId} was not found.`);
+    this.artifactId = artifactId;
+  }
+}
+
+export class ArtifactIdempotencyConflictError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly idempotencyKey: string;
+
+  constructor(workspaceId: WorkspaceId, idempotencyKey: string) {
+    super(
+      `Artifact idempotency key '${idempotencyKey}' conflicts with an existing artifact in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.idempotencyKey = idempotencyKey;
+  }
+}
+
+export class ArtifactPayloadTooLargeError extends DomainError {
+  readonly maxBytes: number;
+
+  constructor(maxBytes: number) {
+    super(
+      `Artifact content exceeds the configured maximum of ${maxBytes} bytes.`,
+    );
+    this.maxBytes = maxBytes;
+  }
+}
+
+export class ArtifactDigestMismatchError extends DomainInvariantError {
+  constructor() {
+    super("Artifact content digest does not match the expected sha256 digest.");
+  }
+}
+
+export class ArtifactBlobUnavailableError extends DomainError {
+  readonly artifactId: ArtifactId;
+
+  constructor(artifactId: ArtifactId) {
+    super(`Artifact ${artifactId} content is unavailable.`);
+    this.artifactId = artifactId;
+  }
+}
+
+export class ArtifactProducerWorkspaceMismatchError extends DomainInvariantError {
+  readonly artifactWorkspaceId: WorkspaceId;
+  readonly producerRunId: RunId;
+
+  constructor(artifactWorkspaceId: WorkspaceId, producerRunId: RunId) {
+    super(
+      `Producer Run ${producerRunId} does not belong to workspace ${artifactWorkspaceId}.`,
+    );
+    this.artifactWorkspaceId = artifactWorkspaceId;
+    this.producerRunId = producerRunId;
+  }
+}
+
+export class ArtifactWorkspaceMismatchError extends DomainError {
+  readonly artifactId: ArtifactId;
+  readonly workspaceId: WorkspaceId;
+
+  constructor(artifactId: ArtifactId, workspaceId: WorkspaceId) {
+    super(
+      `Artifact ${artifactId} is not accessible from workspace ${workspaceId}.`,
+    );
+    this.artifactId = artifactId;
+    this.workspaceId = workspaceId;
   }
 }

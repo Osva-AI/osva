@@ -13,6 +13,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@osva/adapters-artifact-storage": "workspace:*",
     "@osva/adapters-bullmq": "workspace:*",
     "@osva/adapters-opentelemetry": "workspace:*",
     "@osva/adapters-mcp-client": "workspace:*",
@@ -25,9 +26,12 @@
   "devDependencies": {
     "@osva/adapters-mcp-client": "workspace:*",
     "@osva/adapters-memory": "workspace:*",
+    "@osva/adapters-artifact-storage": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "busboy": "1.6.0",
+    "@types/busboy": "1.5.4"
   }
 }

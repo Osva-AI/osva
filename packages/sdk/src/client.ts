@@ -8,6 +8,7 @@ import {
   EvaluationSuitesResource,
 } from "./resources/evaluation.js";
 import { MemoryNamespacesResource } from "./resources/memory-namespaces.js";
+import { ArtifactsResource } from "./resources/artifacts.js";
 import { RunsResource } from "./resources/runs.js";
 import { SchedulesResource } from "./resources/schedules.js";
 import { WorkflowRunsResource } from "./resources/workflow-runs.js";
@@ -31,6 +32,7 @@ export class OsvaClient {
   readonly approvals: ApprovalsResource;
   readonly schedules: SchedulesResource;
   readonly memoryNamespaces: MemoryNamespacesResource;
+  readonly artifacts: ArtifactsResource;
   readonly evaluationSuites: EvaluationSuitesResource;
   readonly evaluationRuns: EvaluationRunsResource;
   readonly officeWorkers: OfficeWorkersResource;
@@ -54,6 +56,7 @@ export class OsvaClient {
     this.approvals = new ApprovalsResource(this.http, options.workspaceId);
     this.schedules = new SchedulesResource(this.http, options.workspaceId);
     this.memoryNamespaces = new MemoryNamespacesResource(this.http);
+    this.artifacts = new ArtifactsResource(this.http, options.workspaceId);
     this.evaluationSuites = new EvaluationSuitesResource(this.http);
     this.evaluationRuns = new EvaluationRunsResource(
       this.http,

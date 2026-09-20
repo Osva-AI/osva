@@ -1,5 +1,9 @@
 import type { WorkflowEventId, WorkspaceId } from "@osva/contracts";
 import {
+  createArtifactBlobStore,
+  loadArtifactStorageConfig,
+} from "@osva/adapters-artifact-storage";
+import {
   MemoryAgentRepository,
   MemoryConnectorRepository,
   MemoryEvaluationRepository,
@@ -17,12 +21,14 @@ import {
   MemoryWorkflowWaitRepository,
   MemoryEvaluationSuiteRepository,
   MemoryMemoryNamespaceRepository,
+  MemoryArtifactRepository,
   MemoryOfficeRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import {
   Workspace,
   createAgentApplication,
+  createArtifactApplication,
   createConnectorApplication,
   createEvaluationApplication,
   createEvaluationRunApplication,
@@ -44,6 +50,8 @@ import {
 } from "@osva/orchestration";
 
 import { createMcpClientPool } from "@osva/adapters-mcp-client";
+import os from "node:os";
+import path from "node:path";
 
 import { createWebApplication } from "../src/http.js";
 import type { RunHttpServices } from "../src/run-http.js";
@@ -84,6 +92,14 @@ export async function createTestWebApplication(options?: {
     eventWaitResolution: workflowEventWaitResolution,
   });
   const memoryNamespaces = new MemoryMemoryNamespaceRepository();
+  const artifactsRepository = new MemoryArtifactRepository();
+  const artifactStorage = loadArtifactStorageConfig({
+    OSVA_ARTIFACT_FILESYSTEM_ROOT: path.join(
+      os.tmpdir(),
+      `osva-artifacts-test-${String(process.pid)}`,
+    ),
+  });
+  const artifactBlobStore = createArtifactBlobStore(artifactStorage);
   const evaluationSuites = new MemoryEvaluationSuiteRepository();
   const officeRepository = new MemoryOfficeRepository();
   const queue = new MemoryJobQueue();
@@ -170,6 +186,16 @@ export async function createTestWebApplication(options?: {
       clock,
       ids,
     }),
+    artifacts: createArtifactApplication({
+      artifacts: artifactsRepository,
+      blobStore: artifactBlobStore,
+      workspaces,
+      runs,
+      maxBytes: artifactStorage.maxBytes,
+      clock,
+      ids,
+    }),
+    artifactMaxBytes: artifactStorage.maxBytes,
     evaluations: {
       suites: createEvaluationSuiteApplication({
         evaluationSuites,

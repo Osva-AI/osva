@@ -1,15 +1,21 @@
 import type {
+  ArtifactId,
   ExecutionRequest,
   MemoryAuthorization,
   RunAttemptId,
   WorkspaceId,
 } from "@osva/contracts";
 import {
+  ARTIFACT_ERROR_CODES,
   MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
   TOOL_ERROR_CODES,
 } from "@osva/contracts";
-import type { AgentRepository, RunRepository } from "@osva/domain";
+import type {
+  AgentRepository,
+  RunRepository,
+  RuntimeArtifactApplication,
+} from "@osva/domain";
 import type {
   RuntimeMemoryGateway,
   RuntimeModelGateway,
@@ -26,8 +32,11 @@ import {
   runtimeMemoryListRequestSchema,
   runtimeMemorySetRequestSchema,
   runtimeModelGenerateTextRequestSchema,
+  runtimeArtifactGetRequestSchema,
   runtimeToolInvokeRequestSchema,
 } from "@osva/runtime-protocol";
+
+import { mapArtifactDomainError } from "./artifact-errors.js";
 
 import { RuntimeExecutionBootstrapStore } from "./execution-bootstrap-store.js";
 import {
@@ -66,6 +75,8 @@ export interface RuntimeCapabilityBridgeOptions {
   readonly createScopedMemoryGateway: (
     execution: ExecutionRequest,
   ) => RuntimeMemoryGateway | undefined;
+  readonly artifactApplication?: RuntimeArtifactApplication;
+  readonly maxArtifactBytes?: number;
 }
 
 export class RuntimeCapabilityBridge {
@@ -78,6 +89,8 @@ export class RuntimeCapabilityBridge {
   private readonly createScopedToolGateway: RuntimeCapabilityBridgeOptions["createScopedToolGateway"];
   private readonly createScopedMemoryGateway: RuntimeCapabilityBridgeOptions["createScopedMemoryGateway"];
   private readonly executionBootstrap: RuntimeExecutionBootstrapStore;
+  private readonly artifactApplication: RuntimeArtifactApplication | undefined;
+  private readonly maxArtifactBytes: number | undefined;
 
   constructor(options: RuntimeCapabilityBridgeOptions) {
     this.secret = options.secret;
@@ -90,6 +103,21 @@ export class RuntimeCapabilityBridge {
     this.createScopedModelGateway = options.createScopedModelGateway;
     this.createScopedToolGateway = options.createScopedToolGateway;
     this.createScopedMemoryGateway = options.createScopedMemoryGateway;
+    this.artifactApplication = options.artifactApplication;
+    this.maxArtifactBytes = options.maxArtifactBytes;
+  }
+
+  async authorizeCapabilityRequest(
+    authorization: string | undefined,
+    claimedExecutionId: string,
+  ): Promise<
+    | { readonly execution: ExecutionRequest; readonly error?: undefined }
+    | {
+        readonly execution?: undefined;
+        readonly error: RuntimeCapabilityHttpResponse;
+      }
+  > {
+    return this.authorize(authorization, claimedExecutionId);
   }
 
   handle: RuntimeCapabilityHttpHandler = async (request) => {
@@ -125,6 +153,10 @@ export class RuntimeCapabilityBridge {
 
     if (request.pathname === RUNTIME_CAPABILITY_PATHS.memoryList) {
       return this.handleMemoryList(request);
+    }
+
+    if (request.pathname === RUNTIME_CAPABILITY_PATHS.artifactGet) {
+      return this.handleArtifactGet(request);
     }
 
     return jsonStatus(404, {
@@ -498,6 +530,64 @@ export class RuntimeCapabilityBridge {
         MEMORY_ERROR_CODES.MEMORY_UNAVAILABLE,
         "Memory delete failed.",
       );
+      return capabilityFailed(
+        parsed.data.executionId,
+        mapped.code,
+        mapped.message,
+      );
+    }
+  }
+
+  private async handleArtifactGet(
+    request: RuntimeCapabilityHttpRequest,
+  ): Promise<RuntimeCapabilityHttpResponse> {
+    const parsed = runtimeArtifactGetRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return protocolInvalid("Capability request is invalid.");
+    }
+
+    const authorized = await this.authorize(
+      request.authorization,
+      parsed.data.executionId,
+    );
+    if (authorized.error !== undefined) {
+      return authorized.error;
+    }
+
+    if (this.artifactApplication === undefined) {
+      return capabilityFailed(
+        parsed.data.executionId,
+        ARTIFACT_ERROR_CODES.ARTIFACT_UNAVAILABLE,
+        "Artifact capability is unavailable.",
+      );
+    }
+
+    try {
+      const artifact =
+        await this.artifactApplication.getRuntimeArtifact.execute(
+          parsed.data.artifactId as ArtifactId,
+          {
+            workspaceId: authorized.execution.workspaceId,
+            runId: authorized.execution.runId,
+            runAttemptId: authorized.execution.runAttemptId,
+          },
+        );
+      this.logger?.info("runtime.capability.artifact_get_succeeded", {
+        executionId: parsed.data.executionId,
+        artifactId: artifact.id,
+      });
+      return {
+        status: 200,
+        body: {
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: parsed.data.executionId,
+          outcome: "SUCCEEDED",
+          artifact,
+        },
+      };
+    } catch (error) {
+      this.logger?.error("runtime.capability.artifact_get_failed", error);
+      const mapped = mapArtifactDomainError(error);
       return capabilityFailed(
         parsed.data.executionId,
         mapped.code,

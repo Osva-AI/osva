@@ -11,6 +11,24 @@ export interface RequestOptions {
   readonly path: string;
   readonly query?: Readonly<Record<string, string | undefined>>;
   readonly body?: unknown;
+  readonly headers?: Readonly<Record<string, string>>;
+}
+
+export interface UploadMultipartOptions {
+  readonly path: string;
+  readonly form: FormData;
+  readonly headers?: Readonly<Record<string, string>>;
+}
+
+export interface DownloadOptions {
+  readonly path: string;
+  readonly query?: Readonly<Record<string, string | undefined>>;
+}
+
+export interface DownloadResult {
+  readonly status: number;
+  readonly headers: Headers;
+  readonly body: ReadableStream<Uint8Array> | null;
 }
 
 export class OsvaHttpClient {
@@ -38,8 +56,11 @@ export class OsvaHttpClient {
         signal: controller.signal,
         headers:
           options.body === undefined
-            ? undefined
-            : { "content-type": "application/json" },
+            ? options.headers
+            : {
+                "content-type": "application/json",
+                ...options.headers,
+              },
         body:
           options.body === undefined ? undefined : JSON.stringify(options.body),
       });
@@ -70,6 +91,93 @@ export class OsvaHttpClient {
     }
 
     return body as T;
+  }
+
+  async uploadMultipart<T>(options: UploadMultipartOptions): Promise<T> {
+    const url = buildUrl(this.baseUrl, options.path, undefined);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, this.timeoutMs);
+
+    let response: Response;
+    try {
+      response = await this.fetchImpl(url, {
+        method: "POST",
+        signal: controller.signal,
+        headers: options.headers,
+        body: options.form,
+      });
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw new OsvaTransportError("OSVA API request timed out.", {
+          cause: error,
+        });
+      }
+      throw new OsvaTransportError("OSVA API transport failed.", {
+        cause: error,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch (error) {
+      throw new OsvaTransportError("OSVA API returned a non-JSON response.", {
+        cause: error,
+      });
+    }
+
+    if (!response.ok) {
+      throw new OsvaApiError(response.status, normalizeErrorBody(body));
+    }
+
+    return body as T;
+  }
+
+  async download(options: DownloadOptions): Promise<DownloadResult> {
+    const url = buildUrl(this.baseUrl, options.path, options.query);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, this.timeoutMs);
+
+    let response: Response;
+    try {
+      response = await this.fetchImpl(url, {
+        method: "GET",
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw new OsvaTransportError("OSVA API request timed out.", {
+          cause: error,
+        });
+      }
+      throw new OsvaTransportError("OSVA API transport failed.", {
+        cause: error,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (!response.ok) {
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        throw new OsvaApiError(response.status, { status: "error" });
+      }
+      throw new OsvaApiError(response.status, normalizeErrorBody(body));
+    }
+
+    return {
+      status: response.status,
+      headers: response.headers,
+      body: response.body,
+    };
   }
 }
 

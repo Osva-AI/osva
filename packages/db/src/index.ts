@@ -23,3 +23,4 @@ export { PostgresWorkflowTimerWaitResolutionRepository } from "./repositories/po
 export { PostgresMemoryNamespaceRepository } from "./repositories/postgres-memory-namespace-repository.js";
 export { PostgresEvaluationSuiteRepository } from "./repositories/postgres-evaluation-suite-repository.js";
 export { PostgresOfficeRepository } from "./repositories/postgres-office-repository.js";
+export { PostgresArtifactRepository } from "./repositories/postgres-artifact-repository.js";

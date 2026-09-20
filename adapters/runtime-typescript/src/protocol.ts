@@ -235,6 +235,129 @@ export interface MemoryListFailedMessage {
 export type ParentToChildMemoryListMessage =
   MemoryListSucceededMessage | MemoryListFailedMessage;
 
+export interface RuntimeArtifactViewMessage {
+  readonly id: string;
+  readonly name: string;
+  readonly mediaType: string;
+  readonly sizeBytes: number;
+  readonly digest: string;
+  readonly metadata: Record<string, JsonValue>;
+  readonly reference: {
+    readonly type: "artifact";
+    readonly artifactId: string;
+  };
+}
+
+export interface ArtifactGetRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.get.request";
+  readonly callId: string;
+  readonly artifactId: string;
+}
+
+export interface ArtifactGetSucceededMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.get.succeeded";
+  readonly callId: string;
+  readonly artifact: RuntimeArtifactViewMessage;
+}
+
+export interface ArtifactGetFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.get.failed";
+  readonly callId: string;
+  readonly error: { readonly code: string; readonly message: string };
+}
+
+export type ParentToChildArtifactGetMessage =
+  ArtifactGetSucceededMessage | ArtifactGetFailedMessage;
+
+export interface ArtifactCreateRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.create.request";
+  readonly callId: string;
+  readonly name: string;
+  readonly mediaType?: string;
+  readonly metadata?: Record<string, JsonValue>;
+  readonly idempotencyKey?: string;
+  readonly expectedDigest?: string;
+}
+
+export interface ArtifactCreateChunkMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.create.chunk";
+  readonly callId: string;
+  readonly chunk: string;
+}
+
+export interface ArtifactCreateEndMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.create.end";
+  readonly callId: string;
+}
+
+export interface ArtifactCreateSucceededMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.create.succeeded";
+  readonly callId: string;
+  readonly artifact: RuntimeArtifactViewMessage;
+}
+
+export interface ArtifactCreateFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.create.failed";
+  readonly callId: string;
+  readonly error: { readonly code: string; readonly message: string };
+}
+
+export type ParentToChildArtifactCreateMessage =
+  ArtifactCreateSucceededMessage | ArtifactCreateFailedMessage;
+
+export type ChildToParentArtifactCreateMessage =
+  | ArtifactCreateRequestMessage
+  | ArtifactCreateChunkMessage
+  | ArtifactCreateEndMessage;
+
+export interface ArtifactOpenRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.open.request";
+  readonly callId: string;
+  readonly artifactId: string;
+}
+
+export interface ArtifactOpenMetaMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.open.meta";
+  readonly callId: string;
+  readonly artifact: RuntimeArtifactViewMessage;
+}
+
+export interface ArtifactOpenChunkMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.open.chunk";
+  readonly callId: string;
+  readonly chunk: string;
+}
+
+export interface ArtifactOpenEndMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.open.end";
+  readonly callId: string;
+}
+
+export interface ArtifactOpenFailedMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "artifact.open.failed";
+  readonly callId: string;
+  readonly error: { readonly code: string; readonly message: string };
+}
+
+export type ParentToChildArtifactOpenMessage =
+  | ArtifactOpenMetaMessage
+  | ArtifactOpenChunkMessage
+  | ArtifactOpenEndMessage
+  | ArtifactOpenFailedMessage;
+
 export function isExecuteChildRequest(
   value: unknown,
 ): value is ExecuteChildRequest {
@@ -612,6 +735,162 @@ export function isParentToChildMemoryDeleteMessage(
   return record.type === "memory.delete.failed" && isNamedError(record.error);
 }
 
+export function isArtifactGetRequestMessage(
+  value: unknown,
+): value is ArtifactGetRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "artifact.get.request" &&
+    isNonEmptyString(record.callId) &&
+    typeof record.artifactId === "string" &&
+    record.artifactId.length > 0
+  );
+}
+
+export function isArtifactCreateRequestMessage(
+  value: unknown,
+): value is ArtifactCreateRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "artifact.create.request" &&
+    isNonEmptyString(record.callId) &&
+    typeof record.name === "string" &&
+    record.name.length > 0
+  );
+}
+
+export function isArtifactCreateChunkMessage(
+  value: unknown,
+): value is ArtifactCreateChunkMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "artifact.create.chunk" &&
+    isNonEmptyString(record.callId) &&
+    typeof record.chunk === "string"
+  );
+}
+
+export function isArtifactCreateEndMessage(
+  value: unknown,
+): value is ArtifactCreateEndMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "artifact.create.end" &&
+    isNonEmptyString(record.callId)
+  );
+}
+
+export function isArtifactOpenRequestMessage(
+  value: unknown,
+): value is ArtifactOpenRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "artifact.open.request" &&
+    isNonEmptyString(record.callId) &&
+    typeof record.artifactId === "string" &&
+    record.artifactId.length > 0
+  );
+}
+
+export function isParentToChildArtifactGetMessage(
+  value: unknown,
+): value is ParentToChildArtifactGetMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  if (record.type === "artifact.get.succeeded") {
+    return isRuntimeArtifactViewMessage(record.artifact);
+  }
+
+  return record.type === "artifact.get.failed" && isNamedError(record.error);
+}
+
+export function isParentToChildArtifactCreateMessage(
+  value: unknown,
+): value is ParentToChildArtifactCreateMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  if (record.type === "artifact.create.succeeded") {
+    return isRuntimeArtifactViewMessage(record.artifact);
+  }
+
+  return record.type === "artifact.create.failed" && isNamedError(record.error);
+}
+
+export function isParentToChildArtifactOpenMessage(
+  value: unknown,
+): value is ParentToChildArtifactOpenMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  if (record.type === "artifact.open.meta") {
+    return isRuntimeArtifactViewMessage(record.artifact);
+  }
+
+  if (record.type === "artifact.open.chunk") {
+    return typeof record.chunk === "string";
+  }
+
+  if (record.type === "artifact.open.end") {
+    return true;
+  }
+
+  return record.type === "artifact.open.failed" && isNamedError(record.error);
+}
+
 export function isParentToChildMemoryListMessage(
   value: unknown,
 ): value is ParentToChildMemoryListMessage {
@@ -737,6 +1016,27 @@ function isNamedError(value: unknown): value is {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function isRuntimeArtifactViewMessage(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  const reference = record.reference;
+  return (
+    typeof record.id === "string" &&
+    typeof record.name === "string" &&
+    typeof record.mediaType === "string" &&
+    typeof record.sizeBytes === "number" &&
+    typeof record.digest === "string" &&
+    typeof record.metadata === "object" &&
+    record.metadata !== null &&
+    typeof reference === "object" &&
+    reference !== null &&
+    (reference as Record<string, unknown>).type === "artifact"
+  );
 }
 
 function isMemoryRecordView(value: unknown): boolean {

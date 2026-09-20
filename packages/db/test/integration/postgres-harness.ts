@@ -32,6 +32,7 @@ const STAGE0_TABLES = [
   "evaluation_suites",
   "memory_records",
   "memory_namespaces",
+  "artifacts",
   "workflow_node_runs",
   "workflow_runs",
   "workflow_versions",

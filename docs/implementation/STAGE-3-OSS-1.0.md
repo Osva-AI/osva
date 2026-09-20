@@ -1,5 +1,14 @@
 # Stage 3 OSS 1.0
 
+## Progress (implementation tracker)
+
+| Area | Status |
+|------|--------|
+| Stage 3.2 durable workflow semantics | Complete in repo |
+| Stage 3.3 durable workflow backend | Complete in repo |
+| Stage 3.4 Artifact storage | **Run 2 in progress** (runtime capabilities, S3 factory, worker/SDK wiring) |
+| Stage 3.5 Knowledge | Not started |
+
 ## Build/stabilize
 
 - container runtime;
@@ -7,7 +16,7 @@
 - durable workflow adapter;
 - stable Workflow Definition v1;
 - waits/events/human tasks;
-- S3-compatible ArtifactStore;
+- S3-compatible ArtifactStore (Run 2; Run 1 ships filesystem BlobStore);
 - knowledge/retrieval adapters;
 - MCP server;
 - Connector SDK;

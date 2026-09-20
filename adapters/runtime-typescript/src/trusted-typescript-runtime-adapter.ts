@@ -26,7 +26,14 @@ import {
   isSha256IntegrityDigest,
   sha256IntegrityHex,
 } from "@osva/contracts";
-
+import {
+  ArtifactCreateIpcSessions,
+  handleArtifactCreateEndIpc,
+  handleArtifactCreateRequestIpc,
+  handleArtifactGetIpc,
+  handleArtifactOpenIpc,
+  type TrustedRuntimeArtifactApplication,
+} from "./artifact-ipc-parent.js";
 import { createChildEnvironment } from "./child-env.js";
 import { RuntimeErrorCode } from "./constants.js";
 import { createTrustedAgentContext } from "./context.js";
@@ -37,6 +44,11 @@ import {
 } from "./public-error.js";
 import {
   isChildResultMessage,
+  isArtifactCreateChunkMessage,
+  isArtifactCreateEndMessage,
+  isArtifactCreateRequestMessage,
+  isArtifactGetRequestMessage,
+  isArtifactOpenRequestMessage,
   isMemoryDeleteRequestMessage,
   isMemoryGetRequestMessage,
   isMemoryListRequestMessage,
@@ -82,6 +94,7 @@ export interface TrustedTypeScriptRuntimeAdapterOptions {
   readonly createScopedMemoryGateway?: (
     execution: ExecutionRequest,
   ) => RuntimeMemoryGateway | undefined;
+  readonly artifactRuntimeApplication?: TrustedRuntimeArtifactApplication;
 }
 
 export interface RuntimeMemoryGateway {
@@ -154,6 +167,8 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
   private readonly createScopedMemoryGateway:
     | ((execution: ExecutionRequest) => RuntimeMemoryGateway | undefined)
     | undefined;
+  private readonly artifactRuntimeApplication:
+    TrustedRuntimeArtifactApplication | undefined;
   private readonly liveExecutions = new Set<LiveExecution>();
   private closed = false;
 
@@ -167,6 +182,7 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
     this.createScopedToolGateway = options.createScopedToolGateway;
     this.memoryGateway = options.memoryGateway;
     this.createScopedMemoryGateway = options.createScopedMemoryGateway;
+    this.artifactRuntimeApplication = options.artifactRuntimeApplication;
   }
 
   async execute(request: ExecutionRequest): Promise<ExecutionResult> {
@@ -307,6 +323,7 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
           this.createScopedToolGateway?.(request) ?? this.toolGateway,
         memoryGateway:
           this.createScopedMemoryGateway?.(request) ?? this.memoryGateway,
+        artifactRuntimeApplication: this.artifactRuntimeApplication,
         modelBindings: request.modelProfileVersionBindings,
         toolBindings: request.toolVersionBindings,
         execution: request,
@@ -334,6 +351,8 @@ function waitForChildResult(options: {
   readonly modelGateway: RuntimeModelGateway | undefined;
   readonly toolGateway: RuntimeToolGateway | undefined;
   readonly memoryGateway: RuntimeMemoryGateway | undefined;
+  readonly artifactRuntimeApplication:
+    TrustedRuntimeArtifactApplication | undefined;
   readonly modelBindings: ExecutionRequest["modelProfileVersionBindings"];
   readonly toolBindings: ExecutionRequest["toolVersionBindings"];
   readonly execution: ExecutionRequest;
@@ -347,6 +366,7 @@ function waitForChildResult(options: {
     modelGateway,
     toolGateway,
     memoryGateway,
+    artifactRuntimeApplication,
     modelBindings,
     toolBindings,
     execution,
@@ -355,6 +375,7 @@ function waitForChildResult(options: {
 
   return new Promise((resolve) => {
     let settled = false;
+    const artifactCreateSessions = new ArtifactCreateIpcSessions();
 
     const finish = (result: ExecutionResult) => {
       if (settled) {
@@ -448,6 +469,56 @@ function waitForChildResult(options: {
           child,
           message: raw,
           memoryGateway,
+          execution,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isArtifactGetRequestMessage(raw)) {
+        void handleArtifactGetIpc({
+          child,
+          message: raw,
+          artifacts: artifactRuntimeApplication,
+          execution,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isArtifactCreateRequestMessage(raw)) {
+        handleArtifactCreateRequestIpc({
+          child,
+          message: raw,
+          sessions: artifactCreateSessions,
+          artifacts: artifactRuntimeApplication,
+          execution,
+          logger,
+          isSettled: () => settled,
+        });
+        return;
+      }
+
+      if (isArtifactCreateChunkMessage(raw)) {
+        artifactCreateSessions.writeChunk(raw);
+        return;
+      }
+
+      if (isArtifactCreateEndMessage(raw)) {
+        handleArtifactCreateEndIpc({
+          sessions: artifactCreateSessions,
+          callId: raw.callId,
+        });
+        return;
+      }
+
+      if (isArtifactOpenRequestMessage(raw)) {
+        void handleArtifactOpenIpc({
+          child,
+          message: raw,
+          artifacts: artifactRuntimeApplication,
           execution,
           logger,
           isSettled: () => settled,

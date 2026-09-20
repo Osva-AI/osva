@@ -86,6 +86,13 @@ export {
   MemoryNamespaceNotFoundError,
   MemoryRecordConflictError,
   MemoryRecordNotFoundError,
+  ArtifactNotFoundError,
+  ArtifactIdempotencyConflictError,
+  ArtifactPayloadTooLargeError,
+  ArtifactDigestMismatchError,
+  ArtifactBlobUnavailableError,
+  ArtifactProducerWorkspaceMismatchError,
+  ArtifactWorkspaceMismatchError,
   ConnectorNotFoundError,
   ConnectorVersionNotFoundError,
   ModelProfileNotFoundError,
@@ -385,6 +392,11 @@ export type {
   ListMemoryRecordsQuery,
   ListMemoryRecordsResult,
   MemoryNamespaceRepository,
+  ArtifactRepository,
+  ArtifactBlobStore,
+  ArtifactListCursor,
+  ListArtifactsQuery,
+  ListArtifactsResult,
   SetMemoryRecordInput,
   ListRunStepsQuery,
   ListRunStepsResult,
@@ -428,6 +440,8 @@ export {
   MAX_SCHEDULE_LIST_LIMIT,
   MAX_SCHEDULE_OCCURRENCE_LIST_LIMIT,
   MAX_MEMORY_RECORD_LIST_LIMIT,
+  DEFAULT_ARTIFACT_LIST_LIMIT,
+  MAX_ARTIFACT_LIST_LIMIT,
 } from "./ports/index.js";
 
 export {
@@ -528,6 +542,44 @@ export {
   type MemoryApplicationDependencies,
   type MemoryApplicationIds,
 } from "./memory-application.js";
+
+export { Artifact } from "./artifact.js";
+export {
+  artifactBlobStorageKey,
+  artifactIdFromBlobStorageKey,
+} from "./artifact-blob-key.js";
+export {
+  CreateArtifact,
+  GetArtifact,
+  ListArtifacts,
+  OpenArtifactContent,
+  createArtifactApplication,
+  type ArtifactApplication,
+  type ArtifactApplicationClock,
+  type ArtifactApplicationDependencies,
+  type ArtifactApplicationIds,
+  type ArtifactApplicationLogger,
+  type CreateArtifactCommand,
+  type OpenArtifactContentResult,
+} from "./artifact-application.js";
+export {
+  CreateRuntimeArtifact,
+  GetRuntimeArtifact,
+  OpenRuntimeArtifactContent,
+  createRuntimeArtifactApplication,
+  runtimeArtifactIdempotencyKey,
+  toRuntimeArtifactView,
+  type CreateRuntimeArtifactCommand,
+  type RuntimeArtifactApplication,
+  type RuntimeArtifactView,
+  type RuntimeExecutionIdentity,
+} from "./artifact-runtime.js";
+
+export type {
+  ArtifactBlobReadHandle,
+  ArtifactBlobWriteInput,
+  ArtifactBlobWriteResult,
+} from "./ports/artifact-blob-store.js";
 
 export { Connector } from "./connector.js";
 export { ConnectorVersion } from "./connector-version.js";

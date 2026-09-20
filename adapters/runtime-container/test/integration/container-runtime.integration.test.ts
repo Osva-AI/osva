@@ -76,7 +76,7 @@ function containerRequest(
     toolVersionBindings: { echo: toolVersionId },
     memoryNamespaceBindings: {},
     toolGrants: [],
-    timeoutMs: 5_000,
+    timeoutMs: 15_000,
     policyContext: {},
     ...overrides,
   };

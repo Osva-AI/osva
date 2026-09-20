@@ -76,5 +76,21 @@ export {
   DEFAULT_MEMORY_RECORD_LIST_LIMIT,
   MAX_MEMORY_RECORD_LIST_LIMIT,
 } from "./memory-namespace-repository.js";
+export type {
+  ArtifactRepository,
+  ArtifactListCursor,
+  ListArtifactsQuery,
+  ListArtifactsResult,
+} from "./artifact-repository.js";
+export {
+  DEFAULT_ARTIFACT_LIST_LIMIT,
+  MAX_ARTIFACT_LIST_LIMIT,
+} from "./artifact-repository.js";
+export type {
+  ArtifactBlobStore,
+  ArtifactBlobReadHandle,
+  ArtifactBlobWriteInput,
+  ArtifactBlobWriteResult,
+} from "./artifact-blob-store.js";
 export type { EvaluationSuiteRepository } from "./evaluation-suite-repository.js";
 export type { OfficeRepository } from "./office-repository.js";
