@@ -10,15 +10,18 @@ import type { AgentVersion } from "./agent-version.js";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
+  InvalidKnowledgeBindingError,
   InvalidMemoryBindingError,
   InvalidModelBindingError,
   InvalidToolBindingError,
   WorkspaceNotFoundError,
 } from "./errors.js";
+import { knowledgeIndexBindingsFromManifest } from "./knowledge-index-bindings.js";
 import { memoryNamespaceBindingsFromManifest } from "./memory-bindings.js";
 import { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 import { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 import type { AgentRepository } from "./ports/agent-repository.js";
+import type { KnowledgeRepository } from "./ports/knowledge-repository.js";
 import type { MemoryNamespaceRepository } from "./ports/memory-namespace-repository.js";
 import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
 import type { ToolRepository } from "./ports/tool-repository.js";
@@ -38,6 +41,7 @@ export interface AgentApplicationDependencies {
   readonly modelProfiles: ModelProfileRepository;
   readonly tools: ToolRepository;
   readonly memoryNamespaces: MemoryNamespaceRepository;
+  readonly knowledge: KnowledgeRepository;
   readonly clock: AgentApplicationClock;
   readonly ids: AgentApplicationIds;
 }
@@ -145,6 +149,11 @@ export class AppendAgentVersion {
     );
     await assertMemoryBindings(
       this.deps.memoryNamespaces,
+      agent.workspaceId,
+      command.manifest,
+    );
+    await assertKnowledgeBindings(
+      this.deps.knowledge,
       agent.workspaceId,
       command.manifest,
     );
@@ -261,6 +270,36 @@ async function assertToolBindings(
       throw new InvalidToolBindingError(
         `Tool binding '${name}' does not belong to workspace '${workspaceId}'.`,
       );
+    }
+  }
+}
+
+async function assertKnowledgeBindings(
+  knowledge: KnowledgeRepository,
+  workspaceId: WorkspaceId,
+  manifest: AgentManifestV1,
+): Promise<void> {
+  const bindings = knowledgeIndexBindingsFromManifest(manifest);
+  for (const [name, indexIds] of Object.entries(bindings)) {
+    for (const knowledgeIndexId of indexIds) {
+      const index = await knowledge.findIndexById(knowledgeIndexId);
+      if (index === null) {
+        throw new InvalidKnowledgeBindingError(
+          `Knowledge binding '${name}' references unknown KnowledgeIndex '${knowledgeIndexId}'.`,
+        );
+      }
+
+      if (index.workspaceId !== workspaceId) {
+        throw new InvalidKnowledgeBindingError(
+          `Knowledge binding '${name}' does not belong to workspace '${workspaceId}'.`,
+        );
+      }
+
+      if (index.status !== "READY") {
+        throw new InvalidKnowledgeBindingError(
+          `Knowledge binding '${name}' references KnowledgeIndex '${knowledgeIndexId}' that is not READY.`,
+        );
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 import type {
   AgentVersionId,
+  KnowledgeIndexId,
   MemoryNamespaceBinding,
   ModelProfileVersionId,
   ToolVersionId,
@@ -17,6 +18,9 @@ export interface EffectiveRunBindingsProps {
   readonly memoryNamespaceBindings: Readonly<
     Record<string, MemoryNamespaceBinding>
   >;
+  readonly knowledgeIndexBindings?: Readonly<
+    Record<string, readonly KnowledgeIndexId[]>
+  >;
 }
 
 export class EffectiveRunBindings {
@@ -28,12 +32,17 @@ export class EffectiveRunBindings {
   readonly memoryNamespaceBindings: Readonly<
     Record<string, MemoryNamespaceBinding>
   >;
+  readonly knowledgeIndexBindings: Readonly<
+    Record<string, readonly KnowledgeIndexId[]>
+  >;
 
   private constructor(props: EffectiveRunBindingsProps) {
     this.agentVersionId = props.agentVersionId;
     this.modelProfileVersionBindings = props.modelProfileVersionBindings;
     this.toolVersionBindings = props.toolVersionBindings;
     this.memoryNamespaceBindings = props.memoryNamespaceBindings;
+    this.knowledgeIndexBindings =
+      props.knowledgeIndexBindings ?? Object.freeze({});
   }
 
   static create(props: EffectiveRunBindingsProps): EffectiveRunBindings {
@@ -73,6 +82,34 @@ export class EffectiveRunBindings {
       );
     }
 
+    const rawKnowledge =
+      props.knowledgeIndexBindings === undefined
+        ? {}
+        : props.knowledgeIndexBindings;
+
+    if (
+      rawKnowledge === null ||
+      typeof rawKnowledge !== "object" ||
+      Array.isArray(rawKnowledge)
+    ) {
+      throw new DomainInvariantError(
+        "EffectiveRunBindings.knowledgeIndexBindings must be a map.",
+      );
+    }
+
+    const knowledgeIndexBindings: Record<string, readonly KnowledgeIndexId[]> =
+      {};
+    for (const [name, ids] of Object.entries(rawKnowledge)) {
+      if (!Array.isArray(ids)) {
+        throw new DomainInvariantError(
+          "EffectiveRunBindings.knowledgeIndexBindings values must be arrays.",
+        );
+      }
+      knowledgeIndexBindings[name] = Object.freeze(
+        ids.map((id) => id as KnowledgeIndexId),
+      );
+    }
+
     return Object.freeze(
       new EffectiveRunBindings({
         agentVersionId: props.agentVersionId,
@@ -81,6 +118,7 @@ export class EffectiveRunBindings {
         ),
         toolVersionBindings: freezeRecord(props.toolVersionBindings),
         memoryNamespaceBindings: freezeRecord(props.memoryNamespaceBindings),
+        knowledgeIndexBindings: Object.freeze(knowledgeIndexBindings),
       }),
     );
   }

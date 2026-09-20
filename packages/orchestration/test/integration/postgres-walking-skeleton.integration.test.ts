@@ -5,6 +5,7 @@ import {
   migrateDatabase,
   PostgresAgentRepository,
   PostgresMemoryNamespaceRepository,
+  PostgresKnowledgeRepository,
   PostgresModelProfileRepository,
   PostgresToolRepository,
   PostgresRunRepository,
@@ -115,6 +116,7 @@ describe("PostgreSQL orchestration walking skeleton", () => {
       effectiveConfig: {},
       toolVersionBindings: {},
       memoryNamespaceBindings: {},
+      knowledgeIndexBindings: {},
       toolGrants: [],
       policyContext: {},
     });
@@ -173,6 +175,7 @@ describe("PostgreSQL orchestration walking skeleton", () => {
       modelProfiles,
       tools: new PostgresToolRepository(database),
       memoryNamespaces: new PostgresMemoryNamespaceRepository(database),
+      knowledge: new PostgresKnowledgeRepository(database),
       clock: { now: () => NOW },
       ids: {
         createId() {

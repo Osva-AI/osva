@@ -42,6 +42,7 @@ Status is recorded after locally verifiable checks for each slice.
 
 - ✅ 3.1 Container Runtime and Execution Isolation
 - ✅ 3.4 Artifact storage (immutable metadata, blob backends, control-plane and runtime capabilities)
+- ✅ 3.5 Knowledge retrieval (ingestion, pgvector, control-plane retrieve, manifest bindings, runtime `context.knowledge`, SDKs)
 
 ## Totals
 

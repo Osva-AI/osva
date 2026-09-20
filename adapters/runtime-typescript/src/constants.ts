@@ -71,6 +71,22 @@ export function isMemoryBindingName(value: string): boolean {
   return MODEL_BINDING_NAME_PATTERN.test(value);
 }
 
+export function isKnowledgeBindingName(value: string): boolean {
+  return MODEL_BINDING_NAME_PATTERN.test(value);
+}
+
+export const KnowledgeErrorCode = {
+  KNOWLEDGE_BINDING_NOT_FOUND: "KNOWLEDGE_BINDING_NOT_FOUND",
+  KNOWLEDGE_UNAVAILABLE: "KNOWLEDGE_UNAVAILABLE",
+  KNOWLEDGE_INVALID_FILTER: "KNOWLEDGE_INVALID_FILTER",
+  KNOWLEDGE_EMBEDDING_FAILED: "KNOWLEDGE_EMBEDDING_FAILED",
+  KNOWLEDGE_VECTOR_STORE_UNAVAILABLE: "KNOWLEDGE_VECTOR_STORE_UNAVAILABLE",
+  KNOWLEDGE_INCOMPATIBLE_INDEXES: "KNOWLEDGE_INCOMPATIBLE_INDEXES",
+} as const;
+
+export type KnowledgeErrorCodeType =
+  (typeof KnowledgeErrorCode)[keyof typeof KnowledgeErrorCode];
+
 export const MemoryErrorCode = {
   MEMORY_BINDING_NOT_FOUND: "MEMORY_BINDING_NOT_FOUND",
   MEMORY_PERMISSION_DENIED: "MEMORY_PERMISSION_DENIED",

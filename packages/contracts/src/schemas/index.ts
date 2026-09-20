@@ -34,6 +34,9 @@ export {
   teamIdSchema,
   goalIdSchema,
   assignmentIdSchema,
+  knowledgeSourceIdSchema,
+  knowledgeIndexIdSchema,
+  knowledgeChunkIdSchema,
 } from "./ids.js";
 
 export { jsonSchemaRecordSchema } from "./json-schema.js";
@@ -212,6 +215,20 @@ export {
   memoryRecordListResourceSchema,
   memoryRecordResourceSchema,
 } from "./memory-registry.js";
+
+export {
+  createKnowledgeIndexRequestSchema,
+  createKnowledgeSourceRequestSchema,
+  knowledgeHitSchema,
+  knowledgeIndexResourceSchema,
+  knowledgeListCursorPayloadSchema,
+  knowledgeRetrieveFilterSchema,
+  knowledgeRetrieveRequestSchema,
+  knowledgeRetrieveResponseSchema,
+  knowledgeSourceResourceSchema,
+  listKnowledgeSourcesQuerySchema,
+  retryKnowledgeIndexRequestSchema,
+} from "./knowledge.js";
 
 export {
   artifactDigestSchema,

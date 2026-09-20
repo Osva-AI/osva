@@ -29,6 +29,7 @@ export function createTrustedRequest(
     modelProfileVersionBindings: {},
     toolVersionBindings: {},
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
     toolGrants: [],
     timeoutMs: 5_000,
     policyContext: {},

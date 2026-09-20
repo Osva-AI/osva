@@ -18,6 +18,7 @@ const validRequest = {
   modelProfileVersionBindings: {},
   toolVersionBindings: {},
   memoryNamespaceBindings: {},
+  knowledgeIndexBindings: {},
   toolGrants: [],
   timeoutMs: 30_000,
   policyContext: {},

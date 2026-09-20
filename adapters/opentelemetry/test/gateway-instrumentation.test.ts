@@ -46,6 +46,7 @@ const EXECUTION = {
   modelProfileVersionBindings: { default: MODEL_PROFILE_VERSION_ID },
   toolVersionBindings: {},
   memoryNamespaceBindings: {},
+  knowledgeIndexBindings: {},
   toolGrants: [],
   policyContext: {},
 } as unknown as ExecutionRequest;

@@ -36,6 +36,10 @@ import {
   type WorkflowEventHttpServices,
 } from "./workflow-event-http.js";
 import { handleOfficeRequest, type OfficeHttpServices } from "./office-http.js";
+import {
+  handleKnowledgeRequest,
+  type KnowledgeHttpServices,
+} from "./knowledge-http.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
@@ -55,6 +59,7 @@ export interface CreateWebApplicationOptions {
   readonly workflows: WorkflowApplication;
   readonly workflowEvents?: WorkflowEventHttpServices;
   readonly office: OfficeHttpServices;
+  readonly knowledge: KnowledgeHttpServices;
 }
 
 export function createWebApplication(
@@ -79,6 +84,7 @@ export function createWebApplication(
       options.workflows,
       options.workflowEvents,
       options.office,
+      options.knowledge,
     );
   });
 }
@@ -101,6 +107,7 @@ async function handleRequest(
   workflows: WorkflowApplication,
   workflowEvents: WorkflowEventHttpServices | undefined,
   office: OfficeHttpServices,
+  knowledge: KnowledgeHttpServices,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -203,6 +210,18 @@ async function handleRequest(
     artifactMaxBytes,
   );
   if (handledArtifacts) {
+    return;
+  }
+
+  const handledKnowledge = await handleKnowledgeRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    knowledge,
+  );
+  if (handledKnowledge) {
     return;
   }
 

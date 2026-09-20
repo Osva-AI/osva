@@ -26,7 +26,8 @@
     "dev:web": "pnpm --filter @osva/web dev",
     "dev:worker": "pnpm --filter @osva/worker dev",
     "dev:scheduler": "pnpm --filter @osva/scheduler dev",
-    "dev:workflow-orchestrator": "pnpm --filter @osva/workflow-orchestrator dev"
+    "dev:workflow-orchestrator": "pnpm --filter @osva/workflow-orchestrator dev",
+    "dev:knowledge-worker": "pnpm --filter @osva/knowledge-worker dev"
   },
   "devDependencies": {
     "@types/node": "catalog:",

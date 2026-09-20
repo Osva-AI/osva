@@ -15,6 +15,9 @@
   "dependencies": {
     "@osva/adapters-artifact-storage": "workspace:*",
     "@osva/adapters-bullmq": "workspace:*",
+    "@osva/adapters-embedding-openai-compatible": "workspace:*",
+    "@osva/adapters-vector-pgvector": "workspace:*",
+    "@osva/embedding-gateway": "workspace:*",
     "@osva/adapters-opentelemetry": "workspace:*",
     "@osva/adapters-mcp-client": "workspace:*",
     "@osva/adapters-runtime-http": "workspace:*",

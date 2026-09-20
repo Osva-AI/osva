@@ -31,6 +31,7 @@ export const RUNTIME_CAPABILITY_PATHS = {
   memorySet: "/v1/runtime/capabilities/memory/set",
   memoryDelete: "/v1/runtime/capabilities/memory/delete",
   memoryList: "/v1/runtime/capabilities/memory/list",
+  knowledgeSearch: "/v1/runtime/capabilities/knowledge/search",
   artifactGet: "/v1/runtime/capabilities/artifacts/get",
   artifactCreate: "/v1/runtime/capabilities/artifacts/create",
   artifactContent: "/v1/runtime/capabilities/artifacts/content",

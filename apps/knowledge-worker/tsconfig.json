@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../../packages/contracts" },
+    { "path": "../../packages/domain" },
+    { "path": "../../packages/db" },
+    { "path": "../../packages/embedding-gateway" },
+    { "path": "../../adapters/bullmq" },
+    { "path": "../../adapters/vector-pgvector" },
+    { "path": "../../adapters/knowledge-parser" },
+    { "path": "../../adapters/embedding-openai-compatible" }
+  ]
+}

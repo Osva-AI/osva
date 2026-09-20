@@ -7,6 +7,7 @@ import type {
 } from "@osva/contracts";
 import {
   ARTIFACT_ERROR_CODES,
+  KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
   TOOL_ERROR_CODES,
@@ -17,6 +18,7 @@ import type {
   RuntimeArtifactApplication,
 } from "@osva/domain";
 import type {
+  RuntimeKnowledgeGateway,
   RuntimeMemoryGateway,
   RuntimeModelGateway,
   RuntimeToolGateway,
@@ -31,6 +33,7 @@ import {
   runtimeMemoryGetRequestSchema,
   runtimeMemoryListRequestSchema,
   runtimeMemorySetRequestSchema,
+  runtimeKnowledgeSearchRequestSchema,
   runtimeModelGenerateTextRequestSchema,
   runtimeArtifactGetRequestSchema,
   runtimeToolInvokeRequestSchema,
@@ -75,6 +78,9 @@ export interface RuntimeCapabilityBridgeOptions {
   readonly createScopedMemoryGateway: (
     execution: ExecutionRequest,
   ) => RuntimeMemoryGateway | undefined;
+  readonly createScopedKnowledgeGateway: (
+    execution: ExecutionRequest,
+  ) => RuntimeKnowledgeGateway | undefined;
   readonly artifactApplication?: RuntimeArtifactApplication;
   readonly maxArtifactBytes?: number;
 }
@@ -88,6 +94,7 @@ export class RuntimeCapabilityBridge {
   private readonly createScopedModelGateway: RuntimeCapabilityBridgeOptions["createScopedModelGateway"];
   private readonly createScopedToolGateway: RuntimeCapabilityBridgeOptions["createScopedToolGateway"];
   private readonly createScopedMemoryGateway: RuntimeCapabilityBridgeOptions["createScopedMemoryGateway"];
+  private readonly createScopedKnowledgeGateway: RuntimeCapabilityBridgeOptions["createScopedKnowledgeGateway"];
   private readonly executionBootstrap: RuntimeExecutionBootstrapStore;
   private readonly artifactApplication: RuntimeArtifactApplication | undefined;
   private readonly maxArtifactBytes: number | undefined;
@@ -103,6 +110,7 @@ export class RuntimeCapabilityBridge {
     this.createScopedModelGateway = options.createScopedModelGateway;
     this.createScopedToolGateway = options.createScopedToolGateway;
     this.createScopedMemoryGateway = options.createScopedMemoryGateway;
+    this.createScopedKnowledgeGateway = options.createScopedKnowledgeGateway;
     this.artifactApplication = options.artifactApplication;
     this.maxArtifactBytes = options.maxArtifactBytes;
   }
@@ -153,6 +161,10 @@ export class RuntimeCapabilityBridge {
 
     if (request.pathname === RUNTIME_CAPABILITY_PATHS.memoryList) {
       return this.handleMemoryList(request);
+    }
+
+    if (request.pathname === RUNTIME_CAPABILITY_PATHS.knowledgeSearch) {
+      return this.handleKnowledgeSearch(request);
     }
 
     if (request.pathname === RUNTIME_CAPABILITY_PATHS.artifactGet) {
@@ -658,6 +670,57 @@ export class RuntimeCapabilityBridge {
     }
   }
 
+  private async handleKnowledgeSearch(
+    request: RuntimeCapabilityHttpRequest,
+  ): Promise<RuntimeCapabilityHttpResponse> {
+    const parsed = runtimeKnowledgeSearchRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return protocolInvalid("Capability request is invalid.");
+    }
+
+    const authorized = await this.authorize(
+      request.authorization,
+      parsed.data.executionId,
+    );
+    if (authorized.error !== undefined) {
+      return authorized.error;
+    }
+
+    const gateway = this.createScopedKnowledgeGateway(authorized.execution);
+    if (gateway === undefined) {
+      return capabilityFailed(
+        parsed.data.executionId,
+        KNOWLEDGE_ERROR_CODES.KNOWLEDGE_UNAVAILABLE,
+        "Knowledge capability is unavailable.",
+      );
+    }
+
+    try {
+      const hits = await gateway.search(parsed.data.bindingName, {
+        query: parsed.data.query,
+        topK: parsed.data.topK,
+        filter: parsed.data.filter,
+      });
+      return {
+        status: 200,
+        body: {
+          protocolVersion: RUNTIME_PROTOCOL_VERSION,
+          executionId: parsed.data.executionId,
+          outcome: "SUCCEEDED",
+          hits,
+        },
+      };
+    } catch (error) {
+      this.logger?.error("runtime.capability.knowledge_search_failed", error);
+      const mapped = mapKnowledgeGatewayFailure(error);
+      return capabilityFailed(
+        parsed.data.executionId,
+        mapped.code,
+        mapped.message,
+      );
+    }
+  }
+
   private async authorize(
     authorization: string | undefined,
     claimedExecutionId: string,
@@ -810,6 +873,17 @@ function memoryAuthorization(execution: ExecutionRequest): MemoryAuthorization {
     memoryNamespaceBindings: execution.memoryNamespaceBindings,
     allowPersistentMutation: execution.evaluationContext === undefined,
   };
+}
+
+function mapKnowledgeGatewayFailure(error: unknown): {
+  readonly code: string;
+  readonly message: string;
+} {
+  return mapGatewayFailure(
+    error,
+    KNOWLEDGE_ERROR_CODES.KNOWLEDGE_UNAVAILABLE,
+    "Knowledge search failed.",
+  );
 }
 
 function mapGatewayFailure(

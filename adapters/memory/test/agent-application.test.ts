@@ -402,6 +402,9 @@ function createEmptyHarness(): {
       modelProfiles,
       tools,
       memoryNamespaces,
+      knowledge: {
+        findIndexById: async () => null,
+      } as unknown as import("@osva/domain").KnowledgeRepository,
       clock: { now: () => NOW },
       ids: {
         createId() {

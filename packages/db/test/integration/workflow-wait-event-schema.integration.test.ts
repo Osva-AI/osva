@@ -390,20 +390,21 @@ describe("PostgreSQL workflow wait and event schema", () => {
     );
   });
 
-  it("retains migration journal entries 16 through 19 in order", async () => {
+  it("retains migration journal entries 17 through 21 in order", async () => {
     const journalModule = await import("../../drizzle/meta/_journal.json");
     const journal = journalModule.default ?? journalModule;
     const tail = journal.entries
-      .slice(-4)
+      .slice(-5)
       .map((entry: { idx: number; tag: string }) => ({
         idx: entry.idx,
         tag: entry.tag,
       }));
     expect(tail).toEqual([
-      { idx: 16, tag: "0016_memory_run_step_kind" },
       { idx: 17, tag: "0017_workflow_waiting_state" },
       { idx: 18, tag: "0018_workflow_wait_event_slice" },
       { idx: 19, tag: "0019_artifact_storage_slice" },
+      { idx: 20, tag: "0020_knowledge_retrieval_slice" },
+      { idx: 21, tag: "0021_knowledge_runtime_slice" },
     ]);
   });
 

@@ -20,3 +20,9 @@ export {
 } from "./errors.js";
 export { toBullMqJobId } from "./job-id.js";
 export type { PingableJobQueue } from "./pingable-job-queue.js";
+export {
+  BullMqKnowledgeIndexQueue,
+  INGEST_KNOWLEDGE_INDEX_JOB_NAME,
+  OSVA_KNOWLEDGE_INDEX_QUEUE_NAME,
+} from "./knowledge-index-queue.js";
+export type { BullMqKnowledgeIndexQueueOptions } from "./knowledge-index-queue.js";

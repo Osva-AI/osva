@@ -57,6 +57,7 @@ export function createBindings(
     },
     toolVersionBindings: {},
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
   });
 }
 
@@ -82,6 +83,7 @@ export function createExecutionRequest(
     },
     toolVersionBindings: {},
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
     toolGrants: [],
     timeoutMs: 30_000,
     policyContext: {},

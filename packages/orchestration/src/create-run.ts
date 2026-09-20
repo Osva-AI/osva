@@ -12,6 +12,7 @@ import {
   EffectiveRunBindings,
   Run,
   RunAttempt,
+  knowledgeIndexBindingsFromManifest,
   memoryNamespaceBindingsFromManifest,
   modelProfileVersionBindingsFromManifest,
   toolVersionBindingsFromManifest,
@@ -196,6 +197,9 @@ function resolveEffectiveBindings(
     ),
     toolVersionBindings: toolVersionBindingsFromManifest(agentVersion.manifest),
     memoryNamespaceBindings: memoryNamespaceBindingsFromManifest(
+      agentVersion.manifest,
+    ),
+    knowledgeIndexBindings: knowledgeIndexBindingsFromManifest(
       agentVersion.manifest,
     ),
   });

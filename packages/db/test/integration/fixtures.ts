@@ -66,5 +66,6 @@ export function createBindings(
     },
     toolVersionBindings: {},
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
   });
 }

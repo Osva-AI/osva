@@ -6,6 +6,7 @@ import {
   agentVersionIdSchema,
   evaluationCaseIdSchema,
   evaluationRunIdSchema,
+  knowledgeIndexIdSchema,
   memoryNamespaceIdSchema,
   modelProfileVersionIdSchema,
   toolVersionIdSchema,
@@ -41,6 +42,9 @@ export const executionRequestSchema = z.strictObject({
   ),
   toolVersionBindings: z.record(z.string(), toolVersionIdSchema),
   memoryNamespaceBindings: z.record(z.string(), memoryNamespaceBindingSchema),
+  knowledgeIndexBindings: z
+    .record(z.string(), z.array(knowledgeIndexIdSchema))
+    .default({}),
   toolGrants: z.array(toolGrantSchema),
   timeoutMs: z.int().positive(),
   policyContext: z.record(z.string(), z.unknown()),

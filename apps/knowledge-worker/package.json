@@ -1,0 +1,33 @@
+{
+  "name": "@osva/knowledge-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --watch dist/main.js",
+    "start": "node dist/main.js",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@osva/adapters-artifact-filesystem": "workspace:*",
+    "@osva/adapters-artifact-storage": "workspace:*",
+    "@osva/adapters-bullmq": "workspace:*",
+    "@osva/adapters-embedding-openai-compatible": "workspace:*",
+    "@osva/adapters-knowledge-parser": "workspace:*",
+    "@osva/adapters-vector-pgvector": "workspace:*",
+    "@osva/contracts": "workspace:*",
+    "@osva/db": "workspace:*",
+    "@osva/domain": "workspace:*",
+    "@osva/embedding-gateway": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

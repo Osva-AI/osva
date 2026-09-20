@@ -65,7 +65,9 @@ export {
   InvalidApprovalRequestTransitionError,
   InvalidEvaluationRunTransitionError,
   InvalidAttemptSequenceError,
+  InvalidKnowledgeBindingError,
   InvalidMemoryBindingError,
+  KnowledgeBindingNotFoundError,
   InvalidModelBindingError,
   InvalidRunAttemptStateError,
   InvalidToolBindingError,
@@ -93,6 +95,21 @@ export {
   ArtifactBlobUnavailableError,
   ArtifactProducerWorkspaceMismatchError,
   ArtifactWorkspaceMismatchError,
+  KnowledgeError,
+  KnowledgeSourceNotFoundError,
+  KnowledgeIndexNotFoundError,
+  KnowledgeIndexNotReadyError,
+  KnowledgeIndexNotRetryableError,
+  KnowledgeUnsupportedMediaTypeError,
+  KnowledgeExtractionFailedError,
+  KnowledgeSourceTooLargeError,
+  KnowledgeEmbeddingFailedError,
+  KnowledgeVectorStoreUnavailableError,
+  KnowledgeIncompatibleIndexesError,
+  KnowledgeInvalidFilterError,
+  KnowledgeIdempotencyConflictError,
+  InvalidKnowledgeIndexTransitionError,
+  KnowledgeChunkConsistencyError,
   ConnectorNotFoundError,
   ConnectorVersionNotFoundError,
   ModelProfileNotFoundError,
@@ -137,7 +154,12 @@ export {
   isSameMcpToolVersionConfig,
   type ToolVersionProps,
 } from "./tool-version.js";
+export { knowledgeIndexBindingsFromManifest } from "./knowledge-index-bindings.js";
 export { memoryNamespaceBindingsFromManifest } from "./memory-bindings.js";
+export {
+  RuntimeKnowledgeGateway,
+  type RuntimeKnowledgeGatewayDependencies,
+} from "./runtime-knowledge-gateway.js";
 export { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 export { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 export {
@@ -542,6 +564,72 @@ export {
   type MemoryApplicationDependencies,
   type MemoryApplicationIds,
 } from "./memory-application.js";
+
+export { KnowledgeSource } from "./knowledge-source.js";
+export { KnowledgeIndex } from "./knowledge-index.js";
+export { KnowledgeChunk } from "./knowledge-chunk.js";
+export { chunkKnowledgeText } from "./knowledge-chunker.js";
+export { computeKnowledgePipelineFingerprint } from "./knowledge-pipeline-fingerprint.js";
+export {
+  resolveDefaultKnowledgePipeline,
+  type KnowledgeEmbeddingDefaults,
+} from "./knowledge-pipeline-config.js";
+export { loadKnowledgeEmbeddingDefaults } from "./knowledge-embedding-env.js";
+export {
+  createKnowledgeApplication,
+  type KnowledgeApplication,
+  type KnowledgeApplicationDependencies,
+  type CreateKnowledgeSourceCommand,
+  type CreateKnowledgeIndexCommand,
+} from "./knowledge-application.js";
+export {
+  KnowledgeIngestionService,
+  KNOWLEDGE_INDEX_LEASE_MS,
+  type KnowledgeIngestionDependencies,
+} from "./knowledge-ingestion.js";
+export {
+  KnowledgeRetriever,
+  type KnowledgeRetrieverDependencies,
+  type KnowledgeRetrieveCommand,
+} from "./knowledge-retriever.js";
+export {
+  toKnowledgeIndexResource,
+  toKnowledgeSourceResource,
+} from "./knowledge-resource-mapper.js";
+export type { KnowledgeRepository } from "./ports/knowledge-repository.js";
+export type {
+  KnowledgeIndexQueue,
+  KnowledgeIndexQueueHandler,
+} from "./ports/knowledge-index-queue.js";
+export type { VectorStore, VectorMatch } from "./ports/vector-store.js";
+export type {
+  EmbeddingGateway,
+  EmbeddingGatewayResult,
+  EmbedDocumentsRequest,
+  EmbedQueryRequest,
+} from "./ports/embedding-gateway.js";
+export type {
+  KnowledgeParser,
+  KnowledgeParserParseInput,
+  KnowledgeParserRegistry,
+} from "./ports/knowledge-parser.js";
+export type {
+  VectorStoreQuery,
+  VectorStoreUpsertItem,
+} from "./ports/vector-store.js";
+export {
+  DEFAULT_KNOWLEDGE_INDEX_LIST_LIMIT,
+  DEFAULT_KNOWLEDGE_SOURCE_LIST_LIMIT,
+  MAX_KNOWLEDGE_INDEX_LIST_LIMIT,
+  MAX_KNOWLEDGE_SOURCE_LIST_LIMIT,
+} from "./ports/knowledge-repository.js";
+export type {
+  ClaimKnowledgeIndexLeaseInput,
+  ListKnowledgeIndexesQuery,
+  ListKnowledgeIndexesResult,
+  ListKnowledgeSourcesQuery,
+  ListKnowledgeSourcesResult,
+} from "./ports/knowledge-repository.js";
 
 export { Artifact } from "./artifact.js";
 export {

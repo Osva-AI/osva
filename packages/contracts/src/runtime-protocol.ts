@@ -4,6 +4,7 @@ import type { AgentRuntime } from "./agent-manifest.js";
 import type {
   EvaluationCaseId,
   EvaluationRunId,
+  KnowledgeIndexId,
   ModelProfileVersionId,
   ToolVersionId,
 } from "./ids.js";
@@ -30,6 +31,9 @@ export interface ExecutionRequest {
   readonly toolVersionBindings: Readonly<Record<string, ToolVersionId>>;
   readonly memoryNamespaceBindings: Readonly<
     Record<string, MemoryNamespaceBinding>
+  >;
+  readonly knowledgeIndexBindings: Readonly<
+    Record<string, readonly KnowledgeIndexId[]>
   >;
   readonly toolGrants: readonly ToolGrant[];
   readonly timeoutMs: number;

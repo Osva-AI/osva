@@ -1,4 +1,5 @@
 import type {
+  KnowledgeIndexId,
   MemoryNamespaceId,
   ModelProfileVersionId,
   ToolVersionId,
@@ -139,6 +140,10 @@ export interface AgentManifestMemoryBinding {
   readonly access: MemoryAccessMode;
 }
 
+export interface AgentManifestKnowledgeBinding {
+  readonly knowledgeIndexIds: readonly KnowledgeIndexId[];
+}
+
 /**
  * Executable contract of an AgentVersion.
  * The document has no plaintext-secret field; secret values are SecretReferences elsewhere.
@@ -167,4 +172,9 @@ export interface AgentManifestV1 {
    * on CreateRun. Binding names are identifiers, not namespace database IDs.
    */
   readonly memory?: Readonly<Record<string, AgentManifestMemoryBinding>>;
+  /**
+   * Optional logical knowledge bindings referencing immutable READY
+   * KnowledgeIndex IDs. Absent or empty maps freeze as `{}` on CreateRun.
+   */
+  readonly knowledge?: Readonly<Record<string, AgentManifestKnowledgeBinding>>;
 }

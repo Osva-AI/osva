@@ -1,7 +1,5 @@
-import { execFile, spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import fs from "node:fs";
-import net from "node:net";
-import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -32,6 +30,10 @@ const STAGE0_TABLES = [
   "evaluation_suites",
   "memory_records",
   "memory_namespaces",
+  "knowledge_vectors",
+  "knowledge_chunks",
+  "knowledge_indexes",
+  "knowledge_sources",
   "artifacts",
   "workflow_node_runs",
   "workflow_runs",
@@ -60,13 +62,12 @@ export interface PostgresTestContext {
   readonly usingDocker: boolean;
   readonly containerName?: string;
   readonly dockerBin?: string;
-  readonly dataDir?: string;
-  readonly postgresBinDir?: string;
 }
 
 export async function startPostgresForTests(): Promise<PostgresTestContext> {
-  const existingUrl = process.env.OSVA_TEST_DATABASE_URL;
-  if (existingUrl) {
+  const existingUrl = process.env.OSVA_TEST_DATABASE_URL?.trim();
+  if (existingUrl !== undefined && existingUrl.length > 0) {
+    await assertPgvectorCapable(existingUrl);
     return {
       connectionString: existingUrl,
       usingDocker: false,
@@ -74,25 +75,16 @@ export async function startPostgresForTests(): Promise<PostgresTestContext> {
   }
 
   const dockerBin = await findDockerBin();
-  if (dockerBin) {
-    try {
-      await assertDockerDaemon(dockerBin);
-      return await startDockerPostgres(dockerBin);
-    } catch (error) {
-      if (findPostgresBinDir()) {
-        return startLocalPostgresCluster();
-      }
-      throw error;
-    }
+  if (dockerBin === undefined) {
+    throw new Error(
+      "Docker is required for @osva/db integration tests (pgvector/pgvector:pg17). Install Docker Desktop and ensure `docker --version` and `docker info` succeed, or set OSVA_TEST_DATABASE_URL to an isolated PostgreSQL database that provides the vector extension.",
+    );
   }
 
-  if (findPostgresBinDir()) {
-    return startLocalPostgresCluster();
-  }
-
-  throw new Error(
-    "A real PostgreSQL instance is required for @osva/db integration tests. Install Docker Desktop and ensure `docker --version` and `docker info` succeed, provide PostgreSQL binaries (initdb/pg_ctl), or set OSVA_TEST_DATABASE_URL to an isolated database.",
-  );
+  await assertDockerDaemon(dockerBin);
+  const context = await startDockerPostgres(dockerBin);
+  await assertPgvectorCapable(context.connectionString);
+  return context;
 }
 
 export async function stopPostgresForTests(
@@ -100,11 +92,6 @@ export async function stopPostgresForTests(
 ): Promise<void> {
   if (context.usingDocker && context.dockerBin && context.containerName) {
     await removeContainer(context.dockerBin, context.containerName);
-    return;
-  }
-
-  if (context.dataDir && context.postgresBinDir) {
-    await stopLocalPostgresCluster(context.postgresBinDir, context.dataDir);
   }
 }
 
@@ -112,6 +99,30 @@ export async function resetStage0Tables(database: Database): Promise<void> {
   await database.sql.unsafe(
     `TRUNCATE TABLE ${STAGE0_TABLES.join(", ")} CASCADE`,
   );
+}
+
+/**
+ * Integration tests require pgvector (migration 0020). Generic local PostgreSQL
+ * installs without the extension are not a supported harness target.
+ */
+export async function assertPgvectorCapable(
+  connectionString: string,
+): Promise<void> {
+  const sql = postgres(connectionString, {
+    max: 1,
+    connect_timeout: HOST_POSTGRES_CONNECT_TIMEOUT_SECONDS,
+  });
+
+  try {
+    await sql`CREATE EXTENSION IF NOT EXISTS vector`;
+    await sql`SELECT '[1,2,3]'::vector AS probe`;
+  } catch (error) {
+    throw new Error(
+      `Integration test PostgreSQL must provide the pgvector extension (use Docker image pgvector/pgvector:pg17 or a pgvector-enabled OSVA_TEST_DATABASE_URL). ${formatUnknownError(error)}`,
+    );
+  } finally {
+    await sql.end({ timeout: 5 }).catch(() => undefined);
+  }
 }
 
 async function startDockerPostgres(
@@ -131,7 +142,7 @@ async function startDockerPostgres(
     "POSTGRES_DB=osva_test",
     "--publish",
     "127.0.0.1::5432",
-    "postgres:17-alpine",
+    "pgvector/pgvector:pg17",
   ]);
 
   try {
@@ -149,132 +160,6 @@ async function startDockerPostgres(
     await removeContainer(dockerBin, containerName);
     throw error;
   }
-}
-
-async function startLocalPostgresCluster(): Promise<PostgresTestContext> {
-  const postgresBinDir = findPostgresBinDir();
-  if (!postgresBinDir) {
-    throw new Error("PostgreSQL binaries were not found.");
-  }
-
-  const dataDir = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), "osva-db-itest-"),
-  );
-  const port = await getFreePort();
-  const env = localPostgresEnv(postgresBinDir);
-
-  try {
-    await execFileAsync(
-      bin(postgresBinDir, "initdb"),
-      [
-        "-D",
-        dataDir,
-        "-U",
-        "osva",
-        "-A",
-        "trust",
-        "-E",
-        "UTF8",
-        "--no-locale",
-        "--no-instructions",
-      ],
-      { env, timeout: 120_000, windowsHide: true },
-    );
-
-    await runWithIgnoredStdio(
-      bin(postgresBinDir, "pg_ctl"),
-      [
-        "-D",
-        dataDir,
-        "-l",
-        path.join(dataDir, "pg.log"),
-        "-o",
-        `-p ${String(port)} -h 127.0.0.1`,
-        "start",
-      ],
-      env,
-      60_000,
-    );
-
-    await waitForLocalPostgresReady(postgresBinDir, port);
-    await execFileAsync(
-      bin(postgresBinDir, "createdb"),
-      ["-h", "127.0.0.1", "-p", String(port), "-U", "osva", "osva_test"],
-      { env },
-    );
-
-    return {
-      connectionString: `postgres://osva@127.0.0.1:${String(port)}/osva_test`,
-      usingDocker: false,
-      dataDir,
-      postgresBinDir,
-    };
-  } catch (error) {
-    await stopLocalPostgresCluster(postgresBinDir, dataDir);
-    throw error;
-  }
-}
-
-async function stopLocalPostgresCluster(
-  postgresBinDir: string,
-  dataDir: string,
-): Promise<void> {
-  try {
-    await runWithIgnoredStdio(
-      bin(postgresBinDir, "pg_ctl"),
-      ["-D", dataDir, "stop", "-m", "fast"],
-      localPostgresEnv(postgresBinDir),
-      30_000,
-    );
-  } catch {
-    // The cluster may already have failed to start.
-  }
-
-  await removeDirectory(dataDir);
-}
-
-function localPostgresEnv(postgresBinDir: string): NodeJS.ProcessEnv {
-  return {
-    ...process.env,
-    PATH: `${postgresBinDir}${path.delimiter}${process.env.PATH ?? ""}`,
-  };
-}
-
-function bin(postgresBinDir: string, name: string): string {
-  const executable = process.platform === "win32" ? `${name}.exe` : name;
-  return path.join(postgresBinDir, executable);
-}
-
-function findPostgresBinDir(): string | undefined {
-  const candidates = [
-    process.env.POSTGRES_BIN,
-    path.join(
-      process.env.ProgramFiles ?? "C:\\Program Files",
-      "PostgreSQL",
-      "17",
-      "bin",
-    ),
-    path.join(
-      process.env.ProgramFiles ?? "C:\\Program Files",
-      "PostgreSQL",
-      "16",
-      "bin",
-    ),
-    "/usr/lib/postgresql/17/bin",
-    "/usr/lib/postgresql/16/bin",
-    "/usr/local/bin",
-  ].filter((candidate): candidate is string => Boolean(candidate));
-
-  for (const candidate of candidates) {
-    if (
-      fs.existsSync(bin(candidate, "initdb")) &&
-      fs.existsSync(bin(candidate, "pg_ctl"))
-    ) {
-      return candidate;
-    }
-  }
-
-  return undefined;
 }
 
 async function findDockerBin(): Promise<string | undefined> {
@@ -312,7 +197,7 @@ async function assertDockerDaemon(dockerBin: string): Promise<void> {
     await execFileAsync(dockerBin, ["info"]);
   } catch {
     throw new Error(
-      "Docker is installed but the daemon is not available (`docker info` failed). Start Docker Desktop or set OSVA_TEST_DATABASE_URL to an isolated PostgreSQL database.",
+      "Docker is installed but the daemon is not available (`docker info` failed). Start Docker Desktop (pgvector/pgvector:pg17) or set OSVA_TEST_DATABASE_URL to a pgvector-capable isolated PostgreSQL database.",
     );
   }
 }
@@ -407,28 +292,6 @@ async function waitForDockerPostgresReady(
   );
 }
 
-async function waitForLocalPostgresReady(
-  postgresBinDir: string,
-  port: number,
-): Promise<void> {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    try {
-      await execFileAsync(
-        bin(postgresBinDir, "pg_isready"),
-        ["-h", "127.0.0.1", "-p", String(port), "-U", "osva"],
-        { env: localPostgresEnv(postgresBinDir) },
-      );
-      return;
-    } catch {
-      await delay(250);
-    }
-  }
-
-  throw new Error(
-    `Timed out waiting for local PostgreSQL cluster on port ${String(port)}.`,
-  );
-}
-
 async function removeContainer(
   dockerBin: string,
   containerName: string,
@@ -440,86 +303,8 @@ async function removeContainer(
   }
 }
 
-async function removeDirectory(directory: string): Promise<void> {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    try {
-      await fs.promises.rm(directory, { recursive: true, force: true });
-      return;
-    } catch {
-      await delay(250);
-    }
-  }
-}
-
-function getFreePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (typeof address !== "object" || address === null) {
-        server.close();
-        reject(new Error("Failed to allocate a local TCP port."));
-        return;
-      }
-
-      const { port } = address;
-      server.close((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(port);
-      });
-    });
-  });
-}
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
-  });
-}
-
-function runWithIgnoredStdio(
-  command: string,
-  args: readonly string[],
-  env: NodeJS.ProcessEnv,
-  timeoutMs: number,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, [...args], {
-      env,
-      stdio: "ignore",
-      windowsHide: true,
-    });
-
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(
-        new Error(
-          `Timed out after ${String(timeoutMs)}ms running '${command} ${args.join(" ")}'.`,
-        ),
-      );
-    }, timeoutMs);
-
-    child.once("error", (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-
-    child.once("exit", (code) => {
-      clearTimeout(timer);
-      if (code === 0) {
-        resolve();
-        return;
-      }
-
-      reject(
-        new Error(
-          `'${command} ${args.join(" ")}' exited with code ${String(code)}.`,
-        ),
-      );
-    });
   });
 }

@@ -14,6 +14,7 @@ describe("EffectiveRunBindings immutability", () => {
       modelProfileVersionBindings: input,
       toolVersionBindings: {},
       memoryNamespaceBindings: {},
+      knowledgeIndexBindings: {},
     });
 
     input.other = "model-profile-version-2" as ModelProfileVersionId;

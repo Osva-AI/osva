@@ -38,10 +38,10 @@ repository ports. Schema changes are committed SQL migrations applied
 explicitly; applications must not auto-migrate on startup.
 
 Default `pnpm test` excludes PostgreSQL integration tests. Run them with
-`pnpm test:integration` against a real PostgreSQL instance. The harness
-prefers a temporary Docker container; if Docker is unavailable it can
-start a throwaway local cluster from installed PostgreSQL binaries, or
-use `OSVA_TEST_DATABASE_URL`.
+`pnpm test:integration` against a pgvector-capable PostgreSQL instance.
+The harness starts a temporary Docker container (`pgvector/pgvector:pg17`)
+when `OSVA_TEST_DATABASE_URL` is unset, or uses that URL when explicitly
+set. Plain local PostgreSQL without the `vector` extension is not supported.
 
 Optimistic concurrency is deferred to Stage 1.
 

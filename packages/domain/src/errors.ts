@@ -37,6 +37,10 @@ import type {
   AssignmentId,
   AssignmentState,
   GoalState,
+  KnowledgeIndexId,
+  KnowledgeIndexState,
+  KnowledgeSourceId,
+  KnowledgeErrorCode,
 } from "@osva/contracts";
 
 export class DomainError extends Error {
@@ -353,6 +357,8 @@ export class ScheduleNotFoundError extends DomainError {
 export class InvalidToolBindingError extends DomainInvariantError {}
 
 export class InvalidMemoryBindingError extends DomainInvariantError {}
+
+export class InvalidKnowledgeBindingError extends DomainInvariantError {}
 
 export class InvalidSubsequentAttemptError extends DomainInvariantError {
   readonly previousStatus: RunAttemptState;
@@ -863,5 +869,172 @@ export class ArtifactWorkspaceMismatchError extends DomainError {
     );
     this.artifactId = artifactId;
     this.workspaceId = workspaceId;
+  }
+}
+
+export class KnowledgeError extends DomainError {
+  readonly code: KnowledgeErrorCode;
+
+  constructor(code: KnowledgeErrorCode, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+export class KnowledgeSourceNotFoundError extends KnowledgeError {
+  readonly knowledgeSourceId: KnowledgeSourceId;
+
+  constructor(knowledgeSourceId: KnowledgeSourceId) {
+    super(
+      "KNOWLEDGE_SOURCE_NOT_FOUND",
+      `KnowledgeSource ${knowledgeSourceId} was not found.`,
+    );
+    this.knowledgeSourceId = knowledgeSourceId;
+  }
+}
+
+export class KnowledgeBindingNotFoundError extends KnowledgeError {
+  readonly bindingName: string;
+
+  constructor(bindingName: string) {
+    super(
+      "KNOWLEDGE_BINDING_NOT_FOUND",
+      `Knowledge binding '${bindingName}' was not found for this execution.`,
+    );
+    this.bindingName = bindingName;
+  }
+}
+
+export class KnowledgeIndexNotFoundError extends KnowledgeError {
+  readonly knowledgeIndexId: KnowledgeIndexId;
+
+  constructor(knowledgeIndexId: KnowledgeIndexId) {
+    super(
+      "KNOWLEDGE_INDEX_NOT_FOUND",
+      `KnowledgeIndex ${knowledgeIndexId} was not found.`,
+    );
+    this.knowledgeIndexId = knowledgeIndexId;
+  }
+}
+
+export class KnowledgeIndexNotReadyError extends KnowledgeError {
+  readonly knowledgeIndexId: KnowledgeIndexId;
+
+  constructor(knowledgeIndexId: KnowledgeIndexId) {
+    super(
+      "KNOWLEDGE_INDEX_NOT_READY",
+      `KnowledgeIndex ${knowledgeIndexId} is not READY.`,
+    );
+    this.knowledgeIndexId = knowledgeIndexId;
+  }
+}
+
+export class KnowledgeIndexNotRetryableError extends KnowledgeError {
+  readonly knowledgeIndexId: KnowledgeIndexId;
+  readonly currentStatus: string;
+
+  constructor(knowledgeIndexId: KnowledgeIndexId, currentStatus: string) {
+    super(
+      "KNOWLEDGE_INDEX_NOT_RETRYABLE",
+      `KnowledgeIndex ${knowledgeIndexId} cannot be retried from status ${currentStatus}.`,
+    );
+    this.knowledgeIndexId = knowledgeIndexId;
+    this.currentStatus = currentStatus;
+  }
+}
+
+export class KnowledgeUnsupportedMediaTypeError extends KnowledgeError {
+  constructor(mediaType: string) {
+    super(
+      "KNOWLEDGE_UNSUPPORTED_MEDIA_TYPE",
+      `Media type '${mediaType}' is not supported for knowledge ingestion.`,
+    );
+  }
+}
+
+export class KnowledgeExtractionFailedError extends KnowledgeError {
+  constructor(message = "Knowledge extraction failed.") {
+    super("KNOWLEDGE_EXTRACTION_FAILED", message);
+  }
+}
+
+export class KnowledgeSourceTooLargeError extends KnowledgeError {
+  constructor(message = "Knowledge source exceeds supported size limits.") {
+    super("KNOWLEDGE_SOURCE_TOO_LARGE", message);
+  }
+}
+
+export class KnowledgeEmbeddingFailedError extends KnowledgeError {
+  constructor(message = "Knowledge embedding failed.") {
+    super("KNOWLEDGE_EMBEDDING_FAILED", message);
+  }
+}
+
+export class KnowledgeVectorStoreUnavailableError extends KnowledgeError {
+  constructor(message = "Knowledge vector store is unavailable.") {
+    super("KNOWLEDGE_VECTOR_STORE_UNAVAILABLE", message);
+  }
+}
+
+export class KnowledgeIncompatibleIndexesError extends KnowledgeError {
+  constructor(message = "Knowledge indexes are incompatible for retrieval.") {
+    super("KNOWLEDGE_INCOMPATIBLE_INDEXES", message);
+  }
+}
+
+export class KnowledgeInvalidFilterError extends KnowledgeError {
+  constructor(message = "Knowledge filter is invalid.") {
+    super("KNOWLEDGE_INVALID_FILTER", message);
+  }
+}
+
+export class KnowledgeIdempotencyConflictError extends KnowledgeError {
+  readonly workspaceId: WorkspaceId;
+  readonly idempotencyKey: string;
+
+  constructor(workspaceId: WorkspaceId, idempotencyKey: string) {
+    super(
+      "KNOWLEDGE_IDEMPOTENCY_CONFLICT",
+      `Knowledge idempotency key '${idempotencyKey}' conflicts in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.idempotencyKey = idempotencyKey;
+  }
+}
+
+export class DuplicateKnowledgeSourceKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `Knowledge source key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class InvalidKnowledgeIndexTransitionError extends DomainError {
+  readonly from: KnowledgeIndexState;
+  readonly to: KnowledgeIndexState;
+
+  constructor(from: KnowledgeIndexState, to: KnowledgeIndexState) {
+    super(`Invalid knowledge index transition from ${from} to ${to}.`);
+    this.from = from;
+    this.to = to;
+  }
+}
+
+export class KnowledgeChunkConsistencyError extends DomainInvariantError {
+  readonly knowledgeIndexId: KnowledgeIndexId;
+  readonly ordinal: number;
+
+  constructor(knowledgeIndexId: KnowledgeIndexId, ordinal: number) {
+    super(
+      `Knowledge chunk at ordinal ${ordinal} conflicts for index ${knowledgeIndexId}.`,
+    );
+    this.knowledgeIndexId = knowledgeIndexId;
+    this.ordinal = ordinal;
   }
 }

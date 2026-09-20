@@ -80,6 +80,30 @@ domain / orchestration / gateways / runtime-core (services)
 - Worker composition root supplies operator network/resource policy and container-reachable capability URL.
 - Container code receives scoped capability tokens only; worker signing secrets never enter containers.
 
+## Knowledge (Stage 3.5 Run 1)
+
+```text
+apps/web / apps/knowledge-worker
+        ↓
+domain knowledge application + KnowledgeIngestionService + KnowledgeRetriever
+        ↓
+contracts + domain ports (KnowledgeRepository, VectorStore, EmbeddingGateway, KnowledgeParser)
+
+concrete parser / embedding / vector / queue / DB implementations
+        ↑ wired only by composition roots (web, knowledge-worker)
+```
+
+| Rule | Implementation |
+|------|----------------|
+| Knowledge domain must not import pgvector | `VectorStore` port in domain; `PgVectorStore` in `adapters/vector-pgvector` |
+| Knowledge domain must not import PDF.js | PDF parsing only in `adapters/knowledge-parser` |
+| Knowledge domain must not import OpenAI SDK types | `EmbeddingGateway` + `adapters/embedding-openai-compatible` |
+| Parser implementations are adapters | `OsvaKnowledgeParserRegistry` implements `KnowledgeParserRegistry` port |
+| Artifact remains separate | Ingestion reuses `createArtifactApplication`; knowledge tables reference `artifacts` |
+| BullMQ knowledge queue is transport-only | `KnowledgeIndexQueue` payload is `knowledgeIndexId`; leases live in PostgreSQL |
+
+Runtime `context.knowledge` is implemented via `@osva/observability` RunSteps, `RuntimeKnowledgeGateway` in domain, capability bridge in `@osva/adapters-runtime-http`, and worker composition (`KnowledgeRetriever` + adapters). Runtimes depend on contracts/protocol only.
+
 ## Cross-cutting rules
 
 | Concern | Authority | Transport |
@@ -95,9 +119,10 @@ domain / orchestration / gateways / runtime-core (services)
 These are deliberate, not layer violations:
 
 1. **apps/web** imports `@osva/adapters-bullmq` to enqueue after persist.
-2. **apps/worker** imports all execution adapters (runtime, model, MCP) in one place.
-3. **apps/web** imports `@osva/adapters-mcp-client` for control-plane MCP discovery only.
-4. **packages/observability** imports concrete gateway classes for wrapping (execution-plane only).
+2. **apps/knowledge-worker** imports parser, embedding, vector, artifact, and BullMQ knowledge queue adapters.
+3. **apps/worker** imports all execution adapters (runtime, model, MCP) in one place.
+4. **apps/web** imports `@osva/adapters-mcp-client` for control-plane MCP discovery only.
+5. **packages/observability** imports concrete gateway classes for wrapping (execution-plane only).
 
 ## Test doubles
 

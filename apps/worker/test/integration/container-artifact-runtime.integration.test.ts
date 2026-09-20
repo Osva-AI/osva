@@ -104,6 +104,7 @@ describe.skipIf(!dockerAvailable)(
           modelProfileVersionBindings: {},
           toolVersionBindings: {},
           memoryNamespaceBindings: {},
+          knowledgeIndexBindings: {},
         }),
         input: {},
         createdAt: NOW,
@@ -164,6 +165,7 @@ describe.skipIf(!dockerAvailable)(
         createScopedModelGateway: () => undefined,
         createScopedToolGateway: () => undefined,
         createScopedMemoryGateway: () => undefined,
+        createScopedKnowledgeGateway: () => undefined,
         artifactApplication: runtimeArtifacts,
         maxArtifactBytes: 1_048_576,
       });
@@ -327,6 +329,7 @@ function containerRequest(
     modelProfileVersionBindings: {},
     toolVersionBindings: {},
     memoryNamespaceBindings: {},
+    knowledgeIndexBindings: {},
     toolGrants: [],
     timeoutMs: 15_000,
     policyContext: {},

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  runtimeKnowledgeSearchRequestSchema,
   runtimeModelGenerateTextRequestSchema,
   runtimeToolInvokeRequestSchema,
 } from "../src/index.js";
@@ -23,6 +24,15 @@ describe("Runtime Protocol V1 capability schemas", () => {
       idempotencyKey: "side-effect-1",
     });
     expect("toolVersionId" in tool).toBe(false);
+
+    const knowledge = runtimeKnowledgeSearchRequestSchema.parse({
+      protocolVersion: "1",
+      executionId: "attempt-1",
+      bindingName: "docs",
+      query: "hello",
+      topK: 5,
+    });
+    expect("knowledgeIndexIds" in knowledge).toBe(false);
   });
 
   it("rejects malformed capability requests", () => {

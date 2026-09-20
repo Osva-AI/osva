@@ -39,6 +39,7 @@ describe("createWebProcess", () => {
         OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
+        OSVA_KNOWLEDGE_EMBEDDING_PROVIDER: "DETERMINISTIC",
       },
       () =>
         fakeDatabase(() => {

@@ -10,6 +10,7 @@ from osva.runtime.errors import RuntimeCapabilityError
 PROTOCOL_VERSION = "1"
 GENERATE_TEXT_PATH = "/v1/runtime/capabilities/models/generate-text"
 INVOKE_TOOL_PATH = "/v1/runtime/capabilities/tools/invoke"
+KNOWLEDGE_SEARCH_PATH = "/v1/runtime/capabilities/knowledge/search"
 ARTIFACT_GET_PATH = "/v1/runtime/capabilities/artifacts/get"
 ARTIFACT_CREATE_PATH = "/v1/runtime/capabilities/artifacts/create"
 ARTIFACT_CONTENT_PATH = "/v1/runtime/capabilities/artifacts/content"
@@ -228,6 +229,68 @@ class ArtifactsCapability:
         return data
 
 
+class KnowledgeCapability:
+    def __init__(
+        self,
+        *,
+        execution_id: str,
+        credential: CapabilityCredential,
+        client: httpx.AsyncClient,
+    ) -> None:
+        self._execution_id = execution_id
+        self._credential = credential
+        self._client = client
+
+    async def search(
+        self,
+        *,
+        binding: str,
+        query: str,
+        top_k: int | None = None,
+        filter: dict[str, object] | None = None,
+    ) -> list[dict[str, object]]:
+        payload: dict[str, Any] = {
+            "protocolVersion": PROTOCOL_VERSION,
+            "executionId": self._execution_id,
+            "bindingName": binding,
+            "query": query,
+        }
+        if top_k is not None:
+            payload["topK"] = top_k
+        if filter is not None:
+            payload["filter"] = filter
+        response = await self._post(KNOWLEDGE_SEARCH_PATH, payload)
+        if response.get("outcome") != "SUCCEEDED":
+            error = response.get("error", {})
+            raise RuntimeCapabilityError(
+                str(error.get("message", "Knowledge search failed.")),
+            )
+        hits = response.get("hits")
+        if not isinstance(hits, list):
+            raise RuntimeCapabilityError("Invalid knowledge capability response.")
+        return hits
+
+    async def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = await self._client.post(
+                f"{self._credential.endpoint}{path}",
+                json=payload,
+                headers={
+                    "authorization": self._credential.authorization_header(),
+                    "content-type": "application/json",
+                    "accept": "application/json",
+                },
+            )
+        except httpx.HTTPError as error:
+            raise RuntimeCapabilityError("Capability transport failed.") from error
+        data = response.json()
+        if not isinstance(data, dict):
+            raise RuntimeCapabilityError("Capability response was not an object.")
+        if data.get("executionId") != self._execution_id:
+            raise RuntimeCapabilityError("Capability response executionId mismatch.")
+        return data
+
+
 class RuntimeContext:
     def __init__(
         self,
@@ -248,6 +311,11 @@ class RuntimeContext:
             client=client,
         )
         self.artifacts = ArtifactsCapability(
+            execution_id=execution_id,
+            credential=credential,
+            client=client,
+        )
+        self.knowledge = KnowledgeCapability(
             execution_id=execution_id,
             credential=credential,
             client=client,
