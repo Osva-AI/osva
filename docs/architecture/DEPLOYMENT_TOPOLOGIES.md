@@ -7,7 +7,10 @@ Web/API
 ExecutionWorker
 PostgreSQL
 Redis/Valkey
+Local filesystem artifact blobs (.osva/artifacts by default)
 ```
+
+Stage 3.4 uses PostgreSQL for Artifact metadata and a configurable BlobStore (`filesystem` for single-host/shared-filesystem deployments; S3-compatible object storage recommended for multi-node production). Web and worker compose the same ArtifactApplication with independent adapter instances.
 
 ## Self-hosted production
 

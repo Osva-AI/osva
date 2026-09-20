@@ -3,6 +3,10 @@ import type { WorkflowEventId } from "@osva/contracts";
 import type { Server } from "node:http";
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
+  createArtifactBlobStore,
+  loadArtifactStorageConfig,
+} from "@osva/adapters-artifact-storage";
+import {
   createOpenTelemetryLifecycle,
   type OpenTelemetryLifecycle,
 } from "@osva/adapters-opentelemetry";
@@ -22,12 +26,14 @@ import {
   PostgresWorkflowWaitRepository,
   PostgresEvaluationSuiteRepository,
   PostgresMemoryNamespaceRepository,
+  PostgresArtifactRepository,
   PostgresOfficeRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
 import {
   createAgentApplication,
+  createArtifactApplication,
   createConnectorApplication,
   createEvaluationApplication,
   createEvaluationRunApplication,
@@ -77,6 +83,7 @@ export function createWebProcess(
   dependencies: WebProcessDependencies = {},
 ): WebProcess {
   const config = loadWebConfig(env);
+  const artifactStorage = loadArtifactStorageConfig(env);
   const telemetryLifecycle =
     dependencies.telemetry ?? createOpenTelemetryLifecycle(env);
   const instrumentation = telemetryLifecycle.instrumentation;
@@ -108,6 +115,8 @@ export function createWebProcess(
     eventWaitResolution: workflowEventWaitResolution,
   });
   const memoryNamespaces = new PostgresMemoryNamespaceRepository(database);
+  const artifactsRepository = new PostgresArtifactRepository(database);
+  const artifactBlobStore = createArtifactBlobStore(artifactStorage);
   const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
   const officeRepository = new PostgresOfficeRepository(database);
   const clock = { now: () => new Date() };
@@ -173,6 +182,20 @@ export function createWebProcess(
       clock,
       ids,
     }),
+    artifacts: createArtifactApplication({
+      artifacts: artifactsRepository,
+      blobStore: artifactBlobStore,
+      workspaces,
+      runs,
+      maxBytes: artifactStorage.maxBytes,
+      clock,
+      ids,
+      logger: {
+        info: (message, fields) => logEvent(message, fields),
+        warn: (message, fields) => logEvent(message, fields),
+      },
+    }),
+    artifactMaxBytes: artifactStorage.maxBytes,
     evaluations: {
       suites: createEvaluationSuiteApplication({
         evaluationSuites,

@@ -23,6 +23,7 @@ export { workflowEvents } from "./workflow-events.js";
 export { workflowWaits } from "./workflow-waits.js";
 export { memoryNamespaces } from "./memory-namespaces.js";
 export { memoryRecords } from "./memory-records.js";
+export { artifacts } from "./artifacts.js";
 export { evaluationSuites } from "./evaluation-suites.js";
 export { evaluationSuiteVersions } from "./evaluation-suite-versions.js";
 export { evaluationCases } from "./evaluation-cases.js";

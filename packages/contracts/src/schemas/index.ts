@@ -214,6 +214,18 @@ export {
 } from "./memory-registry.js";
 
 export {
+  artifactDigestSchema,
+  artifactListCursorPayloadSchema,
+  artifactListResourceSchema,
+  artifactProducerResourceSchema,
+  artifactReferenceV1Schema,
+  artifactResourceSchema,
+  createArtifactFormFieldsSchema,
+  createRuntimeArtifactFormFieldsSchema,
+  listArtifactsQuerySchema,
+} from "./artifact.js";
+
+export {
   createEvaluationRunRequestSchema,
   createEvaluationSuiteRequestSchema,
   createEvaluationSuiteVersionRequestSchema,

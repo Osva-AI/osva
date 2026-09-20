@@ -41,6 +41,7 @@ Status is recorded after locally verifiable checks for each slice.
 ## Stage 3
 
 - ✅ 3.1 Container Runtime and Execution Isolation
+- ✅ 3.4 Artifact storage (immutable metadata, blob backends, control-plane and runtime capabilities)
 
 ## Totals
 

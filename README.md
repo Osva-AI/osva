@@ -160,6 +160,9 @@ environment. Processes do not auto-load `.env`. Required variables:
 - optional worker-only `OPENAI_API_KEY`
 - optional worker-only `OSVA_RUNTIME_CAPABILITY_SECRET` for Remote HTTP
 - optional worker-only `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS` (default off)
+- `OSVA_ARTIFACT_STORAGE_DRIVER` (`filesystem` default; use `s3` for multi-node production)
+- `OSVA_ARTIFACT_FILESYSTEM_ROOT` when using filesystem (web and worker must share the root on one host)
+- optional `OSVA_ARTIFACT_S3_*` when using S3-compatible blob storage
 
 Then start infrastructure, apply committed migrations, and run the apps:
 

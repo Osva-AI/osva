@@ -1,3 +1,9 @@
+export { createArtifactCapabilityRawHandler } from "./artifact-capability-http.js";
+export type {
+  ArtifactCapabilityHttpDeps,
+  ArtifactCapabilityHttpLogger,
+} from "./artifact-capability-http.js";
+export { mapArtifactDomainError } from "./artifact-errors.js";
 export { RuntimeCapabilityBridge } from "./capability-bridge.js";
 export type {
   RuntimeCapabilityBridgeClock,
@@ -10,6 +16,7 @@ export {
   type RuntimeCapabilityHttpRequest,
   type RuntimeCapabilityHttpResponse,
   type RuntimeCapabilityServer,
+  type RuntimeCapabilityRawHttpHandler,
   type StartRuntimeCapabilityServerOptions,
 } from "./capability-server.js";
 export {

@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 import {
+  artifactDigestSchema,
+  artifactReferenceV1Schema,
+  artifactIdSchema,
   generateTextInputSchema,
   generateTextResultSchema,
   jsonValueSchema,
@@ -191,3 +194,57 @@ export const runtimeMemoryListResponseSchema = z.discriminatedUnion("outcome", [
   runtimeMemoryListSuccessSchema,
   runtimeMemoryListFailureSchema,
 ]);
+
+const runtimeArtifactViewSchema = z.strictObject({
+  id: artifactIdSchema,
+  name: z.string().min(1),
+  mediaType: z.string().min(1),
+  sizeBytes: z.number().int().min(0),
+  digest: artifactDigestSchema,
+  metadata: z.record(z.string(), jsonValueSchema),
+  reference: artifactReferenceV1Schema,
+});
+
+export const runtimeArtifactGetRequestSchema = z.strictObject({
+  protocolVersion: runtimeProtocolVersionSchema,
+  executionId: runtimeExecutionIdSchema,
+  artifactId: artifactIdSchema,
+});
+
+export const runtimeArtifactGetSuccessSchema = z.strictObject({
+  protocolVersion: runtimeProtocolVersionSchema,
+  executionId: runtimeExecutionIdSchema,
+  outcome: z.literal("SUCCEEDED"),
+  artifact: runtimeArtifactViewSchema,
+});
+
+export const runtimeArtifactGetFailureSchema = z.strictObject({
+  protocolVersion: runtimeProtocolVersionSchema,
+  executionId: runtimeExecutionIdSchema,
+  outcome: z.literal("FAILED"),
+  error: runtimeProtocolErrorSchema,
+});
+
+export const runtimeArtifactGetResponseSchema = z.discriminatedUnion(
+  "outcome",
+  [runtimeArtifactGetSuccessSchema, runtimeArtifactGetFailureSchema],
+);
+
+export const runtimeArtifactCreateSuccessSchema = z.strictObject({
+  protocolVersion: runtimeProtocolVersionSchema,
+  executionId: runtimeExecutionIdSchema,
+  outcome: z.literal("SUCCEEDED"),
+  artifact: runtimeArtifactViewSchema,
+});
+
+export const runtimeArtifactCreateFailureSchema = z.strictObject({
+  protocolVersion: runtimeProtocolVersionSchema,
+  executionId: runtimeExecutionIdSchema,
+  outcome: z.literal("FAILED"),
+  error: runtimeProtocolErrorSchema,
+});
+
+export const runtimeArtifactCreateResponseSchema = z.discriminatedUnion(
+  "outcome",
+  [runtimeArtifactCreateSuccessSchema, runtimeArtifactCreateFailureSchema],
+);

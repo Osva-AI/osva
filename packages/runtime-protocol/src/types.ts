@@ -1,6 +1,9 @@
 import type {
+  ArtifactId,
+  ArtifactReferenceV1,
   GenerateTextInput,
   GenerateTextResult,
+  JsonObject,
   JsonValue,
 } from "@osva/contracts";
 
@@ -195,3 +198,53 @@ export interface RuntimeMemoryListFailure {
 
 export type RuntimeMemoryListResponse =
   RuntimeMemoryListSuccess | RuntimeMemoryListFailure;
+
+export interface RuntimeArtifactView {
+  readonly id: ArtifactId;
+  readonly name: string;
+  readonly mediaType: string;
+  readonly sizeBytes: number;
+  readonly digest: string;
+  readonly metadata: JsonObject;
+  readonly reference: ArtifactReferenceV1;
+}
+
+export interface RuntimeArtifactGetRequest {
+  readonly protocolVersion: RuntimeProtocolVersion;
+  readonly executionId: string;
+  readonly artifactId: ArtifactId;
+}
+
+export interface RuntimeArtifactGetSuccess {
+  readonly protocolVersion: RuntimeProtocolVersion;
+  readonly executionId: string;
+  readonly outcome: "SUCCEEDED";
+  readonly artifact: RuntimeArtifactView;
+}
+
+export interface RuntimeArtifactGetFailure {
+  readonly protocolVersion: RuntimeProtocolVersion;
+  readonly executionId: string;
+  readonly outcome: "FAILED";
+  readonly error: RuntimeProtocolError;
+}
+
+export type RuntimeArtifactGetResponse =
+  RuntimeArtifactGetSuccess | RuntimeArtifactGetFailure;
+
+export interface RuntimeArtifactCreateSuccess {
+  readonly protocolVersion: RuntimeProtocolVersion;
+  readonly executionId: string;
+  readonly outcome: "SUCCEEDED";
+  readonly artifact: RuntimeArtifactView;
+}
+
+export interface RuntimeArtifactCreateFailure {
+  readonly protocolVersion: RuntimeProtocolVersion;
+  readonly executionId: string;
+  readonly outcome: "FAILED";
+  readonly error: RuntimeProtocolError;
+}
+
+export type RuntimeArtifactCreateResponse =
+  RuntimeArtifactCreateSuccess | RuntimeArtifactCreateFailure;

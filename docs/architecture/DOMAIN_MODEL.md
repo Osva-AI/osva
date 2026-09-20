@@ -33,6 +33,19 @@ Workflow
             └── ApprovalRequest (APPROVAL only)
 ```
 
+## Artifact
+
+```text
+Artifact (immutable after create)
+  ├── workspaceId
+  ├── name, mediaType, sizeBytes, digest (sha256:…)
+  ├── metadata (JSON object)
+  ├── optional producer Run + RunAttempt (both or neither)
+  └── optional workspace-scoped idempotencyKey
+```
+
+Bytes live in BlobStore only. PostgreSQL is metadata authority. Identical digests may map to multiple Artifacts. Public references use `ArtifactReferenceV1` (`type: "artifact"`, `artifactId`).
+
 ## Tool
 
 ```text

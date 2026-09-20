@@ -7,6 +7,10 @@ import {
   ModelCapabilityError,
 } from "./model-capability.js";
 import {
+  createTrustedAgentArtifacts,
+  ArtifactCapabilityError,
+} from "./artifact-capability.js";
+import {
   createTrustedAgentMemory,
   MemoryCapabilityError,
 } from "./memory-capability.js";
@@ -49,6 +53,7 @@ async function handle(raw: unknown): Promise<void> {
       models: createTrustedAgentModels(),
       tools: createTrustedAgentTools(),
       memory: createTrustedAgentMemory(),
+      artifacts: createTrustedAgentArtifacts(),
     });
     const output: unknown = await run(context);
     if (!isChildJsonValue(output)) {
@@ -76,6 +81,11 @@ async function handle(raw: unknown): Promise<void> {
     }
 
     if (error instanceof MemoryCapabilityError) {
+      sendFailure(error.code, error.message);
+      return;
+    }
+
+    if (error instanceof ArtifactCapabilityError) {
       sendFailure(error.code, error.message);
       return;
     }

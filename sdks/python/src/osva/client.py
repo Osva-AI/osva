@@ -3,6 +3,7 @@ from __future__ import annotations
 from osva.http_client import HTTPClient
 from osva.resources.agents import AgentsResource
 from osva.resources.approvals import ApprovalsResource
+from osva.resources.artifacts import ArtifactsResource
 from osva.resources.office import (
     AssignmentsResource,
     GoalsResource,
@@ -33,6 +34,7 @@ class OSVAClient:
         self.workflow_runs = WorkflowRunsResource(self._http, workspace_id)
         self.approvals = ApprovalsResource(self._http, workspace_id)
         self.schedules = SchedulesResource(self._http, workspace_id)
+        self.artifacts = ArtifactsResource(self._http, workspace_id)
         self.office_workers = OfficeWorkersResource(self._http)
         self.roles = RolesResource(self._http)
         self.teams = TeamsResource(self._http)

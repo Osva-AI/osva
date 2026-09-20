@@ -46,6 +46,13 @@ export {
   runtimeToolInvokeRequestSchema,
   runtimeToolInvokeResponseSchema,
   runtimeToolInvokeSuccessSchema,
+  runtimeArtifactCreateFailureSchema,
+  runtimeArtifactCreateResponseSchema,
+  runtimeArtifactCreateSuccessSchema,
+  runtimeArtifactGetFailureSchema,
+  runtimeArtifactGetRequestSchema,
+  runtimeArtifactGetResponseSchema,
+  runtimeArtifactGetSuccessSchema,
 } from "./schemas/capabilities.js";
 export type {
   RuntimeCapabilityCredential,
@@ -79,4 +86,12 @@ export type {
   RuntimeToolInvokeRequest,
   RuntimeToolInvokeResponse,
   RuntimeToolInvokeSuccess,
+  RuntimeArtifactCreateFailure,
+  RuntimeArtifactCreateResponse,
+  RuntimeArtifactCreateSuccess,
+  RuntimeArtifactGetFailure,
+  RuntimeArtifactGetRequest,
+  RuntimeArtifactGetResponse,
+  RuntimeArtifactGetSuccess,
+  RuntimeArtifactView,
 } from "./types.js";

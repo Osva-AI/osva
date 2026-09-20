@@ -21,6 +21,7 @@ export interface FakeRemoteRuntimeOptions {
   readonly oversizedBytes?: number;
   readonly callModel?: boolean;
   readonly callTool?: boolean;
+  readonly callArtifact?: boolean;
   readonly dedupe?: boolean;
   readonly onExecute?: (
     request: FakeRemoteRuntimeRequest,
@@ -163,6 +164,8 @@ export async function startFakeRemoteRuntime(
             outcome: "SUCCEEDED",
             output: (tool as { output?: unknown }).output ?? null,
           };
+        } else if (options.callArtifact === true) {
+          responseBody = await executeRemoteArtifactCapability(parsedBody);
         } else if (options.onExecute !== undefined) {
           responseBody = await options.onExecute(recorded);
         } else {
@@ -254,4 +257,79 @@ async function fetchJson(
     body: JSON.stringify(body),
   });
   return response.json();
+}
+
+async function executeRemoteArtifactCapability(
+  request: RuntimeExecuteRequest,
+): Promise<unknown> {
+  const input = request.input as { content?: string };
+  const payload = input.content ?? "remote-http-artifact";
+  const form = new FormData();
+  form.append("executionId", request.executionId);
+  form.append("name", "remote-artifact.txt");
+  form.append("mediaType", "text/plain");
+  form.append(
+    "file",
+    new Blob([payload], { type: "text/plain" }),
+    "remote-artifact.txt",
+  );
+
+  const createResponse = await fetch(
+    `${request.capabilities.endpoint}${RUNTIME_CAPABILITY_PATHS.artifactCreate}`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${request.capabilities.token}`,
+      },
+      body: form,
+    },
+  );
+  const created = (await createResponse.json()) as {
+    outcome?: string;
+    artifact?: {
+      id: string;
+      reference?: { type: string; artifactId: string };
+    };
+  };
+  if (created.outcome !== "SUCCEEDED" || created.artifact === undefined) {
+    throw new Error("Remote artifact create failed.");
+  }
+
+  const metadata = await fetchJson(
+    `${request.capabilities.endpoint}${RUNTIME_CAPABILITY_PATHS.artifactGet}`,
+    request.capabilities.token,
+    {
+      protocolVersion: RUNTIME_PROTOCOL_VERSION,
+      executionId: request.executionId,
+      artifactId: created.artifact.id,
+    },
+  );
+  const metadataArtifact = (metadata as { artifact?: { name?: string } })
+    .artifact;
+  if (metadataArtifact?.name !== "remote-artifact.txt") {
+    throw new Error("Remote artifact metadata get failed.");
+  }
+
+  const contentUrl = new URL(
+    `${request.capabilities.endpoint}${RUNTIME_CAPABILITY_PATHS.artifactContent}`,
+  );
+  contentUrl.searchParams.set("executionId", request.executionId);
+  contentUrl.searchParams.set("artifactId", created.artifact.id);
+  const contentResponse = await fetch(contentUrl, {
+    headers: { authorization: `Bearer ${request.capabilities.token}` },
+  });
+  const roundTrip = await contentResponse.text();
+  if (roundTrip !== payload) {
+    throw new Error("Remote artifact content open failed.");
+  }
+
+  return {
+    protocolVersion: RUNTIME_PROTOCOL_VERSION,
+    executionId: request.executionId,
+    outcome: "SUCCEEDED",
+    output: {
+      reference: created.artifact.reference,
+      roundTrip,
+    },
+  };
 }

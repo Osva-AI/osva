@@ -96,6 +96,20 @@ exactly one row per APPROVAL `workflow_node_run_id`. Status is `PENDING`,
 on resolution and then immutable. `decided_by` is not persisted because
 OSVA has no durable principal identity yet.
 
+## Stage 3.4 Run 1 tables
+
+Implemented:
+
+```text
+artifacts
+```
+
+`artifacts` is workspace-owned immutable metadata. `digest_sha256` stores the canonical
+`sha256:<hex>` integrity string (not identity). Optional `producer_run_id` and
+`producer_run_attempt_id` reference the canonical RunAttempt pair. Partial unique index on
+`(workspace_id, idempotency_key)` when the key is present. Blob bytes are not stored in
+PostgreSQL; they use the BlobStore abstraction (Community filesystem in Run 1).
+
 ## Rules
 
 - UTC timestamps (`timestamptz`).

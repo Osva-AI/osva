@@ -256,6 +256,85 @@ describe("trusted TypeScript runtime end-to-end", () => {
     }
   });
 
+  it("creates and reads artifacts through the trusted runtime artifact capability", async () => {
+    const trustedRuntimeRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-e2e-artifact-"),
+    );
+    const artifactRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-e2e-artifact-store-"),
+    );
+    await fs.copyFile(
+      path.join(FIXTURE_DIR, "artifact-echo-agent.ts"),
+      path.join(trustedRuntimeRoot, "artifact-echo-agent.ts"),
+    );
+    const integrity = sha256IntegrityOf(
+      await fs.readFile(
+        path.join(trustedRuntimeRoot, "artifact-echo-agent.ts"),
+      ),
+    );
+
+    const sharedEnv = {
+      OSVA_DATABASE_URL: postgres.connectionString,
+      OSVA_VALKEY_URL: valkey.url,
+      OSVA_ARTIFACT_FILESYSTEM_ROOT: artifactRoot,
+    };
+
+    const web = createWebProcess({
+      ...sharedEnv,
+      OSVA_WEB_HOST: "127.0.0.1",
+      OSVA_WEB_PORT: "0",
+    });
+    const worker = createWorkerProcess({
+      ...sharedEnv,
+      OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+    });
+    const inspector = new BullMqJobQueue({ url: valkey.url });
+
+    try {
+      const port = await web.listen();
+      await worker.start();
+      const origin = `http://127.0.0.1:${String(port)}`;
+      const payload = "trusted-runtime-artifact-round-trip";
+
+      const created = await createTrustedRun(
+        origin,
+        "artifact-echo-agent.ts",
+        integrity,
+        { content: payload },
+      );
+
+      await waitUntil(async () => {
+        const run = await fetchJson(`${origin}/v1/runs/${created.runId}`);
+        return (
+          run.status === 200 &&
+          (run.body as { status?: string }).status === "SUCCEEDED"
+        );
+      });
+
+      const attempt = await fetchJson(
+        `${origin}/v1/runs/${created.runId}/attempts/${created.runAttemptId}`,
+      );
+      expect(attempt.status).toBe(200);
+      expect(attempt.body).toMatchObject({
+        status: "SUCCEEDED",
+        output: {
+          name: "runtime-artifact.txt",
+          sizeBytes: payload.length,
+          roundTrip: payload,
+          fetchedName: "runtime-artifact.txt",
+        },
+      });
+      const artifactId = (attempt.body as { output: { artifactId: string } })
+        .output.artifactId;
+      expect(artifactId.length).toBeGreaterThan(0);
+      expect(await inspector.countActiveJobs()).toBe(0);
+    } finally {
+      await worker.stop();
+      await inspector.shutdown();
+      await web.stop();
+    }
+  });
+
   it("persists FAILED Run/RunAttempt for trusted agent errors while completing the queue message", async () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-e2e-fail-"),

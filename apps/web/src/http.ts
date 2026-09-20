@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import http from "node:http";
 import type {
   AgentApplication,
+  ArtifactApplication,
   ConnectorApplication,
   MemoryApplication,
   ModelProfileApplication,
@@ -10,6 +11,7 @@ import type {
 } from "@osva/domain";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
+import { handleArtifactRequest } from "./artifact-http.js";
 import { handleConnectorRegistryRequest } from "./connector-http.js";
 import {
   handleEvaluationRegistryRequest,
@@ -42,6 +44,8 @@ export interface CreateWebApplicationOptions {
   readonly agents: AgentApplication;
   readonly connectors: ConnectorApplication;
   readonly memory: MemoryApplication;
+  readonly artifacts: ArtifactApplication;
+  readonly artifactMaxBytes: number;
   readonly evaluations: EvaluationHttpServices;
   readonly modelProfiles: ModelProfileApplication;
   readonly tools: ToolApplication;
@@ -64,6 +68,8 @@ export function createWebApplication(
       options.agents,
       options.connectors,
       options.memory,
+      options.artifacts,
+      options.artifactMaxBytes,
       options.evaluations,
       options.modelProfiles,
       options.tools,
@@ -84,6 +90,8 @@ async function handleRequest(
   agents: AgentApplication,
   connectors: ConnectorApplication,
   memory: MemoryApplication,
+  artifacts: ArtifactApplication,
+  artifactMaxBytes: number,
   evaluations: EvaluationHttpServices,
   modelProfiles: ModelProfileApplication,
   tools: ToolApplication,
@@ -182,6 +190,19 @@ async function handleRequest(
     memory,
   );
   if (handledMemory) {
+    return;
+  }
+
+  const handledArtifacts = await handleArtifactRequest(
+    request,
+    response,
+    method,
+    path,
+    url.searchParams,
+    artifacts,
+    artifactMaxBytes,
+  );
+  if (handledArtifacts) {
     return;
   }
 

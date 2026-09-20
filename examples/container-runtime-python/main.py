@@ -33,6 +33,22 @@ async def execute(input: Any, context: RuntimeContext) -> Any:
         )
         return {"toolOutput": output}
 
+    if isinstance(input, dict) and input.get("mode") == "artifact":
+        payload = str(input.get("content", "container-artifact"))
+        created = await context.artifacts.create(
+            name="container-artifact.txt",
+            content=payload.encode("utf-8"),
+            media_type="text/plain",
+        )
+        opened = await context.artifacts.open(artifact_id=created["id"])
+        round_trip = (await opened.aread()).decode("utf-8")
+        metadata = await context.artifacts.get(artifact_id=created["id"])
+        return {
+            "reference": created.get("reference"),
+            "roundTrip": round_trip,
+            "name": metadata.get("name"),
+        }
+
     if isinstance(input, dict) and input.get("mode") == "fail":
         raise RuntimeError(str(input.get("message", "agent failure")))
 
