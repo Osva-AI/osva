@@ -1,0 +1,36 @@
+{
+  "name": "@osva/connector-sdk",
+  "version": "0.0.0",
+  "description": "Build OSVA Connector Profile V1 compatible MCP connectors",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "@osva/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

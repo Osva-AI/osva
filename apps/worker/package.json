@@ -38,6 +38,7 @@
     "@osva/orchestration": "workspace:*"
   },
   "devDependencies": {
+    "@osva/connector-sdk": "workspace:*",
     "@osva/adapters-artifact-filesystem": "workspace:*",
     "@osva/adapters-knowledge-parser": "workspace:*",
     "@osva/adapters-memory": "workspace:*",

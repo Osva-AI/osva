@@ -16,6 +16,7 @@ import {
 } from "@osva/contracts";
 
 import { resolveConnectorAuthHeaders } from "./auth-headers.js";
+import { resolveStdioProcessEnvironment } from "./stdio-environment.js";
 import { isMcpAdapterError, mcpAdapterError } from "./errors.js";
 import { mapMcpFailure } from "./error-mapping.js";
 import { normalizeMcpToolResult } from "./result-normalizer.js";
@@ -181,11 +182,13 @@ export class ManagedMcpClient {
       );
     }
 
+    const env = await resolveStdioProcessEnvironment(config, secretResolver);
+
     return new StdioClientTransport({
       command: config.command,
       args: [...config.args],
       cwd: config.cwd,
-      env: config.environment,
+      env,
       stderr: "pipe",
     });
   }

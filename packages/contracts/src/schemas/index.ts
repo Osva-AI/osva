@@ -97,6 +97,13 @@ export {
 } from "./connector.js";
 
 export {
+  osvaMcpAgentRunV1InputSchema,
+  osvaMcpRunGetV1InputSchema,
+  osvaMcpWorkflowRunGetV1InputSchema,
+  osvaMcpWorkflowRunV1InputSchema,
+} from "./mcp-server.js";
+
+export {
   connectorListResourceSchema,
   connectorResourceSchema,
   connectorVersionListResourceSchema,

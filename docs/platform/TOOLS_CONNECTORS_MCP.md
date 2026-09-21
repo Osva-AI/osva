@@ -75,16 +75,28 @@ ToolGateway before any MCP network/process invocation.
 - MCP tool execution through ToolGateway
 - Bearer/header auth via secret references
 
-## Not supported in Stage 2.7
+## Inbound OSVA MCP server (Stage 3.6)
 
-- MCP resources, prompts, sampling, roots
-- elicitation / input-required interaction
-- MCP Tasks / async MCP job lifecycle
-- subscriptions / automatic tool-change sync
-- OAuth browser flows and delegated user credentials
-- legacy SSE as a first-class OSVA connector transport
-- OSVA exposed as an MCP server
-- provider-specific connectors (GitHub, Slack, etc.)
+`apps/mcp-server` exposes Streamable HTTP MCP at `/mcp` for external clients.
 
-OSS 1.0 may later expose selected OSVA capabilities through an MCP server; that
-requires separate architecture from this slice.
+- Authentication: environment-configured bearer tokens mapped to a workspace
+- Tools: agent run, run get, workflow run, workflow run get (explicit version IDs)
+- Resources: read-only `osva://v1/...` listings and item views filtered by workspace
+- Implementation path: MCP server → `@osva/sdk` → `apps/web` (no DB/BullMQ in MCP server)
+
+See `docs/implementation/STAGE-3-6-MCP-SERVER-CONNECTOR-SDK.md`.
+
+## Connector Profile V1 + TypeScript SDK (Stage 3.6)
+
+- Profile: `docs/contracts/CONNECTOR_PROFILE_V1.md`
+- SDK: `@osva/connector-sdk` (`defineConnector`, `defineTool`, HTTP + stdio serving)
+- Example: `examples/echo-connector`
+
+stdio transport supports `secretEnvironment` SecretReferences (resolved at process start).
+
+## Still not supported
+
+- MCP prompts, sampling, roots, elicitation, MCP Tasks, subscriptions on inbound OSVA MCP
+- OAuth/OIDC inbound MCP auth (deferred to Stage 3.7)
+- Raw ToolVersion execution via inbound MCP
+- Provider-specific bundled connectors

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { CONNECTOR_KINDS, CONNECTOR_TRANSPORTS } from "../connector.js";
+import { validateStdioTransportEnvironment } from "../stdio-transport.js";
 import { secretReferenceSchema } from "./secret-reference.js";
 
 export const connectorKindSchema = z.enum(CONNECTOR_KINDS);
@@ -11,12 +12,25 @@ export const streamableHttpTransportConfigSchema = z.strictObject({
   endpointUrl: z.url(),
 });
 
-export const stdioTransportConfigSchema = z.strictObject({
-  command: z.string().min(1),
-  args: z.array(z.string()),
-  cwd: z.string().min(1).optional(),
-  environment: z.record(z.string(), z.string()).optional(),
-});
+export const stdioTransportConfigSchema = z
+  .strictObject({
+    command: z.string().min(1),
+    args: z.array(z.string()),
+    cwd: z.string().min(1).optional(),
+    environment: z.record(z.string(), z.string()).optional(),
+    secretEnvironment: z.record(z.string(), secretReferenceSchema).optional(),
+  })
+  .superRefine((value, ctx) => {
+    try {
+      validateStdioTransportEnvironment(value);
+    } catch (error) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          error instanceof Error ? error.message : "Invalid stdio transport.",
+      });
+    }
+  });
 
 export const connectorTransportConfigSchema = z.union([
   streamableHttpTransportConfigSchema,
