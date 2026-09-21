@@ -11,6 +11,7 @@ import {
   isConnectorTransport,
   isStdioTransportConfig,
   isStreamableHttpTransportConfig,
+  validateStdioTransportEnvironment,
 } from "@osva/contracts";
 
 import { DomainInvariantError } from "./errors.js";
@@ -111,6 +112,14 @@ function validateTransportConfig(
   if (!isStdioTransportConfig(config)) {
     throw new DomainInvariantError(
       "ConnectorVersion.transportConfig must match STDIO transport.",
+    );
+  }
+
+  try {
+    validateStdioTransportEnvironment(config);
+  } catch (error) {
+    throw new DomainInvariantError(
+      error instanceof Error ? error.message : "Invalid stdio transport.",
     );
   }
 }

@@ -15,6 +15,9 @@ export const OSVA_SPAN = {
   ASSIGNMENT_LAUNCH: "osva.assignment.launch",
   MCP_DISCOVER: "osva.mcp.discover",
   MCP_CALL_TOOL: "osva.mcp.call_tool",
+  MCP_INBOUND_REQUEST: "osva.mcp.inbound.request",
+  MCP_INBOUND_TOOL: "osva.mcp.inbound.tool",
+  MCP_INBOUND_RESOURCE: "osva.mcp.inbound.resource",
   QUEUE_PROCESS: "osva.queue.process",
 } as const;
 

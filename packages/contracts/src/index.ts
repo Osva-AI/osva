@@ -131,6 +131,35 @@ export type {
 } from "./mcp-client.js";
 
 export {
+  OSVA_MCP_ERROR_CATEGORY,
+  OSVA_MCP_RESOURCE_URI_PREFIX,
+  OSVA_MCP_TOOL_NAMES,
+  buildOsvaMcpResourceUri,
+  parseOsvaMcpResourceUri,
+} from "./mcp-server.js";
+export type {
+  McpPrincipal,
+  OsvaMcpAgentRunV1Input,
+  OsvaMcpAgentRunV1Output,
+  OsvaMcpErrorCategory,
+  OsvaMcpResourceKind,
+  OsvaMcpRunGetV1Input,
+  OsvaMcpRunGetV1Output,
+  OsvaMcpToolName,
+  OsvaMcpWorkflowRunGetV1Input,
+  OsvaMcpWorkflowRunGetV1Output,
+  OsvaMcpWorkflowRunV1Input,
+  OsvaMcpWorkflowRunV1Output,
+  ParsedOsvaMcpResourceUri,
+} from "./mcp-server.js";
+
+export {
+  isValidProcessEnvironmentVariableName,
+  listStdioEnvironmentConflicts,
+  validateStdioTransportEnvironment,
+} from "./stdio-transport.js";
+
+export {
   RUN_ATTEMPT_STATES,
   RUN_STATES,
   TERMINAL_RUN_STATES,

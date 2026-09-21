@@ -27,7 +27,8 @@
     "dev:worker": "pnpm --filter @osva/worker dev",
     "dev:scheduler": "pnpm --filter @osva/scheduler dev",
     "dev:workflow-orchestrator": "pnpm --filter @osva/workflow-orchestrator dev",
-    "dev:knowledge-worker": "pnpm --filter @osva/knowledge-worker dev"
+    "dev:knowledge-worker": "pnpm --filter @osva/knowledge-worker dev",
+    "dev:mcp-server": "pnpm --filter @osva/mcp-server dev"
   },
   "devDependencies": {
     "@types/node": "catalog:",

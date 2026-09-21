@@ -17,6 +17,7 @@ export interface StdioTransportConfig {
   readonly args: readonly string[];
   readonly cwd?: string;
   readonly environment?: Readonly<Record<string, string>>;
+  readonly secretEnvironment?: Readonly<Record<string, SecretReference>>;
 }
 
 export type ConnectorTransportConfig =

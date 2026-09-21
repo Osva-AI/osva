@@ -1,0 +1,17 @@
+{
+  "name": "@osva/example-echo-connector",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start:http": "node dist/http.js",
+    "start:stdio": "node dist/stdio.js",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@osva/connector-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}
