@@ -1,6 +1,14 @@
-import type { RunAttemptId, RunAttemptState, RunId } from "@osva/contracts";
+import type {
+  RunAttemptId,
+  RunAttemptState,
+  RunId,
+  WorkspaceId,
+} from "@osva/contracts";
 import type { ReconcileEvaluationCase } from "@osva/domain";
-import { isTerminalRunAttemptState } from "@osva/domain";
+import {
+  isTerminalRunAttemptState,
+  runtimeControlPlaneScope,
+} from "@osva/domain";
 import {
   OSVA_ATTR,
   OSVA_METRIC,
@@ -10,6 +18,7 @@ import {
 } from "@osva/observability";
 
 export interface ReconcileEvaluationCaseCommand {
+  readonly workspaceId: WorkspaceId;
   readonly runId: RunId;
   readonly runAttemptId: RunAttemptId;
   readonly runAttemptStatus: RunAttemptState;
@@ -39,10 +48,13 @@ export class EvaluationCoordinator {
         [OSVA_ATTR.RUN_ATTEMPT_ID]: command.runAttemptId,
       },
       async () => {
-        await this.deps.reconcileEvaluationCase.execute({
-          runId: command.runId,
-          runAttemptId: command.runAttemptId,
-        });
+        await this.deps.reconcileEvaluationCase.execute(
+          runtimeControlPlaneScope(command.workspaceId),
+          {
+            runId: command.runId,
+            runAttemptId: command.runAttemptId,
+          },
+        );
         telemetry.recordCounter(OSVA_METRIC.EVALUATION_RECONCILIATIONS, 1);
       },
     );

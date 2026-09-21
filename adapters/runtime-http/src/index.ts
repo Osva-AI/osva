@@ -45,12 +45,12 @@ export {
   type RemoteHttpDestinationDecision,
   type RemoteHttpOutboundNetworkPolicy,
   type ResolvedAddress,
-} from "./outbound-network.js";
+} from "@osva/outbound-network";
 export {
   fetchWithPinnedConnection,
   type PinnedFetchInit,
   type PinnedRemoteHttpConnection,
-} from "./pinned-fetch.js";
+} from "@osva/outbound-network";
 export { ProcessEnvSecretResolver } from "./process-env-secret-resolver.js";
 export {
   RemoteHttpRuntimeAdapter,

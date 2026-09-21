@@ -43,3 +43,12 @@ export {
   withBullMqTraceCarrier,
   type BullMqTraceCarrierPayload,
 } from "./trace-carrier.js";
+export {
+  SECURITY_EVENT_NAMES,
+  emitSecurityEvent,
+  resetSecurityEventSink,
+  setSecurityEventSink,
+  type SecurityEventFields,
+  type SecurityEventName,
+  type SecurityEventSink,
+} from "./security-events.js";

@@ -54,6 +54,7 @@ const STAGE0_TABLES = [
   "tools",
   "connector_versions",
   "connectors",
+  "api_keys",
   "workspaces",
 ] as const;
 
@@ -88,8 +89,11 @@ export async function startPostgresForTests(): Promise<PostgresTestContext> {
 }
 
 export async function stopPostgresForTests(
-  context: PostgresTestContext,
+  context: PostgresTestContext | undefined,
 ): Promise<void> {
+  if (context === undefined) {
+    return;
+  }
   if (context.usingDocker && context.dockerBin && context.containerName) {
     await removeContainer(context.dockerBin, context.containerName);
   }

@@ -8,13 +8,11 @@ from osva.http_client import HTTPClient
 
 
 class ArtifactsResource:
-    def __init__(self, http: HTTPClient, workspace_id: str) -> None:
+    def __init__(self, http: HTTPClient) -> None:
         self._http = http
-        self._workspace_id = workspace_id
 
     def list(self, **query: str | None) -> dict[str, Any]:
-        params = {"workspaceId": self._workspace_id, **query}
-        return self._http.request("GET", "/v1/artifacts", query=params)
+        return self._http.request("GET", "/v1/artifacts", query=query)
 
     def get(self, artifact_id: str) -> dict[str, Any]:
         return self._http.request("GET", f"/v1/artifacts/{artifact_id}")
@@ -29,10 +27,7 @@ class ArtifactsResource:
         expected_digest: str | None = None,
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
-        data = {
-            "workspaceId": self._workspace_id,
-            "name": name,
-        }
+        data: dict[str, str] = {"name": name}
         if media_type is not None:
             data["mediaType"] = media_type
         if metadata is not None:

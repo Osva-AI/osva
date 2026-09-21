@@ -31,19 +31,23 @@ import {
   otherWorkspaceId,
   workspaceId,
 } from "./fixtures.js";
+import { fakeControlPlaneScope } from "./test-scope.js";
+
+const scope = fakeControlPlaneScope(workspaceId);
+const otherScope = fakeControlPlaneScope(otherWorkspaceId);
 
 describe("Agent Registry application", () => {
   it("creates, reads, lists, and updates Agents", async () => {
     const { application } = await createHarness();
 
-    const created = await application.createAgent.execute({
+    const created = await application.createAgent.execute(scope, {
       workspaceId,
       key: "example-agent",
       name: "Example Agent",
     });
-    const loaded = await application.getAgent.execute(created.id);
-    const listed = await application.listAgents.execute();
-    const renamed = await application.updateAgentMetadata.execute({
+    const loaded = await application.getAgent.execute(scope, created.id);
+    const listed = await application.listAgents.execute(scope);
+    const renamed = await application.updateAgentMetadata.execute(scope, {
       agentId: created.id,
       name: "Renamed Agent",
     });
@@ -61,10 +65,10 @@ describe("Agent Registry application", () => {
     const { application } = await createHarness();
 
     await expect(
-      application.getAgent.execute("missing-agent" as AgentId),
+      application.getAgent.execute(scope, "missing-agent" as AgentId),
     ).rejects.toBeInstanceOf(AgentNotFoundError);
     await expect(
-      application.updateAgentMetadata.execute({
+      application.updateAgentMetadata.execute(scope, {
         agentId: "missing-agent" as AgentId,
         name: "Nope",
       }),
@@ -75,7 +79,7 @@ describe("Agent Registry application", () => {
     const { application } = createEmptyHarness();
 
     await expect(
-      application.createAgent.execute({
+      application.createAgent.execute(scope, {
         workspaceId,
         key: "example-agent",
         name: "Example Agent",
@@ -86,14 +90,14 @@ describe("Agent Registry application", () => {
   it("rejects a duplicate Agent key in the same Workspace", async () => {
     const { application } = await createHarness();
 
-    await application.createAgent.execute({
+    await application.createAgent.execute(scope, {
       workspaceId,
       key: "example-agent",
       name: "Example Agent",
     });
 
     await expect(
-      application.createAgent.execute({
+      application.createAgent.execute(scope, {
         workspaceId,
         key: "example-agent",
         name: "Other Agent",
@@ -104,26 +108,26 @@ describe("Agent Registry application", () => {
   it("appends immutable AgentVersions with per-Agent numbering", async () => {
     const { application } = await createHarness();
 
-    const firstAgent = await application.createAgent.execute({
+    const firstAgent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "example-agent",
       name: "Example Agent",
     });
-    const secondAgent = await application.createAgent.execute({
+    const secondAgent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "other-agent",
       name: "Other Agent",
     });
 
-    const v1 = await application.appendAgentVersion.execute({
+    const v1 = await application.appendAgentVersion.execute(scope, {
       agentId: firstAgent.id,
       manifest: createManifest(),
     });
-    const v2 = await application.appendAgentVersion.execute({
+    const v2 = await application.appendAgentVersion.execute(scope, {
       agentId: firstAgent.id,
       manifest: createManifest({ name: "Second Snapshot" }),
     });
-    const otherV1 = await application.appendAgentVersion.execute({
+    const otherV1 = await application.appendAgentVersion.execute(scope, {
       agentId: secondAgent.id,
       manifest: createManifest({ name: "Other First" }),
     });
@@ -132,10 +136,13 @@ describe("Agent Registry application", () => {
     expect(v2.version).toBe(2);
     expect(otherV1.version).toBe(1);
 
-    const listed = await application.listAgentVersions.execute(firstAgent.id);
+    const listed = await application.listAgentVersions.execute(
+      scope,
+      firstAgent.id,
+    );
     expect(listed.map((version) => version.version)).toEqual([1, 2]);
 
-    const loaded = await application.getAgentVersion.execute({
+    const loaded = await application.getAgentVersion.execute(scope, {
       agentId: firstAgent.id,
       agentVersionId: v2.id,
     });
@@ -146,7 +153,7 @@ describe("Agent Registry application", () => {
     const { application } = await createHarness();
 
     await expect(
-      application.appendAgentVersion.execute({
+      application.appendAgentVersion.execute(scope, {
         agentId: "missing-agent" as AgentId,
         manifest: createManifest(),
       }),
@@ -156,23 +163,23 @@ describe("Agent Registry application", () => {
   it("enforces nested AgentVersion ownership", async () => {
     const { application } = await createHarness();
 
-    const firstAgent = await application.createAgent.execute({
+    const firstAgent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "example-agent",
       name: "Example Agent",
     });
-    const secondAgent = await application.createAgent.execute({
+    const secondAgent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "other-agent",
       name: "Other Agent",
     });
-    const version = await application.appendAgentVersion.execute({
+    const version = await application.appendAgentVersion.execute(scope, {
       agentId: firstAgent.id,
       manifest: createManifest(),
     });
 
     await expect(
-      application.getAgentVersion.execute({
+      application.getAgentVersion.execute(scope, {
         agentId: secondAgent.id,
         agentVersionId: version.id,
       }),
@@ -190,7 +197,7 @@ describe("Agent Registry application", () => {
 
   it("accepts an AgentVersion with a same-workspace model binding", async () => {
     const { application, modelProfiles, workspaces } = await createHarness();
-    const agent = await application.createAgent.execute({
+    const agent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "example-agent",
       name: "Example Agent",
@@ -207,18 +214,18 @@ describe("Agent Registry application", () => {
         },
       },
     });
-    const profile = await profiles.createModelProfile.execute({
+    const profile = await profiles.createModelProfile.execute(scope, {
       workspaceId,
       key: "primary",
       name: "Primary",
     });
-    const version = await profiles.appendModelProfileVersion.execute({
+    const version = await profiles.appendModelProfileVersion.execute(scope, {
       modelProfileId: profile.id,
       provider: "OPENAI",
       model: "gpt-test-snapshot",
     });
 
-    const agentVersion = await application.appendAgentVersion.execute({
+    const agentVersion = await application.appendAgentVersion.execute(scope, {
       agentId: agent.id,
       manifest: createManifest({
         models: {
@@ -234,14 +241,14 @@ describe("Agent Registry application", () => {
 
   it("rejects a missing ModelProfileVersion binding", async () => {
     const { application } = await createHarness();
-    const agent = await application.createAgent.execute({
+    const agent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "example-agent",
       name: "Example Agent",
     });
 
     await expect(
-      application.appendAgentVersion.execute({
+      application.appendAgentVersion.execute(scope, {
         agentId: agent.id,
         manifest: createManifest({
           models: {
@@ -275,24 +282,27 @@ describe("Agent Registry application", () => {
         },
       },
     });
-    const otherProfile = await profiles.createModelProfile.execute({
+    const otherProfile = await profiles.createModelProfile.execute(otherScope, {
       workspaceId: otherWorkspaceId,
       key: "primary",
       name: "Other Primary",
     });
-    const otherVersion = await profiles.appendModelProfileVersion.execute({
-      modelProfileId: otherProfile.id,
-      provider: "OPENAI",
-      model: "gpt-other",
-    });
-    const agent = await application.createAgent.execute({
+    const otherVersion = await profiles.appendModelProfileVersion.execute(
+      otherScope,
+      {
+        modelProfileId: otherProfile.id,
+        provider: "OPENAI",
+        model: "gpt-other",
+      },
+    );
+    const agent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "example-agent",
       name: "Example Agent",
     });
 
     await expect(
-      application.appendAgentVersion.execute({
+      application.appendAgentVersion.execute(scope, {
         agentId: agent.id,
         manifest: createManifest({
           models: {
@@ -305,12 +315,12 @@ describe("Agent Registry application", () => {
 
   it("accepts an AgentVersion without model bindings", async () => {
     const { application } = await createHarness();
-    const agent = await application.createAgent.execute({
+    const agent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "example-agent",
       name: "Example Agent",
     });
-    const version = await application.appendAgentVersion.execute({
+    const version = await application.appendAgentVersion.execute(scope, {
       agentId: agent.id,
       manifest: createManifest(),
     });
@@ -331,22 +341,22 @@ describe("Agent Registry application", () => {
         },
       },
     });
-    const tool = await toolApp.createTool.execute({
+    const tool = await toolApp.createTool.execute(scope, {
       workspaceId,
       key: "echo",
       name: "Echo",
     });
-    const toolVersion = await toolApp.appendToolVersion.execute({
+    const toolVersion = await toolApp.appendToolVersion.execute(scope, {
       toolId: tool.id,
       type: "INTERNAL",
       implementation: "OSVA_ECHO_V1",
     });
-    const agent = await application.createAgent.execute({
+    const agent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "tool-agent",
       name: "Tool Agent",
     });
-    const version = await application.appendAgentVersion.execute({
+    const version = await application.appendAgentVersion.execute(scope, {
       agentId: agent.id,
       manifest: createManifest({
         tools: {
@@ -359,13 +369,13 @@ describe("Agent Registry application", () => {
 
   it("rejects a missing ToolVersion binding", async () => {
     const { application } = await createHarness();
-    const agent = await application.createAgent.execute({
+    const agent = await application.createAgent.execute(scope, {
       workspaceId,
       key: "tool-agent",
       name: "Tool Agent",
     });
     await expect(
-      application.appendAgentVersion.execute({
+      application.appendAgentVersion.execute(scope, {
         agentId: agent.id,
         manifest: createManifest({
           tools: {

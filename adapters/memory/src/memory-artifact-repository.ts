@@ -34,6 +34,18 @@ export class MemoryArtifactRepository implements ArtifactRepository {
     return this.artifacts.get(artifactId) ?? null;
   }
 
+  async findByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    artifactId: ArtifactId,
+  ): Promise<Artifact | null> {
+    const artifact = this.artifacts.get(artifactId);
+    if (artifact === undefined || artifact.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return artifact;
+  }
+
   async findByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,

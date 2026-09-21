@@ -11,11 +11,12 @@ import {
   migrateDatabase,
   PostgresRunRepository,
   PostgresScheduleRepository,
-  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
-
+import {
+  bootstrapIntegrationAuth,
+  fetchJson,
+} from "../../../worker/test/integration/integration-auth.js";
 import { createWebProcess } from "../../../web/src/process.js";
 import { createWorkerProcess } from "../../../worker/src/process.js";
 import { createSchedulerProcess } from "../../src/process.js";
@@ -83,12 +84,10 @@ describe("scheduler end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: new Date("2026-01-15T12:00:00.000Z"),
-      }),
+    await bootstrapIntegrationAuth(
+      database,
+      WORKSPACE_ID,
+      new Date("2026-01-15T12:00:00.000Z"),
     );
   });
 
@@ -139,11 +138,17 @@ describe("scheduler end-to-end", () => {
 
       const runs = new PostgresRunRepository(database);
       await waitUntil(async () => {
-        const listed = await runs.listRuns({ limit: 10 });
+        const listed = await runs.listRuns({
+          workspaceId: WORKSPACE_ID,
+          limit: 10,
+        });
         return listed.runs.some((run) => run.status === "SUCCEEDED");
       });
 
-      const listedRuns = await runs.listRuns({ limit: 10 });
+      const listedRuns = await runs.listRuns({
+        workspaceId: WORKSPACE_ID,
+        limit: 10,
+      });
       expect(listedRuns.runs).toHaveLength(1);
       const run = listedRuns.runs[0]!;
       const attempts = await runs.listRunAttempts(run.id);
@@ -243,7 +248,10 @@ describe("scheduler end-to-end", () => {
       await worker.start();
       await scheduler.tickOnce();
 
-      const listedRuns = await runs.listRuns({ limit: 10 });
+      const listedRuns = await runs.listRuns({
+        workspaceId: WORKSPACE_ID,
+        limit: 10,
+      });
       expect(listedRuns.runs).toHaveLength(1);
       const persistedRun = listedRuns.runs[0]!;
       expect(persistedRun.status).toBe("QUEUED");
@@ -315,7 +323,6 @@ async function createEchoSchedule(
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "echo-agent",
       name: "Echo Agent",
     },
@@ -346,7 +353,6 @@ async function createEchoSchedule(
   const schedule = await fetchJson(`${origin}/v1/schedules`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "echo-every-minute",
       name: "Echo Every Minute",
       agentId,
@@ -383,16 +389,4 @@ function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => {
     setImmediate(resolve);
   });
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

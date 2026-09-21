@@ -18,6 +18,10 @@ import type { TeamMembership } from "../team-membership.js";
 export interface OfficeRepository {
   saveOfficeWorker(officeWorker: OfficeWorker): Promise<void>;
   findOfficeWorkerById(id: OfficeWorkerId): Promise<OfficeWorker | null>;
+  findOfficeWorkerByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: OfficeWorkerId,
+  ): Promise<OfficeWorker | null>;
   listOfficeWorkersByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly OfficeWorker[]>;
@@ -25,11 +29,19 @@ export interface OfficeRepository {
 
   saveRole(role: Role): Promise<void>;
   findRoleById(id: RoleId): Promise<Role | null>;
+  findRoleByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: RoleId,
+  ): Promise<Role | null>;
   listRolesByWorkspace(workspaceId: WorkspaceId): Promise<readonly Role[]>;
   updateRole(role: Role): Promise<Role | null>;
 
   saveTeam(team: Team): Promise<void>;
   findTeamById(id: TeamId): Promise<Team | null>;
+  findTeamByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: TeamId,
+  ): Promise<Team | null>;
   listTeamsByWorkspace(workspaceId: WorkspaceId): Promise<readonly Team[]>;
   updateTeam(team: Team): Promise<Team | null>;
 
@@ -42,11 +54,19 @@ export interface OfficeRepository {
 
   saveGoal(goal: Goal): Promise<void>;
   findGoalById(id: GoalId): Promise<Goal | null>;
+  findGoalByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: GoalId,
+  ): Promise<Goal | null>;
   listGoalsByWorkspace(workspaceId: WorkspaceId): Promise<readonly Goal[]>;
   updateGoal(goal: Goal): Promise<Goal | null>;
 
   saveAssignment(assignment: Assignment): Promise<void>;
   findAssignmentById(id: AssignmentId): Promise<Assignment | null>;
+  findAssignmentByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: AssignmentId,
+  ): Promise<Assignment | null>;
   listAssignmentsByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly Assignment[]>;

@@ -14,7 +14,7 @@ import type {
   ModelProfileApplication,
   ModelProfileVersion,
 } from "@osva/domain";
-
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -62,9 +62,10 @@ async function dispatchModelProfileRoute(
   route: ModelProfileRoute,
   modelProfiles: ModelProfileApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "collection") {
     if (method === "GET") {
-      const list = await modelProfiles.listModelProfiles.execute();
+      const list = await modelProfiles.listModelProfiles.execute(scope);
       sendJson(response, 200, toModelProfileListResource(list));
       return;
     }
@@ -78,9 +79,10 @@ async function dispatchModelProfileRoute(
         return;
       }
 
-      const created = await modelProfiles.createModelProfile.execute(
-        parsed.data,
-      );
+      const created = await modelProfiles.createModelProfile.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toModelProfileResource(created));
       return;
     }
@@ -97,6 +99,7 @@ async function dispatchModelProfileRoute(
   if (route.kind === "item") {
     if (method === "GET") {
       const profile = await modelProfiles.getModelProfile.execute(
+        scope,
         route.modelProfileId,
       );
       sendJson(response, 200, toModelProfileResource(profile));
@@ -112,10 +115,13 @@ async function dispatchModelProfileRoute(
         return;
       }
 
-      const updated = await modelProfiles.updateModelProfileMetadata.execute({
-        modelProfileId: route.modelProfileId,
-        name: parsed.data.name,
-      });
+      const updated = await modelProfiles.updateModelProfileMetadata.execute(
+        scope,
+        {
+          modelProfileId: route.modelProfileId,
+          name: parsed.data.name,
+        },
+      );
       sendJson(response, 200, toModelProfileResource(updated));
       return;
     }
@@ -132,6 +138,7 @@ async function dispatchModelProfileRoute(
   if (route.kind === "versions") {
     if (method === "GET") {
       const versions = await modelProfiles.listModelProfileVersions.execute(
+        scope,
         route.modelProfileId,
       );
       sendJson(response, 200, toModelProfileVersionListResource(versions));
@@ -147,12 +154,15 @@ async function dispatchModelProfileRoute(
         return;
       }
 
-      const created = await modelProfiles.appendModelProfileVersion.execute({
-        modelProfileId: route.modelProfileId,
-        provider: parsed.data.provider,
-        model: parsed.data.model,
-        pricing: parsed.data.pricing,
-      });
+      const created = await modelProfiles.appendModelProfileVersion.execute(
+        scope,
+        {
+          modelProfileId: route.modelProfileId,
+          provider: parsed.data.provider,
+          model: parsed.data.model,
+          pricing: parsed.data.pricing,
+        },
+      );
       sendJson(response, 201, toModelProfileVersionResource(created));
       return;
     }
@@ -167,7 +177,7 @@ async function dispatchModelProfileRoute(
   }
 
   if (method === "GET") {
-    const version = await modelProfiles.getModelProfileVersion.execute({
+    const version = await modelProfiles.getModelProfileVersion.execute(scope, {
       modelProfileId: route.modelProfileId,
       modelProfileVersionId: route.modelProfileVersionId,
     });
@@ -269,3 +279,15 @@ function toModelProfileVersionListResource(
     })),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/model-profiles" },
+  { method: "POST", path: "/v1/model-profiles" },
+  { method: "GET", path: "/v1/model-profiles/:modelProfileId" },
+  { method: "PATCH", path: "/v1/model-profiles/:modelProfileId" },
+  { method: "GET", path: "/v1/model-profiles/:modelProfileId/versions" },
+  { method: "POST", path: "/v1/model-profiles/:modelProfileId/versions" },
+  {
+    method: "GET",
+    path: "/v1/model-profiles/:modelProfileId/versions/:modelProfileVersionId",
+  },
+] as const;

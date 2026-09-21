@@ -16,13 +16,13 @@ import {
   migrateDatabase,
   PostgresAgentRepository,
   PostgresRunRepository,
-  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Agent, AgentVersion, Workspace } from "@osva/domain";
+import { Agent, AgentVersion } from "@osva/domain";
 import { CreateRun } from "@osva/orchestration";
 
 import { createWorkerProcess } from "../../src/process.js";
+import { bootstrapIntegrationAuth } from "./integration-auth.js";
 import {
   resetStage0Tables,
   startPostgresForTests,
@@ -72,22 +72,15 @@ describe("worker process BullMQ integration", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
+    await bootstrapIntegrationAuth(database, workspaceId, NOW);
   });
 
   it("consumes through ExecuteRunAttempt when a test runtime is injected", async () => {
-    const workspaces = new PostgresWorkspaceRepository(database);
     const agents = new PostgresAgentRepository(database);
     const runs = new PostgresRunRepository(database);
     const producer = new BullMqJobQueue({ url: valkey.url });
     let executions = 0;
 
-    await workspaces.save(
-      Workspace.create({
-        id: workspaceId,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
     await agents.saveAgent(
       Agent.create({
         id: agentId,

@@ -50,7 +50,6 @@ export const knowledgeChunkLocationSchema = z.strictObject({
 });
 
 export const createKnowledgeSourceRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1).max(KNOWLEDGE_SOURCE_KEY_MAX_LENGTH),
   name: z.string().min(1).max(KNOWLEDGE_SOURCE_NAME_MAX_LENGTH),
   artifactId: artifactIdSchema,
@@ -68,13 +67,11 @@ export const knowledgeListCursorPayloadSchema = z.strictObject({
 });
 
 export const listKnowledgeSourcesQuerySchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   limit: z.string().optional(),
   cursor: z.string().min(1).optional(),
 });
 
 export const createKnowledgeIndexRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   idempotencyKey: z
     .string()
     .min(1)
@@ -82,12 +79,9 @@ export const createKnowledgeIndexRequestSchema = z.strictObject({
     .optional(),
 });
 
-export const retryKnowledgeIndexRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
-});
+export const retryKnowledgeIndexRequestSchema = z.strictObject({});
 
 export const knowledgeRetrieveRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   knowledgeIndexIds: z
     .array(knowledgeIndexIdSchema)
     .min(1)

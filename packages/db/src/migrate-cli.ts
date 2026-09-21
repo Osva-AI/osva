@@ -9,7 +9,10 @@ if (!connectionString) {
   );
   process.exitCode = 1;
 } else {
-  const database = createDatabase({ connectionString });
+  const database = createDatabase({
+    connectionString,
+    max: 1,
+  });
 
   migrateDatabase(database)
     .then(async () => {

@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "tag": "0000_dry_landau",
+      "file": "0000_dry_landau.sql",
+      "sha256": "3b7cd8245239650b9538aa8b334cdaaadb6cdefc5834384a44f3fca0b1fa4c56"
+    },
+    {
+      "idx": 1,
+      "tag": "0001_far_gorgon",
+      "file": "0001_far_gorgon.sql",
+      "sha256": "4d09abba3761b668950acbbc92e8366ad35a4182803871708abf91607220640c"
+    },
+    {
+      "idx": 2,
+      "tag": "0002_omniscient_warlock",
+      "file": "0002_omniscient_warlock.sql",
+      "sha256": "bb23a64b18bdd306be65e23a69d5f38a285a309e168d435f27d7a8deb90427d7"
+    },
+    {
+      "idx": 3,
+      "tag": "0003_workable_master_mold",
+      "file": "0003_workable_master_mold.sql",
+      "sha256": "a2cf0542cf2701b614eca510a4876a6c6fd802e06f988782ccd9fba348cf7522"
+    },
+    {
+      "idx": 4,
+      "tag": "0004_orange_mephisto",
+      "file": "0004_orange_mephisto.sql",
+      "sha256": "1ebb454175a61dec42c1e3d41605434d9842138fa85d9e68ba89463e03704f8e"
+    },
+    {
+      "idx": 5,
+      "tag": "0005_ambitious_king_cobra",
+      "file": "0005_ambitious_king_cobra.sql",
+      "sha256": "5a7c71e36a1ccd148fe627886d608cbb70b5cf83ad9b450fdde04b5b41972d53"
+    },
+    {
+      "idx": 6,
+      "tag": "0006_public_talos",
+      "file": "0006_public_talos.sql",
+      "sha256": "17217def0f6e2dfa2f8530c2a56a606318c2fde6b90cbbf826fe71d5b2ad5457"
+    },
+    {
+      "idx": 7,
+      "tag": "0007_observability_slice",
+      "file": "0007_observability_slice.sql",
+      "sha256": "8b84ebd1223e5d7f2c8e5841d4aae2965be1ae3a24340c3336c8b39ee281d1cd"
+    },
+    {
+      "idx": 8,
+      "tag": "0008_scheduling_slice",
+      "file": "0008_scheduling_slice.sql",
+      "sha256": "192c7f3429d4522c324de8edf89dacd326a4249900c5234fb8c55a3b31f2392e"
+    },
+    {
+      "idx": 9,
+      "tag": "0009_workflow_slice",
+      "file": "0009_workflow_slice.sql",
+      "sha256": "c7d30df7a1ce4f85375f30ef0428cb82adce47c979ab50de54326c9fa2e5aadb"
+    },
+    {
+      "idx": 10,
+      "tag": "0010_workflow_dag_slice",
+      "file": "0010_workflow_dag_slice.sql",
+      "sha256": "4c071ff114d922e1bfad9426c19b8474a8e34a5738abdb4fee8dfe344e712c3c"
+    },
+    {
+      "idx": 11,
+      "tag": "0011_workflow_approval_slice",
+      "file": "0011_workflow_approval_slice.sql",
+      "sha256": "540dcd5252a6a691c0b5a4dc536f510a3f36c182814804fb2e6ab13af0bc83bc"
+    },
+    {
+      "idx": 12,
+      "tag": "0012_model_providers_slice",
+      "file": "0012_model_providers_slice.sql",
+      "sha256": "412e83efce6478bead3879246ec1cf4c8e391b05e8549eafd299bdd539ed2c3a"
+    },
+    {
+      "idx": 13,
+      "tag": "0013_mcp_connector_slice",
+      "file": "0013_mcp_connector_slice.sql",
+      "sha256": "ddcdcea1b198988d33751829cfab1ad7840e076dca06ef49500dcf5bcc6b80d1"
+    },
+    {
+      "idx": 14,
+      "tag": "0014_memory_evaluation_slice",
+      "file": "0014_memory_evaluation_slice.sql",
+      "sha256": "bf528f59b5521f0dd91a7a1b40555fce3ef2cedd796f23df13c0d7b876b9b9fe"
+    },
+    {
+      "idx": 15,
+      "tag": "0015_ai_office_slice",
+      "file": "0015_ai_office_slice.sql",
+      "sha256": "f521a0fff2142bc167460adabe824d9b0b348c8cc25ceb9598d1a40cbac21847"
+    },
+    {
+      "idx": 16,
+      "tag": "0016_memory_run_step_kind",
+      "file": "0016_memory_run_step_kind.sql",
+      "sha256": "a63e78256138ad54584df7acb9c41ecda18ee05c6e1fa254ada808ce57d6a982"
+    },
+    {
+      "idx": 17,
+      "tag": "0017_workflow_waiting_state",
+      "file": "0017_workflow_waiting_state.sql",
+      "sha256": "4ee7de7dba159ff33c1932c484e279227ce8acb6b969b5c7e9a1f0467bc26fb2"
+    },
+    {
+      "idx": 18,
+      "tag": "0018_workflow_wait_event_slice",
+      "file": "0018_workflow_wait_event_slice.sql",
+      "sha256": "02550ae2db9bfb9187150ed6364c21ffef37e25a5101c2431cec8a0bcc0b603c"
+    },
+    {
+      "idx": 19,
+      "tag": "0019_artifact_storage_slice",
+      "file": "0019_artifact_storage_slice.sql",
+      "sha256": "200562a00f70c437df825a4cf4b9535b92ef54e90d21210eec90bee1541dbae7"
+    },
+    {
+      "idx": 20,
+      "tag": "0020_knowledge_retrieval_slice",
+      "file": "0020_knowledge_retrieval_slice.sql",
+      "sha256": "9effbdc294804ca5ec8e90751aba80dde5165c9847a3959a0a1a312e7a4d0220"
+    },
+    {
+      "idx": 21,
+      "tag": "0021_knowledge_runtime_slice",
+      "file": "0021_knowledge_runtime_slice.sql",
+      "sha256": "3a2ca6f431ae76313c7ddb047fece26de7657c828f14c92eaf999156131e4c52"
+    },
+    {
+      "idx": 22,
+      "tag": "0022_api_security_slice",
+      "file": "0022_api_security_slice.sql",
+      "sha256": "392c33a76d3881c3c52220471c123f04146ba7b46e4900592509071089c6ad28"
+    }
+  ]
+}

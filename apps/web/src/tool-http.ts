@@ -10,7 +10,7 @@ import {
   updateToolRequestSchema,
 } from "@osva/contracts/schemas";
 import type { Tool, ToolApplication, ToolVersion } from "@osva/domain";
-
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -52,9 +52,10 @@ async function dispatchToolRoute(
   route: ToolRoute,
   tools: ToolApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "collection") {
     if (method === "GET") {
-      const list = await tools.listTools.execute();
+      const list = await tools.listTools.execute(scope);
       sendJson(response, 200, toToolListResource(list));
       return;
     }
@@ -68,7 +69,10 @@ async function dispatchToolRoute(
         return;
       }
 
-      const created = await tools.createTool.execute(parsed.data);
+      const created = await tools.createTool.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toToolResource(created));
       return;
     }
@@ -84,7 +88,7 @@ async function dispatchToolRoute(
 
   if (route.kind === "item") {
     if (method === "GET") {
-      const tool = await tools.getTool.execute(route.toolId);
+      const tool = await tools.getTool.execute(scope, route.toolId);
       sendJson(response, 200, toToolResource(tool));
       return;
     }
@@ -98,7 +102,7 @@ async function dispatchToolRoute(
         return;
       }
 
-      const updated = await tools.updateToolMetadata.execute({
+      const updated = await tools.updateToolMetadata.execute(scope, {
         toolId: route.toolId,
         name: parsed.data.name,
       });
@@ -117,7 +121,10 @@ async function dispatchToolRoute(
 
   if (route.kind === "versions") {
     if (method === "GET") {
-      const versions = await tools.listToolVersions.execute(route.toolId);
+      const versions = await tools.listToolVersions.execute(
+        scope,
+        route.toolId,
+      );
       sendJson(response, 200, toToolVersionListResource(versions));
       return;
     }
@@ -131,7 +138,7 @@ async function dispatchToolRoute(
         return;
       }
 
-      const created = await tools.appendToolVersion.execute({
+      const created = await tools.appendToolVersion.execute(scope, {
         toolId: route.toolId,
         type: parsed.data.type,
         implementation: parsed.data.implementation,
@@ -150,7 +157,7 @@ async function dispatchToolRoute(
   }
 
   if (method === "GET") {
-    const version = await tools.getToolVersion.execute({
+    const version = await tools.getToolVersion.execute(scope, {
       toolId: route.toolId,
       toolVersionId: route.toolVersionId,
     });
@@ -254,3 +261,12 @@ function toToolVersionListResource(versions: readonly ToolVersion[]) {
     versions: versions.map((version) => toToolVersionResource(version)),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/tools" },
+  { method: "POST", path: "/v1/tools" },
+  { method: "GET", path: "/v1/tools/:toolId" },
+  { method: "PATCH", path: "/v1/tools/:toolId" },
+  { method: "GET", path: "/v1/tools/:toolId/versions" },
+  { method: "POST", path: "/v1/tools/:toolId/versions" },
+  { method: "GET", path: "/v1/tools/:toolId/versions/:toolVersionId" },
+] as const;

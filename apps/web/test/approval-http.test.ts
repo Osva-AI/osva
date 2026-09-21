@@ -7,6 +7,7 @@ import type {
 import { ApprovalRequest, WorkflowNodeRun } from "@osva/domain";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import { fetchJson, setTestAuthHeaders } from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
@@ -43,13 +44,8 @@ describe("ApprovalRequest HTTP API", () => {
     });
     await approvalRequests.saveApprovalRequest(pending);
 
-    const missingWorkspace = await fetchJson(
-      `${origin}/v1/approval-requests/${pending.id}`,
-    );
-    expect(missingWorkspace.status).toBe(400);
-
     const loaded = await fetchJson(
-      `${origin}/v1/approval-requests/${pending.id}?workspaceId=${WORKSPACE_ID}`,
+      `${origin}/v1/approval-requests/${pending.id}`,
     );
     expect(loaded.status).toBe(200);
     expect(loaded.body).toMatchObject({
@@ -62,16 +58,16 @@ describe("ApprovalRequest HTTP API", () => {
       `${origin}/v1/approval-requests/${pending.id}/decision`,
       {
         method: "POST",
-        body: { workspaceId: "ws-other", decision: "APPROVED" },
+        body: { decision: "DEFERRED" },
       },
     );
-    expect(wrongWorkspace.status).toBe(404);
+    expect(wrongWorkspace.status).toBe(400);
 
     const invalid = await fetchJson(
       `${origin}/v1/approval-requests/${pending.id}/decision`,
       {
         method: "POST",
-        body: { workspaceId: WORKSPACE_ID, decision: "DEFERRED" },
+        body: { decision: "DEFERRED" },
       },
     );
     expect(invalid.status).toBe(400);
@@ -81,7 +77,6 @@ describe("ApprovalRequest HTTP API", () => {
       {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           decision: "APPROVED",
           comment: "Looks good.",
         },
@@ -97,7 +92,7 @@ describe("ApprovalRequest HTTP API", () => {
       `${origin}/v1/approval-requests/${pending.id}/decision`,
       {
         method: "POST",
-        body: { workspaceId: WORKSPACE_ID, decision: "APPROVED" },
+        body: { decision: "APPROVED" },
       },
     );
     expect(repeated.status).toBe(200);
@@ -107,7 +102,7 @@ describe("ApprovalRequest HTTP API", () => {
       `${origin}/v1/approval-requests/${pending.id}/decision`,
       {
         method: "POST",
-        body: { workspaceId: WORKSPACE_ID, decision: "REJECTED" },
+        body: { decision: "REJECTED" },
       },
     );
     expect(conflict.status).toBe(409);
@@ -133,6 +128,7 @@ describe("ApprovalRequest HTTP API", () => {
     });
     servers.push(created.server);
     const port = await listenHttpServer(created.server, "127.0.0.1", 0);
+    setTestAuthHeaders(created.testApiKey);
     return {
       origin: `http://127.0.0.1:${String(port)}`,
       workflowRuns: created.workflowRuns,
@@ -147,7 +143,6 @@ async function createPendingWorkflowRun(origin: string): Promise<{
   const workflow = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "campaign",
       name: "Campaign",
     },
@@ -156,7 +151,6 @@ async function createPendingWorkflowRun(origin: string): Promise<{
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "example-agent",
       name: "Example Agent",
     },
@@ -201,7 +195,6 @@ async function createPendingWorkflowRun(origin: string): Promise<{
   const created = await fetchJson(`${origin}/v1/workflow-runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       workflowVersionId: (workflowVersion.body as { id: string }).id,
       input: { campaign: "launch" },
     },
@@ -213,20 +206,4 @@ async function createPendingWorkflowRun(origin: string): Promise<{
   return {
     id: (created.body as { id: import("@osva/contracts").WorkflowRunId }).id,
   };
-}
-
-async function fetchJson(
-  url: string,
-  options?: { readonly method?: string; readonly body?: unknown },
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: options?.method ?? "GET",
-    headers:
-      options?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body:
-      options?.body === undefined ? undefined : JSON.stringify(options.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

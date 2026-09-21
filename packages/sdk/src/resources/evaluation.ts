@@ -103,18 +103,15 @@ export class EvaluationSuitesResource {
 }
 
 export class EvaluationRunsResource {
-  constructor(
-    private readonly client: OsvaHttpClient,
-    private readonly workspaceId: string,
-  ) {}
+  constructor(private readonly client: OsvaHttpClient) {}
 
   create(
-    input: Omit<CreateEvaluationRunRequest, "workspaceId">,
+    input: CreateEvaluationRunRequest,
   ): Promise<EvaluationRunDetailResource> {
     return this.client.request({
       method: "POST",
       path: "/v1/evaluation-runs",
-      body: { ...input, workspaceId: this.workspaceId },
+      body: input,
     });
   }
 

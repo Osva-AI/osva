@@ -3,15 +3,30 @@ import type {
   MemoryNamespaceId,
   WorkspaceId,
 } from "@osva/contracts";
-import { MEMORY_ERROR_CODES } from "@osva/contracts";
+import { COMMUNITY_EDITION_ROLES, MEMORY_ERROR_CODES } from "@osva/contracts";
 import { MemoryMemoryNamespaceRepository } from "@osva/adapters-memory";
-import { Workspace, createMemoryApplication } from "@osva/domain";
+import {
+  Workspace,
+  createMemoryApplication,
+  type ControlPlaneScope,
+} from "@osva/domain";
 import { describe, expect, it } from "vitest";
 
 import { MemoryGateway, MemoryGatewayError } from "../src/index.js";
 
 const NOW = new Date("2026-01-15T12:00:00.000Z");
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
+
+function testScope(workspaceId: WorkspaceId): ControlPlaneScope {
+  return {
+    principal: {
+      subjectId: "ak-test" as import("@osva/contracts").ApiKeyId,
+      workspaceId,
+      role: COMMUNITY_EDITION_ROLES.ADMIN,
+      authenticationMethod: "API_KEY",
+    },
+  };
+}
 
 describe("MemoryGateway", () => {
   it("gets, sets, lists, and deletes records through bindings", async () => {
@@ -144,6 +159,12 @@ async function createGateway(options?: {
       });
     },
     async save() {},
+    async countAll() {
+      return 1;
+    },
+    async listIds() {
+      return [WORKSPACE_ID, "ws-other" as WorkspaceId];
+    },
   };
   const memoryNamespaces = new MemoryMemoryNamespaceRepository();
   let namespaceCounter = 0;
@@ -159,16 +180,22 @@ async function createGateway(options?: {
     },
   });
 
-  const namespace = await memoryApplication.createMemoryNamespace.execute({
-    workspaceId: WORKSPACE_ID,
-    key: "notes",
-    name: "Notes",
-  });
-  const otherNamespace = await memoryApplication.createMemoryNamespace.execute({
-    workspaceId: "ws-other" as WorkspaceId,
-    key: "other",
-    name: "Other",
-  });
+  const namespace = await memoryApplication.createMemoryNamespace.execute(
+    testScope(WORKSPACE_ID),
+    {
+      workspaceId: WORKSPACE_ID,
+      key: "notes",
+      name: "Notes",
+    },
+  );
+  const otherNamespace = await memoryApplication.createMemoryNamespace.execute(
+    testScope("ws-other" as WorkspaceId),
+    {
+      workspaceId: "ws-other" as WorkspaceId,
+      key: "other",
+      name: "Other",
+    },
+  );
 
   const access = options?.access ?? "READ_WRITE";
   const authorization: MemoryAuthorization = {

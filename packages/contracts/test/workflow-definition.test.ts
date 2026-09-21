@@ -359,7 +359,6 @@ describe("Workflow Definition v3 schema", () => {
 describe("Workflow registry request schemas", () => {
   it("parses a create Workflow request", () => {
     const parsed = createWorkflowRequestSchema.parse({
-      workspaceId: "ws-1",
       key: "research-report",
       name: "Research Report",
     });

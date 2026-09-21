@@ -83,6 +83,24 @@ export class PostgresMemoryNamespaceRepository implements MemoryNamespaceReposit
     return row === undefined ? null : memoryNamespaceFromRow(row);
   }
 
+  async findNamespaceByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: MemoryNamespaceId,
+  ): Promise<MemoryNamespace | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(memoryNamespaces)
+      .where(
+        and(
+          eq(memoryNamespaces.id, id),
+          eq(memoryNamespaces.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    return row === undefined ? null : memoryNamespaceFromRow(row);
+  }
+
   async listNamespacesByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly MemoryNamespace[]> {

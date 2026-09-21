@@ -24,7 +24,13 @@ import { CreateRun } from "../src/create-run.js";
 import { ExecuteRunAttempt } from "../src/execute-run-attempt.js";
 import { ReconcileWorkflowRun } from "../src/reconcile-workflow-run.js";
 import { WorkflowOrchestratorTick } from "../src/workflow-orchestrator-tick.js";
-import { LATER, NOW, seedAgentGraph, workspaceId } from "./fixtures.js";
+import {
+  LATER,
+  NOW,
+  seedAgentGraph,
+  workspaceId,
+  orchScope,
+} from "./fixtures.js";
 import { wrapRunRepository } from "./fixtures.js";
 
 describe("DAG workflow orchestration", () => {
@@ -39,14 +45,20 @@ describe("DAG workflow orchestration", () => {
       ],
       edges: [{ from: "research", to: "summarize" }],
     });
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("SUCCEEDED");
     expect(view.nodeRuns.map((node) => node.workflowNodeKey)).toEqual([
       "research",
@@ -62,14 +74,20 @@ describe("DAG workflow orchestration", () => {
       harness,
       branchJoinDefinition(agentA, agentB),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { category: "sales" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { category: "sales" },
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("SUCCEEDED");
     const byKey = byNodeKey(view.nodeRuns);
     expect(byKey.route?.status).toBe("SUCCEEDED");
@@ -91,14 +109,20 @@ describe("DAG workflow orchestration", () => {
       harness,
       branchJoinDefinition(agentA, agentB),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: {},
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: {},
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const byKey = byNodeKey(view.nodeRuns);
     expect(byKey.route?.selectedTargetKey).toBe("c");
     expect(byKey.c?.status).toBe("SUCCEEDED");
@@ -113,16 +137,22 @@ describe("DAG workflow orchestration", () => {
       harness,
       branchJoinDefinition(agentA, agentB),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { category: "sales" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { category: "sales" },
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
     await harness.tick.execute(LATER, harness.ids);
     await harness.tick.execute(LATER, harness.ids);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const route = view.nodeRuns.find(
       (node) => node.workflowNodeKey === "route",
     );
@@ -139,14 +169,20 @@ describe("DAG workflow orchestration", () => {
       harness,
       skipJoinDefinition(agentA, agentB),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { category: "keep" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { category: "keep" },
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const byKey = byNodeKey(view.nodeRuns);
     expect(byKey.keep?.status).toBe("SUCCEEDED");
     expect(byKey.left?.status).toBe("SKIPPED");
@@ -166,14 +202,20 @@ describe("DAG workflow orchestration", () => {
       harness,
       parallelDefinition(agentA, agentB, agentC),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const byKey = byNodeKey(view.nodeRuns);
     expect(byKey.b?.status).toBe("SUCCEEDED");
     expect(byKey.c?.status).toBe("SUCCEEDED");
@@ -199,14 +241,20 @@ describe("DAG workflow orchestration", () => {
       harness,
       parallelDefinition(agentA, agentB, agentC),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
-    let view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    let view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("FAILED");
     expect(
       view.nodeRuns.find((node) => node.workflowNodeKey === "join"),
@@ -223,7 +271,10 @@ describe("DAG workflow orchestration", () => {
       });
     });
     await harness.tick.execute(LATER, harness.ids);
-    view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("FAILED");
     expect(
       view.nodeRuns.find((node) => node.workflowNodeKey === "d"),
@@ -237,11 +288,14 @@ describe("DAG workflow orchestration", () => {
       harness,
       parallelDefinition(agentA, agentB, agentC),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await Promise.all([
       harness.tick.execute(NOW, harness.ids),
@@ -253,7 +307,10 @@ describe("DAG workflow orchestration", () => {
     ]);
 
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("SUCCEEDED");
     for (const nodeRun of view.nodeRuns) {
       if (nodeRun.childRunId === undefined) {
@@ -266,7 +323,7 @@ describe("DAG workflow orchestration", () => {
 
     const agentNodes = view.nodeRuns.filter((node) => node.childRunId);
     expect(agentNodes).toHaveLength(4);
-    const listed = await harness.runs.listRuns({ limit: 20 });
+    const listed = await harness.runs.listRuns({ workspaceId, limit: 20 });
     expect(listed.runs).toHaveLength(4);
   });
 
@@ -277,21 +334,30 @@ describe("DAG workflow orchestration", () => {
       harness,
       parallelDefinition(agentA, agentB, agentC),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await runUntil(harness, async () => {
-      const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+      const view = await harness.app.getWorkflowRun.execute(
+        orchScope(),
+        workflowRun.id,
+      );
       const keys = view.nodeRuns.map((node) => node.workflowNodeKey);
       return keys.includes("b") && keys.includes("c");
     });
 
     harness.replaceTick(createTick(harness));
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("SUCCEEDED");
   });
 
@@ -302,15 +368,21 @@ describe("DAG workflow orchestration", () => {
       harness,
       parallelDefinition(agentA, agentB, agentC),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await runUntilAfterTick(harness, async () => {
       const pending = harness.queue.pendingRunAttemptIds();
-      const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+      const view = await harness.app.getWorkflowRun.execute(
+        orchScope(),
+        workflowRun.id,
+      );
       const keys = view.nodeRuns.map((node) => node.workflowNodeKey);
       return keys.includes("b") && keys.includes("c") && pending.length >= 2;
     });
@@ -324,7 +396,10 @@ describe("DAG workflow orchestration", () => {
 
     harness.replaceTick(createTick(harness));
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("SUCCEEDED");
     expect(byNodeKey(view.nodeRuns).join?.status).toBe("SUCCEEDED");
   });
@@ -336,14 +411,20 @@ describe("DAG workflow orchestration", () => {
       harness,
       branchJoinDefinition(agentA, agentB),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { category: "sales" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { category: "sales" },
+      },
+    );
 
     await runUntil(harness, async () => {
-      const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+      const view = await harness.app.getWorkflowRun.execute(
+        orchScope(),
+        workflowRun.id,
+      );
       const route = view.nodeRuns.find(
         (node) => node.workflowNodeKey === "route",
       );
@@ -352,7 +433,10 @@ describe("DAG workflow orchestration", () => {
 
     harness.replaceTick(createTick(harness));
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const byKey = byNodeKey(view.nodeRuns);
     expect(byKey.c?.status).toBe("SKIPPED");
     expect(view.workflowRun.status).toBe("SUCCEEDED");
@@ -365,21 +449,30 @@ describe("DAG workflow orchestration", () => {
       harness,
       parallelDefinition(agentA, agentB, agentC),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await runUntil(harness, async () => {
-      const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+      const view = await harness.app.getWorkflowRun.execute(
+        orchScope(),
+        workflowRun.id,
+      );
       const byKey = byNodeKey(view.nodeRuns);
       return byKey.b?.status === "SUCCEEDED" && byKey.c?.status === "SUCCEEDED";
     });
 
     harness.replaceTick(createTick(harness));
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("SUCCEEDED");
     expect(byNodeKey(view.nodeRuns).d?.status).toBe("SUCCEEDED");
   });
@@ -517,12 +610,12 @@ async function createVersion(
   harness: TestHarness,
   definition: WorkflowDefinitionV2,
 ) {
-  const workflow = await harness.app.createWorkflow.execute({
+  const workflow = await harness.app.createWorkflow.execute(orchScope(), {
     workspaceId,
     key: `wf-${String(harness.nextWorkflowKey())}`,
     name: "DAG",
   });
-  return harness.app.appendWorkflowVersion.execute({
+  return harness.app.appendWorkflowVersion.execute(orchScope(), {
     workflowId: workflow.id,
     definition,
   });
@@ -533,7 +626,10 @@ async function runUntilTerminal(
   workflowRunId: WorkflowRunId,
 ): Promise<void> {
   await runUntil(harness, async () => {
-    const view = await harness.app.getWorkflowRun.execute(workflowRunId);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRunId,
+    );
     return (
       view.workflowRun.status === "SUCCEEDED" ||
       view.workflowRun.status === "FAILED"

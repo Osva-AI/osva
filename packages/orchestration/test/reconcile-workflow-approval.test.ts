@@ -29,7 +29,7 @@ import { CreateRun } from "../src/create-run.js";
 import { ExecuteRunAttempt } from "../src/execute-run-attempt.js";
 import { ReconcileWorkflowRun } from "../src/reconcile-workflow-run.js";
 import { WorkflowOrchestratorTick } from "../src/workflow-orchestrator-tick.js";
-import { LATER, seedAgentGraph, workspaceId } from "./fixtures.js";
+import { LATER, seedAgentGraph, workspaceId, orchScope } from "./fixtures.js";
 import { wrapRunRepository } from "./fixtures.js";
 
 describe("approval and multi-agent workflow orchestration", () => {
@@ -44,14 +44,20 @@ describe("approval and multi-agent workflow orchestration", () => {
         agents.publish,
       ),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { campaign: "launch" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
 
     await waitUntilWaiting(harness, workflowRun.id);
-    const waiting = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const waiting = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const byKey = byNodeKey(waiting.nodeRuns);
     expect(waiting.workflowRun.status).toBe("WAITING");
     expect(byKey.research?.status).toBe("SUCCEEDED");
@@ -76,14 +82,18 @@ describe("approval and multi-agent workflow orchestration", () => {
     expect(researchRun?.effectiveBindings.agentVersionId).toBe(agents.research);
     expect(analysisRun?.effectiveBindings.agentVersionId).toBe(agents.analysis);
 
-    const decided = await harness.app.decideApprovalRequest.execute({
-      workspaceId,
-      approvalRequestId: waiting.approvalRequests[0]!.id,
-      decision: "APPROVED",
-      comment: "Looks good.",
-    });
+    const decided = await harness.app.decideApprovalRequest.execute(
+      orchScope(),
+      {
+        workspaceId,
+        approvalRequestId: waiting.approvalRequests[0]!.id,
+        decision: "APPROVED",
+        comment: "Looks good.",
+      },
+    );
     expect(decided.status).toBe("APPROVED");
     const afterDecision = await harness.app.getWorkflowRun.execute(
+      orchScope(),
       workflowRun.id,
     );
     expect(afterDecision.workflowRun.status).toBe("WAITING");
@@ -93,7 +103,10 @@ describe("approval and multi-agent workflow orchestration", () => {
     ).toBe("WAITING");
 
     await runUntilTerminal(harness, workflowRun.id);
-    const succeeded = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const succeeded = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const succeededByKey = byNodeKey(succeeded.nodeRuns);
     expect(succeeded.workflowRun.status).toBe("SUCCEEDED");
     expect(succeededByKey.review?.status).toBe("SUCCEEDED");
@@ -117,15 +130,21 @@ describe("approval and multi-agent workflow orchestration", () => {
         agents.publish,
       ),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { campaign: "launch" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
 
     await waitUntilWaiting(harness, workflowRun.id);
-    const waiting = await harness.app.getWorkflowRun.execute(workflowRun.id);
-    await harness.app.decideApprovalRequest.execute({
+    const waiting = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
+    await harness.app.decideApprovalRequest.execute(orchScope(), {
       workspaceId,
       approvalRequestId: waiting.approvalRequests[0]!.id,
       decision: "REJECTED",
@@ -133,7 +152,10 @@ describe("approval and multi-agent workflow orchestration", () => {
     });
 
     await runUntilTerminal(harness, workflowRun.id);
-    const failed = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const failed = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const byKey = byNodeKey(failed.nodeRuns);
     expect(failed.workflowRun.status).toBe("FAILED");
     expect(failed.workflowRun.error?.code).toBe(APPROVAL_REJECTED_ERROR_CODE);
@@ -150,16 +172,22 @@ describe("approval and multi-agent workflow orchestration", () => {
       harness,
       parallelApprovalDefinition(agents.research, agents.analysis),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { campaign: "launch" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
 
     await waitUntil(
       harness,
       async () => {
-        const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+        const view = await harness.app.getWorkflowRun.execute(
+          orchScope(),
+          workflowRun.id,
+        );
         const byKey = byNodeKey(view.nodeRuns);
         return (
           byKey.review?.status === "WAITING" &&
@@ -168,13 +196,19 @@ describe("approval and multi-agent workflow orchestration", () => {
       },
       false,
     );
-    const running = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const running = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(running.workflowRun.status).toBe("RUNNING");
     expect(running.approvalRequests).toHaveLength(1);
     expect(running.approvalRequests[0]?.status).toBe("PENDING");
 
     await waitUntilWaiting(harness, workflowRun.id);
-    const waiting = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const waiting = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(waiting.workflowRun.status).toBe("WAITING");
     expect(byNodeKey(waiting.nodeRuns).agent?.status).toBe("SUCCEEDED");
   });
@@ -186,14 +220,20 @@ describe("approval and multi-agent workflow orchestration", () => {
       harness,
       dualApprovalDefinition(agents.publish),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { campaign: "launch" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
 
     await waitUntilWaiting(harness, workflowRun.id);
-    const waiting = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const waiting = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(waiting.approvalRequests).toHaveLength(2);
     const finance = waiting.approvalRequests.find(
       (request) =>
@@ -208,31 +248,38 @@ describe("approval and multi-agent workflow orchestration", () => {
     expect(finance).toBeDefined();
     expect(legal).toBeDefined();
 
-    await harness.app.decideApprovalRequest.execute({
+    await harness.app.decideApprovalRequest.execute(orchScope(), {
       workspaceId,
       approvalRequestId: finance!.id,
       decision: "APPROVED",
     });
     await waitUntil(harness, async () => {
-      const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+      const view = await harness.app.getWorkflowRun.execute(
+        orchScope(),
+        workflowRun.id,
+      );
       return (
         byNodeKey(view.nodeRuns).finance?.status === "SUCCEEDED" &&
         view.workflowRun.status === "WAITING"
       );
     });
     const oneApproved = await harness.app.getWorkflowRun.execute(
+      orchScope(),
       workflowRun.id,
     );
     expect(byNodeKey(oneApproved.nodeRuns).join).toBeUndefined();
     expect(byNodeKey(oneApproved.nodeRuns).publish).toBeUndefined();
 
-    await harness.app.decideApprovalRequest.execute({
+    await harness.app.decideApprovalRequest.execute(orchScope(), {
       workspaceId,
       approvalRequestId: legal!.id,
       decision: "APPROVED",
     });
     await runUntilTerminal(harness, workflowRun.id);
-    const succeeded = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const succeeded = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(succeeded.workflowRun.status).toBe("SUCCEEDED");
     expect(byNodeKey(succeeded.nodeRuns).join?.status).toBe("SUCCEEDED");
     expect(byNodeKey(succeeded.nodeRuns).publish?.status).toBe("SUCCEEDED");
@@ -245,21 +292,30 @@ describe("approval and multi-agent workflow orchestration", () => {
       harness,
       dualApprovalDefinition(agents.publish),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { campaign: "launch" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
 
     await waitUntilWaiting(harness, workflowRun.id);
-    const waiting = await harness.app.getWorkflowRun.execute(workflowRun.id);
-    await harness.app.decideApprovalRequest.execute({
+    const waiting = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
+    await harness.app.decideApprovalRequest.execute(orchScope(), {
       workspaceId,
       approvalRequestId: waiting.approvalRequests[0]!.id,
       decision: "REJECTED",
     });
     await runUntilTerminal(harness, workflowRun.id);
-    const failed = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const failed = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(failed.workflowRun.status).toBe("FAILED");
     expect(failed.workflowRun.error?.code).toBe(APPROVAL_REJECTED_ERROR_CODE);
     expect(byNodeKey(failed.nodeRuns).publish).toBeUndefined();
@@ -276,22 +332,26 @@ describe("approval and multi-agent workflow orchestration", () => {
         agents.publish,
       ),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { campaign: "launch" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
 
     await waitUntilWaiting(harness, workflowRun.id);
     harness.replaceTick(createTick(harness));
     await harness.tick.execute(LATER, harness.ids);
     const stillWaiting = await harness.app.getWorkflowRun.execute(
+      orchScope(),
       workflowRun.id,
     );
     expect(stillWaiting.workflowRun.status).toBe("WAITING");
     expect(stillWaiting.approvalRequests).toHaveLength(1);
 
-    await harness.app.decideApprovalRequest.execute({
+    await harness.app.decideApprovalRequest.execute(orchScope(), {
       workspaceId,
       approvalRequestId: stillWaiting.approvalRequests[0]!.id,
       decision: "APPROVED",
@@ -299,8 +359,8 @@ describe("approval and multi-agent workflow orchestration", () => {
     harness.replaceTick(createTick(harness));
     await runUntilTerminal(harness, workflowRun.id);
     expect(
-      (await harness.app.getWorkflowRun.execute(workflowRun.id)).workflowRun
-        .status,
+      (await harness.app.getWorkflowRun.execute(orchScope(), workflowRun.id))
+        .workflowRun.status,
     ).toBe("SUCCEEDED");
 
     const rejectedHarness = await createHarness();
@@ -313,16 +373,20 @@ describe("approval and multi-agent workflow orchestration", () => {
         rejectedAgents.publish,
       ),
     );
-    const rejectedRun = await rejectedHarness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: rejectedVersion.id,
-      input: { campaign: "launch" },
-    });
+    const rejectedRun = await rejectedHarness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: rejectedVersion.id,
+        input: { campaign: "launch" },
+      },
+    );
     await waitUntilWaiting(rejectedHarness, rejectedRun.id);
     const pending = await rejectedHarness.app.getWorkflowRun.execute(
+      orchScope(),
       rejectedRun.id,
     );
-    await rejectedHarness.app.decideApprovalRequest.execute({
+    await rejectedHarness.app.decideApprovalRequest.execute(orchScope(), {
       workspaceId,
       approvalRequestId: pending.approvalRequests[0]!.id,
       decision: "REJECTED",
@@ -330,8 +394,12 @@ describe("approval and multi-agent workflow orchestration", () => {
     rejectedHarness.replaceTick(createTick(rejectedHarness));
     await runUntilTerminal(rejectedHarness, rejectedRun.id);
     expect(
-      (await rejectedHarness.app.getWorkflowRun.execute(rejectedRun.id))
-        .workflowRun.status,
+      (
+        await rejectedHarness.app.getWorkflowRun.execute(
+          orchScope(),
+          rejectedRun.id,
+        )
+      ).workflowRun.status,
     ).toBe("FAILED");
   });
 
@@ -346,19 +414,28 @@ describe("approval and multi-agent workflow orchestration", () => {
         agents.publish,
       ),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { campaign: "launch" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
     await waitUntilWaiting(harness, workflowRun.id);
-    const first = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const first = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
 
     await Promise.all([
       harness.tick.execute(LATER, harness.ids),
       harness.tick.execute(LATER, harness.ids),
     ]);
-    const after = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const after = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(after.approvalRequests).toHaveLength(1);
     expect(after.approvalRequests[0]?.id).toBe(first.approvalRequests[0]?.id);
   });
@@ -374,23 +451,29 @@ describe("approval and multi-agent workflow orchestration", () => {
         agents.publish,
       ),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { campaign: "launch" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
     await waitUntilWaiting(harness, workflowRun.id);
-    const waiting = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const waiting = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const id = waiting.approvalRequests[0]!.id;
 
     const identical = await Promise.all([
-      harness.app.decideApprovalRequest.execute({
+      harness.app.decideApprovalRequest.execute(orchScope(), {
         workspaceId,
         approvalRequestId: id,
         decision: "APPROVED",
         comment: "first",
       }),
-      harness.app.decideApprovalRequest.execute({
+      harness.app.decideApprovalRequest.execute(orchScope(), {
         workspaceId,
         approvalRequestId: id,
         decision: "APPROVED",
@@ -405,7 +488,7 @@ describe("approval and multi-agent workflow orchestration", () => {
     );
 
     await expect(
-      harness.app.decideApprovalRequest.execute({
+      harness.app.decideApprovalRequest.execute(orchScope(), {
         workspaceId,
         approvalRequestId: id,
         decision: "REJECTED",
@@ -420,13 +503,19 @@ describe("approval and multi-agent workflow orchestration", () => {
       harness,
       branchAroundApprovalDefinition(agents.research, agents.publish),
     );
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { category: "publish" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { category: "publish" },
+      },
+    );
     await runUntilTerminal(harness, workflowRun.id);
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     const byKey = byNodeKey(view.nodeRuns);
     expect(view.workflowRun.status).toBe("SUCCEEDED");
     expect(byKey.review?.status).toBe("SKIPPED");
@@ -573,12 +662,12 @@ async function createVersion(
   harness: TestHarness,
   definition: WorkflowDefinitionV2,
 ) {
-  const workflow = await harness.app.createWorkflow.execute({
+  const workflow = await harness.app.createWorkflow.execute(orchScope(), {
     workspaceId,
     key: `wf-${String(harness.nextWorkflowKey())}`,
     name: "Approval",
   });
-  return harness.app.appendWorkflowVersion.execute({
+  return harness.app.appendWorkflowVersion.execute(orchScope(), {
     workflowId: workflow.id,
     definition,
   });
@@ -589,7 +678,10 @@ async function waitUntilWaiting(
   workflowRunId: WorkflowRunId,
 ): Promise<void> {
   await waitUntil(harness, async () => {
-    const view = await harness.app.getWorkflowRun.execute(workflowRunId);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRunId,
+    );
     return view.workflowRun.status === "WAITING";
   });
 }
@@ -599,7 +691,10 @@ async function runUntilTerminal(
   workflowRunId: WorkflowRunId,
 ): Promise<void> {
   await waitUntil(harness, async () => {
-    const view = await harness.app.getWorkflowRun.execute(workflowRunId);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRunId,
+    );
     return (
       view.workflowRun.status === "SUCCEEDED" ||
       view.workflowRun.status === "FAILED"

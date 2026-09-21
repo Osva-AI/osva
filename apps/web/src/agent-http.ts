@@ -9,8 +9,18 @@ import {
   createAgentVersionRequestSchema,
   updateAgentRequestSchema,
 } from "@osva/contracts/schemas";
-import type { Agent, AgentApplication, AgentVersion } from "@osva/domain";
+import {
+  CONTROL_PLANE_RESOURCE_KINDS,
+  type Agent,
+  type AgentApplication,
+  type AgentVersion,
+} from "@osva/domain";
 
+import {
+  authorizeControlPlaneRead,
+  authorizeControlPlaneWrite,
+  requireControlPlaneScope,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -52,9 +62,11 @@ async function dispatchAgentRoute(
   route: AgentRoute,
   agents: AgentApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "collection") {
     if (method === "GET") {
-      const list = await agents.listAgents.execute();
+      authorizeControlPlaneRead(scope, CONTROL_PLANE_RESOURCE_KINDS.agent);
+      const list = await agents.listAgents.execute(scope);
       sendJson(response, 200, toAgentListResource(list));
       return;
     }
@@ -68,7 +80,11 @@ async function dispatchAgentRoute(
         return;
       }
 
-      const created = await agents.createAgent.execute(parsed.data);
+      authorizeControlPlaneWrite(scope, CONTROL_PLANE_RESOURCE_KINDS.agent);
+      const created = await agents.createAgent.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toAgentResource(created));
       return;
     }
@@ -84,7 +100,8 @@ async function dispatchAgentRoute(
 
   if (route.kind === "item") {
     if (method === "GET") {
-      const agent = await agents.getAgent.execute(route.agentId);
+      authorizeControlPlaneRead(scope, CONTROL_PLANE_RESOURCE_KINDS.agent);
+      const agent = await agents.getAgent.execute(scope, route.agentId);
       sendJson(response, 200, toAgentResource(agent));
       return;
     }
@@ -98,7 +115,8 @@ async function dispatchAgentRoute(
         return;
       }
 
-      const updated = await agents.updateAgentMetadata.execute({
+      authorizeControlPlaneWrite(scope, CONTROL_PLANE_RESOURCE_KINDS.agent);
+      const updated = await agents.updateAgentMetadata.execute(scope, {
         agentId: route.agentId,
         name: parsed.data.name,
       });
@@ -117,7 +135,11 @@ async function dispatchAgentRoute(
 
   if (route.kind === "versions") {
     if (method === "GET") {
-      const versions = await agents.listAgentVersions.execute(route.agentId);
+      authorizeControlPlaneRead(scope, CONTROL_PLANE_RESOURCE_KINDS.agent);
+      const versions = await agents.listAgentVersions.execute(
+        scope,
+        route.agentId,
+      );
       sendJson(response, 200, toAgentVersionListResource(versions));
       return;
     }
@@ -131,7 +153,8 @@ async function dispatchAgentRoute(
         return;
       }
 
-      const created = await agents.appendAgentVersion.execute({
+      authorizeControlPlaneWrite(scope, CONTROL_PLANE_RESOURCE_KINDS.agent);
+      const created = await agents.appendAgentVersion.execute(scope, {
         agentId: route.agentId,
         manifest: parsed.data.manifest,
       });
@@ -149,7 +172,8 @@ async function dispatchAgentRoute(
   }
 
   if (method === "GET") {
-    const version = await agents.getAgentVersion.execute({
+    authorizeControlPlaneRead(scope, CONTROL_PLANE_RESOURCE_KINDS.agent);
+    const version = await agents.getAgentVersion.execute(scope, {
       agentId: route.agentId,
       agentVersionId: route.agentVersionId,
     });
@@ -246,3 +270,12 @@ function toAgentVersionListResource(versions: readonly AgentVersion[]) {
     })),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/agents" },
+  { method: "POST", path: "/v1/agents" },
+  { method: "GET", path: "/v1/agents/:agentId" },
+  { method: "PATCH", path: "/v1/agents/:agentId" },
+  { method: "GET", path: "/v1/agents/:agentId/versions" },
+  { method: "POST", path: "/v1/agents/:agentId/versions" },
+  { method: "GET", path: "/v1/agents/:agentId/versions/:agentVersionId" },
+] as const;

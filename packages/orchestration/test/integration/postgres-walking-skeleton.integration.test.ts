@@ -29,6 +29,7 @@ import {
   runId,
   seedAgentGraph,
   workspaceId,
+  orchScope,
 } from "../fixtures.js";
 import {
   resetStage0Tables,
@@ -185,12 +186,12 @@ describe("PostgreSQL orchestration walking skeleton", () => {
       },
     });
 
-    await registry.createAgent.execute({
+    await registry.createAgent.execute(orchScope(), {
       workspaceId,
       key: "agent-key",
       name: "Example Agent",
     });
-    await registry.appendAgentVersion.execute({
+    await registry.appendAgentVersion.execute(orchScope(), {
       agentId,
       manifest: createManifest(),
     });

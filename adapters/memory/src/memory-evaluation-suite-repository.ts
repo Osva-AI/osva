@@ -54,6 +54,18 @@ export class MemoryEvaluationSuiteRepository implements EvaluationSuiteRepositor
     return this.suites.get(id) ?? null;
   }
 
+  async findSuiteByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: EvaluationSuiteId,
+  ): Promise<EvaluationSuite | null> {
+    const suite = this.suites.get(id);
+    if (suite === undefined || suite.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return suite;
+  }
+
   async listSuitesByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly EvaluationSuite[]> {
@@ -125,6 +137,21 @@ export class MemoryEvaluationSuiteRepository implements EvaluationSuiteRepositor
     id: EvaluationRunId,
   ): Promise<EvaluationRun | null> {
     return this.evaluationRuns.get(id) ?? null;
+  }
+
+  async findEvaluationRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: EvaluationRunId,
+  ): Promise<EvaluationRun | null> {
+    const evaluationRun = this.evaluationRuns.get(id);
+    if (
+      evaluationRun === undefined ||
+      evaluationRun.workspaceId !== workspaceId
+    ) {
+      return null;
+    }
+
+    return evaluationRun;
   }
 
   async transitionEvaluationRun(

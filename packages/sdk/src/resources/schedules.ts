@@ -29,17 +29,13 @@ export interface ListScheduleOccurrencesParams {
 }
 
 export class SchedulesResource {
-  constructor(
-    private readonly client: OsvaHttpClient,
-    private readonly workspaceId: string,
-  ) {}
+  constructor(private readonly client: OsvaHttpClient) {}
 
   list(params: ListSchedulesParams = {}): Promise<ScheduleListResource> {
     return this.client.request({
       method: "GET",
       path: "/v1/schedules",
       query: {
-        workspaceId: this.workspaceId,
         limit: params.limit === undefined ? undefined : String(params.limit),
         cursor: params.cursor,
       },
@@ -53,16 +49,11 @@ export class SchedulesResource {
     });
   }
 
-  create(
-    input: Omit<CreateScheduleRequest, "workspaceId">,
-  ): Promise<ScheduleResource> {
+  create(input: CreateScheduleRequest): Promise<ScheduleResource> {
     return this.client.request({
       method: "POST",
       path: "/v1/schedules",
-      body: {
-        ...input,
-        workspaceId: this.workspaceId,
-      },
+      body: input,
     });
   }
 

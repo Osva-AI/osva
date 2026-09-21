@@ -1218,11 +1218,15 @@ describe("PostgreSQL Stage 0 repositories", () => {
         }),
       );
 
-      const firstPage = await runs.listRuns({ limit: 2 });
+      const firstPage = await runs.listRuns({
+        workspaceId: ids.workspaceId,
+        limit: 2,
+      });
       expect(firstPage.runs.map((run) => run.id)).toEqual(["run-c", "run-b"]);
       expect(firstPage.nextCursor?.id).toBe("run-b" as RunId);
 
       const secondPage = await runs.listRuns({
+        workspaceId: ids.workspaceId,
         limit: 2,
         cursor: firstPage.nextCursor,
       });
@@ -1235,16 +1239,22 @@ describe("PostgreSQL Stage 0 repositories", () => {
       }
       await runs.transitionRun("PENDING", runC.transitionTo("QUEUED", LATER));
 
-      const queued = await runs.listRuns({ limit: 10, status: "QUEUED" });
+      const queued = await runs.listRuns({
+        workspaceId: ids.workspaceId,
+        limit: 10,
+        status: "QUEUED",
+      });
       expect(queued.runs.map((run) => run.id)).toEqual(["run-c"]);
 
       const byAgent = await runs.listRuns({
+        workspaceId: ids.workspaceId,
         limit: 10,
         agentId: ids.agentId,
       });
       expect(byAgent.runs).toHaveLength(3);
 
       const byVersion = await runs.listRuns({
+        workspaceId: ids.workspaceId,
         limit: 10,
         agentVersionId: ids.agentVersionId,
       });

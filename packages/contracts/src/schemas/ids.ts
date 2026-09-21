@@ -7,6 +7,7 @@ function osvaIdSchema<Name extends string>(): z.ZodType<OsvaId<Name>, string> {
 }
 
 export const workspaceIdSchema = osvaIdSchema<"WorkspaceId">();
+export const apiKeyIdSchema = osvaIdSchema<"ApiKeyId">();
 export const agentIdSchema = osvaIdSchema<"AgentId">();
 export const agentVersionIdSchema = osvaIdSchema<"AgentVersionId">();
 export const deploymentIdSchema = osvaIdSchema<"DeploymentId">();

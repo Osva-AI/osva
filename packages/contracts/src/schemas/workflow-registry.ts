@@ -41,7 +41,6 @@ export const approvalRequestStateSchema = z.enum([
 export const approvalDecisionSchema = z.enum(["APPROVED", "REJECTED"]);
 
 export const createWorkflowRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -52,7 +51,6 @@ export const createWorkflowVersionRequestSchema = z.strictObject({
 });
 
 export const createWorkflowRunRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   workflowVersionId: workflowVersionIdSchema,
   input: jsonValueSchema,
 });
@@ -141,7 +139,6 @@ export const workflowRunResourceSchema = z.strictObject({
 });
 
 export const decideApprovalRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   decision: approvalDecisionSchema,
   comment: z
     .string()

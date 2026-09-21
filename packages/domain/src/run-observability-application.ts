@@ -1,4 +1,10 @@
-import type { RunAttemptId, RunId, RunStepId } from "@osva/contracts";
+import type {
+  RunAttemptId,
+  RunId,
+  RunStepId,
+  WorkspaceId,
+} from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import {
   DomainInvariantError,
@@ -17,6 +23,14 @@ import {
   MAX_RUN_STEP_LIST_LIMIT,
 } from "./ports/run-repository.js";
 import type { RunStep } from "./run-step.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const RUN_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.run };
 
 export interface RunObservabilityApplicationDependencies {
   readonly runs: RunRepository;
@@ -32,11 +46,22 @@ export class ListRunSteps {
   constructor(private readonly deps: RunObservabilityApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     runId: RunId,
     runAttemptId: RunAttemptId,
     query: Omit<ListRunStepsQuery, "runAttemptId">,
   ): Promise<ListRunStepsResult> {
-    await assertRunAttemptOwnership(this.deps.runs, runId, runAttemptId);
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      RUN_RESOURCE,
+    );
+    await assertRunAttemptOwnership(
+      this.deps.runs,
+      controlPlaneWorkspaceId(scope),
+      runId,
+      runAttemptId,
+    );
     assertRunStepListLimit(query.limit);
 
     return this.deps.runs.listRunSteps({
@@ -50,9 +75,18 @@ export class ListRunSteps {
 export class GetRunStep {
   constructor(private readonly deps: RunObservabilityApplicationDependencies) {}
 
-  async execute(command: GetRunStepCommand): Promise<RunStep> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: GetRunStepCommand,
+  ): Promise<RunStep> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      RUN_RESOURCE,
+    );
     await assertRunAttemptOwnership(
       this.deps.runs,
+      controlPlaneWorkspaceId(scope),
       command.runId,
       command.runAttemptId,
     );
@@ -74,10 +108,21 @@ export class GetRunAttemptUsage {
   constructor(private readonly deps: RunObservabilityApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     runId: RunId,
     runAttemptId: RunAttemptId,
   ): Promise<RunAttemptUsageSummary> {
-    await assertRunAttemptOwnership(this.deps.runs, runId, runAttemptId);
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      RUN_RESOURCE,
+    );
+    await assertRunAttemptOwnership(
+      this.deps.runs,
+      controlPlaneWorkspaceId(scope),
+      runId,
+      runAttemptId,
+    );
     return this.deps.runs.aggregateRunAttemptUsage(runAttemptId);
   }
 }
@@ -100,10 +145,11 @@ export function createRunObservabilityApplication(
 
 async function assertRunAttemptOwnership(
   runs: RunRepository,
+  workspaceId: WorkspaceId,
   runId: RunId,
   runAttemptId: RunAttemptId,
 ): Promise<void> {
-  const run = await runs.findRunById(runId);
+  const run = await runs.findRunByWorkspaceAndId(workspaceId, runId);
   if (run === null) {
     throw new RunNotFoundError(runId);
   }

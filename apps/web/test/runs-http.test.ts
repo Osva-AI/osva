@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { encodeRunListCursor } from "../src/run-cursor.js";
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import { fetchJson, setTestAuthHeaders } from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
@@ -37,7 +38,6 @@ describe("Run HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/runs`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         agentId: registered.agentId,
         agentVersionId: registered.agentVersionId,
         input: { prompt: "hello" },
@@ -48,7 +48,6 @@ describe("Run HTTP API", () => {
     expect(created.body).toMatchObject({
       run: {
         id: "id-3",
-        workspaceId: WORKSPACE_ID,
         agentId: registered.agentId,
         status: "QUEUED",
         effectiveBindings: {
@@ -80,7 +79,6 @@ describe("Run HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/runs`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         agentId: registered.agentId,
         agentVersionId: registered.agentVersionId,
         effectiveBindings: {
@@ -103,7 +101,6 @@ describe("Run HTTP API", () => {
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "second-agent",
         name: "Second Agent",
       },
@@ -116,7 +113,6 @@ describe("Run HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/runs`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         agentId: "id-1",
         agentVersionId: "id-4",
         input: { prompt: "hello" },
@@ -133,7 +129,10 @@ describe("Run HTTP API", () => {
     const { origin } = await listen();
     const response = await fetchJson(`${origin}/v1/runs/missing`);
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: "not_found" });
+    expect(response.body).toMatchObject({
+      status: "error",
+      code: "RESOURCE_NOT_FOUND",
+    });
   });
 
   it("lists Runs with deterministic ordering and cursor pagination", async () => {
@@ -196,7 +195,6 @@ describe("Run HTTP API", () => {
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "two",
         name: "Second Agent",
       },
@@ -292,7 +290,10 @@ describe("Run HTTP API", () => {
       `${origin}/v1/runs/${first.run.id}/attempts/${second.runAttempt.id}`,
     );
     expect(leaked.status).toBe(404);
-    expect(leaked.body).toEqual({ status: "not_found" });
+    expect(leaked.body).toMatchObject({
+      status: "error",
+      code: "RESOURCE_NOT_FOUND",
+    });
 
     const missingRun = await fetchJson(`${origin}/v1/runs/missing/attempts`);
     expect(missingRun.status).toBe(404);
@@ -340,7 +341,6 @@ describe("Run HTTP API", () => {
         id: "chosen-run",
         runAttemptId: "chosen-attempt",
         status: "SUCCEEDED",
-        workspaceId: WORKSPACE_ID,
         agentId: registered.agentId,
         agentVersionId: registered.agentVersionId,
         input: { prompt: "hello" },
@@ -351,11 +351,12 @@ describe("Run HTTP API", () => {
   });
 
   async function listen() {
-    const { server, queue } = await createTestWebApplication({
+    const { server, queue, testApiKey } = await createTestWebApplication({
       workspaceId: WORKSPACE_ID,
     });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);
+    setTestAuthHeaders(testApiKey);
     return { origin: `http://127.0.0.1:${String(port)}`, queue };
   }
 });
@@ -367,7 +368,6 @@ async function registerAgent(
   const created = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: options?.key ?? "example-agent",
       name: "Example Agent",
     },
@@ -396,7 +396,6 @@ async function createRun(
   const created = await fetchJson(`${origin}/v1/runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       agentId: registered.agentId,
       agentVersionId: registered.agentVersionId,
       input,
@@ -407,20 +406,4 @@ async function createRun(
     run: { id: string };
     runAttempt: { id: string };
   };
-}
-
-async function fetchJson(
-  url: string,
-  options?: { readonly method?: string; readonly body?: unknown },
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: options?.method ?? "GET",
-    headers:
-      options?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body:
-      options?.body === undefined ? undefined : JSON.stringify(options.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

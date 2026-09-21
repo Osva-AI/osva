@@ -23,7 +23,6 @@ const validManifest = {
 describe("Agent Registry request schemas", () => {
   it("parses a create Agent request", () => {
     const parsed = createAgentRequestSchema.parse({
-      workspaceId: "ws-1",
       key: "example-agent",
       name: "Example Agent",
     });

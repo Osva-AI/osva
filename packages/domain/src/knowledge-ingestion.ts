@@ -26,6 +26,7 @@ import {
   KnowledgeUnsupportedMediaTypeError,
   KnowledgeVectorStoreUnavailableError,
 } from "./errors.js";
+import { runtimeControlPlaneScope } from "./control-plane.js";
 import { KnowledgeChunk } from "./knowledge-chunk.js";
 import { chunkKnowledgeText } from "./knowledge-chunker.js";
 import { KnowledgeIndex } from "./knowledge-index.js";
@@ -119,7 +120,10 @@ export class KnowledgeIngestionService {
       });
     }
 
-    const segments = await this.loadExtractionSegments(extractedArtifactId);
+    const segments = await this.loadExtractionSegments(
+      current.workspaceId,
+      extractedArtifactId,
+    );
     const chunks = chunkKnowledgeText({
       segments,
       chunkSize: current.chunkSize,
@@ -214,7 +218,8 @@ export class KnowledgeIngestionService {
     index: KnowledgeIndex,
     artifactId: ArtifactId,
   ): Promise<ArtifactId> {
-    const opened = await this.deps.openArtifact.execute(artifactId);
+    const scope = runtimeControlPlaneScope(index.workspaceId);
+    const opened = await this.deps.openArtifact.execute(scope, artifactId);
     if (opened.artifact.sizeBytes > this.deps.maxSourceBytes) {
       throw new KnowledgeSourceTooLargeError();
     }
@@ -251,7 +256,7 @@ export class KnowledgeIngestionService {
     }
 
     const body = lines.length === 0 ? "" : `${lines.join("\n")}\n`;
-    const artifact = await this.deps.createArtifact.execute({
+    const artifact = await this.deps.createArtifact.execute(scope, {
       workspaceId: index.workspaceId,
       name: `knowledge-extraction-${index.id}.ndjson`,
       mediaType: KNOWLEDGE_EXTRACTION_MEDIA_TYPE,
@@ -265,9 +270,11 @@ export class KnowledgeIngestionService {
   }
 
   private async loadExtractionSegments(
+    workspaceId: import("@osva/contracts").WorkspaceId,
     artifactId: ArtifactId,
   ): Promise<readonly KnowledgeTextSegmentV1[]> {
-    const opened = await this.deps.openArtifact.execute(artifactId);
+    const scope = runtimeControlPlaneScope(workspaceId);
+    const opened = await this.deps.openArtifact.execute(scope, artifactId);
     const raw = await text(opened.content.stream);
     return raw
       .split("\n")

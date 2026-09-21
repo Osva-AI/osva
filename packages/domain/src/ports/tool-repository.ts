@@ -4,6 +4,7 @@ import type {
   ToolId,
   ToolType,
   ToolVersionId,
+  WorkspaceId,
 } from "@osva/contracts";
 import { MCP_TOOL_IMPLEMENTATION } from "@osva/contracts";
 
@@ -27,7 +28,12 @@ export interface AppendToolVersionInput {
 export interface ToolRepository {
   saveTool(tool: Tool): Promise<void>;
   findToolById(id: ToolId): Promise<Tool | null>;
+  findToolByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ToolId,
+  ): Promise<Tool | null>;
   listTools(): Promise<Tool[]>;
+  listToolsByWorkspaceId(workspaceId: WorkspaceId): Promise<Tool[]>;
   updateToolMetadata(
     id: ToolId,
     metadata: ToolMetadataUpdate,

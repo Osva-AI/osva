@@ -8,16 +8,11 @@ import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import { createInMemoryOpenTelemetryHarness } from "@osva/adapters-opentelemetry/testing";
 import { startFakeOpenAIResponsesServer } from "../../../../adapters/model-openai/test/fake-openai-server.js";
-import {
-  createDatabase,
-  migrateDatabase,
-  PostgresWorkspaceRepository,
-  type Database,
-} from "@osva/db";
-import { Workspace } from "@osva/domain";
+import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 import { extractBullMqTraceCarrier } from "@osva/observability";
 
 import { createWebProcess } from "../../../../apps/web/src/process.js";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { createWorkerProcess } from "../../src/process.js";
 import {
   resetStage0Tables,
@@ -67,13 +62,7 @@ describe("Stage 2.9A trace continuity integration", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("propagates trace context through create, queue, worker, runtime, and model gateway", async () => {
@@ -144,7 +133,6 @@ describe("Stage 2.9A trace continuity integration", () => {
       const modelProfile = await fetchJson(`${origin}/v1/model-profiles`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "openai-default",
           name: "OpenAI Default",
         },
@@ -174,7 +162,6 @@ describe("Stage 2.9A trace continuity integration", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "model-echo-agent",
           name: "Model Echo Agent",
         },
@@ -213,7 +200,6 @@ describe("Stage 2.9A trace continuity integration", () => {
       const run = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId,
           input: { message: "hello" },
@@ -262,22 +248,6 @@ describe("Stage 2.9A trace continuity integration", () => {
     }
   }, 120_000);
 });
-
-async function fetchJson(
-  url: string,
-  init?: { method?: string; body?: unknown },
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init?.method ?? "GET",
-    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
-    body: init?.body ? JSON.stringify(init.body) : undefined,
-  });
-  const text = await response.text();
-  return {
-    status: response.status,
-    body: text.length > 0 ? JSON.parse(text) : null,
-  };
-}
 
 async function waitFor<T>(
   _label: string,

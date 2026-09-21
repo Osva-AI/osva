@@ -8,8 +8,23 @@ import type {
   WorkflowVersionId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import { ApprovalRequest } from "./approval-request.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const WORKFLOW_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.workflow };
+const WORKFLOW_RUN_RESOURCE = {
+  kind: CONTROL_PLANE_RESOURCE_KINDS.workflowRun,
+};
+const APPROVAL_RESOURCE = {
+  kind: CONTROL_PLANE_RESOURCE_KINDS.approvalRequest,
+};
 import { isTerminalApprovalRequestState } from "./approval-request-state-machine.js";
 import {
   AgentVersionNotFoundError,
@@ -97,16 +112,25 @@ export interface DecideApprovalRequestCommand {
 export class CreateWorkflow {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
-  async execute(command: CreateWorkflowCommand): Promise<Workflow> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateWorkflowCommand,
+  ): Promise<Workflow> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      WORKFLOW_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     const now = this.deps.clock.now();
     const workflow = Workflow.create({
       id: this.deps.ids.createId() as WorkflowId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       description: command.description,
@@ -122,8 +146,19 @@ export class CreateWorkflow {
 export class GetWorkflow {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
-  async execute(workflowId: WorkflowId): Promise<Workflow> {
-    const workflow = await this.deps.workflows.findWorkflowById(workflowId);
+  async execute(
+    scope: ControlPlaneScope,
+    workflowId: WorkflowId,
+  ): Promise<Workflow> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      WORKFLOW_RESOURCE,
+    );
+    const workflow = await this.deps.workflows.findWorkflowByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      workflowId,
+    );
     if (workflow === null) {
       throw new WorkflowNotFoundError(workflowId);
     }
@@ -135,8 +170,15 @@ export class GetWorkflow {
 export class ListWorkflows {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
-  async execute(): Promise<Workflow[]> {
-    return this.deps.workflows.listWorkflows();
+  async execute(scope: ControlPlaneScope): Promise<Workflow[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      WORKFLOW_RESOURCE,
+    );
+    return this.deps.workflows.listWorkflowsByWorkspaceId(
+      controlPlaneWorkspaceId(scope),
+    );
   }
 }
 
@@ -144,9 +186,16 @@ export class AppendWorkflowVersion {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: AppendWorkflowVersionCommand,
   ): Promise<WorkflowVersion> {
-    const workflow = await this.deps.workflows.findWorkflowById(
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      WORKFLOW_RESOURCE,
+    );
+    const workflow = await this.deps.workflows.findWorkflowByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.workflowId,
     );
     if (workflow === null) {
@@ -171,8 +220,17 @@ export class AppendWorkflowVersion {
 export class GetWorkflowVersion {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
-  async execute(command: GetWorkflowVersionCommand): Promise<WorkflowVersion> {
-    const workflow = await this.deps.workflows.findWorkflowById(
+  async execute(
+    scope: ControlPlaneScope,
+    command: GetWorkflowVersionCommand,
+  ): Promise<WorkflowVersion> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      WORKFLOW_RESOURCE,
+    );
+    const workflow = await this.deps.workflows.findWorkflowByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.workflowId,
     );
     if (workflow === null) {
@@ -193,8 +251,19 @@ export class GetWorkflowVersion {
 export class ListWorkflowVersions {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
-  async execute(workflowId: WorkflowId): Promise<WorkflowVersion[]> {
-    const workflow = await this.deps.workflows.findWorkflowById(workflowId);
+  async execute(
+    scope: ControlPlaneScope,
+    workflowId: WorkflowId,
+  ): Promise<WorkflowVersion[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      WORKFLOW_RESOURCE,
+    );
+    const workflow = await this.deps.workflows.findWorkflowByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      workflowId,
+    );
     if (workflow === null) {
       throw new WorkflowNotFoundError(workflowId);
     }
@@ -206,16 +275,25 @@ export class ListWorkflowVersions {
 export class CreateWorkflowRun {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
-  async execute(command: CreateWorkflowRunCommand): Promise<WorkflowRun> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateWorkflowRunCommand,
+  ): Promise<WorkflowRun> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.EXECUTE,
+      WORKFLOW_RUN_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     const version = await this.deps.workflows.findWorkflowVersionById(
       command.workflowVersionId,
     );
-    if (version === null || version.workspaceId !== command.workspaceId) {
+    if (version === null || version.workspaceId !== workspaceId) {
       throw new WorkflowVersionNotFoundError(command.workflowVersionId);
     }
 
@@ -230,7 +308,7 @@ export class CreateWorkflowRun {
 
     const workflowRun = WorkflowRun.create({
       id: this.deps.ids.createId() as WorkflowRunId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       workflowId: version.workflowId,
       workflowVersionId: version.id,
       input: command.input,
@@ -245,9 +323,20 @@ export class CreateWorkflowRun {
 export class GetWorkflowRun {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
-  async execute(workflowRunId: WorkflowRunId): Promise<WorkflowRunView> {
+  async execute(
+    scope: ControlPlaneScope,
+    workflowRunId: WorkflowRunId,
+  ): Promise<WorkflowRunView> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      WORKFLOW_RUN_RESOURCE,
+    );
     const workflowRun =
-      await this.deps.workflowRuns.findWorkflowRunById(workflowRunId);
+      await this.deps.workflowRuns.findWorkflowRunByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        workflowRunId,
+      );
     if (workflowRun === null) {
       throw new WorkflowRunNotFoundError(workflowRunId);
     }
@@ -266,10 +355,18 @@ export class GetWorkflowRun {
 export class GetApprovalRequest {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
-  async execute(command: GetApprovalRequestCommand): Promise<ApprovalRequest> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: GetApprovalRequestCommand,
+  ): Promise<ApprovalRequest> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      APPROVAL_RESOURCE,
+    );
     const request =
       await this.deps.approvalRequests.findApprovalRequestByWorkspaceAndId(
-        command.workspaceId,
+        controlPlaneWorkspaceId(scope),
         command.approvalRequestId,
       );
     if (request === null) {
@@ -284,11 +381,18 @@ export class DecideApprovalRequest {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: DecideApprovalRequestCommand,
   ): Promise<ApprovalRequest> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.EXECUTE,
+      APPROVAL_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     const existing =
       await this.deps.approvalRequests.findApprovalRequestByWorkspaceAndId(
-        command.workspaceId,
+        workspaceId,
         command.approvalRequestId,
       );
     if (existing === null) {
@@ -325,7 +429,7 @@ export class DecideApprovalRequest {
 
       const reloaded =
         await this.deps.approvalRequests.findApprovalRequestByWorkspaceAndId(
-          command.workspaceId,
+          workspaceId,
           command.approvalRequestId,
         );
       if (reloaded === null) {
@@ -391,8 +495,11 @@ async function assertAgentVersionBindings(
       throw new AgentVersionNotFoundError(agentVersionId);
     }
 
-    const agent = await agents.findAgentById(agentVersion.agentId);
-    if (agent === null || agent.workspaceId !== workspaceId) {
+    const agent = await agents.findAgentByWorkspaceAndId(
+      workspaceId,
+      agentVersion.agentId,
+    );
+    if (agent === null) {
       throw new DomainInvariantError(
         `Workflow node '${node.key}' references AgentVersion '${agentVersionId}' that does not belong to workspace '${workspaceId}'.`,
       );

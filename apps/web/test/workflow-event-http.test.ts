@@ -9,6 +9,11 @@ import {
 } from "@osva/contracts";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import {
+  authHeadersForKey,
+  fetchJson,
+  setTestAuthHeaders,
+} from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 
 const WORKSPACE_ID = "ws-workflow-events" as WorkspaceId;
@@ -115,7 +120,7 @@ describe("POST /v1/workflow-events", () => {
   });
 
   it("rejects oversized request bodies", async () => {
-    const { origin } = await listen();
+    const { origin, authHeaders } = await listen();
     const padding = "x".repeat(WORKFLOW_EVENT_HTTP_REQUEST_MAX_BYTES);
     const raw = JSON.stringify({
       ...validBody(),
@@ -126,7 +131,10 @@ describe("POST /v1/workflow-events", () => {
     );
     const response = await fetch(`${origin}/v1/workflow-events`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        ...authHeaders,
+        "content-type": "application/json",
+      },
       body: raw,
     });
     expect(response.status).toBe(413);
@@ -181,13 +189,16 @@ describe("POST /v1/workflow-events", () => {
     });
     servers.push(created.server);
     const port = await listenHttpServer(created.server, "127.0.0.1", 0);
-    return { origin: `http://127.0.0.1:${String(port)}` };
+    setTestAuthHeaders(created.testApiKey);
+    return {
+      origin: `http://127.0.0.1:${String(port)}`,
+      authHeaders: authHeadersForKey(created.testApiKey),
+    };
   }
 });
 
 function validBody() {
   return {
-    workspaceId: WORKSPACE_ID,
     source: "Payments",
     eventType: "invoice.Paid",
     correlationKey: "ord-1",
@@ -200,10 +211,8 @@ async function postEvent(
   origin: string,
   body: unknown,
 ): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(`${origin}/v1/workflow-events`, {
+  return fetchJson(`${origin}/v1/workflow-events`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+    body,
   });
-  return { status: response.status, body: await response.json() };
 }

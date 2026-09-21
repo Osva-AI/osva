@@ -5,15 +5,10 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { ToolVersionId, WorkspaceId } from "@osva/contracts";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
-import {
-  createDatabase,
-  migrateDatabase,
-  PostgresWorkspaceRepository,
-  type Database,
-} from "@osva/db";
-import { Workspace } from "@osva/domain";
+import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 
 import { createWebProcess } from "../../../web/src/process.js";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { createWorkerProcess } from "../../src/process.js";
 import {
   resetStage0Tables,
@@ -64,13 +59,7 @@ describe("tool gateway end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("runs HTTP CreateRun through ToolGateway and persists tool output", async () => {
@@ -105,7 +94,6 @@ describe("tool gateway end-to-end", () => {
       const tool = await fetchJson(`${origin}/v1/tools`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "echo",
           name: "Echo",
         },
@@ -120,7 +108,6 @@ describe("tool gateway end-to-end", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "tool-agent",
           name: "Tool Agent",
         },
@@ -156,7 +143,6 @@ describe("tool gateway end-to-end", () => {
       const created = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId,
           input: { hello: "tool-e2e" },
@@ -195,27 +181,6 @@ describe("tool gateway end-to-end", () => {
     }
   });
 });
-
-async function fetchJson(
-  url: string,
-  init?: {
-    readonly method?: string;
-    readonly body?: unknown;
-  },
-) {
-  const response = await fetch(url, {
-    method: init?.method ?? "GET",
-    headers:
-      init?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return {
-    status: response.status,
-    body: await response.json(),
-  };
-}
 
 async function waitUntil(
   predicate: () => Promise<boolean>,

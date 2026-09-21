@@ -5,6 +5,7 @@ import type {
   ToolVersionId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import {
   ToolNotFoundError,
@@ -15,6 +16,14 @@ import { Tool } from "./tool.js";
 import type { ToolVersion } from "./tool-version.js";
 import type { ToolRepository } from "./ports/tool-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const TOOL_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.tool };
 
 export interface ToolApplicationClock {
   now(): Date;
@@ -56,15 +65,24 @@ export interface GetToolVersionCommand {
 export class CreateTool {
   constructor(private readonly deps: ToolApplicationDependencies) {}
 
-  async execute(command: CreateToolCommand): Promise<Tool> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateToolCommand,
+  ): Promise<Tool> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      TOOL_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     const tool = Tool.create({
       id: this.deps.ids.createId() as ToolId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       createdAt: this.deps.clock.now(),
@@ -78,8 +96,16 @@ export class CreateTool {
 export class GetTool {
   constructor(private readonly deps: ToolApplicationDependencies) {}
 
-  async execute(toolId: ToolId): Promise<Tool> {
-    const tool = await this.deps.tools.findToolById(toolId);
+  async execute(scope: ControlPlaneScope, toolId: ToolId): Promise<Tool> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      TOOL_RESOURCE,
+    );
+    const tool = await this.deps.tools.findToolByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      toolId,
+    );
     if (tool === null) {
       throw new ToolNotFoundError(toolId);
     }
@@ -91,15 +117,38 @@ export class GetTool {
 export class ListTools {
   constructor(private readonly deps: ToolApplicationDependencies) {}
 
-  async execute(): Promise<Tool[]> {
-    return this.deps.tools.listTools();
+  async execute(scope: ControlPlaneScope): Promise<Tool[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      TOOL_RESOURCE,
+    );
+    return this.deps.tools.listToolsByWorkspaceId(
+      controlPlaneWorkspaceId(scope),
+    );
   }
 }
 
 export class UpdateToolMetadata {
   constructor(private readonly deps: ToolApplicationDependencies) {}
 
-  async execute(command: UpdateToolMetadataCommand): Promise<Tool> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateToolMetadataCommand,
+  ): Promise<Tool> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      TOOL_RESOURCE,
+    );
+    const existing = await this.deps.tools.findToolByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.toolId,
+    );
+    if (existing === null) {
+      throw new ToolNotFoundError(command.toolId);
+    }
+
     const updated = await this.deps.tools.updateToolMetadata(command.toolId, {
       name: command.name,
     });
@@ -114,7 +163,23 @@ export class UpdateToolMetadata {
 export class AppendToolVersion {
   constructor(private readonly deps: ToolApplicationDependencies) {}
 
-  async execute(command: AppendToolVersionCommand): Promise<ToolVersion> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: AppendToolVersionCommand,
+  ): Promise<ToolVersion> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      TOOL_RESOURCE,
+    );
+    const tool = await this.deps.tools.findToolByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.toolId,
+    );
+    if (tool === null) {
+      throw new ToolNotFoundError(command.toolId);
+    }
+
     return this.deps.tools.appendToolVersion({
       id: this.deps.ids.createId() as ToolVersionId,
       toolId: command.toolId,
@@ -128,8 +193,19 @@ export class AppendToolVersion {
 export class GetToolVersion {
   constructor(private readonly deps: ToolApplicationDependencies) {}
 
-  async execute(command: GetToolVersionCommand): Promise<ToolVersion> {
-    const tool = await this.deps.tools.findToolById(command.toolId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: GetToolVersionCommand,
+  ): Promise<ToolVersion> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      TOOL_RESOURCE,
+    );
+    const tool = await this.deps.tools.findToolByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.toolId,
+    );
     if (tool === null) {
       throw new ToolNotFoundError(command.toolId);
     }
@@ -148,8 +224,19 @@ export class GetToolVersion {
 export class ListToolVersions {
   constructor(private readonly deps: ToolApplicationDependencies) {}
 
-  async execute(toolId: ToolId): Promise<ToolVersion[]> {
-    const tool = await this.deps.tools.findToolById(toolId);
+  async execute(
+    scope: ControlPlaneScope,
+    toolId: ToolId,
+  ): Promise<ToolVersion[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      TOOL_RESOURCE,
+    );
+    const tool = await this.deps.tools.findToolByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      toolId,
+    );
     if (tool === null) {
       throw new ToolNotFoundError(toolId);
     }

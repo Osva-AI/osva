@@ -31,6 +31,10 @@ export interface ListArtifactsResult {
 export interface ArtifactRepository {
   save(artifact: Artifact): Promise<void>;
   findById(artifactId: ArtifactId): Promise<Artifact | null>;
+  findByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    artifactId: ArtifactId,
+  ): Promise<Artifact | null>;
   findByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,

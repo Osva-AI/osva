@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+﻿import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,13 +9,14 @@ import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
 import {
   PostgresWorkflowRunRepository,
   PostgresWorkflowWaitRepository,
-  PostgresWorkspaceRepository,
   createDatabase,
   migrateDatabase,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
-
+import {
+  bootstrapIntegrationAuth,
+  fetchJson,
+} from "../../../worker/test/integration/integration-auth.js";
 import { createWebProcess } from "../../../web/src/process.js";
 import { createWorkerProcess } from "../../../worker/src/process.js";
 import { createWorkflowOrchestratorProcess } from "../../src/process.js";
@@ -66,13 +67,7 @@ describe("workflow orchestrator V3 WAIT end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: new Date(),
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, new Date());
   });
 
   it("completes AGENT -> WAIT DURATION -> AGENT through timer driver and reconciliation", async () => {
@@ -172,7 +167,6 @@ describe("workflow orchestrator V3 WAIT end-to-end", () => {
       const ingested = await fetchJson(`${origin}/v1/workflow-events`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           source: "billing",
           eventType: "invoice.paid",
           correlationKey: "ord-early",
@@ -323,7 +317,6 @@ async function createV3WorkflowRun(
   const workflow = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: `v3-${String(Date.now())}`,
       name: "V3 Wait",
     },
@@ -344,7 +337,6 @@ async function createV3WorkflowRun(
   const workflowRun = await fetchJson(`${origin}/v1/workflow-runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       workflowVersionId: (workflowVersion.body as { id: string }).id,
       input: input.input,
     },
@@ -364,7 +356,6 @@ async function registerEchoAgent(
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "echo-agent",
       name: "Echo Agent",
     },
@@ -432,16 +423,4 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error("Timed out waiting for workflow orchestrator execution.");
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

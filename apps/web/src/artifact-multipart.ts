@@ -6,7 +6,6 @@ import { createArtifactFormFieldsSchema } from "@osva/contracts/schemas";
 import { ArtifactPayloadTooLargeError } from "@osva/domain";
 
 export interface ParsedArtifactMultipartFields {
-  readonly workspaceId: string;
   readonly name: string;
   readonly mediaType?: string;
   readonly metadata?: JsonObject;
@@ -94,7 +93,7 @@ export async function parseArtifactMultipartUpload(
         return;
       }
 
-      if (rawFields.workspaceId === undefined || rawFields.name === undefined) {
+      if (rawFields.name === undefined) {
         return;
       }
 
@@ -118,7 +117,6 @@ export async function parseArtifactMultipartUpload(
       }
 
       const validated = createArtifactFormFieldsSchema.safeParse({
-        workspaceId: rawFields.workspaceId,
         name: rawFields.name,
         mediaType: rawFields.mediaType,
         metadata,
@@ -147,11 +145,9 @@ export async function parseArtifactMultipartUpload(
         return;
       }
 
-      if (rawFields.workspaceId === undefined || rawFields.name === undefined) {
+      if (rawFields.name === undefined) {
         fail(
-          new Error(
-            "Artifact multipart fields workspaceId and name must precede file content.",
-          ),
+          new Error("Artifact multipart field name must precede file content."),
         );
         stream.resume();
         return;

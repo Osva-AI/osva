@@ -1,4 +1,8 @@
-import type { ModelProfileId, ModelProfileVersionId } from "@osva/contracts";
+import type {
+  ModelProfileId,
+  ModelProfileVersionId,
+  WorkspaceId,
+} from "@osva/contracts";
 import {
   DomainInvariantError,
   DuplicateModelProfileKeyError,
@@ -9,7 +13,7 @@ import {
   type ModelProfileMetadataUpdate,
   type ModelProfileRepository,
 } from "@osva/domain";
-import { asc, eq, max } from "drizzle-orm";
+import { and, asc, eq, max } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import {
@@ -75,6 +79,36 @@ export class PostgresModelProfileRepository implements ModelProfileRepository {
       .limit(1);
 
     return row === undefined ? null : modelProfileFromRow(row);
+  }
+
+  async findModelProfileByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ModelProfileId,
+  ): Promise<ModelProfile | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(modelProfiles)
+      .where(
+        and(
+          eq(modelProfiles.id, id),
+          eq(modelProfiles.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    return row === undefined ? null : modelProfileFromRow(row);
+  }
+
+  async listModelProfilesByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<ModelProfile[]> {
+    const rows = await this.database.db
+      .select()
+      .from(modelProfiles)
+      .where(eq(modelProfiles.workspaceId, workspaceId))
+      .orderBy(asc(modelProfiles.createdAt), asc(modelProfiles.id));
+
+    return rows.map(modelProfileFromRow);
   }
 
   async listModelProfiles(): Promise<ModelProfile[]> {

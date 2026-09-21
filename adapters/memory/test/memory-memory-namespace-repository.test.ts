@@ -14,17 +14,23 @@ import { describe, expect, it } from "vitest";
 import { MemoryMemoryNamespaceRepository } from "../src/memory-memory-namespace-repository.js";
 import { MemoryWorkspaceRepository } from "../src/memory-workspace-repository.js";
 import { LATER, NOW, otherWorkspaceId, workspaceId } from "./fixtures.js";
+import { fakeControlPlaneScope } from "./test-scope.js";
+
+const scope = fakeControlPlaneScope(workspaceId);
 
 describe("MemoryMemoryNamespaceRepository", () => {
   it("creates, reads, and lists namespaces", async () => {
     const { application } = await createHarness();
-    const created = await application.createMemoryNamespace.execute({
+    const created = await application.createMemoryNamespace.execute(scope, {
       workspaceId,
       key: "notes",
       name: "Notes",
     });
-    const loaded = await application.getMemoryNamespace.execute(created.id);
-    const listed = await application.listMemoryNamespaces.execute(workspaceId);
+    const loaded = await application.getMemoryNamespace.execute(
+      scope,
+      created.id,
+    );
+    const listed = await application.listMemoryNamespaces.execute(scope);
 
     expect(loaded).toEqual(created);
     expect(listed).toEqual([created]);
@@ -33,20 +39,23 @@ describe("MemoryMemoryNamespaceRepository", () => {
   it("rejects an unknown namespace", async () => {
     const { application } = await createHarness();
     await expect(
-      application.getMemoryNamespace.execute("missing" as MemoryNamespaceId),
+      application.getMemoryNamespace.execute(
+        scope,
+        "missing" as MemoryNamespaceId,
+      ),
     ).rejects.toBeInstanceOf(MemoryNamespaceNotFoundError);
   });
 
   it("rejects duplicate namespace keys within the same workspace", async () => {
     const { application } = await createHarness();
-    await application.createMemoryNamespace.execute({
+    await application.createMemoryNamespace.execute(scope, {
       workspaceId,
       key: "notes",
       name: "Notes",
     });
 
     await expect(
-      application.createMemoryNamespace.execute({
+      application.createMemoryNamespace.execute(scope, {
         workspaceId,
         key: "notes",
         name: "Other Notes",

@@ -11,15 +11,24 @@ import type {
   RunId,
   WorkspaceId,
 } from "@osva/contracts";
-import { isCanonicalJsonValue } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS, isCanonicalJsonValue } from "@osva/contracts";
 
 import { EffectiveRunBindings } from "./effective-run-bindings.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const EVALUATION_RUN_RESOURCE = {
+  kind: CONTROL_PLANE_RESOURCE_KINDS.evaluationRun,
+};
 import { EvaluationCaseResult } from "./evaluation-case-result.js";
 import { EvaluationRun } from "./evaluation-run.js";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
-  DomainInvariantError,
   EvaluationCaseNotFoundError,
   EvaluationRunNotFoundError,
   EvaluationSuiteVersionNotFoundError,
@@ -70,14 +79,20 @@ export interface ReconcileEvaluationCaseCommand {
 export class LaunchEvaluationRun {
   constructor(private readonly deps: EvaluationRunApplicationDependencies) {}
 
-  async execute(command: LaunchEvaluationRunCommand): Promise<EvaluationRun> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: LaunchEvaluationRunCommand,
+  ): Promise<EvaluationRun> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.EXECUTE,
+      EVALUATION_RUN_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     const suiteVersion = await this.deps.evaluationSuites.findSuiteVersionById(
       command.evaluationSuiteVersionId,
     );
-    if (
-      suiteVersion === null ||
-      suiteVersion.workspaceId !== command.workspaceId
-    ) {
+    if (suiteVersion === null || suiteVersion.workspaceId !== workspaceId) {
       throw new EvaluationSuiteVersionNotFoundError(
         command.evaluationSuiteVersionId,
       );
@@ -88,14 +103,14 @@ export class LaunchEvaluationRun {
     }
 
     const agentVersion = await this.loadAgentVersion(
-      command.workspaceId,
+      workspaceId,
       command.targetVersionId as AgentVersionId,
     );
 
     const now = this.deps.clock.now();
     const evaluationRun = EvaluationRun.create({
       id: this.deps.ids.createId() as EvaluationRunId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       evaluationSuiteVersionId: command.evaluationSuiteVersionId,
       targetType: command.targetType,
       targetVersionId: command.targetVersionId,
@@ -110,7 +125,7 @@ export class LaunchEvaluationRun {
 
     for (const evaluationCase of cases) {
       await this.createEvaluationChildRun({
-        workspaceId: command.workspaceId,
+        workspaceId,
         agentVersion,
         evaluationRunId: evaluationRun.id,
         evaluationCaseId: evaluationCase.id,
@@ -141,15 +156,12 @@ export class LaunchEvaluationRun {
       throw new AgentVersionNotFoundError(agentVersionId);
     }
 
-    const agent = await this.deps.agents.findAgentById(agentVersion.agentId);
+    const agent = await this.deps.agents.findAgentByWorkspaceAndId(
+      workspaceId,
+      agentVersion.agentId,
+    );
     if (agent === null) {
       throw new AgentNotFoundError(agentVersion.agentId);
-    }
-
-    if (agent.workspaceId !== workspaceId) {
-      throw new DomainInvariantError(
-        `Agent ${agent.id} belongs to workspace ${agent.workspaceId}, not ${workspaceId}.`,
-      );
     }
 
     return agentVersion;
@@ -212,12 +224,23 @@ export class LaunchEvaluationRun {
 export class GetEvaluationRun {
   constructor(private readonly deps: EvaluationRunApplicationDependencies) {}
 
-  async execute(evaluationRunId: EvaluationRunId): Promise<{
+  async execute(
+    scope: ControlPlaneScope,
+    evaluationRunId: EvaluationRunId,
+  ): Promise<{
     readonly evaluationRun: EvaluationRun;
     readonly summary: EvaluationRunSummary;
   }> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_RUN_RESOURCE,
+    );
     const evaluationRun =
-      await this.deps.evaluationSuites.findEvaluationRunById(evaluationRunId);
+      await this.deps.evaluationSuites.findEvaluationRunByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        evaluationRunId,
+      );
     if (evaluationRun === null) {
       throw new EvaluationRunNotFoundError(evaluationRunId);
     }
@@ -250,10 +273,19 @@ export class ListEvaluationCaseResults {
   constructor(private readonly deps: EvaluationRunApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     evaluationRunId: EvaluationRunId,
   ): Promise<readonly EvaluationCaseResult[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_RUN_RESOURCE,
+    );
     const evaluationRun =
-      await this.deps.evaluationSuites.findEvaluationRunById(evaluationRunId);
+      await this.deps.evaluationSuites.findEvaluationRunByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        evaluationRunId,
+      );
     if (evaluationRun === null) {
       throw new EvaluationRunNotFoundError(evaluationRunId);
     }
@@ -267,8 +299,19 @@ export class ListEvaluationCaseResults {
 export class ReconcileEvaluationCase {
   constructor(private readonly deps: EvaluationRunApplicationDependencies) {}
 
-  async execute(command: ReconcileEvaluationCaseCommand): Promise<void> {
-    const run = await this.deps.runs.findRunById(command.runId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: ReconcileEvaluationCaseCommand,
+  ): Promise<void> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.EXECUTE,
+      EVALUATION_RUN_RESOURCE,
+    );
+    const run = await this.deps.runs.findRunByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.runId,
+    );
     if (run === null) {
       throw new RunNotFoundError(command.runId);
     }

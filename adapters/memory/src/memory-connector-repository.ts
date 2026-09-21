@@ -1,4 +1,8 @@
-import type { ConnectorId, ConnectorVersionId } from "@osva/contracts";
+import type {
+  ConnectorId,
+  ConnectorVersionId,
+  WorkspaceId,
+} from "@osva/contracts";
 import {
   Connector,
   ConnectorNotFoundError,
@@ -33,6 +37,26 @@ export class MemoryConnectorRepository implements ConnectorRepository {
 
   async findConnectorById(id: ConnectorId): Promise<Connector | null> {
     return this.connectors.get(id) ?? null;
+  }
+
+  async findConnectorByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ConnectorId,
+  ): Promise<Connector | null> {
+    const connector = this.connectors.get(id);
+    if (connector === undefined || connector.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return connector;
+  }
+
+  async listConnectorsByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<Connector[]> {
+    return [...this.connectors.values()]
+      .filter((connector) => connector.workspaceId === workspaceId)
+      .sort(compareConnectors);
   }
 
   async listConnectors(): Promise<Connector[]> {

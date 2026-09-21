@@ -1,4 +1,8 @@
-import type { ConnectorId, ConnectorVersionId } from "@osva/contracts";
+import type {
+  ConnectorId,
+  ConnectorVersionId,
+  WorkspaceId,
+} from "@osva/contracts";
 import {
   ConnectorNotFoundError,
   ConnectorVersion,
@@ -9,7 +13,7 @@ import {
   type ConnectorMetadataUpdate,
   type ConnectorRepository,
 } from "@osva/domain";
-import { asc, eq, max } from "drizzle-orm";
+import { and, asc, eq, max } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import {
@@ -76,6 +80,33 @@ export class PostgresConnectorRepository implements ConnectorRepository {
       .limit(1);
 
     return row === undefined ? null : connectorFromRow(row);
+  }
+
+  async findConnectorByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ConnectorId,
+  ): Promise<Connector | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(connectors)
+      .where(
+        and(eq(connectors.id, id), eq(connectors.workspaceId, workspaceId)),
+      )
+      .limit(1);
+
+    return row === undefined ? null : connectorFromRow(row);
+  }
+
+  async listConnectorsByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<Connector[]> {
+    const rows = await this.database.db
+      .select()
+      .from(connectors)
+      .where(eq(connectors.workspaceId, workspaceId))
+      .orderBy(asc(connectors.createdAt), asc(connectors.id));
+
+    return rows.map(connectorFromRow);
   }
 
   async listConnectors(): Promise<Connector[]> {

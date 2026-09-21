@@ -4,8 +4,8 @@ import {
 } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import type {
-  ConnectorVersionResourceV1,
   DiscoveredMcpTool,
+  McpConnectorExecutionConfig,
   McpToolInvokeRequest,
   McpToolInvokeResult,
   SecretResolver,
@@ -14,6 +14,10 @@ import {
   isStdioTransportConfig,
   isStreamableHttpTransportConfig,
 } from "@osva/contracts";
+import {
+  OutboundNetworkPolicyError,
+  type PinnedOutboundFetch,
+} from "@osva/outbound-network";
 
 import { resolveConnectorAuthHeaders } from "./auth-headers.js";
 import { resolveStdioProcessEnvironment } from "./stdio-environment.js";
@@ -24,9 +28,14 @@ import { normalizeMcpToolResult } from "./result-normalizer.js";
 const OSVA_CLIENT_NAME = "osva-mcp-client";
 const OSVA_CLIENT_VERSION = "0.0.0";
 
+const MCP_FORBIDDEN_DESTINATION_MESSAGE =
+  "MCP connector destination is not permitted by outbound network policy.";
+
 export interface ManagedMcpClientOptions {
-  readonly connectorVersion: ConnectorVersionResourceV1;
+  readonly executionConfig: McpConnectorExecutionConfig;
   readonly secretResolver: SecretResolver;
+  readonly stdioConnectorsEnabled: boolean;
+  readonly pinnedFetch: PinnedOutboundFetch;
 }
 
 export class ManagedMcpClient {
@@ -145,20 +154,29 @@ export class ManagedMcpClient {
       version: OSVA_CLIENT_VERSION,
     });
 
-    const transport = await this.createTransport(signal);
-    await client.connect(transport);
-    this.client = client;
+    try {
+      const transport = await this.createTransport(signal);
+      await client.connect(transport);
+      this.client = client;
+    } catch (error) {
+      mapOutboundNetworkError(error);
+    }
   }
 
   private async createTransport(signal?: AbortSignal) {
-    const { connectorVersion, secretResolver } = this.options;
-    const headers = await resolveConnectorAuthHeaders(
-      connectorVersion.auth,
+    const {
+      executionConfig,
       secretResolver,
-    );
+      stdioConnectorsEnabled,
+      pinnedFetch,
+    } = this.options;
 
-    if (connectorVersion.transport === "STREAMABLE_HTTP") {
-      const config = connectorVersion.transportConfig;
+    if (executionConfig.transport === "STREAMABLE_HTTP") {
+      const headers = await resolveConnectorAuthHeaders(
+        executionConfig.auth,
+        secretResolver,
+      );
+      const config = executionConfig.transportConfig;
       if (!isStreamableHttpTransportConfig(config)) {
         throw mcpAdapterError(
           "MCP_PROTOCOL_ERROR",
@@ -167,14 +185,26 @@ export class ManagedMcpClient {
       }
 
       return new StreamableHTTPClientTransport(new URL(config.endpointUrl), {
+        fetch: pinnedFetch,
         requestInit: {
           headers,
           signal,
+          redirect: "manual",
         },
       });
     }
 
-    const config = connectorVersion.transportConfig;
+    if (executionConfig.transport === "STDIO") {
+      if (!stdioConnectorsEnabled) {
+        throw mcpAdapterError(
+          "CONNECTOR_UNAVAILABLE",
+          "STDIO MCP connectors are disabled by operator configuration.",
+          false,
+        );
+      }
+    }
+
+    const config = executionConfig.transportConfig;
     if (!isStdioTransportConfig(config)) {
       throw mcpAdapterError(
         "MCP_PROTOCOL_ERROR",
@@ -192,4 +222,15 @@ export class ManagedMcpClient {
       stderr: "pipe",
     });
   }
+}
+
+export function mapOutboundNetworkError(error: unknown): never {
+  if (error instanceof OutboundNetworkPolicyError) {
+    throw mcpAdapterError(
+      "CONNECTOR_UNAVAILABLE",
+      MCP_FORBIDDEN_DESTINATION_MESSAGE,
+      false,
+    );
+  }
+  throw error;
 }

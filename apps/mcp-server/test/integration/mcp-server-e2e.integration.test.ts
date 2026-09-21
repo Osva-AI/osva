@@ -33,11 +33,13 @@ import {
   stopValkeyForTests,
   type ValkeyTestContext,
 } from "../../../../adapters/bullmq/test/integration/valkey-harness.js";
+import {
+  authorizationHeader,
+  seedWorkspaceAdminApiKeys,
+} from "./support/workspace-api-keys.js";
 
 const WORKSPACE_A = "ws-mcp-server-a" as WorkspaceId;
 const WORKSPACE_B = "ws-mcp-server-b" as WorkspaceId;
-const MCP_TOKEN_A = "mcp-token-workspace-a";
-const MCP_TOKEN_B = "mcp-token-workspace-b";
 const FIXTURE_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../../adapters/runtime-typescript/test/fixtures",
@@ -110,12 +112,17 @@ describe("OSVA inbound MCP server end-to-end", () => {
 
     const webPort = await web.listen();
     const webOrigin = `http://127.0.0.1:${String(webPort)}`;
+    const apiKeys = await seedWorkspaceAdminApiKeys(database, [
+      { id: WORKSPACE_A, name: "workspace-a" },
+      { id: WORKSPACE_B, name: "workspace-b" },
+    ]);
+    const authA = authorizationHeader(apiKeys[WORKSPACE_A]);
+    const authB = authorizationHeader(apiKeys[WORKSPACE_B]);
 
     const mcp = createMcpServerProcess({
       OSVA_API_BASE_URL: webOrigin,
       OSVA_MCP_HOST: "127.0.0.1",
       OSVA_MCP_PORT: "0",
-      OSVA_MCP_BEARER_TOKENS: `${MCP_TOKEN_A}:${WORKSPACE_A},${MCP_TOKEN_B}:${WORKSPACE_B}`,
     });
 
     try {
@@ -130,18 +137,19 @@ describe("OSVA inbound MCP server end-to-end", () => {
       const mcpEndpoint = `http://127.0.0.1:${String(mcpPort)}/mcp`;
       const { agentId, agentVersionId } = await seedEchoAgent(
         webOrigin,
-        WORKSPACE_A,
         trustedRuntimeRoot,
+        authA,
       );
       const { workflowVersionId, runIdInB } = await seedWorkflows(
         webOrigin,
-        WORKSPACE_A,
         WORKSPACE_B,
         agentVersionId,
         trustedRuntimeRoot,
+        authA,
+        authB,
       );
 
-      const clientA = await connectMcpClient(mcpEndpoint, MCP_TOKEN_A);
+      const clientA = await connectMcpClient(mcpEndpoint, apiKeys[WORKSPACE_A]);
 
       const started = await clientA.callTool({
         name: OSVA_MCP_TOOL_NAMES.AGENT_RUN_V1,
@@ -257,16 +265,16 @@ function parseStructured(result: {
 
 async function seedEchoAgent(
   origin: string,
-  workspaceId: WorkspaceId,
   trustedRuntimeRoot: string,
+  authHeaders: Record<string, string>,
 ) {
   const integrity = sha256IntegrityOf(
     await fs.readFile(path.join(trustedRuntimeRoot, "echo-agent.ts")),
   );
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
+    headers: authHeaders,
     body: {
-      workspaceId,
       key: "echo",
       name: "Echo",
     },
@@ -274,6 +282,7 @@ async function seedEchoAgent(
   const agentId = (agent.body as { id: string }).id;
   const version = await fetchJson(`${origin}/v1/agents/${agentId}/versions`, {
     method: "POST",
+    headers: authHeaders,
     body: {
       manifest: {
         schemaVersion: "1",
@@ -299,15 +308,16 @@ async function seedEchoAgent(
 
 async function seedWorkflows(
   origin: string,
-  workspaceA: WorkspaceId,
   workspaceB: WorkspaceId,
   agentVersionId: string,
   trustedRuntimeRoot: string,
+  authA: Record<string, string>,
+  authB: Record<string, string>,
 ) {
   const workflowA = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
+    headers: authA,
     body: {
-      workspaceId: workspaceA,
       key: "wf-a",
       name: "Workflow A",
     },
@@ -317,6 +327,7 @@ async function seedWorkflows(
     `${origin}/v1/workflows/${workflowAId}/versions`,
     {
       method: "POST",
+      headers: authA,
       body: {
         definition: {
           schemaVersion: "1",
@@ -335,11 +346,11 @@ async function seedWorkflows(
   const workflowVersionId = (workflowAVersion.body as { id: string }).id;
 
   const { agentId: agentIdB, agentVersionId: agentVersionIdB } =
-    await seedEchoAgent(origin, workspaceB, trustedRuntimeRoot);
+    await seedEchoAgent(origin, trustedRuntimeRoot, authB);
   const runB = await fetchJson(`${origin}/v1/runs`, {
     method: "POST",
+    headers: authB,
     body: {
-      workspaceId: workspaceB,
       agentId: agentIdB,
       agentVersionId: agentVersionIdB,
       input: { secret: true },
@@ -365,14 +376,20 @@ async function copyAgentFixture(file: string) {
 
 async function fetchJson(
   url: string,
-  init?: { readonly method?: string; readonly body?: unknown },
+  init?: {
+    readonly method?: string;
+    readonly body?: unknown;
+    readonly headers?: Record<string, string>;
+  },
 ) {
   const response = await fetch(url, {
     method: init?.method ?? "GET",
-    headers:
-      init?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
+    headers: {
+      ...init?.headers,
+      ...(init?.body === undefined
+        ? {}
+        : { "content-type": "application/json" }),
+    },
     body: init?.body === undefined ? undefined : JSON.stringify(init.body),
   });
   return {

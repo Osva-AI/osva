@@ -15,6 +15,7 @@ export const OSVA_ATTR = {
   TOOL_EXECUTION_KIND: "osva.tool.execution_kind",
   TERMINAL_STATUS: "osva.terminal_status",
   ERROR_CATEGORY: "osva.error_category",
+  REQUEST_ID: "osva.request.id",
   MODEL_PROFILE_VERSION_ID: "osva.model_profile_version.id",
   KNOWLEDGE_BINDING_NAME: "osva.knowledge.binding_name",
   KNOWLEDGE_INDEX_COUNT: "osva.knowledge.index_count",

@@ -4,7 +4,6 @@ import { jsonValueSchema } from "./json-value.js";
 import { memoryNamespaceIdSchema, workspaceIdSchema } from "./ids.js";
 
 export const createMemoryNamespaceRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1).optional(),

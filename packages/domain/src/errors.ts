@@ -332,6 +332,12 @@ export class InvalidEvaluationRunTransitionError extends DomainError {
 
 export class InvalidConnectorTransportError extends DomainInvariantError {}
 
+export class StdioConnectorsDisabledError extends DomainInvariantError {
+  constructor() {
+    super("STDIO MCP connectors are disabled by operator configuration.");
+  }
+}
+
 export class DuplicateScheduleKeyError extends DomainInvariantError {
   readonly workspaceId: WorkspaceId;
   readonly key: string;

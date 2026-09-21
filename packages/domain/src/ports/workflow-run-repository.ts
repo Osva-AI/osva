@@ -2,6 +2,7 @@ import type {
   WorkflowNodeRunId,
   WorkflowRunId,
   WorkflowRunState,
+  WorkspaceId,
 } from "@osva/contracts";
 
 import type { WorkflowNodeRun } from "../workflow-node-run.js";
@@ -10,6 +11,10 @@ import type { WorkflowRun } from "../workflow-run.js";
 export interface WorkflowRunRepository {
   saveWorkflowRun(workflowRun: WorkflowRun): Promise<void>;
   findWorkflowRunById(id: WorkflowRunId): Promise<WorkflowRun | null>;
+  findWorkflowRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: WorkflowRunId,
+  ): Promise<WorkflowRun | null>;
   listActiveWorkflowRuns(limit: number): Promise<readonly WorkflowRun[]>;
   transitionWorkflowRun(
     expectedStatus: WorkflowRunState,

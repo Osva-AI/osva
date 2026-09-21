@@ -12,12 +12,12 @@ import {
   connectorKindSchema,
   connectorTransportConfigSchema,
   connectorTransportSchema,
+  streamableHttpTransportConfigSchema,
 } from "./connector.js";
 import { jsonSchemaRecordSchema } from "./json-schema.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 
 export const createConnectorRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -49,14 +49,47 @@ export const connectorListResourceSchema = z.strictObject({
   connectors: z.array(connectorResourceSchema),
 });
 
+export const publicSecretBindingSchema = z.strictObject({
+  configured: z.literal(true),
+});
+
+export const publicConnectorBearerAuthConfigSchema = z.strictObject({
+  type: z.literal("BEARER"),
+  configured: z.literal(true),
+});
+
+export const publicConnectorHeaderAuthConfigSchema = z.strictObject({
+  type: z.literal("HEADER"),
+  headerName: z.string().min(1),
+  configured: z.literal(true),
+});
+
+export const publicConnectorAuthConfigSchema = z.union([
+  publicConnectorBearerAuthConfigSchema,
+  publicConnectorHeaderAuthConfigSchema,
+]);
+
+export const publicStdioTransportConfigSchema = z.strictObject({
+  command: z.string().min(1),
+  args: z.array(z.string()),
+  cwd: z.string().min(1).optional(),
+  environment: z.record(z.string(), z.string()).optional(),
+  secretEnvironment: z.record(z.string(), publicSecretBindingSchema).optional(),
+});
+
+export const publicConnectorTransportConfigSchema = z.union([
+  streamableHttpTransportConfigSchema,
+  publicStdioTransportConfigSchema,
+]);
+
 export const connectorVersionResourceSchema = z.strictObject({
   id: connectorVersionIdSchema,
   connectorId: connectorIdSchema,
   version: z.int().positive(),
   kind: connectorKindSchema,
   transport: connectorTransportSchema,
-  transportConfig: connectorTransportConfigSchema,
-  auth: connectorAuthConfigSchema.optional(),
+  transportConfig: publicConnectorTransportConfigSchema,
+  auth: publicConnectorAuthConfigSchema.optional(),
   createdAt: utcIso8601TimestampSchema,
 });
 

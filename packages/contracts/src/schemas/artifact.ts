@@ -47,7 +47,6 @@ export const artifactListResourceSchema = z.strictObject({
 });
 
 export const listArtifactsQuerySchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   runId: runIdSchema.optional(),
   runAttemptId: runAttemptIdSchema.optional(),
   limit: z.string().optional(),
@@ -60,7 +59,6 @@ export const artifactListCursorPayloadSchema = z.strictObject({
 });
 
 export const createArtifactFormFieldsSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   name: z.string().min(1).max(ARTIFACT_NAME_MAX_LENGTH),
   mediaType: z.string().min(1).max(ARTIFACT_MEDIA_TYPE_MAX_LENGTH).optional(),
   metadata: z.record(z.string(), jsonValueSchema).optional(),

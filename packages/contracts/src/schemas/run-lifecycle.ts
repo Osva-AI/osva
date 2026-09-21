@@ -17,7 +17,6 @@ const runStateSchema = z.enum(RUN_STATES);
 const runAttemptStateSchema = z.enum(RUN_ATTEMPT_STATES);
 
 export const createRunRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   agentId: agentIdSchema,
   agentVersionId: agentVersionIdSchema,
   input: z.unknown(),

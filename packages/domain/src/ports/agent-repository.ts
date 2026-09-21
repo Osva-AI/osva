@@ -1,4 +1,9 @@
-import type { AgentId, AgentManifestV1, AgentVersionId } from "@osva/contracts";
+import type {
+  AgentId,
+  AgentManifestV1,
+  AgentVersionId,
+  WorkspaceId,
+} from "@osva/contracts";
 
 import type { Agent } from "../agent.js";
 import type { AgentVersion } from "../agent-version.js";
@@ -17,7 +22,12 @@ export interface AppendAgentVersionInput {
 export interface AgentRepository {
   saveAgent(agent: Agent): Promise<void>;
   findAgentById(id: AgentId): Promise<Agent | null>;
+  findAgentByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: AgentId,
+  ): Promise<Agent | null>;
   listAgents(): Promise<Agent[]>;
+  listAgentsByWorkspaceId(workspaceId: WorkspaceId): Promise<Agent[]>;
   updateAgentMetadata(
     id: AgentId,
     metadata: AgentMetadataUpdate,

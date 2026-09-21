@@ -18,6 +18,7 @@ import {
 } from "@osva/domain";
 import type { CreateRun } from "@osva/orchestration";
 
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 import { decodeRunListCursor, encodeRunListCursor } from "./run-cursor.js";
@@ -84,6 +85,7 @@ async function dispatchRunRoute(
   searchParams: URLSearchParams,
   services: RunHttpServices,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "collection") {
     if (method === "GET") {
       await handleListRuns(response, searchParams, services.runs);
@@ -102,7 +104,7 @@ async function dispatchRunRoute(
       const created = await services.createRun.execute({
         runId: services.ids.createId() as RunId,
         runAttemptId: services.ids.createId() as RunAttemptId,
-        workspaceId: parsed.data.workspaceId,
+        workspaceId: scope.principal.workspaceId,
         agentId: parsed.data.agentId,
         agentVersionId: parsed.data.agentVersionId,
         input: parsed.data.input,
@@ -128,7 +130,7 @@ async function dispatchRunRoute(
 
   if (route.kind === "item") {
     if (method === "GET") {
-      const run = await services.runs.getRun.execute(route.runId);
+      const run = await services.runs.getRun.execute(scope, route.runId);
       sendJson(response, 200, toRunResource(run));
       return;
     }
@@ -139,7 +141,10 @@ async function dispatchRunRoute(
 
   if (route.kind === "attempts") {
     if (method === "GET") {
-      const attempts = await services.runs.listRunAttempts.execute(route.runId);
+      const attempts = await services.runs.listRunAttempts.execute(
+        scope,
+        route.runId,
+      );
       sendJson(response, 200, toRunAttemptListResource(attempts));
       return;
     }
@@ -149,7 +154,7 @@ async function dispatchRunRoute(
   }
 
   if (method === "GET") {
-    const attempt = await services.runs.getRunAttempt.execute({
+    const attempt = await services.runs.getRunAttempt.execute(scope, {
       runId: route.runId,
       runAttemptId: route.runAttemptId,
     });
@@ -165,6 +170,7 @@ async function handleListRuns(
   searchParams: URLSearchParams,
   runs: RunApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   const parsed = listRunsQuerySchema.safeParse(
     Object.fromEntries(searchParams.entries()),
   );
@@ -196,7 +202,7 @@ async function handleListRuns(
     };
   }
 
-  const page = await runs.listRuns.execute({
+  const page = await runs.listRuns.execute(scope, {
     limit,
     cursor,
     agentId: parsed.data.agentId,
@@ -311,3 +317,10 @@ function toRunAttemptListResource(attempts: readonly RunAttempt[]) {
     attempts: attempts.map((attempt) => toRunAttemptResource(attempt)),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/runs" },
+  { method: "POST", path: "/v1/runs" },
+  { method: "GET", path: "/v1/runs/:runId" },
+  { method: "GET", path: "/v1/runs/:runId/attempts" },
+  { method: "GET", path: "/v1/runs/:runId/attempts/:runAttemptId" },
+] as const;

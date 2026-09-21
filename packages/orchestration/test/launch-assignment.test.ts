@@ -123,7 +123,7 @@ describe("LaunchAssignment", () => {
     expect(first.runId).toBeDefined();
     expect(second.runId).toBe(first.runId);
 
-    const listedRuns = await runs.listRuns({ limit: 10 });
+    const listedRuns = await runs.listRuns({ workspaceId, limit: 10 });
     expect(
       listedRuns.runs.filter((run) => run.id === first.runId),
     ).toHaveLength(1);

@@ -5,6 +5,7 @@ import type {
   KnowledgeSourceId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import {
   ArtifactNotFoundError,
@@ -34,6 +35,15 @@ import {
   type ListKnowledgeIndexesQuery,
   type ListKnowledgeSourcesQuery,
 } from "./ports/knowledge-repository.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const KNOWLEDGE_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.knowledge };
+
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 
 export interface KnowledgeApplicationClock {
@@ -73,14 +83,25 @@ export class CreateKnowledgeSource {
   constructor(private readonly deps: KnowledgeApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: CreateKnowledgeSourceCommand,
   ): Promise<KnowledgeSource> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      KNOWLEDGE_RESOURCE,
+    );
+    const workspace = await this.deps.workspaces.findById(
+      controlPlaneWorkspaceId(scope),
+    );
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(controlPlaneWorkspaceId(scope));
     }
 
-    const artifact = await this.deps.artifacts.findById(command.artifactId);
+    const artifact = await this.deps.artifacts.findByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.artifactId,
+    );
     if (artifact === null) {
       throw new ArtifactNotFoundError(command.artifactId);
     }
@@ -105,7 +126,7 @@ export class CreateKnowledgeSource {
 
     const source = KnowledgeSource.create({
       id: this.deps.ids.createId() as KnowledgeSourceId,
-      workspaceId: command.workspaceId,
+      workspaceId: controlPlaneWorkspaceId(scope),
       key: command.key,
       name: command.name,
       artifactId: command.artifactId,
@@ -122,7 +143,15 @@ export class CreateKnowledgeSource {
 export class CreateKnowledgeIndex {
   constructor(private readonly deps: KnowledgeApplicationDependencies) {}
 
-  async execute(command: CreateKnowledgeIndexCommand): Promise<KnowledgeIndex> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateKnowledgeIndexCommand,
+  ): Promise<KnowledgeIndex> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      KNOWLEDGE_RESOURCE,
+    );
     const source = await this.deps.knowledge.findSourceById(
       command.knowledgeSourceId,
     );
@@ -160,7 +189,7 @@ export class CreateKnowledgeIndex {
 
     const index = KnowledgeIndex.create({
       id: this.deps.ids.createId() as KnowledgeIndexId,
-      workspaceId: command.workspaceId,
+      workspaceId: controlPlaneWorkspaceId(scope),
       knowledgeSourceId: command.knowledgeSourceId,
       ...pipeline,
       pipelineFingerprint: fingerprint,
@@ -178,11 +207,20 @@ export class RetryKnowledgeIndex {
   constructor(private readonly deps: KnowledgeApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     workspaceId: WorkspaceId,
     knowledgeIndexId: KnowledgeIndexId,
   ): Promise<KnowledgeIndex> {
-    const index = await this.deps.knowledge.findIndexById(knowledgeIndexId);
-    if (index === null || index.workspaceId !== workspaceId) {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      KNOWLEDGE_RESOURCE,
+    );
+    const index = await this.deps.knowledge.findIndexByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      knowledgeIndexId,
+    );
+    if (index === null) {
       throw new KnowledgeIndexNotFoundError(knowledgeIndexId);
     }
 
@@ -208,11 +246,20 @@ export class GetKnowledgeSource {
   constructor(private readonly deps: KnowledgeApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     workspaceId: WorkspaceId,
     knowledgeSourceId: KnowledgeSourceId,
   ): Promise<KnowledgeSource> {
-    const source = await this.deps.knowledge.findSourceById(knowledgeSourceId);
-    if (source === null || source.workspaceId !== workspaceId) {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      KNOWLEDGE_RESOURCE,
+    );
+    const source = await this.deps.knowledge.findSourceByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      knowledgeSourceId,
+    );
+    if (source === null) {
       throw new KnowledgeSourceNotFoundError(knowledgeSourceId);
     }
     return source;
@@ -223,11 +270,20 @@ export class GetKnowledgeIndex {
   constructor(private readonly deps: KnowledgeApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     workspaceId: WorkspaceId,
     knowledgeIndexId: KnowledgeIndexId,
   ): Promise<KnowledgeIndex> {
-    const index = await this.deps.knowledge.findIndexById(knowledgeIndexId);
-    if (index === null || index.workspaceId !== workspaceId) {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      KNOWLEDGE_RESOURCE,
+    );
+    const index = await this.deps.knowledge.findIndexByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      knowledgeIndexId,
+    );
+    if (index === null) {
       throw new KnowledgeIndexNotFoundError(knowledgeIndexId);
     }
     return index;
@@ -238,15 +294,26 @@ export class ListKnowledgeSources {
   constructor(private readonly deps: KnowledgeApplicationDependencies) {}
 
   async execute(
-    query: Omit<ListKnowledgeSourcesQuery, "limit"> & {
+    scope: ControlPlaneScope,
+    query: Omit<ListKnowledgeSourcesQuery, "limit" | "workspaceId"> & {
       readonly limit?: number;
+      readonly workspaceId?: WorkspaceId;
     },
   ) {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      KNOWLEDGE_RESOURCE,
+    );
     const limit = clamp(
       query.limit ?? DEFAULT_KNOWLEDGE_SOURCE_LIST_LIMIT,
       MAX_KNOWLEDGE_SOURCE_LIST_LIMIT,
     );
-    return this.deps.knowledge.listSources({ ...query, limit });
+    return this.deps.knowledge.listSources({
+      ...query,
+      workspaceId: controlPlaneWorkspaceId(scope),
+      limit,
+    });
   }
 }
 
@@ -254,15 +321,34 @@ export class ListKnowledgeIndexes {
   constructor(private readonly deps: KnowledgeApplicationDependencies) {}
 
   async execute(
-    query: Omit<ListKnowledgeIndexesQuery, "limit"> & {
+    scope: ControlPlaneScope,
+    query: Omit<ListKnowledgeIndexesQuery, "limit" | "workspaceId"> & {
       readonly limit?: number;
+      readonly workspaceId?: WorkspaceId;
     },
   ) {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      KNOWLEDGE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const source = await this.deps.knowledge.findSourceByWorkspaceAndId(
+      workspaceId,
+      query.knowledgeSourceId,
+    );
+    if (source === null) {
+      throw new KnowledgeSourceNotFoundError(query.knowledgeSourceId);
+    }
     const limit = clamp(
       query.limit ?? DEFAULT_KNOWLEDGE_INDEX_LIST_LIMIT,
       MAX_KNOWLEDGE_INDEX_LIST_LIMIT,
     );
-    return this.deps.knowledge.listIndexesBySource({ ...query, limit });
+    return this.deps.knowledge.listIndexesBySource({
+      ...query,
+      workspaceId,
+      limit,
+    });
   }
 }
 

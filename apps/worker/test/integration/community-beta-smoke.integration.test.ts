@@ -14,12 +14,11 @@ import {
   migrateDatabase,
   PostgresMemoryNamespaceRepository,
   PostgresRunRepository,
-  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
 
 import { createWebProcess } from "../../../../apps/web/src/process.js";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { createWorkerProcess } from "../../src/process.js";
 import {
   resetStage0Tables,
@@ -70,13 +69,7 @@ describe("Community Beta smoke", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("runs Agent → AgentVersion → Run through runtime, ToolGateway, and MemoryGateway without external services", async () => {
@@ -120,10 +113,9 @@ describe("Community Beta smoke", () => {
       const ready = await fetchJson(`${origin}/ready`);
       expect(ready.status).toBe(200);
 
-      const namespace = await fetchJson(`${origin}/v1/memory-namespaces`, {
+      const namespace = await fetchJson(`${origin}/v1/memory/namespaces`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "store",
           name: "Store",
         },
@@ -140,7 +132,6 @@ describe("Community Beta smoke", () => {
       const tool = await fetchJson(`${origin}/v1/tools`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "echo",
           name: "Echo",
         },
@@ -160,7 +151,6 @@ describe("Community Beta smoke", () => {
       const toolAgent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "tool-agent",
           name: "Tool Agent",
         },
@@ -196,7 +186,6 @@ describe("Community Beta smoke", () => {
       const toolRun = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId: toolAgentId,
           agentVersionId: toolAgentVersionId,
           input: { hello: "community-beta" },
@@ -236,7 +225,6 @@ describe("Community Beta smoke", () => {
       const memoryAgent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "memory-agent",
           name: "Memory Agent",
         },
@@ -276,7 +264,6 @@ describe("Community Beta smoke", () => {
       const memoryRun = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId: memoryAgentId,
           agentVersionId: memoryAgentVersionId,
           input: { memoryKey: "greeting" },
@@ -318,22 +305,6 @@ describe("Community Beta smoke", () => {
     }
   }, 120_000);
 });
-
-async function fetchJson(
-  url: string,
-  init?: { method?: string; body?: unknown },
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init?.method ?? "GET",
-    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
-    body: init?.body ? JSON.stringify(init.body) : undefined,
-  });
-  const text = await response.text();
-  return {
-    status: response.status,
-    body: text.length > 0 ? JSON.parse(text) : null,
-  };
-}
 
 async function waitUntil(
   predicate: () => Promise<boolean>,

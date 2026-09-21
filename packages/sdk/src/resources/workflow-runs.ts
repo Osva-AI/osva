@@ -11,21 +11,13 @@ type CreateWorkflowRunRequest = z.infer<typeof createWorkflowRunRequestSchema>;
 type WorkflowRunResource = z.infer<typeof workflowRunResourceSchema>;
 
 export class WorkflowRunsResource {
-  constructor(
-    private readonly client: OsvaHttpClient,
-    private readonly workspaceId: string,
-  ) {}
+  constructor(private readonly client: OsvaHttpClient) {}
 
-  create(
-    input: Omit<CreateWorkflowRunRequest, "workspaceId">,
-  ): Promise<WorkflowRunResource> {
+  create(input: CreateWorkflowRunRequest): Promise<WorkflowRunResource> {
     return this.client.request({
       method: "POST",
       path: "/v1/workflow-runs",
-      body: {
-        ...input,
-        workspaceId: this.workspaceId,
-      },
+      body: input,
     });
   }
 

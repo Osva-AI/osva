@@ -1,4 +1,4 @@
-import type { OfficeWorkerId, WorkspaceId } from "@osva/contracts";
+import type { OfficeWorkerId } from "@osva/contracts";
 import {
   createOfficeWorkerRequestSchema,
   officeWorkerListResourceSchema,
@@ -21,11 +21,10 @@ type UpdateOfficeWorkerRequest = z.infer<
 export class OfficeWorkersResource {
   constructor(private readonly client: OsvaHttpClient) {}
 
-  list(workspaceId: WorkspaceId): Promise<OfficeWorkerListResource> {
+  list(): Promise<OfficeWorkerListResource> {
     return this.client.request({
       method: "GET",
       path: "/v1/office-workers",
-      query: { workspaceId },
     });
   }
 

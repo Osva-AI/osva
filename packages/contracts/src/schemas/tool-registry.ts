@@ -9,7 +9,6 @@ import {
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 
 export const createToolRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
 });

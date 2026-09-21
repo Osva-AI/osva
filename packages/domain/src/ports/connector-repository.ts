@@ -5,6 +5,7 @@ import type {
   ConnectorTransport,
   ConnectorTransportConfig,
   ConnectorVersionId,
+  WorkspaceId,
 } from "@osva/contracts";
 
 import type { Connector } from "../connector.js";
@@ -29,7 +30,12 @@ export interface AppendConnectorVersionInput {
 export interface ConnectorRepository {
   saveConnector(connector: Connector): Promise<void>;
   findConnectorById(id: ConnectorId): Promise<Connector | null>;
+  findConnectorByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ConnectorId,
+  ): Promise<Connector | null>;
   listConnectors(): Promise<Connector[]>;
+  listConnectorsByWorkspaceId(workspaceId: WorkspaceId): Promise<Connector[]>;
   updateConnectorMetadata(
     id: ConnectorId,
     metadata: ConnectorMetadataUpdate,

@@ -26,14 +26,14 @@ export class MemoryNamespacesResource {
   list(): Promise<MemoryNamespaceListResource> {
     return this.client.request({
       method: "GET",
-      path: "/v1/memory-namespaces",
+      path: "/v1/memory/namespaces",
     });
   }
 
   get(namespaceId: MemoryNamespaceId): Promise<MemoryNamespaceResource> {
     return this.client.request({
       method: "GET",
-      path: `/v1/memory-namespaces/${encodeURIComponent(namespaceId)}`,
+      path: `/v1/memory/namespaces/${encodeURIComponent(namespaceId)}`,
     });
   }
 
@@ -42,7 +42,7 @@ export class MemoryNamespacesResource {
   ): Promise<MemoryNamespaceResource> {
     return this.client.request({
       method: "POST",
-      path: "/v1/memory-namespaces",
+      path: "/v1/memory/namespaces",
       body: input,
     });
   }
@@ -64,7 +64,7 @@ export class MemoryNamespacesResource {
     const suffix = params.size > 0 ? `?${params.toString()}` : "";
     return this.client.request({
       method: "GET",
-      path: `/v1/memory-namespaces/${encodeURIComponent(namespaceId)}/records${suffix}`,
+      path: `/v1/memory/namespaces/${encodeURIComponent(namespaceId)}/records${suffix}`,
     });
   }
 }

@@ -66,6 +66,19 @@ export class PostgresScheduleRepository implements ScheduleRepository {
     return row === undefined ? null : scheduleFromRow(row);
   }
 
+  async findScheduleByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ScheduleId,
+  ): Promise<Schedule | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(schedules)
+      .where(and(eq(schedules.id, id), eq(schedules.workspaceId, workspaceId)))
+      .limit(1);
+
+    return row === undefined ? null : scheduleFromRow(row);
+  }
+
   async findScheduleByWorkspaceKey(
     workspaceId: WorkspaceId,
     key: string,

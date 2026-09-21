@@ -7,15 +7,10 @@ import type { ToolVersionId, WorkspaceId } from "@osva/contracts";
 import { serveStreamableHttp } from "@osva/connector-sdk";
 import { echoConnector } from "../../../../examples/echo-connector/src/connector.js";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
-import {
-  createDatabase,
-  migrateDatabase,
-  PostgresWorkspaceRepository,
-  type Database,
-} from "@osva/db";
-import { Workspace } from "@osva/domain";
+import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 
 import { createWebProcess } from "../../../web/src/process.js";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { createWorkerProcess } from "../../src/process.js";
 import {
   resetStage0Tables,
@@ -66,12 +61,10 @@ describe("connector-sdk MCP compatibility", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: new Date("2026-01-15T12:00:00.000Z"),
-      }),
+    await bootstrapIntegrationAuth(
+      database,
+      WORKSPACE_ID,
+      new Date("2026-01-15T12:00:00.000Z"),
     );
   });
 
@@ -95,11 +88,13 @@ describe("connector-sdk MCP compatibility", () => {
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
+        OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
       });
       const worker = createWorkerProcess({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+        OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
       });
 
       try {
@@ -114,7 +109,6 @@ describe("connector-sdk MCP compatibility", () => {
         const agent = await fetchJson(`${origin}/v1/agents`, {
           method: "POST",
           body: {
-            workspaceId: WORKSPACE_ID,
             key: "sdk-agent",
             name: "SDK Agent",
           },
@@ -150,7 +144,6 @@ describe("connector-sdk MCP compatibility", () => {
         const created = await fetchJson(`${origin}/v1/runs`, {
           method: "POST",
           body: {
-            workspaceId: WORKSPACE_ID,
             agentId,
             agentVersionId,
             input: { hello: "connector-sdk" },
@@ -193,7 +186,6 @@ async function seedEchoTool(origin: string, endpointUrl: string) {
   const connector = await fetchJson(`${origin}/v1/connectors`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "connector-sdk-echo",
       name: "Connector SDK Echo",
     },
@@ -240,24 +232,6 @@ async function copyAgentFixtures(...files: readonly string[]) {
     );
   }
   return trustedRuntimeRoot;
-}
-
-async function fetchJson(
-  url: string,
-  init?: { readonly method?: string; readonly body?: unknown },
-) {
-  const response = await fetch(url, {
-    method: init?.method ?? "GET",
-    headers:
-      init?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return {
-    status: response.status,
-    body: await response.json(),
-  };
 }
 
 async function waitUntil(

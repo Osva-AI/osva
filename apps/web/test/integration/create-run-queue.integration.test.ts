@@ -4,10 +4,12 @@ import { BullMqJobQueue, toBullMqJobId } from "@osva/adapters-bullmq";
 import {
   createDatabase,
   migrateDatabase,
+  PostgresApiKeyRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
+import { Workspace, createApiKeyApplication } from "@osva/domain";
+import { randomUUID } from "node:crypto";
 
 import { createWebProcess } from "../../src/process.js";
 import {
@@ -43,6 +45,7 @@ describe("web CreateRun BullMQ integration", () => {
   let postgres: PostgresTestContext;
   let valkey: ValkeyTestContext;
   let seedDatabase: Database;
+  let apiKeyToken: string;
 
   beforeAll(async () => {
     postgres = await startPostgresForTests();
@@ -69,13 +72,25 @@ describe("web CreateRun BullMQ integration", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(seedDatabase);
-    await new PostgresWorkspaceRepository(seedDatabase).save(
+    const workspaces = new PostgresWorkspaceRepository(seedDatabase);
+    await workspaces.save(
       Workspace.create({
         id: WORKSPACE_ID,
         name: "Workspace",
         createdAt: NOW,
       }),
     );
+    const apiKeys = new PostgresApiKeyRepository(seedDatabase);
+    const bootstrap = createApiKeyApplication({
+      apiKeys,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: { createId: () => randomUUID() },
+    });
+    const boot = await bootstrap.bootstrapInstallation.execute({
+      workspaceId: WORKSPACE_ID,
+    });
+    apiKeyToken = boot.plaintextToken;
   });
 
   it("enqueues exactly { runAttemptId } through real BullMQ", async () => {
@@ -98,10 +113,10 @@ describe("web CreateRun BullMQ integration", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "example-agent",
           name: "Example Agent",
         },
+        apiKeyToken,
       });
       expect(agent.status).toBe(201);
       const agentId = (agent.body as { id: string }).id;
@@ -111,6 +126,7 @@ describe("web CreateRun BullMQ integration", () => {
         {
           method: "POST",
           body: { manifest: VALID_MANIFEST },
+          apiKeyToken,
         },
       );
       expect(version.status).toBe(201);
@@ -119,11 +135,11 @@ describe("web CreateRun BullMQ integration", () => {
       const created = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId,
           input: { prompt: "queue me" },
         },
+        apiKeyToken,
       });
       expect(created.status).toBe(201);
       const runAttemptId = (created.body as { runAttempt: { id: string } })
@@ -157,11 +173,18 @@ async function waitForJob(
 
 async function fetchJson(
   url: string,
-  init: { method?: string; body?: unknown } = {},
+  init: { method?: string; body?: unknown; apiKeyToken?: string } = {},
 ): Promise<{ status: number; body: unknown }> {
+  const headers: Record<string, string> = {};
+  if (init.body !== undefined) {
+    headers["content-type"] = "application/json";
+  }
+  if (init.apiKeyToken !== undefined) {
+    headers.authorization = `Bearer ${init.apiKeyToken}`;
+  }
   const response = await fetch(url, {
     method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
   return { status: response.status, body: await response.json() };

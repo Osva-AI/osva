@@ -3,8 +3,13 @@ import type { WorkflowEventId } from "@osva/contracts";
 import { WORKFLOW_EVENT_HTTP_REQUEST_MAX_BYTES } from "@osva/contracts";
 import { ingestWorkflowEventRequestSchema } from "@osva/contracts/schemas";
 import type { WorkflowEvent } from "@osva/domain";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "@osva/domain";
 import type { IngestWorkflowEvent } from "@osva/orchestration";
 
+import {
+  authorizeControlPlaneExecute,
+  requireControlPlaneScope,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 import { logEvent } from "./log.js";
@@ -52,10 +57,15 @@ export async function handleWorkflowEventRequest(
       return true;
     }
 
+    const scope = requireControlPlaneScope();
+    authorizeControlPlaneExecute(
+      scope,
+      CONTROL_PLANE_RESOURCE_KINDS.workflowEvent,
+    );
     const body = parsed.data;
     const persisted = await services.ingest.execute({
       submission: {
-        workspaceId: body.workspaceId,
+        workspaceId: scope.principal.workspaceId,
         source: body.source,
         eventType: body.eventType,
         correlationKey: body.correlationKey,
@@ -98,3 +108,6 @@ function toWorkflowEventResource(event: WorkflowEvent): object {
     receivedAt: event.receivedAt.toISOString(),
   };
 }
+export const V1_HTTP_ROUTES = [
+  { method: "POST", path: "/v1/workflow-events" },
+] as const;

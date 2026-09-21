@@ -27,9 +27,11 @@ import { Workflow } from "../src/workflow.js";
 import { createWorkflowApplication } from "../src/workflow-application.js";
 import { WorkflowVersion } from "../src/workflow-version.js";
 import { Workspace } from "../src/workspace.js";
+import { fakeControlPlaneScope } from "./control-plane-test-scope.js";
 import { createManifest, NOW } from "./fixtures.js";
 
 const workspaceId = "ws-1" as WorkspaceId;
+const scope = fakeControlPlaneScope(workspaceId);
 const otherWorkspaceId = "ws-2" as WorkspaceId;
 const agentId = "agent-1" as AgentId;
 const agentVersionId = "agent-version-1" as AgentVersionId;
@@ -48,12 +50,12 @@ describe("workflow application", () => {
   it("creates a Workflow and an immutable WorkflowVersion", async () => {
     const app = await createApp();
 
-    const workflow = await app.createWorkflow.execute({
+    const workflow = await app.createWorkflow.execute(scope, {
       workspaceId,
       key: "research-report",
       name: "Research Report",
     });
-    const version = await app.appendWorkflowVersion.execute({
+    const version = await app.appendWorkflowVersion.execute(scope, {
       workflowId: workflow.id,
       definition: sequentialDefinition(),
     });
@@ -67,7 +69,7 @@ describe("workflow application", () => {
         : undefined,
     ).toBe(agentVersionId);
 
-    const run = await app.createWorkflowRun.execute({
+    const run = await app.createWorkflowRun.execute(scope, {
       workspaceId,
       workflowVersionId: version.id,
       input: { topic: "osva" },
@@ -79,12 +81,12 @@ describe("workflow application", () => {
 
   it("accepts a V2 DAG WorkflowVersion", async () => {
     const app = await createApp();
-    const workflow = await app.createWorkflow.execute({
+    const workflow = await app.createWorkflow.execute(scope, {
       workspaceId,
       key: "parallel-report",
       name: "Parallel Report",
     });
-    const version = await app.appendWorkflowVersion.execute({
+    const version = await app.appendWorkflowVersion.execute(scope, {
       workflowId: workflow.id,
       definition: {
         schemaVersion: "2",
@@ -109,12 +111,12 @@ describe("workflow application", () => {
 
   it("accepts a valid V3 WorkflowVersion and CreateWorkflowRun", async () => {
     const app = await createApp();
-    const workflow = await app.createWorkflow.execute({
+    const workflow = await app.createWorkflow.execute(scope, {
       workspaceId,
       key: "wait-flow",
       name: "Wait Flow",
     });
-    const version = await app.appendWorkflowVersion.execute({
+    const version = await app.appendWorkflowVersion.execute(scope, {
       workflowId: workflow.id,
       definition: {
         schemaVersion: "3",
@@ -131,7 +133,7 @@ describe("workflow application", () => {
     });
     expect(version.definition.schemaVersion).toBe("3");
 
-    const run = await app.createWorkflowRun.execute({
+    const run = await app.createWorkflowRun.execute(scope, {
       workspaceId,
       workflowVersionId: version.id,
       input: { topic: "osva" },
@@ -142,14 +144,14 @@ describe("workflow application", () => {
 
   it("rejects unknown AgentVersion bindings", async () => {
     const app = await createApp();
-    const workflow = await app.createWorkflow.execute({
+    const workflow = await app.createWorkflow.execute(scope, {
       workspaceId,
       key: "research-report",
       name: "Research Report",
     });
 
     await expect(
-      app.appendWorkflowVersion.execute({
+      app.appendWorkflowVersion.execute(scope, {
         workflowId: workflow.id,
         definition: sequentialDefinition(
           "missing-agent-version" as AgentVersionId,
@@ -208,14 +210,14 @@ describe("workflow application", () => {
       },
     });
 
-    const workflow = await app.createWorkflow.execute({
+    const workflow = await app.createWorkflow.execute(scope, {
       workspaceId,
       key: "research-report",
       name: "Research Report",
     });
 
     await expect(
-      app.appendWorkflowVersion.execute({
+      app.appendWorkflowVersion.execute(scope, {
         workflowId: workflow.id,
         definition: sequentialDefinition(),
       }),
@@ -225,7 +227,7 @@ describe("workflow application", () => {
   it("rejects Workflow creation for an unknown workspace", async () => {
     const app = await createApp({ seedWorkspace: false });
     await expect(
-      app.createWorkflow.execute({
+      app.createWorkflow.execute(scope, {
         workspaceId,
         key: "research-report",
         name: "Research Report",
@@ -292,6 +294,14 @@ class InMemoryWorkspaceRepository implements WorkspaceRepository {
   async findById(id: WorkspaceId): Promise<Workspace | null> {
     return this.workspaces.get(id) ?? null;
   }
+
+  async countAll(): Promise<number> {
+    return this.workspaces.size;
+  }
+
+  async listIds(): Promise<readonly WorkspaceId[]> {
+    return [...this.workspaces.keys()].sort();
+  }
 }
 
 class InMemoryAgentRepository implements AgentRepository {
@@ -304,6 +314,20 @@ class InMemoryAgentRepository implements AgentRepository {
 
   async findAgentById(id: AgentId): Promise<Agent | null> {
     return this.agents.get(id) ?? null;
+  }
+
+  async findAgentByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: AgentId,
+  ): Promise<Agent | null> {
+    const agent = this.agents.get(id);
+    return agent?.workspaceId === workspaceId ? agent : null;
+  }
+
+  async listAgentsByWorkspaceId(workspaceId: WorkspaceId): Promise<Agent[]> {
+    return [...this.agents.values()].filter(
+      (agent) => agent.workspaceId === workspaceId,
+    );
   }
 
   async listAgents(): Promise<Agent[]> {
@@ -341,6 +365,22 @@ class InMemoryWorkflowRepository implements WorkflowRepository {
 
   async findWorkflowById(id: WorkflowId): Promise<Workflow | null> {
     return this.workflows.get(id) ?? null;
+  }
+
+  async findWorkflowByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: WorkflowId,
+  ): Promise<Workflow | null> {
+    const workflow = this.workflows.get(id);
+    return workflow?.workspaceId === workspaceId ? workflow : null;
+  }
+
+  async listWorkflowsByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<Workflow[]> {
+    return [...this.workflows.values()].filter(
+      (workflow) => workflow.workspaceId === workspaceId,
+    );
   }
 
   async listWorkflows(): Promise<Workflow[]> {
@@ -415,6 +455,14 @@ class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
     id: import("@osva/contracts").WorkflowRunId,
   ): Promise<import("../src/workflow-run.js").WorkflowRun | null> {
     return this.runs.get(id) ?? null;
+  }
+
+  async findWorkflowRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: import("@osva/contracts").WorkflowRunId,
+  ): Promise<import("../src/workflow-run.js").WorkflowRun | null> {
+    const workflowRun = this.runs.get(id);
+    return workflowRun?.workspaceId === workspaceId ? workflowRun : null;
   }
 
   async listActiveWorkflowRuns(): Promise<

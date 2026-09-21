@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createWebApplication } from "../src/http.js";
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import { setTestAuthHeaders } from "./http-test-helpers.js";
 import { createTestWebApplication } from "./test-web.js";
 
 describe("web HTTP shell", () => {
@@ -16,9 +17,12 @@ describe("web HTTP shell", () => {
   async function listen(
     readinessCheck: () => Promise<boolean> = async () => true,
   ) {
-    const { server } = await createTestWebApplication({ readinessCheck });
+    const { server, testApiKey } = await createTestWebApplication({
+      readinessCheck,
+    });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);
+    setTestAuthHeaders(testApiKey);
     return { server, origin: `http://127.0.0.1:${String(port)}` };
   }
 

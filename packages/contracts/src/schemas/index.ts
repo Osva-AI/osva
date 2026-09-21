@@ -29,6 +29,7 @@ export {
   workflowVersionIdSchema,
   workflowEventIdSchema,
   workspaceIdSchema,
+  apiKeyIdSchema,
   officeWorkerIdSchema,
   roleIdSchema,
   teamIdSchema,
@@ -306,3 +307,12 @@ export {
   updateRoleRequestSchema,
   updateTeamRequestSchema,
 } from "./office-registry.js";
+
+export {
+  apiKeyListResourceSchema,
+  apiKeyResourceSchema,
+  communityEditionRoleSchema,
+  createApiKeyRequestSchema,
+  createApiKeyResponseSchema,
+  revokeApiKeyResponseSchema,
+} from "./api-key-registry.js";

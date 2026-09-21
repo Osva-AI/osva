@@ -14,21 +14,27 @@ import { describe, expect, it } from "vitest";
 import { MemoryModelProfileRepository } from "../src/memory-model-profile-repository.js";
 import { MemoryWorkspaceRepository } from "../src/memory-workspace-repository.js";
 import { NOW, workspaceId } from "./fixtures.js";
+import { fakeControlPlaneScope } from "./test-scope.js";
+
+const scope = fakeControlPlaneScope(workspaceId);
 
 describe("MemoryModelProfileRepository", () => {
   it("creates, reads, lists, and renames ModelProfiles", async () => {
     const { application } = await createHarness();
-    const created = await application.createModelProfile.execute({
+    const created = await application.createModelProfile.execute(scope, {
       workspaceId,
       key: "primary",
       name: "Primary",
     });
-    const loaded = await application.getModelProfile.execute(created.id);
-    const listed = await application.listModelProfiles.execute();
-    const renamed = await application.updateModelProfileMetadata.execute({
-      modelProfileId: created.id,
-      name: "Renamed",
-    });
+    const loaded = await application.getModelProfile.execute(scope, created.id);
+    const listed = await application.listModelProfiles.execute(scope);
+    const renamed = await application.updateModelProfileMetadata.execute(
+      scope,
+      {
+        modelProfileId: created.id,
+        name: "Renamed",
+      },
+    );
 
     expect(loaded.name).toBe("Primary");
     expect(listed).toHaveLength(1);
@@ -40,33 +46,33 @@ describe("MemoryModelProfileRepository", () => {
   it("rejects an unknown ModelProfile", async () => {
     const { application } = await createHarness();
     await expect(
-      application.getModelProfile.execute("missing" as ModelProfileId),
+      application.getModelProfile.execute(scope, "missing" as ModelProfileId),
     ).rejects.toBeInstanceOf(ModelProfileNotFoundError);
   });
 
   it("appends immutable ModelProfileVersions with per-profile numbering", async () => {
     const { application } = await createHarness();
-    const first = await application.createModelProfile.execute({
+    const first = await application.createModelProfile.execute(scope, {
       workspaceId,
       key: "primary",
       name: "Primary",
     });
-    const second = await application.createModelProfile.execute({
+    const second = await application.createModelProfile.execute(scope, {
       workspaceId,
       key: "secondary",
       name: "Secondary",
     });
-    const v1 = await application.appendModelProfileVersion.execute({
+    const v1 = await application.appendModelProfileVersion.execute(scope, {
       modelProfileId: first.id,
       provider: "OPENAI",
       model: "gpt-one",
     });
-    const v2 = await application.appendModelProfileVersion.execute({
+    const v2 = await application.appendModelProfileVersion.execute(scope, {
       modelProfileId: first.id,
       provider: "OPENAI",
       model: "gpt-two",
     });
-    const otherV1 = await application.appendModelProfileVersion.execute({
+    const otherV1 = await application.appendModelProfileVersion.execute(scope, {
       modelProfileId: second.id,
       provider: "OPENAI",
       model: "gpt-other",
@@ -82,24 +88,24 @@ describe("MemoryModelProfileRepository", () => {
 
   it("enforces nested ModelProfileVersion ownership", async () => {
     const { application } = await createHarness();
-    const first = await application.createModelProfile.execute({
+    const first = await application.createModelProfile.execute(scope, {
       workspaceId,
       key: "primary",
       name: "Primary",
     });
-    const second = await application.createModelProfile.execute({
+    const second = await application.createModelProfile.execute(scope, {
       workspaceId,
       key: "secondary",
       name: "Secondary",
     });
-    const version = await application.appendModelProfileVersion.execute({
+    const version = await application.appendModelProfileVersion.execute(scope, {
       modelProfileId: first.id,
       provider: "OPENAI",
       model: "gpt-one",
     });
 
     await expect(
-      application.getModelProfileVersion.execute({
+      application.getModelProfileVersion.execute(scope, {
         modelProfileId: second.id,
         modelProfileVersionId: version.id,
       }),
@@ -147,13 +153,13 @@ describe("MemoryModelProfileRepository", () => {
 
   it("rejects a duplicate ModelProfile key", async () => {
     const { application } = await createHarness();
-    await application.createModelProfile.execute({
+    await application.createModelProfile.execute(scope, {
       workspaceId,
       key: "primary",
       name: "Primary",
     });
     await expect(
-      application.createModelProfile.execute({
+      application.createModelProfile.execute(scope, {
         workspaceId,
         key: "primary",
         name: "Other",
@@ -164,7 +170,7 @@ describe("MemoryModelProfileRepository", () => {
   it("rejects appending a version to a missing ModelProfile", async () => {
     const { application } = await createHarness();
     await expect(
-      application.appendModelProfileVersion.execute({
+      application.appendModelProfileVersion.execute(scope, {
         modelProfileId: "missing" as ModelProfileId,
         provider: "OPENAI",
         model: "gpt-one",

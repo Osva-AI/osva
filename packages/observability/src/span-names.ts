@@ -18,6 +18,7 @@ export const OSVA_SPAN = {
   MCP_INBOUND_REQUEST: "osva.mcp.inbound.request",
   MCP_INBOUND_TOOL: "osva.mcp.inbound.tool",
   MCP_INBOUND_RESOURCE: "osva.mcp.inbound.resource",
+  HTTP_REQUEST: "osva.http.request",
   QUEUE_PROCESS: "osva.queue.process",
 } as const;
 

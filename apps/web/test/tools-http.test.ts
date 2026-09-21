@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { WorkspaceId } from "@osva/contracts";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import { fetchJson, setTestAuthHeaders } from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
@@ -20,7 +21,6 @@ describe("Tool Registry HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/tools`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "echo",
         name: "Echo",
       },
@@ -28,7 +28,6 @@ describe("Tool Registry HTTP API", () => {
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({
       id: "id-1",
-      workspaceId: WORKSPACE_ID,
       key: "echo",
       name: "Echo",
       createdAt: TEST_NOW.toISOString(),
@@ -55,7 +54,6 @@ describe("Tool Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/tools`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "echo",
         name: "Echo",
       },
@@ -80,32 +78,12 @@ describe("Tool Registry HTTP API", () => {
   });
 
   async function listen() {
-    const { server } = await createTestWebApplication({
+    const { server, testApiKey } = await createTestWebApplication({
       workspaceId: WORKSPACE_ID,
     });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);
+    setTestAuthHeaders(testApiKey);
     return { origin: `http://127.0.0.1:${String(port)}` };
   }
 });
-
-async function fetchJson(
-  url: string,
-  init?: {
-    readonly method?: string;
-    readonly body?: unknown;
-  },
-) {
-  const response = await fetch(url, {
-    method: init?.method ?? "GET",
-    headers:
-      init?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return {
-    status: response.status,
-    body: await response.json(),
-  };
-}

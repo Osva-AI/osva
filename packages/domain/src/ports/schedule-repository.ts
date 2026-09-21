@@ -48,6 +48,10 @@ export interface ListScheduleOccurrencesResult {
 export interface ScheduleRepository {
   saveSchedule(schedule: Schedule): Promise<void>;
   findScheduleById(id: ScheduleId): Promise<Schedule | null>;
+  findScheduleByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ScheduleId,
+  ): Promise<Schedule | null>;
   findScheduleByWorkspaceKey(
     workspaceId: WorkspaceId,
     key: string,

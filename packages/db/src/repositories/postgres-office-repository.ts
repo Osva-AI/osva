@@ -90,6 +90,24 @@ export class PostgresOfficeRepository implements OfficeRepository {
     return row === undefined ? null : officeWorkerFromRow(row);
   }
 
+  async findOfficeWorkerByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: OfficeWorkerId,
+  ): Promise<OfficeWorker | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(officeWorkers)
+      .where(
+        and(
+          eq(officeWorkers.id, id),
+          eq(officeWorkers.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    return row === undefined ? null : officeWorkerFromRow(row);
+  }
+
   async listOfficeWorkersByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly OfficeWorker[]> {
@@ -148,6 +166,19 @@ export class PostgresOfficeRepository implements OfficeRepository {
     return row === undefined ? null : roleFromRow(row);
   }
 
+  async findRoleByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: RoleId,
+  ): Promise<Role | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(roles)
+      .where(and(eq(roles.id, id), eq(roles.workspaceId, workspaceId)))
+      .limit(1);
+
+    return row === undefined ? null : roleFromRow(row);
+  }
+
   async listRolesByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly Role[]> {
@@ -199,6 +230,19 @@ export class PostgresOfficeRepository implements OfficeRepository {
       .select()
       .from(teams)
       .where(eq(teams.id, id))
+      .limit(1);
+
+    return row === undefined ? null : teamFromRow(row);
+  }
+
+  async findTeamByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: TeamId,
+  ): Promise<Team | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(teams)
+      .where(and(eq(teams.id, id), eq(teams.workspaceId, workspaceId)))
       .limit(1);
 
     return row === undefined ? null : teamFromRow(row);
@@ -313,6 +357,19 @@ export class PostgresOfficeRepository implements OfficeRepository {
     return row === undefined ? null : goalFromRow(row);
   }
 
+  async findGoalByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: GoalId,
+  ): Promise<Goal | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(goals)
+      .where(and(eq(goals.id, id), eq(goals.workspaceId, workspaceId)))
+      .limit(1);
+
+    return row === undefined ? null : goalFromRow(row);
+  }
+
   async listGoalsByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly Goal[]> {
@@ -351,6 +408,21 @@ export class PostgresOfficeRepository implements OfficeRepository {
       .select()
       .from(assignments)
       .where(eq(assignments.id, id))
+      .limit(1);
+
+    return row === undefined ? null : assignmentFromRow(row);
+  }
+
+  async findAssignmentByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: AssignmentId,
+  ): Promise<Assignment | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(assignments)
+      .where(
+        and(eq(assignments.id, id), eq(assignments.workspaceId, workspaceId)),
+      )
       .limit(1);
 
     return row === undefined ? null : assignmentFromRow(row);

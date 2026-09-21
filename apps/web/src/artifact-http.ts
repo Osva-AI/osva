@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
-import type { ArtifactId, WorkspaceId } from "@osva/contracts";
+import type { ArtifactId } from "@osva/contracts";
 import {
   artifactResourceSchema,
   listArtifactsQuerySchema,
@@ -17,6 +17,7 @@ import {
   decodeArtifactListCursor,
   encodeArtifactListCursor,
 } from "./artifact-cursor.js";
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { sendJson } from "./json.js";
 import {
@@ -69,6 +70,7 @@ async function dispatchArtifactRoute(
   artifacts: ArtifactApplication,
   maxBytes: number,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "collection") {
     if (method === "GET") {
       await handleListArtifacts(response, searchParams, artifacts);
@@ -100,7 +102,10 @@ async function dispatchArtifactRoute(
       return;
     }
 
-    const artifact = await artifacts.getArtifact.execute(route.artifactId);
+    const artifact = await artifacts.getArtifact.execute(
+      scope,
+      route.artifactId,
+    );
     sendJson(response, 200, toArtifactResource(artifact));
     return;
   }
@@ -110,7 +115,10 @@ async function dispatchArtifactRoute(
     return;
   }
 
-  const opened = await artifacts.openArtifactContent.execute(route.artifactId);
+  const opened = await artifacts.openArtifactContent.execute(
+    scope,
+    route.artifactId,
+  );
   response.statusCode = 200;
   response.setHeader("Content-Type", opened.artifact.mediaType);
   response.setHeader("Content-Length", String(opened.content.sizeBytes));
@@ -128,6 +136,7 @@ async function handleListArtifacts(
   searchParams: URLSearchParams,
   artifacts: ArtifactApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   const parsed = listArtifactsQuerySchema.safeParse(
     Object.fromEntries(searchParams.entries()),
   );
@@ -163,8 +172,7 @@ async function handleListArtifacts(
     };
   }
 
-  const page = await artifacts.listArtifacts.execute({
-    workspaceId: parsed.data.workspaceId as WorkspaceId,
+  const page = await artifacts.listArtifacts.execute(scope, {
     runId: parsed.data.runId,
     runAttemptId: parsed.data.runAttemptId,
     limit,
@@ -180,6 +188,7 @@ async function handleCreateArtifact(
   artifacts: ArtifactApplication,
   maxBytes: number,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   const contentType = request.headers["content-type"];
   if (
     typeof contentType !== "string" ||
@@ -205,8 +214,8 @@ async function handleCreateArtifact(
         const expectedDigest =
           readHeader(request, "x-expected-digest") ?? fields.expectedDigest;
 
-        uploadPromise = artifacts.createArtifact.execute({
-          workspaceId: fields.workspaceId as WorkspaceId,
+        uploadPromise = artifacts.createArtifact.execute(scope, {
+          workspaceId: scope.principal.workspaceId,
           name: fields.name,
           mediaType:
             fields.mediaType ?? fileMediaType ?? "application/octet-stream",
@@ -317,3 +326,9 @@ function readHeader(
 
   return value.trim();
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/artifacts" },
+  { method: "POST", path: "/v1/artifacts" },
+  { method: "GET", path: "/v1/artifacts/:artifactId" },
+  { method: "GET", path: "/v1/artifacts/:artifactId/content" },
+] as const;

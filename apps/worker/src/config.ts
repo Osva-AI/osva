@@ -17,6 +17,8 @@ export interface WorkerConfig {
    * AgentVersion configuration cannot enable this.
    */
   readonly remoteHttpAllowPrivateNetworks: boolean;
+  readonly mcpStdioConnectorsEnabled: boolean;
+  readonly mcpConnectorAllowPrivateNetworks: boolean;
   readonly containerEnabled: boolean;
   readonly containerNetworkMode: string;
   readonly containerCapabilityBaseUrl?: string;
@@ -75,6 +77,14 @@ export function loadWorkerConfig(
     remoteHttpAllowPrivateNetworks: readOptionalBoolean(
       env.OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS,
       "OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS",
+    ),
+    mcpStdioConnectorsEnabled: readOptionalBoolean(
+      env.OSVA_MCP_STDIO_CONNECTORS_ENABLED,
+      "OSVA_MCP_STDIO_CONNECTORS_ENABLED",
+    ),
+    mcpConnectorAllowPrivateNetworks: readOptionalBoolean(
+      env.OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS,
+      "OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS",
     ),
     containerEnabled,
     containerNetworkMode,

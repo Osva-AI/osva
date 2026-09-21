@@ -7,15 +7,20 @@ import type { KnowledgeIndexId, WorkspaceId } from "@osva/contracts";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
 import { createDatabase, migrateDatabase, type Database } from "@osva/db";
-import { Workspace } from "@osva/domain";
 
 import {
   createKnowledgeIntegrationStack,
+  integrationControlPlaneScope,
   TEST_EMBEDDING_DEFAULTS,
   uploadTextArtifact,
 } from "../../../../apps/knowledge-worker/test/integration/knowledge-stack.js";
 import { createWebProcess } from "../../../../apps/web/src/process.js";
 import { createWorkerProcess } from "../../src/process.js";
+import {
+  bootstrapIntegrationAuth,
+  getJson,
+  postJson,
+} from "./integration-auth.js";
 import {
   resetStage0Tables,
   startPostgresForTests,
@@ -65,6 +70,12 @@ describe("knowledge runtime end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
+    await bootstrapIntegrationAuth(
+      database,
+      WORKSPACE_ID,
+      NOW,
+      "Knowledge Runtime",
+    );
   });
 
   it("ingests READY knowledge and returns hits through trusted context.knowledge.search", async () => {
@@ -72,14 +83,6 @@ describe("knowledge runtime end-to-end", () => {
       now: NOW,
       embeddingDefaults: TEST_EMBEDDING_DEFAULTS,
     });
-    await stack.workspaces.save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Knowledge Runtime",
-        createdAt: NOW,
-      }),
-    );
-
     const sourceBody = `Handbook\n\n${MARKER}\nRefund within thirty days.`;
     const sourceArtifact = await uploadTextArtifact(
       stack,
@@ -87,17 +90,23 @@ describe("knowledge runtime end-to-end", () => {
       "handbook.txt",
       sourceBody,
     );
-    const source = await stack.knowledgeApp.createSource.execute({
-      workspaceId: WORKSPACE_ID,
-      key: "handbook",
-      name: "Handbook",
-      artifactId: sourceArtifact.id,
-      attributes: {},
-    });
-    const index = await stack.knowledgeApp.createIndex.execute({
-      workspaceId: WORKSPACE_ID,
-      knowledgeSourceId: source.id,
-    });
+    const source = await stack.knowledgeApp.createSource.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        key: "handbook",
+        name: "Handbook",
+        artifactId: sourceArtifact.id,
+        attributes: {},
+      },
+    );
+    const index = await stack.knowledgeApp.createIndex.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        knowledgeSourceId: source.id,
+      },
+    );
     await stack.ingestion.processIndex(index.id);
     const ready = await stack.knowledge.findIndexById(index.id);
     expect(ready?.status).toBe("READY");
@@ -137,7 +146,6 @@ describe("knowledge runtime end-to-end", () => {
       const origin = `http://127.0.0.1:${String(port)}`;
 
       const agent = await postJson(`${origin}/v1/agents`, {
-        workspaceId: WORKSPACE_ID,
         key: "knowledge-agent",
         name: "Knowledge Agent",
       });
@@ -172,7 +180,6 @@ describe("knowledge runtime end-to-end", () => {
       const agentVersionId = (version.body as { id: string }).id;
 
       const created = await postJson(`${origin}/v1/runs`, {
-        workspaceId: WORKSPACE_ID,
         agentId,
         agentVersionId,
         input: { query: MARKER },
@@ -218,25 +225,6 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     await delay(100);
   }
   throw new Error("Timed out waiting for knowledge runtime execution.");
-}
-
-async function postJson(
-  url: string,
-  body: unknown,
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return { status: response.status, body: await response.json() };
-}
-
-async function getJson(
-  url: string,
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url);
-  return { status: response.status, body: await response.json() };
 }
 
 function delay(ms: number): Promise<void> {

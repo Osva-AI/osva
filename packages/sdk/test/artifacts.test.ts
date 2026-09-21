@@ -52,11 +52,10 @@ describe("OsvaClient artifacts", () => {
 
     const client = new OsvaClient({
       baseUrl: server.origin,
-      workspaceId: "ws-1" as never,
+      apiKey: "osva_ak_test.secret" as never,
     });
 
     const created = await client.artifacts.create({
-      workspaceId: "ws-1" as never,
       name: "sample.bin",
       content: new Blob([Uint8Array.from([1, 2, 3])]),
     });
@@ -71,7 +70,10 @@ describe("OsvaClient artifacts", () => {
         writeJson(res, 200, SAMPLE_ARTIFACT);
         return;
       }
-      if (req.method === "GET" && req.url?.startsWith("/v1/artifacts?")) {
+      if (
+        req.method === "GET" &&
+        (req.url === "/v1/artifacts" || req.url?.startsWith("/v1/artifacts?"))
+      ) {
         writeJson(res, 200, { items: [SAMPLE_ARTIFACT] });
         return;
       }
@@ -81,7 +83,7 @@ describe("OsvaClient artifacts", () => {
 
     const client = new OsvaClient({
       baseUrl: server.origin,
-      workspaceId: "ws-1" as never,
+      apiKey: "osva_ak_test.secret" as never,
     });
 
     const artifact = await client.artifacts.get("artifact-1" as never);
@@ -111,7 +113,7 @@ describe("OsvaClient artifacts", () => {
 
     const client = new OsvaClient({
       baseUrl: server.origin,
-      workspaceId: "ws-1" as never,
+      apiKey: "osva_ak_test.secret" as never,
     });
 
     const downloaded = await client.artifacts.download("artifact-1" as never);
@@ -134,7 +136,7 @@ describe("OsvaClient artifacts", () => {
 
     const client = new OsvaClient({
       baseUrl: server.origin,
-      workspaceId: "ws-1" as never,
+      apiKey: "osva_ak_test.secret" as never,
     });
 
     await expect(

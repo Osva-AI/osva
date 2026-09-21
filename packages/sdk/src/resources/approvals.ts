@@ -11,30 +11,23 @@ type ApprovalRequestResource = z.infer<typeof approvalRequestResourceSchema>;
 type DecideApprovalRequest = z.infer<typeof decideApprovalRequestSchema>;
 
 export class ApprovalsResource {
-  constructor(
-    private readonly client: OsvaHttpClient,
-    private readonly workspaceId: string,
-  ) {}
+  constructor(private readonly client: OsvaHttpClient) {}
 
   get(approvalRequestId: ApprovalRequestId): Promise<ApprovalRequestResource> {
     return this.client.request({
       method: "GET",
       path: `/v1/approval-requests/${encodeURIComponent(approvalRequestId)}`,
-      query: { workspaceId: this.workspaceId },
     });
   }
 
   decide(
     approvalRequestId: ApprovalRequestId,
-    input: Omit<DecideApprovalRequest, "workspaceId">,
+    input: DecideApprovalRequest,
   ): Promise<ApprovalRequestResource> {
     return this.client.request({
       method: "POST",
       path: `/v1/approval-requests/${encodeURIComponent(approvalRequestId)}/decision`,
-      body: {
-        ...input,
-        workspaceId: this.workspaceId,
-      },
+      body: input,
     });
   }
 }

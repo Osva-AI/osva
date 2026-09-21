@@ -6,9 +6,12 @@ import type {
   ConnectorTransport,
   ConnectorTransportConfig,
 } from "./connector.js";
+import type {
+  PublicConnectorAuthConfigV1,
+  PublicConnectorTransportConfigV1,
+} from "./connector-public.js";
 
 export interface CreateConnectorRequestV1 {
-  readonly workspaceId: WorkspaceId;
   readonly key: string;
   readonly name: string;
   readonly description?: string;
@@ -46,8 +49,8 @@ export interface ConnectorVersionResourceV1 {
   readonly version: number;
   readonly kind: ConnectorKind;
   readonly transport: ConnectorTransport;
-  readonly transportConfig: ConnectorTransportConfig;
-  readonly auth?: ConnectorAuthConfig;
+  readonly transportConfig: PublicConnectorTransportConfigV1;
+  readonly auth?: PublicConnectorAuthConfigV1;
   readonly createdAt: string;
 }
 

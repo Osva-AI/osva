@@ -59,6 +59,23 @@ export class PostgresKnowledgeRepository implements KnowledgeRepository {
     return row === undefined ? null : knowledgeSourceFromRow(row);
   }
 
+  async findSourceByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: KnowledgeSourceId,
+  ): Promise<KnowledgeSource | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(knowledgeSources)
+      .where(
+        and(
+          eq(knowledgeSources.id, id),
+          eq(knowledgeSources.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+    return row === undefined ? null : knowledgeSourceFromRow(row);
+  }
+
   async findSourceByWorkspaceKey(
     workspaceId: WorkspaceId,
     key: string,
@@ -155,6 +172,23 @@ export class PostgresKnowledgeRepository implements KnowledgeRepository {
       .select()
       .from(knowledgeIndexes)
       .where(eq(knowledgeIndexes.id, id))
+      .limit(1);
+    return row === undefined ? null : knowledgeIndexFromRow(row);
+  }
+
+  async findIndexByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: KnowledgeIndexId,
+  ): Promise<KnowledgeIndex | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(knowledgeIndexes)
+      .where(
+        and(
+          eq(knowledgeIndexes.id, id),
+          eq(knowledgeIndexes.workspaceId, workspaceId),
+        ),
+      )
       .limit(1);
     return row === undefined ? null : knowledgeIndexFromRow(row);
   }

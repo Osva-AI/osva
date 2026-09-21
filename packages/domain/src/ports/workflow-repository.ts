@@ -2,6 +2,7 @@ import type {
   WorkflowDefinition,
   WorkflowId,
   WorkflowVersionId,
+  WorkspaceId,
 } from "@osva/contracts";
 
 import type { Workflow } from "../workflow.js";
@@ -17,7 +18,12 @@ export interface AppendWorkflowVersionInput {
 export interface WorkflowRepository {
   saveWorkflow(workflow: Workflow): Promise<void>;
   findWorkflowById(id: WorkflowId): Promise<Workflow | null>;
+  findWorkflowByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: WorkflowId,
+  ): Promise<Workflow | null>;
   listWorkflows(): Promise<Workflow[]>;
+  listWorkflowsByWorkspaceId(workspaceId: WorkspaceId): Promise<Workflow[]>;
   saveWorkflowVersion(workflowVersion: WorkflowVersion): Promise<void>;
   appendWorkflowVersion(
     input: AppendWorkflowVersionInput,

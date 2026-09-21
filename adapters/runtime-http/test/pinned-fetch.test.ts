@@ -3,7 +3,7 @@ import https from "node:https";
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchWithPinnedConnection } from "../src/pinned-fetch.js";
+import { fetchWithPinnedConnection } from "@osva/outbound-network";
 
 afterEach(() => {
   vi.restoreAllMocks();

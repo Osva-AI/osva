@@ -1,4 +1,3 @@
-import type { WorkspaceId } from "@osva/contracts";
 import {
   knowledgeRetrieveRequestSchema,
   knowledgeRetrieveResponseSchema,
@@ -13,22 +12,15 @@ type KnowledgeRetrieveResponse = z.infer<
 >;
 
 export class KnowledgeResource {
-  constructor(
-    private readonly client: OsvaHttpClient,
-    private readonly workspaceId: WorkspaceId,
-  ) {}
+  constructor(private readonly client: OsvaHttpClient) {}
 
   retrieve(
-    input: Omit<KnowledgeRetrieveRequest, "workspaceId">,
+    input: KnowledgeRetrieveRequest,
   ): Promise<KnowledgeRetrieveResponse> {
-    const body: KnowledgeRetrieveRequest = {
-      workspaceId: this.workspaceId,
-      ...input,
-    };
     return this.client.request({
       method: "POST",
       path: "/v1/knowledge/retrieve",
-      body,
+      body: input,
     });
   }
 }

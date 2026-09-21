@@ -8,6 +8,7 @@ import type {
   ModelProfileApplication,
   ToolApplication,
   WorkflowApplication,
+  ApiKeyApplication,
 } from "@osva/domain";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
@@ -40,6 +41,23 @@ import {
   handleKnowledgeRequest,
   type KnowledgeHttpServices,
 } from "./knowledge-http.js";
+import { handleAuthContextRequest } from "./auth-http.js";
+import { handleApiKeyRequest } from "./api-key-http.js";
+import {
+  authenticateRequest,
+  type WebSecurityServices,
+} from "./http-security.js";
+import {
+  createRequestId,
+  getRequestPrincipal,
+  runWithSecurityRequestContext,
+  resolveRequestId,
+} from "./security-request-context.js";
+import {
+  OSVA_REQUEST_ID_HEADER,
+  PUBLIC_API_ERROR_CODES,
+} from "@osva/contracts";
+import { sendV1Error } from "./v1-api-error.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
@@ -60,6 +78,8 @@ export interface CreateWebApplicationOptions {
   readonly workflowEvents?: WorkflowEventHttpServices;
   readonly office: OfficeHttpServices;
   readonly knowledge: KnowledgeHttpServices;
+  readonly security: WebSecurityServices;
+  readonly apiKeys: ApiKeyApplication;
 }
 
 export function createWebApplication(
@@ -85,6 +105,8 @@ export function createWebApplication(
       options.workflowEvents,
       options.office,
       options.knowledge,
+      options.security,
+      options.apiKeys,
     );
   });
 }
@@ -108,6 +130,59 @@ async function handleRequest(
   workflowEvents: WorkflowEventHttpServices | undefined,
   office: OfficeHttpServices,
   knowledge: KnowledgeHttpServices,
+  security: WebSecurityServices,
+  apiKeys: ApiKeyApplication,
+): Promise<void> {
+  const requestId = createRequestId();
+  response.setHeader(OSVA_REQUEST_ID_HEADER, requestId);
+
+  const principal = await authenticateRequest(request, security);
+
+  await runWithSecurityRequestContext({ requestId, principal }, async () => {
+    await handleRequestWithContext(
+      request,
+      response,
+      readinessCheck,
+      agents,
+      connectors,
+      memory,
+      artifacts,
+      artifactMaxBytes,
+      evaluations,
+      modelProfiles,
+      tools,
+      runs,
+      runObservability,
+      schedules,
+      workflows,
+      workflowEvents,
+      office,
+      knowledge,
+      apiKeys,
+    );
+  });
+}
+
+async function handleRequestWithContext(
+  request: IncomingMessage,
+  response: ServerResponse,
+  readinessCheck: ReadinessCheck,
+  agents: AgentApplication,
+  connectors: ConnectorApplication,
+  memory: MemoryApplication,
+  artifacts: ArtifactApplication,
+  artifactMaxBytes: number,
+  evaluations: EvaluationHttpServices,
+  modelProfiles: ModelProfileApplication,
+  tools: ToolApplication,
+  runs: RunHttpServices,
+  runObservability: RunObservabilityHttpServices,
+  schedules: ScheduleHttpServices,
+  workflows: WorkflowApplication,
+  workflowEvents: WorkflowEventHttpServices | undefined,
+  office: OfficeHttpServices,
+  knowledge: KnowledgeHttpServices,
+  apiKeys: ApiKeyApplication,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -152,6 +227,39 @@ async function handleRequest(
     }
 
     sendJson(response, 503, { status: "unavailable" });
+    return;
+  }
+
+  if (path.startsWith("/v1")) {
+    if (getRequestPrincipal() === undefined) {
+      sendV1Error(
+        response,
+        401,
+        PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
+        resolveRequestId(),
+      );
+      return;
+    }
+  }
+
+  const handledAuthContext = await handleAuthContextRequest(
+    request,
+    response,
+    method,
+    path,
+  );
+  if (handledAuthContext) {
+    return;
+  }
+
+  const handledApiKeys = await handleApiKeyRequest(
+    request,
+    response,
+    method,
+    path,
+    apiKeys,
+  );
+  if (handledApiKeys) {
     return;
   }
 
@@ -290,7 +398,6 @@ async function handleRequest(
     method,
     path,
     workflows,
-    url.searchParams,
   );
   if (handledWorkflows) {
     return;

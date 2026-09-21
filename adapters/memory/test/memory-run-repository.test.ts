@@ -250,11 +250,12 @@ describe("MemoryRunRepository", () => {
     await repository.saveRun(createPendingRun("run-c" as RunId, NOW));
     await repository.saveRun(createPendingRun("run-b" as RunId, NOW));
 
-    const firstPage = await repository.listRuns({ limit: 2 });
+    const firstPage = await repository.listRuns({ workspaceId, limit: 2 });
     expect(firstPage.runs.map((run) => run.id)).toEqual(["run-c", "run-b"]);
     expect(firstPage.nextCursor?.id).toBe("run-b");
 
     const secondPage = await repository.listRuns({
+      workspaceId,
       limit: 2,
       cursor: firstPage.nextCursor,
     });
@@ -288,18 +289,21 @@ describe("MemoryRunRepository", () => {
     );
 
     const byAgent = await repository.listRuns({
+      workspaceId,
       limit: 50,
       agentId,
     });
     expect(byAgent.runs.map((run) => run.id)).toEqual([runId]);
 
     const byVersion = await repository.listRuns({
+      workspaceId,
       limit: 50,
       agentVersionId: otherAgentVersionId,
     });
     expect(byVersion.runs.map((run) => run.id)).toEqual([otherRunId]);
 
     const byStatus = await repository.listRuns({
+      workspaceId,
       limit: 50,
       status: "QUEUED",
     });

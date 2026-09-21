@@ -11,15 +11,17 @@ import {
   type RunRepository,
 } from "../src/index.js";
 import { readableFromBuffer } from "./artifact-test-blob-store.js";
+import { fakeControlPlaneScope } from "./control-plane-test-scope.js";
 
 const NOW = new Date("2026-01-01T00:00:00.000Z");
 const WORKSPACE = "ws-1" as WorkspaceId;
+const scope = fakeControlPlaneScope(WORKSPACE);
 
 describe("Artifact application", () => {
   it("creates an artifact end-to-end", async () => {
     const { app } = createTestApp();
 
-    const created = await app.createArtifact.execute({
+    const created = await app.createArtifact.execute(scope, {
       workspaceId: WORKSPACE,
       name: "hello.txt",
       mediaType: "text/plain",
@@ -30,6 +32,7 @@ describe("Artifact application", () => {
     expect(created.digest).toMatch(/^sha256:[0-9a-f]{64}$/);
 
     const opened = await app.openArtifactContent.execute(
+      scope,
       created.id as ArtifactId,
     );
     const chunks: Buffer[] = [];
@@ -43,7 +46,7 @@ describe("Artifact application", () => {
     const { app } = createTestApp();
     const key = "upload-1";
 
-    const first = await app.createArtifact.execute({
+    const first = await app.createArtifact.execute(scope, {
       workspaceId: WORKSPACE,
       name: "same.bin",
       mediaType: "application/octet-stream",
@@ -51,7 +54,7 @@ describe("Artifact application", () => {
       idempotencyKey: key,
     });
 
-    const second = await app.createArtifact.execute({
+    const second = await app.createArtifact.execute(scope, {
       workspaceId: WORKSPACE,
       name: "same.bin",
       mediaType: "application/octet-stream",
@@ -67,7 +70,7 @@ describe("Artifact application", () => {
     const { app } = createTestApp();
     const key = "upload-2";
 
-    await app.createArtifact.execute({
+    await app.createArtifact.execute(scope, {
       workspaceId: WORKSPACE,
       name: "same.bin",
       mediaType: "application/octet-stream",
@@ -76,7 +79,7 @@ describe("Artifact application", () => {
     });
 
     await expect(
-      app.createArtifact.execute({
+      app.createArtifact.execute(scope, {
         workspaceId: WORKSPACE,
         name: "same.bin",
         mediaType: "application/octet-stream",
@@ -90,7 +93,7 @@ describe("Artifact application", () => {
     const { app } = createTestApp();
     const key = "upload-3";
 
-    await app.createArtifact.execute({
+    await app.createArtifact.execute(scope, {
       workspaceId: WORKSPACE,
       name: "a.bin",
       mediaType: "application/octet-stream",
@@ -99,7 +102,7 @@ describe("Artifact application", () => {
     });
 
     await expect(
-      app.createArtifact.execute({
+      app.createArtifact.execute(scope, {
         workspaceId: WORKSPACE,
         name: "b.bin",
         mediaType: "application/octet-stream",
@@ -113,7 +116,7 @@ describe("Artifact application", () => {
     const { app } = createTestApp();
     const key = "upload-4";
 
-    await app.createArtifact.execute({
+    await app.createArtifact.execute(scope, {
       workspaceId: WORKSPACE,
       name: "same.bin",
       mediaType: "application/octet-stream",
@@ -123,7 +126,7 @@ describe("Artifact application", () => {
     });
 
     await expect(
-      app.createArtifact.execute({
+      app.createArtifact.execute(scope, {
         workspaceId: WORKSPACE,
         name: "same.bin",
         mediaType: "application/octet-stream",
@@ -162,11 +165,11 @@ describe("Artifact application", () => {
     };
 
     const [first, second] = await Promise.all([
-      app.createArtifact.execute({
+      app.createArtifact.execute(scope, {
         ...command,
         content: readableFromBuffer(Buffer.from("payload")),
       }),
-      app.createArtifact.execute({
+      app.createArtifact.execute(scope, {
         ...command,
         content: readableFromBuffer(Buffer.from("payload")),
       }),
@@ -198,14 +201,14 @@ describe("Artifact application", () => {
 
     const key = "race-conflict";
     const results = await Promise.allSettled([
-      app.createArtifact.execute({
+      app.createArtifact.execute(scope, {
         workspaceId: WORKSPACE,
         name: "race.bin",
         mediaType: "application/octet-stream",
         content: readableFromBuffer(Buffer.from("alpha")),
         idempotencyKey: key,
       }),
-      app.createArtifact.execute({
+      app.createArtifact.execute(scope, {
         workspaceId: WORKSPACE,
         name: "race.bin",
         mediaType: "application/octet-stream",
@@ -257,6 +260,14 @@ class FakeWorkspaceRepository {
   async findById(id: WorkspaceId): Promise<Workspace | null> {
     return this.workspaces.get(id) ?? null;
   }
+
+  async countAll(): Promise<number> {
+    return this.workspaces.size;
+  }
+
+  async listIds(): Promise<readonly WorkspaceId[]> {
+    return [...this.workspaces.keys()].sort();
+  }
 }
 
 class FakeArtifactRepository implements ArtifactRepository {
@@ -288,6 +299,18 @@ class FakeArtifactRepository implements ArtifactRepository {
     return this.artifacts.get(artifactId) ?? null;
   }
 
+  async findByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    artifactId: ArtifactId,
+  ): Promise<Artifact | null> {
+    const artifact = this.artifacts.get(artifactId);
+    if (artifact === undefined || artifact.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return artifact;
+  }
+
   async findByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,
@@ -316,6 +339,10 @@ function idempotencyMapKey(
 
 class FakeRunRepository implements RunRepository {
   async findRunById() {
+    return null;
+  }
+
+  async findRunByWorkspaceAndId() {
     return null;
   }
 

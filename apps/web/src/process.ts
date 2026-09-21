@@ -40,6 +40,7 @@ import {
   PostgresKnowledgeRepository,
   PostgresOfficeRepository,
   PostgresWorkspaceRepository,
+  PostgresApiKeyRepository,
   type Database,
 } from "@osva/db";
 import {
@@ -59,9 +60,12 @@ import {
   createOfficeApplication,
   createKnowledgeApplication,
   KnowledgeRetriever,
+  AuthenticateApiKey,
+  createApiKeyApplication,
 } from "@osva/domain";
 import { PostgresEvaluationRepository } from "@osva/db";
 import { createMcpClientPool } from "@osva/adapters-mcp-client";
+import { readMcpRuntimePolicyFromEnv } from "./mcp-runtime-config.js";
 import { ProcessEnvSecretResolver } from "@osva/adapters-runtime-http";
 import {
   CreateRun,
@@ -73,6 +77,7 @@ import {
 import { loadWebConfig, type WebConfig } from "./config.js";
 import { createWebApplication } from "./http.js";
 import { logEvent } from "./log.js";
+import { createWebSecurityServices } from "./web-security-services.js";
 import { postgresAndValkeyReadinessCheck } from "./readiness.js";
 import { closeHttpServer, listenHttpServer } from "./server.js";
 import { loadKnowledgeEmbeddingDefaults } from "./knowledge-config.js";
@@ -112,6 +117,7 @@ export function createWebProcess(
   });
   const agents = new PostgresAgentRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
+  const apiKeys = new PostgresApiKeyRepository(database);
   const modelProfiles = new PostgresModelProfileRepository(database);
   const tools = new PostgresToolRepository(database);
   const connectors = new PostgresConnectorRepository(database);
@@ -135,6 +141,13 @@ export function createWebProcess(
   const artifactsRepository = new PostgresArtifactRepository(database);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
+  const authenticateApiKey = new AuthenticateApiKey({ apiKeys, clock });
+  const apiKeyApplication = createApiKeyApplication({
+    apiKeys,
+    workspaces,
+    clock,
+    ids,
+  });
   const knowledgeRepository = new PostgresKnowledgeRepository(database);
   const vectorStore = new PgVectorStore(database);
   const embeddingDefaults = loadKnowledgeEmbeddingDefaults({
@@ -198,8 +211,11 @@ export function createWebProcess(
     reconcileAssignment,
     instrumentation,
   });
+  const mcpRuntimePolicy = readMcpRuntimePolicyFromEnv(env);
   const mcpClientPool = createMcpClientPool({
     secretResolver: new ProcessEnvSecretResolver(env),
+    stdioConnectorsEnabled: mcpRuntimePolicy.stdioConnectorsEnabled,
+    allowPrivateNetworks: mcpRuntimePolicy.allowPrivateNetworks,
   });
   const server = createWebApplication({
     readinessCheck: postgresAndValkeyReadinessCheck(database, queue),
@@ -230,6 +246,7 @@ export function createWebProcess(
       tools,
       workspaces,
       mcpClientPool,
+      mcpRuntimePolicy,
       clock,
       ids,
     }),
@@ -329,6 +346,8 @@ export function createWebProcess(
       knowledge: knowledgeApplication,
       retriever: knowledgeRetriever,
     },
+    apiKeys: apiKeyApplication,
+    security: createWebSecurityServices(authenticateApiKey),
   });
 
   let stopping: Promise<void> | undefined;

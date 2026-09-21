@@ -1,4 +1,4 @@
-import type { TeamId, WorkspaceId } from "@osva/contracts";
+import type { TeamId } from "@osva/contracts";
 import {
   addTeamMembershipRequestSchema,
   createTeamRequestSchema,
@@ -23,11 +23,10 @@ type AddTeamMembershipRequest = z.infer<typeof addTeamMembershipRequestSchema>;
 export class TeamsResource {
   constructor(private readonly client: OsvaHttpClient) {}
 
-  list(workspaceId: WorkspaceId): Promise<TeamListResource> {
+  list(): Promise<TeamListResource> {
     return this.client.request({
       method: "GET",
       path: "/v1/teams",
-      query: { workspaceId },
     });
   }
 

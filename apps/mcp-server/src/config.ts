@@ -1,18 +1,15 @@
-import type { WorkspaceId } from "@osva/contracts";
-
-import { parseBearerTokenMappings } from "./bearer-tokens.js";
+const DEFAULT_HOST = "127.0.0.1";
+const DEFAULT_PORT = 3100;
+const DEFAULT_MCP_PATH = "/mcp";
 
 export interface McpServerConfig {
   readonly host: string;
   readonly port: number;
   readonly osvaApiBaseUrl: string;
   readonly mcpPath: string;
-  readonly bearerTokens: ReadonlyMap<string, WorkspaceId>;
+  readonly connectorAllowPrivateNetworks: boolean;
+  readonly stdioConnectorsEnabled: boolean;
 }
-
-const DEFAULT_HOST = "127.0.0.1";
-const DEFAULT_PORT = 3100;
-const DEFAULT_MCP_PATH = "/mcp";
 
 export function loadMcpServerConfig(
   env: NodeJS.ProcessEnv = process.env,
@@ -26,8 +23,13 @@ export function loadMcpServerConfig(
   const mcpPath = normalizePath(
     readOptional(env.OSVA_MCP_PATH) ?? DEFAULT_MCP_PATH,
   );
-  const bearerTokens = parseBearerTokenMappings(
-    readRequired(env.OSVA_MCP_BEARER_TOKENS, "OSVA_MCP_BEARER_TOKENS"),
+  const connectorAllowPrivateNetworks = readBoolean(
+    env.OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS,
+    false,
+  );
+  const stdioConnectorsEnabled = readBoolean(
+    env.OSVA_MCP_STDIO_CONNECTORS_ENABLED,
+    false,
   );
 
   return {
@@ -35,7 +37,8 @@ export function loadMcpServerConfig(
     port,
     osvaApiBaseUrl,
     mcpPath,
-    bearerTokens,
+    connectorAllowPrivateNetworks,
+    stdioConnectorsEnabled,
   };
 }
 
@@ -57,6 +60,20 @@ function readRequired(value: string | undefined, name: string): string {
 function readOptional(value: string | undefined): string | undefined {
   const trimmed = value?.trim() ?? "";
   return trimmed.length === 0 ? undefined : trimmed;
+}
+
+function readBoolean(value: string | undefined, fallback: boolean): boolean {
+  const trimmed = value?.trim().toLowerCase() ?? "";
+  if (trimmed.length === 0) {
+    return fallback;
+  }
+  if (trimmed === "true") {
+    return true;
+  }
+  if (trimmed === "false") {
+    return false;
+  }
+  throw new Error(`${value} must be true or false.`);
 }
 
 function parsePort(value: string | undefined, fallback: number): number {

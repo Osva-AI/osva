@@ -12,7 +12,7 @@ import {
   type Workflow,
   type WorkflowRepository,
 } from "@osva/domain";
-import { asc, eq, max } from "drizzle-orm";
+import { and, asc, eq, max } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import { workflowFromRow, workflowToRow } from "../mappers/workflow-mapper.js";
@@ -73,6 +73,31 @@ export class PostgresWorkflowRepository implements WorkflowRepository {
       .limit(1);
 
     return row === undefined ? null : workflowFromRow(row);
+  }
+
+  async findWorkflowByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: WorkflowId,
+  ): Promise<Workflow | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(workflows)
+      .where(and(eq(workflows.id, id), eq(workflows.workspaceId, workspaceId)))
+      .limit(1);
+
+    return row === undefined ? null : workflowFromRow(row);
+  }
+
+  async listWorkflowsByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<Workflow[]> {
+    const rows = await this.database.db
+      .select()
+      .from(workflows)
+      .where(eq(workflows.workspaceId, workspaceId))
+      .orderBy(asc(workflows.createdAt), asc(workflows.id));
+
+    return rows.map(workflowFromRow);
   }
 
   async listWorkflows(): Promise<Workflow[]> {

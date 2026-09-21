@@ -40,7 +40,6 @@ import {
   EffectiveRunBindings,
   Run,
   RunAttempt,
-  Workspace,
   artifactBlobStorageKey,
   createArtifactApplication,
   createRuntimeArtifactApplication,
@@ -68,6 +67,7 @@ import {
   stopPostgresForTests,
   type PostgresTestContext,
 } from "../../../../packages/db/test/integration/postgres-harness.js";
+import { bootstrapIntegrationAuth } from "./integration-auth.js";
 
 const CAPABILITY_SECRET = "container-artifact-integration-secret";
 const WORKSPACE_ID = "ws-container-artifact" as WorkspaceId;
@@ -185,12 +185,11 @@ describe.skipIf(!dockerAvailable)(
 
     beforeEach(async () => {
       await resetStage0Tables(database);
-      await new PostgresWorkspaceRepository(database).save(
-        Workspace.create({
-          id: WORKSPACE_ID,
-          name: "Container Artifact Workspace",
-          createdAt: NOW,
-        }),
+      await bootstrapIntegrationAuth(
+        database,
+        WORKSPACE_ID,
+        NOW,
+        "Container Artifact Workspace",
       );
 
       await agents.saveAgent(
@@ -287,7 +286,6 @@ describe.skipIf(!dockerAvailable)(
 
       const artifact = await artifactsRepository.findById(artifactId);
       expect(artifact).toMatchObject({
-        workspaceId: WORKSPACE_ID,
         producerRunId: runId,
         producerRunAttemptId: executionId,
         name: "container-artifact.txt",

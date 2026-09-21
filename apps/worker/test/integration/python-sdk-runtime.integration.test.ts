@@ -6,15 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { WorkspaceId } from "@osva/contracts";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
-import {
-  createDatabase,
-  migrateDatabase,
-  PostgresWorkspaceRepository,
-  type Database,
-} from "@osva/db";
-import { Workspace } from "@osva/domain";
+import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 
 import { createWebProcess } from "../../../web/src/process.js";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { createWorkerProcess } from "../../src/process.js";
 import {
   resetStage0Tables,
@@ -66,13 +61,7 @@ describe("Python SDK runtime end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("executes through the Python SDK runtime and completes the RunAttempt", async () => {
@@ -274,7 +263,6 @@ async function createRemoteRun(
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: `python-runtime-${String(Date.now())}-${Math.random()}`,
       name: "Python Runtime Agent",
     },
@@ -303,7 +291,6 @@ async function createRemoteRun(
   const created = await fetchJson(`${origin}/v1/runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       agentId,
       agentVersionId: (version.body as { id: string }).id,
       input,
@@ -328,16 +315,4 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     });
   }
   throw new Error("Timed out waiting for Python SDK runtime execution.");
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

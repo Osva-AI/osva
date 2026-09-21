@@ -41,15 +41,20 @@ Status is recorded after locally verifiable checks for each slice.
 ## Stage 3
 
 - ✅ 3.1 Container Runtime and Execution Isolation
-- ✅ 3.4 Artifact storage (immutable metadata, blob backends, control-plane and runtime capabilities)
-- ✅ 3.5 Knowledge retrieval (ingestion, pgvector, control-plane retrieve, manifest bindings, runtime `context.knowledge`, SDKs)
+- ✅ 3.2 Durable workflow semantics
+- ✅ 3.3 Durable workflow backend
+- ✅ 3.4 Artifact storage
+- ✅ 3.5 Knowledge retrieval
+- ✅ 3.6 MCP server + connector SDK
+- ✅ 3.7 API security and stability (implementation complete; pending final acceptance)
+- ⬜ 3.8 OSS 1.0 deployment and release packaging
 
 ## Totals
 
 - Stage 0: 8/8 complete
 - Stage 1: 8/8 complete
 - Stage 2: 9/9 complete
-- Stage 3: 1/8+ complete (see `STAGE_ROADMAP.md` for remaining OSS 1.0 slices)
-- Overall: 26/34+ slices complete
+- Stage 3: 7/8 complete (3.8 remaining)
+- Overall: 32/33 OSS 1.0 slices complete
 
 **Community Beta:** complete

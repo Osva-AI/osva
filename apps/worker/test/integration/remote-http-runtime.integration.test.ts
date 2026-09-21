@@ -4,15 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import type { ToolVersionId, WorkspaceId } from "@osva/contracts";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
-import {
-  createDatabase,
-  migrateDatabase,
-  PostgresWorkspaceRepository,
-  type Database,
-} from "@osva/db";
-import { Workspace } from "@osva/domain";
+import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 
 import { startFakeRemoteRuntime } from "../../../../adapters/runtime-http/test/fake-remote-runtime.js";
+import {
+  bootstrapIntegrationAuth,
+  fetchJson,
+  integrationAuthHeaders,
+} from "./integration-auth.js";
 import { startFakeOpenAIResponsesServer } from "../../../../adapters/model-openai/test/fake-openai-server.js";
 import { createWebProcess } from "../../../web/src/process.js";
 import { createWorkerProcess } from "../../src/process.js";
@@ -61,13 +60,7 @@ describe("remote HTTP runtime end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("executes a remote HTTP agent through the worker dispatcher", async () => {
@@ -218,7 +211,6 @@ describe("remote HTTP runtime end-to-end", () => {
       const profile = await fetchJson(`${origin}/v1/model-profiles`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "primary",
           name: "Primary",
         },
@@ -301,7 +293,6 @@ describe("remote HTTP runtime end-to-end", () => {
       const tool = await fetchJson(`${origin}/v1/tools`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "echo",
           name: "Echo",
         },
@@ -403,7 +394,6 @@ describe("remote HTTP runtime end-to-end", () => {
         .artifactId;
       const metadata = await fetchJson(`${origin}/v1/artifacts/${artifactId}`);
       expect(metadata.body).toMatchObject({
-        workspaceId: WORKSPACE_ID,
         producer: {
           runId: created.runId,
           runAttemptId: created.runAttemptId,
@@ -412,6 +402,7 @@ describe("remote HTTP runtime end-to-end", () => {
 
       const download = await fetch(
         `${origin}/v1/artifacts/${artifactId}/content`,
+        { headers: integrationAuthHeaders() },
       );
       expect(download.status).toBe(200);
       expect(await download.text()).toBe(payload);
@@ -438,7 +429,6 @@ async function createRemoteRun(
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: `remote-${String(Date.now())}-${Math.random()}`,
       name: "Remote Agent",
     },
@@ -469,7 +459,6 @@ async function createRemoteRun(
   const created = await fetchJson(`${origin}/v1/runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       agentId,
       agentVersionId: (version.body as { id: string }).id,
       input,
@@ -494,16 +483,4 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     });
   }
   throw new Error("Timed out waiting for remote HTTP runtime execution.");
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

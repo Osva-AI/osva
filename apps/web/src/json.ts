@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
+import { OSVA_DEFAULT_JSON_BODY_MAX_BYTES } from "@osva/contracts";
+
 export interface ReadJsonBodyOptions {
   readonly maxBytes?: number;
 }
@@ -8,12 +10,13 @@ export async function readJsonBody(
   request: IncomingMessage,
   options: ReadJsonBodyOptions = {},
 ): Promise<unknown> {
+  const maxBytes = options.maxBytes ?? OSVA_DEFAULT_JSON_BODY_MAX_BYTES;
   const chunks: Buffer[] = [];
   let totalBytes = 0;
   for await (const chunk of request) {
     const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
     totalBytes += buffer.length;
-    if (options.maxBytes !== undefined && totalBytes > options.maxBytes) {
+    if (totalBytes > maxBytes) {
       throw new RequestBodyTooLargeError();
     }
     chunks.push(buffer);

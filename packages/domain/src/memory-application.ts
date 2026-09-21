@@ -3,6 +3,7 @@ import type {
   MemoryNamespaceId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import { MemoryNamespace } from "./memory-namespace.js";
 import { MemoryRecord } from "./memory-record.js";
@@ -17,6 +18,14 @@ import type {
 } from "./ports/memory-namespace-repository.js";
 import { DEFAULT_MEMORY_RECORD_LIST_LIMIT } from "./ports/memory-namespace-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const MEMORY_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.memory };
 
 export interface MemoryApplicationClock {
   now(): Date;
@@ -44,17 +53,24 @@ export class CreateMemoryNamespace {
   constructor(private readonly deps: MemoryApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: CreateMemoryNamespaceCommand,
   ): Promise<MemoryNamespace> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      MEMORY_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     const now = this.deps.clock.now();
     const namespace = MemoryNamespace.create({
       id: this.deps.ids.createId() as MemoryNamespaceId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       description: command.description,
@@ -70,9 +86,20 @@ export class CreateMemoryNamespace {
 export class GetMemoryNamespace {
   constructor(private readonly deps: MemoryApplicationDependencies) {}
 
-  async execute(namespaceId: MemoryNamespaceId): Promise<MemoryNamespace> {
+  async execute(
+    scope: ControlPlaneScope,
+    namespaceId: MemoryNamespaceId,
+  ): Promise<MemoryNamespace> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      MEMORY_RESOURCE,
+    );
     const namespace =
-      await this.deps.memoryNamespaces.findNamespaceById(namespaceId);
+      await this.deps.memoryNamespaces.findNamespaceByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        namespaceId,
+      );
     if (namespace === null) {
       throw new MemoryNamespaceNotFoundError(namespaceId);
     }
@@ -84,7 +111,13 @@ export class GetMemoryNamespace {
 export class ListMemoryNamespaces {
   constructor(private readonly deps: MemoryApplicationDependencies) {}
 
-  async execute(workspaceId: WorkspaceId): Promise<readonly MemoryNamespace[]> {
+  async execute(scope: ControlPlaneScope): Promise<readonly MemoryNamespace[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      MEMORY_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
       throw new WorkspaceNotFoundError(workspaceId);
@@ -105,11 +138,19 @@ export class ListMemoryRecords {
   constructor(private readonly deps: MemoryApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: ListMemoryRecordsCommand,
   ): Promise<ListMemoryRecordsResult> {
-    const namespace = await this.deps.memoryNamespaces.findNamespaceById(
-      command.namespaceId,
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      MEMORY_RESOURCE,
     );
+    const namespace =
+      await this.deps.memoryNamespaces.findNamespaceByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        command.namespaceId,
+      );
     if (namespace === null) {
       throw new MemoryNamespaceNotFoundError(command.namespaceId);
     }

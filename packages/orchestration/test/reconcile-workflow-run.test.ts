@@ -3,6 +3,7 @@ import type {
   RunAttemptId,
   RunId,
   WorkflowNodeRunId,
+  WorkflowRunId,
 } from "@osva/contracts";
 import {
   FakeRuntimeAdapter,
@@ -22,7 +23,13 @@ import { CreateRun } from "../src/create-run.js";
 import { ExecuteRunAttempt } from "../src/execute-run-attempt.js";
 import { ReconcileWorkflowRun } from "../src/reconcile-workflow-run.js";
 import { WorkflowOrchestratorTick } from "../src/workflow-orchestrator-tick.js";
-import { LATER, NOW, seedAgentGraph, workspaceId } from "./fixtures.js";
+import {
+  LATER,
+  NOW,
+  seedAgentGraph,
+  workspaceId,
+  orchScope,
+} from "./fixtures.js";
 import { wrapRunRepository } from "./fixtures.js";
 
 describe("sequential workflow orchestration", () => {
@@ -33,15 +40,21 @@ describe("sequential workflow orchestration", () => {
       ["research", agentA],
       ["summarize", agentB],
     ]);
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
 
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("SUCCEEDED");
     expect(view.workflowRun.output).toEqual({
       from: "summarize",
@@ -65,15 +78,21 @@ describe("sequential workflow orchestration", () => {
       ["summarize", agentB],
       ["publish", agentC],
     ]);
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await runUntilTerminal(harness, workflowRun.id);
 
-    const view = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(view.workflowRun.status).toBe("FAILED");
     expect(view.nodeRuns.map((node) => node.workflowNodeKey)).toEqual([
       "research",
@@ -90,17 +109,21 @@ describe("sequential workflow orchestration", () => {
       ["research", agentA],
       ["summarize", agentB],
     ]);
-    const workflowRun = await harness.app.createWorkflowRun.execute({
-      workspaceId,
-      workflowVersionId: version.id,
-      input: { topic: "osva" },
-    });
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { topic: "osva" },
+      },
+    );
 
     await harness.tick.execute(NOW, harness.ids);
     await harness.tick.execute(NOW, harness.ids);
     await harness.tick.execute(NOW, harness.ids);
 
     const afterRedelivery = await harness.app.getWorkflowRun.execute(
+      orchScope(),
       workflowRun.id,
     );
     expect(afterRedelivery.nodeRuns).toHaveLength(1);
@@ -112,7 +135,10 @@ describe("sequential workflow orchestration", () => {
 
     await runUntilTerminal(harness, workflowRun.id);
 
-    const finished = await harness.app.getWorkflowRun.execute(workflowRun.id);
+    const finished = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
     expect(finished.workflowRun.status).toBe("SUCCEEDED");
     expect(finished.nodeRuns).toHaveLength(2);
     expect(
@@ -158,12 +184,12 @@ async function createSequentialVersion(
   harness: TestHarness,
   nodes: ReadonlyArray<readonly [string, AgentVersionId]>,
 ) {
-  const workflow = await harness.app.createWorkflow.execute({
+  const workflow = await harness.app.createWorkflow.execute(orchScope(), {
     workspaceId,
     key: "research-report",
     name: "Research Report",
   });
-  return harness.app.appendWorkflowVersion.execute({
+  return harness.app.appendWorkflowVersion.execute(orchScope(), {
     workflowId: workflow.id,
     definition: {
       schemaVersion: "1",
@@ -182,7 +208,7 @@ async function createSequentialVersion(
 
 async function runUntilTerminal(
   harness: TestHarness,
-  workflowRunId: Parameters<TestHarness["app"]["getWorkflowRun"]["execute"]>[0],
+  workflowRunId: WorkflowRunId,
 ): Promise<void> {
   for (let attempt = 0; attempt < 12; attempt += 1) {
     await harness.tick.execute(LATER, harness.ids);
@@ -192,7 +218,10 @@ async function runUntilTerminal(
         now: LATER,
       });
     });
-    const view = await harness.app.getWorkflowRun.execute(workflowRunId);
+    const view = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRunId,
+    );
     if (
       view.workflowRun.status === "SUCCEEDED" ||
       view.workflowRun.status === "FAILED"

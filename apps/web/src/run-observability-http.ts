@@ -18,6 +18,7 @@ import {
 } from "@osva/domain";
 import type { EvaluationApplication } from "@osva/domain";
 
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 import {
@@ -96,6 +97,7 @@ async function dispatchRunObservabilityRoute(
   searchParams: URLSearchParams,
   services: RunObservabilityHttpServices,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "steps") {
     if (method === "GET") {
       await handleListRunSteps(
@@ -114,7 +116,7 @@ async function dispatchRunObservabilityRoute(
 
   if (route.kind === "step") {
     if (method === "GET") {
-      const step = await services.observability.getRunStep.execute({
+      const step = await services.observability.getRunStep.execute(scope, {
         runId: route.runId,
         runAttemptId: route.runAttemptId,
         runStepId: route.runStepId,
@@ -130,6 +132,7 @@ async function dispatchRunObservabilityRoute(
   if (route.kind === "usage") {
     if (method === "GET") {
       const usage = await services.observability.getRunAttemptUsage.execute(
+        scope,
         route.runId,
         route.runAttemptId,
       );
@@ -144,6 +147,7 @@ async function dispatchRunObservabilityRoute(
   if (route.kind === "evaluations") {
     if (method === "GET") {
       const evaluations = await services.evaluations.listEvaluations.execute(
+        scope,
         route.runId,
         route.runAttemptId,
       );
@@ -160,11 +164,14 @@ async function dispatchRunObservabilityRoute(
         return;
       }
 
-      const created = await services.evaluations.createEvaluation.execute({
-        runId: route.runId,
-        runAttemptId: route.runAttemptId,
-        evaluator: parsed.data.evaluator,
-      });
+      const created = await services.evaluations.createEvaluation.execute(
+        scope,
+        {
+          runId: route.runId,
+          runAttemptId: route.runAttemptId,
+          evaluator: parsed.data.evaluator,
+        },
+      );
       sendJson(response, 201, toEvaluationResource(created));
       return;
     }
@@ -179,7 +186,7 @@ async function dispatchRunObservabilityRoute(
   }
 
   if (method === "GET") {
-    const evaluation = await services.evaluations.getEvaluation.execute({
+    const evaluation = await services.evaluations.getEvaluation.execute(scope, {
       runId: route.runId,
       runAttemptId: route.runAttemptId,
       evaluationId:
@@ -199,6 +206,7 @@ async function handleListRunSteps(
   searchParams: URLSearchParams,
   observability: RunObservabilityApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   const parsed = listRunStepsQuerySchema.safeParse(
     Object.fromEntries(searchParams.entries()),
   );
@@ -234,10 +242,15 @@ async function handleListRunSteps(
     };
   }
 
-  const page = await observability.listRunSteps.execute(runId, runAttemptId, {
-    limit,
-    cursor,
-  });
+  const page = await observability.listRunSteps.execute(
+    scope,
+    runId,
+    runAttemptId,
+    {
+      limit,
+      cursor,
+    },
+  );
 
   sendJson(response, 200, toRunStepListResource(page.steps, page.nextCursor));
 }
@@ -377,3 +390,20 @@ function toEvaluationListResource(evaluations: readonly Evaluation[]) {
     ),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/runs/:runId/attempts/:runAttemptId/steps" },
+  {
+    method: "GET",
+    path: "/v1/runs/:runId/attempts/:runAttemptId/steps/:runStepId",
+  },
+  { method: "GET", path: "/v1/runs/:runId/attempts/:runAttemptId/usage" },
+  { method: "GET", path: "/v1/runs/:runId/attempts/:runAttemptId/evaluations" },
+  {
+    method: "POST",
+    path: "/v1/runs/:runId/attempts/:runAttemptId/evaluations",
+  },
+  {
+    method: "GET",
+    path: "/v1/runs/:runId/attempts/:runAttemptId/evaluations/:evaluationId",
+  },
+] as const;

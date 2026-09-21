@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+﻿import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,11 +10,12 @@ import {
   createDatabase,
   migrateDatabase,
   PostgresWorkflowRunRepository,
-  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
-
+import {
+  bootstrapIntegrationAuth,
+  fetchJson,
+} from "../../../worker/test/integration/integration-auth.js";
 import { createWebProcess } from "../../../web/src/process.js";
 import { createWorkerProcess } from "../../../worker/src/process.js";
 import { createWorkflowOrchestratorProcess } from "../../src/process.js";
@@ -67,12 +68,10 @@ describe("workflow-orchestrator end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: new Date("2026-01-15T12:00:00.000Z"),
-      }),
+    await bootstrapIntegrationAuth(
+      database,
+      WORKSPACE_ID,
+      new Date("2026-01-15T12:00:00.000Z"),
     );
   });
 
@@ -260,7 +259,6 @@ describe("workflow-orchestrator end-to-end", () => {
         {
           method: "POST",
           body: {
-            workspaceId: WORKSPACE_ID,
             decision: "APPROVED",
             comment: "Looks good.",
           },
@@ -479,7 +477,6 @@ describe("workflow-orchestrator end-to-end", () => {
         {
           method: "POST",
           body: {
-            workspaceId: WORKSPACE_ID,
             decision: "APPROVED",
           },
         },
@@ -550,7 +547,6 @@ async function createParallelWorkflow(
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "echo-agent",
       name: "Echo Agent",
     },
@@ -581,7 +577,6 @@ async function createParallelWorkflow(
   const workflow = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "parallel-join",
       name: "Parallel Join",
     },
@@ -620,7 +615,6 @@ async function createParallelWorkflow(
   const workflowRun = await fetchJson(`${origin}/v1/workflow-runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       workflowVersionId,
       input: { topic: "orchestrator e2e" },
     },
@@ -646,7 +640,6 @@ async function createApprovalWorkflow(
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "echo-agent-approval",
       name: "Echo Agent",
     },
@@ -677,7 +670,6 @@ async function createApprovalWorkflow(
   const workflow = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "approval-gate",
       name: "Approval Gate",
     },
@@ -713,7 +705,6 @@ async function createApprovalWorkflow(
   const workflowRun = await fetchJson(`${origin}/v1/workflow-runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       workflowVersionId,
       input: { topic: "approval e2e" },
     },
@@ -736,7 +727,6 @@ async function createMixedRuntimeWorkflow(
   const trustedAgent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "trusted-mixed",
       name: "Trusted Agent",
     },
@@ -766,7 +756,6 @@ async function createMixedRuntimeWorkflow(
   const remoteAgent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "remote-mixed",
       name: "Remote Agent",
     },
@@ -796,7 +785,6 @@ async function createMixedRuntimeWorkflow(
   const workflow = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "mixed-runtime",
       name: "Mixed Runtime",
     },
@@ -828,7 +816,6 @@ async function createMixedRuntimeWorkflow(
   const workflowRun = await fetchJson(`${origin}/v1/workflow-runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       workflowVersionId: (workflowVersion.body as { id: string }).id,
       input: { topic: "mixed runtime" },
     },
@@ -847,7 +834,6 @@ async function createRemoteApprovalWorkflow(
   const remoteAgent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "remote-approval-a",
       name: "Remote Agent",
     },
@@ -877,7 +863,6 @@ async function createRemoteApprovalWorkflow(
   const trustedAgent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "trusted-approval-b",
       name: "Trusted Agent",
     },
@@ -907,7 +892,6 @@ async function createRemoteApprovalWorkflow(
   const workflow = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "remote-approval-gate",
       name: "Remote Approval Gate",
     },
@@ -947,7 +931,6 @@ async function createRemoteApprovalWorkflow(
   const workflowRun = await fetchJson(`${origin}/v1/workflow-runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       workflowVersionId: (workflowVersion.body as { id: string }).id,
       input: { topic: "remote approval e2e" },
     },
@@ -965,16 +948,4 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     });
   }
   throw new Error("Timed out waiting for workflow orchestrator execution.");
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

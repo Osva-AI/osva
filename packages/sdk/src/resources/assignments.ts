@@ -1,4 +1,4 @@
-import type { AssignmentId, WorkspaceId } from "@osva/contracts";
+import type { AssignmentId } from "@osva/contracts";
 import {
   assignmentListResourceSchema,
   assignmentResourceSchema,
@@ -17,11 +17,10 @@ type UpdateAssignmentRequest = z.infer<typeof updateAssignmentRequestSchema>;
 export class AssignmentsResource {
   constructor(private readonly client: OsvaHttpClient) {}
 
-  list(workspaceId: WorkspaceId): Promise<AssignmentListResource> {
+  list(): Promise<AssignmentListResource> {
     return this.client.request({
       method: "GET",
       path: "/v1/assignments",
-      query: { workspaceId },
     });
   }
 

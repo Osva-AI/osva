@@ -1,56 +1,113 @@
 import type { IncomingMessage } from "node:http";
-import type { McpPrincipal, WorkspaceId } from "@osva/contracts";
-import { timingSafeEqual } from "node:crypto";
+import type {
+  ApiKeyId,
+  AuthContextResourceV1,
+  CommunityEditionRole,
+  McpPrincipal,
+  WorkspaceId,
+} from "@osva/contracts";
+
+/** Request-scoped MCP authentication result (not a public contract). */
+export interface AuthenticatedMcpIdentity {
+  readonly principal: McpPrincipal;
+  readonly bearerCredential: string;
+}
 
 export interface McpAuthenticator {
-  authenticate(request: IncomingMessage): McpPrincipal | undefined;
+  authenticate(
+    request: IncomingMessage,
+  ): Promise<AuthenticatedMcpIdentity | undefined>;
 }
 
-export interface BearerTokenMcpAuthenticatorOptions {
-  readonly tokens: ReadonlyMap<string, WorkspaceId>;
+export interface RestAuthContextMcpAuthenticatorOptions {
+  readonly osvaApiBaseUrl: string;
+  readonly fetch?: typeof fetch;
 }
 
-export function createBearerTokenMcpAuthenticator(
-  options: BearerTokenMcpAuthenticatorOptions,
+export class McpAuthenticationServiceUnavailableError extends Error {
+  constructor() {
+    super("OSVA control-plane authentication is unavailable.");
+    this.name = "McpAuthenticationServiceUnavailableError";
+  }
+}
+
+export function createRestAuthContextMcpAuthenticator(
+  options: RestAuthContextMcpAuthenticatorOptions,
 ): McpAuthenticator {
-  const tokenEntries = [...options.tokens.entries()];
+  const baseUrl = options.osvaApiBaseUrl.replace(/\/+$/, "");
+  const fetchImpl = options.fetch ?? fetch;
 
   return {
-    authenticate(request) {
-      const authorization = headerValue(request.headers.authorization);
-      if (authorization === undefined) {
+    async authenticate(request) {
+      const token = extractBearerToken(request);
+      if (token === undefined) {
         return undefined;
       }
 
-      const match = /^Bearer\s+(.+)$/i.exec(authorization);
-      if (match === null) {
+      let response: Response;
+      try {
+        response = await fetchImpl(`${baseUrl}/v1/auth/context`, {
+          method: "GET",
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+          redirect: "manual",
+        });
+      } catch {
+        throw new McpAuthenticationServiceUnavailableError();
+      }
+
+      if (response.status === 401 || response.status === 403) {
         return undefined;
       }
 
-      const presented = match[1]!.trim();
-      if (presented.length === 0) {
-        return undefined;
+      if (!response.ok) {
+        throw new McpAuthenticationServiceUnavailableError();
       }
 
-      for (const [configured, workspaceId] of tokenEntries) {
-        if (tokensEqual(presented, configured)) {
-          return { workspaceId };
-        }
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        throw new McpAuthenticationServiceUnavailableError();
       }
 
-      return undefined;
+      if (
+        typeof body !== "object" ||
+        body === null ||
+        typeof (body as AuthContextResourceV1).subjectId !== "string" ||
+        typeof (body as AuthContextResourceV1).workspaceId !== "string" ||
+        typeof (body as AuthContextResourceV1).role !== "string"
+      ) {
+        throw new McpAuthenticationServiceUnavailableError();
+      }
+
+      const context = body as AuthContextResourceV1;
+      return {
+        principal: {
+          subjectId: context.subjectId as ApiKeyId,
+          workspaceId: context.workspaceId as WorkspaceId,
+          role: context.role as CommunityEditionRole,
+        },
+        bearerCredential: token,
+      };
     },
   };
 }
 
-function tokensEqual(presented: string, configured: string): boolean {
-  const presentedBuffer = Buffer.from(presented);
-  const configuredBuffer = Buffer.from(configured);
-  if (presentedBuffer.length !== configuredBuffer.length) {
-    return false;
+function extractBearerToken(request: IncomingMessage): string | undefined {
+  const authorization = headerValue(request.headers.authorization);
+  if (authorization === undefined) {
+    return undefined;
   }
 
-  return timingSafeEqual(presentedBuffer, configuredBuffer);
+  const match = /^Bearer\s+(.+)$/i.exec(authorization);
+  if (match === null) {
+    return undefined;
+  }
+
+  const presented = match[1]!.trim();
+  return presented.length === 0 ? undefined : presented;
 }
 
 function headerValue(

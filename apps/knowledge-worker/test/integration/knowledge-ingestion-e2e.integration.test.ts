@@ -13,6 +13,7 @@ import {
 } from "../../../../packages/db/test/integration/postgres-harness.js";
 import {
   createKnowledgeIntegrationStack,
+  integrationControlPlaneScope,
   TEST_EMBEDDING_DEFAULTS,
   uploadTextArtifact,
 } from "./knowledge-stack.js";
@@ -67,19 +68,25 @@ describe("knowledge ingestion end-to-end", () => {
       SOURCE_BODY,
     );
 
-    const source = await stack.knowledgeApp.createSource.execute({
-      workspaceId: WORKSPACE_ID,
-      key: "handbook",
-      name: "Handbook",
-      artifactId: sourceArtifact.id,
-      attributes: { department: "finance" },
-    });
+    const source = await stack.knowledgeApp.createSource.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        key: "handbook",
+        name: "Handbook",
+        artifactId: sourceArtifact.id,
+        attributes: { department: "finance" },
+      },
+    );
     expect(source.artifactId).toBe(sourceArtifact.id);
 
-    const index = await stack.knowledgeApp.createIndex.execute({
-      workspaceId: WORKSPACE_ID,
-      knowledgeSourceId: source.id,
-    });
+    const index = await stack.knowledgeApp.createIndex.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        knowledgeSourceId: source.id,
+      },
+    );
     expect(index.status).toBe("PENDING");
 
     await stack.ingestion.processIndex(index.id);
@@ -91,6 +98,7 @@ describe("knowledge ingestion end-to-end", () => {
     expect(ready?.embeddedChunkCount).toBe(ready?.chunkCount);
 
     const extracted = await stack.artifacts.openArtifactContent.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
       ready!.extractedArtifactId!,
     );
     expect(extracted.artifact.mediaType).toBe(KNOWLEDGE_EXTRACTION_MEDIA_TYPE);
@@ -129,6 +137,7 @@ describe("knowledge ingestion end-to-end", () => {
     expect(hits[0]?.attributes).toEqual({ department: "finance" });
 
     const unchangedSource = await stack.artifacts.getArtifact.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
       sourceArtifact.id,
     );
     expect(unchangedSource.digest).toBe(sourceArtifact.digest);

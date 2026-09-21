@@ -151,15 +151,12 @@ export class CreateRun {
   private async assertAgentOwnership(
     command: CreateRunCommand,
   ): Promise<AgentVersion> {
-    const agent = await this.deps.agents.findAgentById(command.agentId);
+    const agent = await this.deps.agents.findAgentByWorkspaceAndId(
+      command.workspaceId,
+      command.agentId,
+    );
     if (agent === null) {
       throw new AgentNotFoundError(command.agentId);
-    }
-
-    if (agent.workspaceId !== command.workspaceId) {
-      throw new BindingMismatchError(
-        `Agent ${agent.id} belongs to workspace ${agent.workspaceId}, not ${command.workspaceId}.`,
-      );
     }
 
     const agentVersionId = command.agentVersionId;

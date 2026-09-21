@@ -7,8 +7,11 @@ import {
 import { Workspace, createConnectorApplication } from "@osva/domain";
 import { describe, expect, it, vi } from "vitest";
 
+import { fakeControlPlaneScope } from "./test-scope.js";
+
 const NOW = new Date("2026-01-15T12:00:00.000Z");
 const WORKSPACE_ID = "ws-1" as import("@osva/contracts").WorkspaceId;
+const scope = fakeControlPlaneScope(WORKSPACE_ID);
 
 describe("ConnectorApplication MCP import versioning", () => {
   it("reuses an existing ToolVersion when rediscovery returns the same schema", async () => {
@@ -17,19 +20,22 @@ describe("ConnectorApplication MCP import versioning", () => {
     ];
     const { application } = await createHarness(discovered);
 
-    const connector = await application.createConnector.execute({
+    const connector = await application.createConnector.execute(scope, {
       workspaceId: WORKSPACE_ID,
       key: "fake-mcp",
       name: "Fake MCP",
     });
-    const connectorVersion = await application.appendConnectorVersion.execute({
-      connectorId: connector.id,
-      kind: "MCP",
-      transport: "STREAMABLE_HTTP",
-      transportConfig: { endpointUrl: "http://127.0.0.1:9001" },
-    });
+    const connectorVersion = await application.appendConnectorVersion.execute(
+      scope,
+      {
+        connectorId: connector.id,
+        kind: "MCP",
+        transport: "STREAMABLE_HTTP",
+        transportConfig: { endpointUrl: "http://127.0.0.1:9001" },
+      },
+    );
 
-    const first = await application.importMcpTools.execute({
+    const first = await application.importMcpTools.execute(scope, {
       connectorVersionId: connectorVersion.id,
       tools: [
         {
@@ -39,7 +45,7 @@ describe("ConnectorApplication MCP import versioning", () => {
         },
       ],
     });
-    const second = await application.importMcpTools.execute({
+    const second = await application.importMcpTools.execute(scope, {
       connectorVersionId: connectorVersion.id,
       tools: [
         {
@@ -62,19 +68,22 @@ describe("ConnectorApplication MCP import versioning", () => {
     const initial = [echoTool({ description: "Echoes tool input as text." })];
     const { application, setDiscoveredTools } = await createHarness(initial);
 
-    const connector = await application.createConnector.execute({
+    const connector = await application.createConnector.execute(scope, {
       workspaceId: WORKSPACE_ID,
       key: "fake-mcp",
       name: "Fake MCP",
     });
-    const connectorVersion = await application.appendConnectorVersion.execute({
-      connectorId: connector.id,
-      kind: "MCP",
-      transport: "STREAMABLE_HTTP",
-      transportConfig: { endpointUrl: "http://127.0.0.1:9001" },
-    });
+    const connectorVersion = await application.appendConnectorVersion.execute(
+      scope,
+      {
+        connectorId: connector.id,
+        kind: "MCP",
+        transport: "STREAMABLE_HTTP",
+        transportConfig: { endpointUrl: "http://127.0.0.1:9001" },
+      },
+    );
 
-    const first = await application.importMcpTools.execute({
+    const first = await application.importMcpTools.execute(scope, {
       connectorVersionId: connectorVersion.id,
       tools: [
         {
@@ -95,7 +104,7 @@ describe("ConnectorApplication MCP import versioning", () => {
       }),
     ]);
 
-    const second = await application.importMcpTools.execute({
+    const second = await application.importMcpTools.execute(scope, {
       connectorVersionId: connectorVersion.id,
       tools: [
         {
@@ -151,6 +160,7 @@ async function createHarness(initialTools: readonly DiscoveredMcpTool[]) {
     tools,
     workspaces,
     mcpClientPool,
+    mcpRuntimePolicy: { stdioConnectorsEnabled: true },
     clock: { now: () => NOW },
     ids: {
       createId() {

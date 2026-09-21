@@ -1,4 +1,4 @@
-import type { KnowledgeSourceId, WorkspaceId } from "@osva/contracts";
+import type { KnowledgeSourceId } from "@osva/contracts";
 import {
   createKnowledgeSourceRequestSchema,
   knowledgeSourceResourceSchema,
@@ -22,19 +22,15 @@ export interface KnowledgeSourceListResource {
 }
 
 export class KnowledgeSourcesResource {
-  constructor(
-    private readonly client: OsvaHttpClient,
-    private readonly workspaceId: WorkspaceId,
-  ) {}
+  constructor(private readonly client: OsvaHttpClient) {}
 
   list(
-    query: Omit<ListKnowledgeSourcesQuery, "workspaceId"> = {},
+    query: ListKnowledgeSourcesQuery = {},
   ): Promise<KnowledgeSourceListResource> {
     return this.client.request({
       method: "GET",
       path: "/v1/knowledge-sources",
       query: {
-        workspaceId: this.workspaceId,
         limit: query.limit,
         cursor: query.cursor,
       },
@@ -45,17 +41,12 @@ export class KnowledgeSourcesResource {
     return this.client.request({
       method: "GET",
       path: `/v1/knowledge-sources/${encodeURIComponent(knowledgeSourceId)}`,
-      query: { workspaceId: this.workspaceId },
     });
   }
 
   create(
-    input: Omit<CreateKnowledgeSourceRequest, "workspaceId">,
+    input: CreateKnowledgeSourceRequest,
   ): Promise<KnowledgeSourceResource> {
-    const body: CreateKnowledgeSourceRequest = {
-      workspaceId: this.workspaceId,
-      ...input,
-    };
     const headers: Record<string, string> = {};
     if (input.idempotencyKey !== undefined) {
       headers["Idempotency-Key"] = input.idempotencyKey;
@@ -63,7 +54,7 @@ export class KnowledgeSourcesResource {
     return this.client.request({
       method: "POST",
       path: "/v1/knowledge-sources",
-      body,
+      body: input,
       headers,
     });
   }

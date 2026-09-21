@@ -292,7 +292,7 @@ describe("DispatchScheduleOccurrence", () => {
       now: LATER,
     });
 
-    const listed = await runs.listRuns({ limit: 10 });
+    const listed = await runs.listRuns({ workspaceId, limit: 10 });
     expect(listed.runs).toHaveLength(1);
     expect(listed.runs[0]?.id).toBe(runId);
     expect(listed.runs[0]?.idempotencyKey).toBe(

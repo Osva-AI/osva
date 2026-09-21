@@ -2,6 +2,7 @@ import { OsvaApiError, OsvaTransportError } from "./errors.js";
 
 export interface OsvaHttpClientOptions {
   readonly baseUrl: string;
+  readonly apiKey: string;
   readonly timeoutMs?: number;
   readonly fetch?: typeof fetch;
 }
@@ -33,13 +34,24 @@ export interface DownloadResult {
 
 export class OsvaHttpClient {
   readonly baseUrl: string;
+  private readonly apiKey: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
 
   constructor(options: OsvaHttpClientOptions) {
     this.baseUrl = normalizeBaseUrl(options.baseUrl);
+    this.apiKey = options.apiKey;
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.fetchImpl = options.fetch ?? fetch;
+  }
+
+  private authHeaders(
+    headers?: Readonly<Record<string, string>>,
+  ): Record<string, string> {
+    return {
+      authorization: `Bearer ${this.apiKey}`,
+      ...headers,
+    };
   }
 
   async request<T>(options: RequestOptions): Promise<T> {
@@ -56,11 +68,11 @@ export class OsvaHttpClient {
         signal: controller.signal,
         headers:
           options.body === undefined
-            ? options.headers
-            : {
+            ? this.authHeaders(options.headers)
+            : this.authHeaders({
                 "content-type": "application/json",
                 ...options.headers,
-              },
+              }),
         body:
           options.body === undefined ? undefined : JSON.stringify(options.body),
       });
@@ -105,7 +117,7 @@ export class OsvaHttpClient {
       response = await this.fetchImpl(url, {
         method: "POST",
         signal: controller.signal,
-        headers: options.headers,
+        headers: this.authHeaders(options.headers),
         body: options.form,
       });
     } catch (error) {
@@ -149,6 +161,7 @@ export class OsvaHttpClient {
       response = await this.fetchImpl(url, {
         method: "GET",
         signal: controller.signal,
+        headers: this.authHeaders(),
       });
     } catch (error) {
       if (isAbortError(error)) {

@@ -5,7 +5,28 @@ export {
 } from "./database.js";
 export { checkDatabaseConnection } from "./check-database-connection.js";
 export { migrateDatabase, migrationsFolder } from "./migrate.js";
+export {
+  verifyMigrationHistory,
+  lockMigrationHistory,
+  loadMigrationHistoryManifest,
+  migrationHistoryManifestPath,
+  drizzleDirectory,
+  type MigrationHistoryVerificationResult,
+} from "./migration-history.js";
+export {
+  acquireMigrationAdvisoryLock,
+  releaseMigrationAdvisoryLock,
+  tryAcquireMigrationAdvisoryLock,
+  OSVA_MIGRATION_ADVISORY_LOCK,
+} from "./migration-advisory-lock.js";
+export {
+  formatMigrationStatus,
+  readMigrationStatus,
+  redactDatabaseTarget,
+  type MigrationStatusSnapshot,
+} from "./migration-status.js";
 export { PostgresWorkspaceRepository } from "./repositories/postgres-workspace-repository.js";
+export { PostgresApiKeyRepository } from "./repositories/postgres-api-key-repository.js";
 export { PostgresAgentRepository } from "./repositories/postgres-agent-repository.js";
 export { PostgresModelProfileRepository } from "./repositories/postgres-model-profile-repository.js";
 export { PostgresConnectorRepository } from "./repositories/postgres-connector-repository.js";

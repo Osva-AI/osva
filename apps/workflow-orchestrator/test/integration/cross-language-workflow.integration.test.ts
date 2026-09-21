@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+﻿import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -11,11 +11,12 @@ import {
   createDatabase,
   migrateDatabase,
   PostgresWorkflowRunRepository,
-  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
-
+import {
+  bootstrapIntegrationAuth,
+  fetchJson,
+} from "../../../worker/test/integration/integration-auth.js";
 import { createWebProcess } from "../../../web/src/process.js";
 import { createWorkerProcess } from "../../../worker/src/process.js";
 import { createWorkflowOrchestratorProcess } from "../../src/process.js";
@@ -71,12 +72,10 @@ describe("cross-language workflow composition", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: new Date("2026-01-15T12:00:00.000Z"),
-      }),
+    await bootstrapIntegrationAuth(
+      database,
+      WORKSPACE_ID,
+      new Date("2026-01-15T12:00:00.000Z"),
     );
   });
 
@@ -197,7 +196,6 @@ async function createCrossLanguageWorkflow(
   const tsAgent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "ts-agent",
       name: "TS Agent",
     },
@@ -230,7 +228,6 @@ async function createCrossLanguageWorkflow(
   const pythonAgent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "python-agent",
       name: "Python Agent",
     },
@@ -263,7 +260,6 @@ async function createCrossLanguageWorkflow(
   const workflow = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "cross-language",
       name: "Cross Language",
     },
@@ -293,7 +289,6 @@ async function createCrossLanguageWorkflow(
   const workflowRun = await fetchJson(`${origin}/v1/workflow-runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       workflowVersionId,
       input: { topic: "cross-language" },
     },
@@ -393,16 +388,4 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     });
   }
   throw new Error("Timed out waiting for cross-language workflow completion.");
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

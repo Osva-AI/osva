@@ -11,15 +11,27 @@ import type {
   ToolVersionId,
   WorkspaceId,
 } from "@osva/contracts";
-import { MCP_TOOL_IMPLEMENTATION } from "@osva/contracts";
+import {
+  AUTHORIZATION_ACTIONS,
+  MCP_TOOL_IMPLEMENTATION,
+} from "@osva/contracts";
 
 import { Connector } from "./connector.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const CONNECTOR_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.connector };
 import type { ConnectorVersion } from "./connector-version.js";
 import {
   ConnectorNotFoundError,
   ConnectorVersionNotFoundError,
   DuplicateConnectorKeyError,
   DuplicateToolKeyError,
+  StdioConnectorsDisabledError,
   ToolNotFoundError,
   WorkspaceNotFoundError,
 } from "./errors.js";
@@ -28,6 +40,20 @@ import type { ToolRepository } from "./ports/tool-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 import { Tool } from "./tool.js";
 import { isSameMcpToolVersionConfig } from "./tool-version.js";
+import { toMcpConnectorExecutionConfig } from "./mcp-connector-execution.js";
+
+export interface McpRuntimePolicy {
+  readonly stdioConnectorsEnabled: boolean;
+}
+
+function assertStdioConnectorAllowed(
+  transport: ConnectorTransport,
+  policy: McpRuntimePolicy,
+): void {
+  if (transport === "STDIO" && !policy.stdioConnectorsEnabled) {
+    throw new StdioConnectorsDisabledError();
+  }
+}
 
 export interface ConnectorApplicationClock {
   now(): Date;
@@ -42,6 +68,7 @@ export interface ConnectorApplicationDependencies {
   readonly tools: ToolRepository;
   readonly workspaces: WorkspaceRepository;
   readonly mcpClientPool: McpClientPool;
+  readonly mcpRuntimePolicy: McpRuntimePolicy;
   readonly clock: ConnectorApplicationClock;
   readonly ids: ConnectorApplicationIds;
 }
@@ -95,32 +122,28 @@ export interface ImportedMcpToolResult {
   readonly createdNewToolVersion: boolean;
 }
 
-function toConnectorVersionResource(version: ConnectorVersion) {
-  return {
-    id: version.id,
-    connectorId: version.connectorId,
-    version: version.version,
-    kind: version.kind,
-    transport: version.transport,
-    transportConfig: version.transportConfig,
-    auth: version.auth,
-    createdAt: version.createdAt.toISOString(),
-  };
-}
-
 export class CreateConnector {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
-  async execute(command: CreateConnectorCommand): Promise<Connector> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateConnectorCommand,
+  ): Promise<Connector> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.ADMIN,
+      CONNECTOR_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     const now = this.deps.clock.now();
     const connector = Connector.create({
       id: this.deps.ids.createId() as ConnectorId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       description: command.description,
@@ -144,8 +167,19 @@ export class CreateConnector {
 export class GetConnector {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
-  async execute(connectorId: ConnectorId): Promise<Connector> {
-    const connector = await this.deps.connectors.findConnectorById(connectorId);
+  async execute(
+    scope: ControlPlaneScope,
+    connectorId: ConnectorId,
+  ): Promise<Connector> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      CONNECTOR_RESOURCE,
+    );
+    const connector = await this.deps.connectors.findConnectorByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      connectorId,
+    );
     if (connector === null) {
       throw new ConnectorNotFoundError(connectorId);
     }
@@ -157,15 +191,38 @@ export class GetConnector {
 export class ListConnectors {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
-  async execute(): Promise<Connector[]> {
-    return this.deps.connectors.listConnectors();
+  async execute(scope: ControlPlaneScope): Promise<Connector[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      CONNECTOR_RESOURCE,
+    );
+    return this.deps.connectors.listConnectorsByWorkspaceId(
+      controlPlaneWorkspaceId(scope),
+    );
   }
 }
 
 export class UpdateConnectorMetadata {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
-  async execute(command: UpdateConnectorMetadataCommand): Promise<Connector> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateConnectorMetadataCommand,
+  ): Promise<Connector> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.ADMIN,
+      CONNECTOR_RESOURCE,
+    );
+    const existing = await this.deps.connectors.findConnectorByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.connectorId,
+    );
+    if (existing === null) {
+      throw new ConnectorNotFoundError(command.connectorId);
+    }
+
     const updated = await this.deps.connectors.updateConnectorMetadata(
       command.connectorId,
       {
@@ -186,14 +243,23 @@ export class AppendConnectorVersion {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: AppendConnectorVersionCommand,
   ): Promise<ConnectorVersion> {
-    const connector = await this.deps.connectors.findConnectorById(
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.ADMIN,
+      CONNECTOR_RESOURCE,
+    );
+    const connector = await this.deps.connectors.findConnectorByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.connectorId,
     );
     if (connector === null) {
       throw new ConnectorNotFoundError(command.connectorId);
     }
+
+    assertStdioConnectorAllowed(command.transport, this.deps.mcpRuntimePolicy);
 
     return this.deps.connectors.appendConnectorVersion({
       id: this.deps.ids.createId() as ConnectorVersionId,
@@ -211,9 +277,16 @@ export class GetConnectorVersion {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: GetConnectorVersionCommand,
   ): Promise<ConnectorVersion> {
-    const connector = await this.deps.connectors.findConnectorById(
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      CONNECTOR_RESOURCE,
+    );
+    const connector = await this.deps.connectors.findConnectorByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.connectorId,
     );
     if (connector === null) {
@@ -234,8 +307,19 @@ export class GetConnectorVersion {
 export class ListConnectorVersions {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
-  async execute(connectorId: ConnectorId): Promise<ConnectorVersion[]> {
-    const connector = await this.deps.connectors.findConnectorById(connectorId);
+  async execute(
+    scope: ControlPlaneScope,
+    connectorId: ConnectorId,
+  ): Promise<ConnectorVersion[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      CONNECTOR_RESOURCE,
+    );
+    const connector = await this.deps.connectors.findConnectorByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      connectorId,
+    );
     if (connector === null) {
       throw new ConnectorNotFoundError(connectorId);
     }
@@ -248,8 +332,14 @@ export class DiscoverConnectorTools {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: DiscoverConnectorToolsCommand,
   ): Promise<readonly DiscoveredMcpTool[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.EXECUTE,
+      CONNECTOR_RESOURCE,
+    );
     const version = await this.deps.connectors.findConnectorVersionById(
       command.connectorVersionId,
     );
@@ -257,8 +347,18 @@ export class DiscoverConnectorTools {
       throw new ConnectorVersionNotFoundError(command.connectorVersionId);
     }
 
+    const connector = await this.deps.connectors.findConnectorByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      version.connectorId,
+    );
+    if (connector === null) {
+      throw new ConnectorVersionNotFoundError(command.connectorVersionId);
+    }
+
+    assertStdioConnectorAllowed(version.transport, this.deps.mcpRuntimePolicy);
+
     return this.deps.mcpClientPool.discoverTools(
-      toConnectorVersionResource(version),
+      toMcpConnectorExecutionConfig(version),
     );
   }
 }
@@ -267,8 +367,14 @@ export class ImportMcpTools {
   constructor(private readonly deps: ConnectorApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: ImportMcpToolsCommand,
   ): Promise<readonly ImportedMcpToolResult[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.ADMIN,
+      CONNECTOR_RESOURCE,
+    );
     const connectorVersion =
       await this.deps.connectors.findConnectorVersionById(
         command.connectorVersionId,
@@ -277,15 +383,21 @@ export class ImportMcpTools {
       throw new ConnectorVersionNotFoundError(command.connectorVersionId);
     }
 
-    const connector = await this.deps.connectors.findConnectorById(
+    const connector = await this.deps.connectors.findConnectorByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       connectorVersion.connectorId,
     );
     if (connector === null) {
-      throw new ConnectorNotFoundError(connectorVersion.connectorId);
+      throw new ConnectorVersionNotFoundError(command.connectorVersionId);
     }
 
+    assertStdioConnectorAllowed(
+      connectorVersion.transport,
+      this.deps.mcpRuntimePolicy,
+    );
+
     const discovered = await this.deps.mcpClientPool.discoverTools(
-      toConnectorVersionResource(connectorVersion),
+      toMcpConnectorExecutionConfig(connectorVersion),
     );
     const discoveredByName = new Map(
       discovered.map((tool) => [tool.remoteToolName, tool]),
@@ -385,11 +497,8 @@ async function findToolByWorkspaceKey(
   workspaceId: WorkspaceId,
   key: string,
 ): Promise<Tool | null> {
-  const all = await tools.listTools();
-  return (
-    all.find((tool) => tool.workspaceId === workspaceId && tool.key === key) ??
-    null
-  );
+  const all = await tools.listToolsByWorkspaceId(workspaceId);
+  return all.find((tool) => tool.key === key) ?? null;
 }
 
 export interface ConnectorApplication {

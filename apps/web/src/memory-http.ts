@@ -1,11 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { MemoryNamespaceId, WorkspaceId } from "@osva/contracts";
+import type { MemoryNamespaceId } from "@osva/contracts";
 import {
   createMemoryNamespaceRequestSchema,
   memoryNamespaceListResourceSchema,
   memoryNamespaceResourceSchema,
   memoryRecordListResourceSchema,
-  workspaceIdSchema,
 } from "@osva/contracts/schemas";
 import {
   DEFAULT_MEMORY_RECORD_LIST_LIMIT,
@@ -15,6 +14,7 @@ import {
   type MemoryRecord,
 } from "@osva/domain";
 
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -60,19 +60,10 @@ async function dispatchMemoryRoute(
   searchParams: URLSearchParams,
   memory: MemoryApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "collection") {
     if (method === "GET") {
-      const workspaceId = workspaceIdSchema.safeParse(
-        searchParams.get("workspaceId") ?? undefined,
-      );
-      if (!workspaceId.success) {
-        sendJson(response, 400, { status: "invalid_request" });
-        return;
-      }
-
-      const list = await memory.listMemoryNamespaces.execute(
-        workspaceId.data as WorkspaceId,
-      );
+      const list = await memory.listMemoryNamespaces.execute(scope);
       sendJson(response, 200, toMemoryNamespaceListResource(list));
       return;
     }
@@ -86,7 +77,10 @@ async function dispatchMemoryRoute(
         return;
       }
 
-      const created = await memory.createMemoryNamespace.execute(parsed.data);
+      const created = await memory.createMemoryNamespace.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toMemoryNamespaceResource(created));
       return;
     }
@@ -112,6 +106,7 @@ async function dispatchMemoryRoute(
     }
 
     const namespace = await memory.getMemoryNamespace.execute(
+      scope,
       route.namespaceId,
     );
     sendJson(response, 200, toMemoryNamespaceResource(namespace));
@@ -137,7 +132,7 @@ async function dispatchMemoryRoute(
     return;
   }
 
-  const records = await memory.listMemoryRecords.execute({
+  const records = await memory.listMemoryRecords.execute(scope, {
     namespaceId: route.namespaceId,
     prefix: searchParams.get("prefix") ?? undefined,
     limit,
@@ -155,33 +150,36 @@ function matchMemoryRoute(path: string): MemoryRoute | undefined {
   const segments = path.split("/").filter((segment) => segment.length > 0);
 
   if (
-    segments.length === 2 &&
+    segments.length === 3 &&
     segments[0] === "v1" &&
-    segments[1] === "memory-namespaces"
+    segments[1] === "memory" &&
+    segments[2] === "namespaces"
   ) {
     return { kind: "collection" };
   }
 
   if (
-    segments.length === 3 &&
+    segments.length === 4 &&
     segments[0] === "v1" &&
-    segments[1] === "memory-namespaces"
+    segments[1] === "memory" &&
+    segments[2] === "namespaces"
   ) {
     return {
       kind: "item",
-      namespaceId: decodeURIComponent(segments[2]!) as MemoryNamespaceId,
+      namespaceId: decodeURIComponent(segments[3]!) as MemoryNamespaceId,
     };
   }
 
   if (
-    segments.length === 4 &&
+    segments.length === 5 &&
     segments[0] === "v1" &&
-    segments[1] === "memory-namespaces" &&
-    segments[3] === "records"
+    segments[1] === "memory" &&
+    segments[2] === "namespaces" &&
+    segments[4] === "records"
   ) {
     return {
       kind: "records",
-      namespaceId: decodeURIComponent(segments[2]!) as MemoryNamespaceId,
+      namespaceId: decodeURIComponent(segments[3]!) as MemoryNamespaceId,
     };
   }
 
@@ -221,3 +219,9 @@ function toMemoryRecordListResource(
     nextCursor,
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/memory/namespaces" },
+  { method: "POST", path: "/v1/memory/namespaces" },
+  { method: "GET", path: "/v1/memory/namespaces/:namespaceId" },
+  { method: "GET", path: "/v1/memory/namespaces/:namespaceId/records" },
+] as const;

@@ -24,6 +24,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ToolGateway, ToolGatewayError } from "../src/index.js";
 import type { InternalToolImplementation } from "../src/internal/implementation.js";
 import * as registry from "../src/internal/registry.js";
+import { fakeControlPlaneScope } from "./test-scope.js";
 
 const NOW = new Date("2026-01-15T12:00:00.000Z");
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
@@ -213,22 +214,23 @@ async function seedTools(tools: MemoryToolRepository) {
     },
   });
 
-  const echoTool = await application.createTool.execute({
+  const scope = fakeControlPlaneScope(WORKSPACE_ID);
+  const echoTool = await application.createTool.execute(scope, {
     workspaceId: WORKSPACE_ID,
     key: "echo",
     name: "Echo",
   });
-  const clockTool = await application.createTool.execute({
+  const clockTool = await application.createTool.execute(scope, {
     workspaceId: WORKSPACE_ID,
     key: "clock",
     name: "Clock",
   });
-  const echoVersion = await application.appendToolVersion.execute({
+  const echoVersion = await application.appendToolVersion.execute(scope, {
     toolId: echoTool.id,
     type: "INTERNAL",
     implementation: "OSVA_ECHO_V1",
   });
-  const clockVersion = await application.appendToolVersion.execute({
+  const clockVersion = await application.appendToolVersion.execute(scope, {
     toolId: clockTool.id,
     type: "INTERNAL",
     implementation: "OSVA_CLOCK_NOW_V1",

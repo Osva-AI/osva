@@ -13,9 +13,11 @@ import {
   AgentVersion,
   EffectiveRunBindings,
   type AgentRepository,
+  type ControlPlaneScope,
   type RunRepository,
   type WorkspaceRepository,
   Workspace,
+  runtimeControlPlaneScope,
 } from "@osva/domain";
 
 export const NOW = new Date("2026-01-15T12:00:00.000Z");
@@ -36,6 +38,13 @@ export const secondaryModelProfileVersionId =
   "model-profile-version-2" as ModelProfileVersionId;
 
 export const RUN_INPUT = { prompt: "hello from run" };
+
+/** Trusted orchestration tests: workspace already enforced by seeded graph. */
+export function orchScope(
+  forWorkspace: WorkspaceId = workspaceId,
+): ControlPlaneScope {
+  return runtimeControlPlaneScope(forWorkspace);
+}
 
 export function createManifest(
   overrides: Partial<AgentManifestV1> = {},
@@ -140,6 +149,9 @@ export function wrapRunRepository(
     saveRun: overrides.saveRun?.bind(overrides) ?? inner.saveRun.bind(inner),
     findRunById:
       overrides.findRunById?.bind(overrides) ?? inner.findRunById.bind(inner),
+    findRunByWorkspaceAndId:
+      overrides.findRunByWorkspaceAndId?.bind(overrides) ??
+      inner.findRunByWorkspaceAndId.bind(inner),
     findRunByWorkspaceIdempotencyKey:
       overrides.findRunByWorkspaceIdempotencyKey?.bind(overrides) ??
       inner.findRunByWorkspaceIdempotencyKey.bind(inner),
@@ -189,8 +201,14 @@ export function wrapAgentRepository(
     findAgentById:
       overrides.findAgentById?.bind(overrides) ??
       inner.findAgentById.bind(inner),
+    findAgentByWorkspaceAndId:
+      overrides.findAgentByWorkspaceAndId?.bind(overrides) ??
+      inner.findAgentByWorkspaceAndId.bind(inner),
     listAgents:
       overrides.listAgents?.bind(overrides) ?? inner.listAgents.bind(inner),
+    listAgentsByWorkspaceId:
+      overrides.listAgentsByWorkspaceId?.bind(overrides) ??
+      inner.listAgentsByWorkspaceId.bind(inner),
     updateAgentMetadata:
       overrides.updateAgentMetadata?.bind(overrides) ??
       inner.updateAgentMetadata.bind(inner),

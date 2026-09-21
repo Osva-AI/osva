@@ -5,6 +5,7 @@ import type {
   EvaluationSuiteVersionId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import { EvaluationCase } from "./evaluation-case.js";
 import { EvaluationSuite } from "./evaluation-suite.js";
@@ -16,6 +17,16 @@ import {
 } from "./errors.js";
 import type { EvaluationSuiteRepository } from "./ports/evaluation-suite-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const EVALUATION_SUITE_RESOURCE = {
+  kind: CONTROL_PLANE_RESOURCE_KINDS.evaluationSuite,
+};
 
 export interface EvaluationSuiteApplicationClock {
   now(): Date;
@@ -53,17 +64,24 @@ export class CreateEvaluationSuite {
   constructor(private readonly deps: EvaluationSuiteApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: CreateEvaluationSuiteCommand,
   ): Promise<EvaluationSuite> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      EVALUATION_SUITE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     const now = this.deps.clock.now();
     const suite = EvaluationSuite.create({
       id: this.deps.ids.createId() as EvaluationSuiteId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       description: command.description,
@@ -80,10 +98,18 @@ export class GetEvaluationSuite {
   constructor(private readonly deps: EvaluationSuiteApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     evaluationSuiteId: EvaluationSuiteId,
   ): Promise<EvaluationSuite> {
-    const suite =
-      await this.deps.evaluationSuites.findSuiteById(evaluationSuiteId);
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_SUITE_RESOURCE,
+    );
+    const suite = await this.deps.evaluationSuites.findSuiteByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      evaluationSuiteId,
+    );
     if (suite === null) {
       throw new EvaluationSuiteNotFoundError(evaluationSuiteId);
     }
@@ -95,7 +121,13 @@ export class GetEvaluationSuite {
 export class ListEvaluationSuites {
   constructor(private readonly deps: EvaluationSuiteApplicationDependencies) {}
 
-  async execute(workspaceId: WorkspaceId): Promise<readonly EvaluationSuite[]> {
+  async execute(scope: ControlPlaneScope): Promise<readonly EvaluationSuite[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_SUITE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
       throw new WorkspaceNotFoundError(workspaceId);
@@ -109,9 +141,16 @@ export class AppendEvaluationSuiteVersion {
   constructor(private readonly deps: EvaluationSuiteApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: AppendEvaluationSuiteVersionCommand,
   ): Promise<EvaluationSuiteVersion> {
-    const suite = await this.deps.evaluationSuites.findSuiteById(
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      EVALUATION_SUITE_RESOURCE,
+    );
+    const suite = await this.deps.evaluationSuites.findSuiteByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.evaluationSuiteId,
     );
     if (suite === null) {
@@ -164,9 +203,16 @@ export class GetEvaluationSuiteVersion {
   constructor(private readonly deps: EvaluationSuiteApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: GetEvaluationSuiteVersionCommand,
   ): Promise<EvaluationSuiteVersion> {
-    const suite = await this.deps.evaluationSuites.findSuiteById(
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_SUITE_RESOURCE,
+    );
+    const suite = await this.deps.evaluationSuites.findSuiteByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.evaluationSuiteId,
     );
     if (suite === null) {
@@ -193,10 +239,18 @@ export class ListEvaluationSuiteVersions {
   constructor(private readonly deps: EvaluationSuiteApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     evaluationSuiteId: EvaluationSuiteId,
   ): Promise<readonly EvaluationSuiteVersion[]> {
-    const suite =
-      await this.deps.evaluationSuites.findSuiteById(evaluationSuiteId);
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_SUITE_RESOURCE,
+    );
+    const suite = await this.deps.evaluationSuites.findSuiteByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      evaluationSuiteId,
+    );
     if (suite === null) {
       throw new EvaluationSuiteNotFoundError(evaluationSuiteId);
     }

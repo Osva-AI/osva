@@ -1,9 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type {
-  KnowledgeIndexId,
-  KnowledgeSourceId,
-  WorkspaceId,
-} from "@osva/contracts";
+import type { KnowledgeIndexId, KnowledgeSourceId } from "@osva/contracts";
 import {
   createKnowledgeIndexRequestSchema,
   createKnowledgeSourceRequestSchema,
@@ -26,6 +22,7 @@ import {
   decodeKnowledgeListCursor,
   encodeKnowledgeListCursor,
 } from "./knowledge-cursor.js";
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -82,10 +79,10 @@ async function dispatchKnowledgeRoute(
   searchParams: URLSearchParams,
   services: KnowledgeHttpServices,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "sources-collection") {
     if (method === "GET") {
       const parsed = listKnowledgeSourcesQuerySchema.safeParse({
-        workspaceId: searchParams.get("workspaceId"),
         limit: searchParams.get("limit") ?? undefined,
         cursor: searchParams.get("cursor") ?? undefined,
       });
@@ -100,8 +97,8 @@ async function dispatchKnowledgeRoute(
         parsed.data.cursor === undefined
           ? undefined
           : decodeKnowledgeListCursor(parsed.data.cursor);
-      const page = await services.knowledge.listSources.execute({
-        workspaceId: parsed.data.workspaceId,
+      const page = await services.knowledge.listSources.execute(scope, {
+        workspaceId: scope.principal.workspaceId,
         limit,
         cursor:
           decodedCursor === undefined
@@ -129,9 +126,10 @@ async function dispatchKnowledgeRoute(
         sendJson(response, 400, { status: "invalid_request" });
         return;
       }
-      const created = await services.knowledge.createSource.execute(
-        parsed.data,
-      );
+      const created = await services.knowledge.createSource.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toKnowledgeSourceResource(created));
       return;
     }
@@ -155,13 +153,9 @@ async function dispatchKnowledgeRoute(
       );
       return;
     }
-    const workspaceId = searchParams.get("workspaceId");
-    if (workspaceId === null || workspaceId.trim().length === 0) {
-      sendJson(response, 400, { status: "invalid_request" });
-      return;
-    }
     const source = await services.knowledge.getSource.execute(
-      workspaceId as WorkspaceId,
+      scope,
+      scope.principal.workspaceId,
       route.sourceId,
     );
     sendJson(response, 200, toKnowledgeSourceResource(source));
@@ -170,11 +164,6 @@ async function dispatchKnowledgeRoute(
 
   if (route.kind === "source-indexes") {
     if (method === "GET") {
-      const workspaceId = searchParams.get("workspaceId");
-      if (workspaceId === null || workspaceId.trim().length === 0) {
-        sendJson(response, 400, { status: "invalid_request" });
-        return;
-      }
       const limitParam = searchParams.get("limit");
       const limit = limitParam
         ? Number.parseInt(limitParam, 10)
@@ -184,8 +173,8 @@ async function dispatchKnowledgeRoute(
         cursorParam === null || cursorParam.trim().length === 0
           ? undefined
           : decodeKnowledgeListCursor(cursorParam);
-      const page = await services.knowledge.listIndexes.execute({
-        workspaceId: workspaceId as WorkspaceId,
+      const page = await services.knowledge.listIndexes.execute(scope, {
+        workspaceId: scope.principal.workspaceId,
         knowledgeSourceId: route.sourceId,
         limit,
         cursor:
@@ -214,8 +203,8 @@ async function dispatchKnowledgeRoute(
         sendJson(response, 400, { status: "invalid_request" });
         return;
       }
-      const created = await services.knowledge.createIndex.execute({
-        workspaceId: parsed.data.workspaceId,
+      const created = await services.knowledge.createIndex.execute(scope, {
+        workspaceId: scope.principal.workspaceId,
         knowledgeSourceId: route.sourceId,
         idempotencyKey: parsed.data.idempotencyKey,
       });
@@ -242,13 +231,9 @@ async function dispatchKnowledgeRoute(
       );
       return;
     }
-    const workspaceId = searchParams.get("workspaceId");
-    if (workspaceId === null || workspaceId.trim().length === 0) {
-      sendJson(response, 400, { status: "invalid_request" });
-      return;
-    }
     const index = await services.knowledge.getIndex.execute(
-      workspaceId as WorkspaceId,
+      scope,
+      scope.principal.workspaceId,
       route.indexId,
     );
     sendJson(response, 200, toKnowledgeIndexResource(index));
@@ -273,7 +258,8 @@ async function dispatchKnowledgeRoute(
       return;
     }
     const retried = await services.knowledge.retryIndex.execute(
-      parsed.data.workspaceId,
+      scope,
+      scope.principal.workspaceId,
       route.indexId,
     );
     sendJson(response, 200, toKnowledgeIndexResource(retried));
@@ -297,7 +283,10 @@ async function dispatchKnowledgeRoute(
       sendJson(response, 400, { status: "invalid_request" });
       return;
     }
-    const hits = await services.retriever.retrieve(parsed.data);
+    const hits = await services.retriever.retrieve({
+      ...parsed.data,
+      workspaceId: scope.principal.workspaceId,
+    });
     sendJson(response, 200, { hits });
     return;
   }
@@ -353,3 +342,22 @@ function matchKnowledgeRoute(path: string): KnowledgeRoute | undefined {
 
   return undefined;
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/knowledge-sources" },
+  { method: "POST", path: "/v1/knowledge-sources" },
+  { method: "GET", path: "/v1/knowledge-sources/:knowledgeSourceId" },
+  {
+    method: "GET",
+    path: "/v1/knowledge-sources/:knowledgeSourceId/indexes",
+  },
+  {
+    method: "POST",
+    path: "/v1/knowledge-sources/:knowledgeSourceId/indexes",
+  },
+  { method: "GET", path: "/v1/knowledge-indexes/:knowledgeIndexId" },
+  {
+    method: "POST",
+    path: "/v1/knowledge-indexes/:knowledgeIndexId/retry",
+  },
+  { method: "POST", path: "/v1/knowledge/retrieve" },
+] as const;

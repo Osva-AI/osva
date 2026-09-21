@@ -57,6 +57,10 @@ export interface ClaimKnowledgeIndexLeaseInput {
 export interface KnowledgeRepository {
   saveSource(source: KnowledgeSource): Promise<void>;
   findSourceById(id: KnowledgeSourceId): Promise<KnowledgeSource | null>;
+  findSourceByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: KnowledgeSourceId,
+  ): Promise<KnowledgeSource | null>;
   findSourceByWorkspaceKey(
     workspaceId: WorkspaceId,
     key: string,
@@ -72,6 +76,10 @@ export interface KnowledgeRepository {
   saveIndex(index: KnowledgeIndex): Promise<void>;
   updateIndex(index: KnowledgeIndex): Promise<void>;
   findIndexById(id: KnowledgeIndexId): Promise<KnowledgeIndex | null>;
+  findIndexByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: KnowledgeIndexId,
+  ): Promise<KnowledgeIndex | null>;
   findIndexByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,

@@ -95,6 +95,26 @@ function forbiddenWebImport(specifier: string): string | undefined {
   return undefined;
 }
 
+const FORBIDDEN_DOMAIN_SYMBOLS = new Set([
+  "runtimeControlPlaneScope",
+  "controlPlaneWorkspaceId",
+]);
+
+function collectDomainRuntimeBypassSymbols(source: string): string[] {
+  const hits: string[] = [];
+  const uncommented = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  for (const symbol of FORBIDDEN_DOMAIN_SYMBOLS) {
+    if (new RegExp(String.raw`\b${symbol}\b`).test(uncommented)) {
+      hits.push(symbol);
+    }
+  }
+
+  return hits;
+}
+
 describe("architecture import restrictions", () => {
   it("keeps apps/web/src free of runtimes, queue SDKs, and the worker app", () => {
     const violations: string[] = [];
@@ -107,6 +127,30 @@ describe("architecture import restrictions", () => {
         if (forbidden) {
           violations.push(
             `${toRepoPath(file)} imports forbidden '${specifier}' (${forbidden})`,
+          );
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps apps/web/src from importing trusted runtime control-plane bypass helpers", () => {
+    const violations: string[] = [];
+
+    for (const file of walkTypeScriptFiles(webSrc)) {
+      const source = fs.readFileSync(file, "utf8");
+      for (const specifier of collectImportSpecifiers(source)) {
+        if (
+          specifier !== "@osva/domain" &&
+          !specifier.startsWith("@osva/domain/")
+        ) {
+          continue;
+        }
+
+        for (const symbol of collectDomainRuntimeBypassSymbols(source)) {
+          violations.push(
+            `${toRepoPath(file)} references forbidden domain bypass '${symbol}'`,
           );
         }
       }

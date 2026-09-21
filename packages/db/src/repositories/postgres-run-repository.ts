@@ -108,6 +108,19 @@ export class PostgresRunRepository implements RunRepository {
     return row === undefined ? null : runFromRow(row);
   }
 
+  async findRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: RunId,
+  ): Promise<Run | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(runs)
+      .where(and(eq(runs.id, id), eq(runs.workspaceId, workspaceId)))
+      .limit(1);
+
+    return row === undefined ? null : runFromRow(row);
+  }
+
   async findRunByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,
@@ -127,7 +140,7 @@ export class PostgresRunRepository implements RunRepository {
   }
 
   async listRuns(query: ListRunsQuery): Promise<ListRunsResult> {
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [eq(runs.workspaceId, query.workspaceId)];
 
     if (query.agentId !== undefined) {
       conditions.push(eq(runs.agentId, query.agentId));
@@ -157,7 +170,7 @@ export class PostgresRunRepository implements RunRepository {
     const rows = await this.database.db
       .select()
       .from(runs)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(desc(runs.createdAt), desc(runs.id))
       .limit(query.limit + 1);
 

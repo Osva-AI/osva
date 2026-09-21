@@ -1,4 +1,4 @@
-import type { AgentId, AgentVersionId } from "@osva/contracts";
+import type { AgentId, AgentVersionId, WorkspaceId } from "@osva/contracts";
 import {
   AgentNotFoundError,
   AgentVersion,
@@ -9,7 +9,7 @@ import {
   type AgentRepository,
   type AppendAgentVersionInput,
 } from "@osva/domain";
-import { asc, eq, max } from "drizzle-orm";
+import { and, asc, eq, max } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import { agentFromRow, agentToRow } from "../mappers/agent-mapper.js";
@@ -68,6 +68,29 @@ export class PostgresAgentRepository implements AgentRepository {
       .limit(1);
 
     return row === undefined ? null : agentFromRow(row);
+  }
+
+  async findAgentByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: AgentId,
+  ): Promise<Agent | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.id, id), eq(agents.workspaceId, workspaceId)))
+      .limit(1);
+
+    return row === undefined ? null : agentFromRow(row);
+  }
+
+  async listAgentsByWorkspaceId(workspaceId: WorkspaceId): Promise<Agent[]> {
+    const rows = await this.database.db
+      .select()
+      .from(agents)
+      .where(eq(agents.workspaceId, workspaceId))
+      .orderBy(asc(agents.createdAt), asc(agents.id));
+
+    return rows.map(agentFromRow);
   }
 
   async listAgents(): Promise<Agent[]> {

@@ -2,12 +2,14 @@ import { fileURLToPath } from "node:url";
 import { SdkError, SdkErrorCode } from "@modelcontextprotocol/client";
 import { afterEach, describe, expect, it } from "vitest";
 import type {
+  ConnectorAuthConfig,
   ConnectorId,
   ConnectorVersionId,
-  ConnectorVersionResourceV1,
+  McpConnectorExecutionConfig,
   SecretReference,
   SecretResolver,
 } from "@osva/contracts";
+import { createPinnedOutboundFetch } from "@osva/outbound-network";
 
 import { mapMcpFailure } from "../src/error-mapping.js";
 import {
@@ -27,6 +29,31 @@ const NOW = "2026-01-15T12:00:00.000Z";
 const STDIO_SCRIPT = fileURLToPath(
   new URL("./fake-stdio-mcp-server.mjs", import.meta.url),
 );
+
+const TEST_PINNED_FETCH = createPinnedOutboundFetch({
+  allowPrivateNetworks: true,
+});
+
+function testPoolOptions(secretResolver: SecretResolver) {
+  return {
+    secretResolver,
+    stdioConnectorsEnabled: true,
+    allowPrivateNetworks: true,
+    pinnedFetch: TEST_PINNED_FETCH,
+  };
+}
+
+function testClientOptions(
+  executionConfig: McpConnectorExecutionConfig,
+  secretResolver: SecretResolver,
+) {
+  return {
+    executionConfig,
+    secretResolver,
+    stdioConnectorsEnabled: true,
+    pinnedFetch: TEST_PINNED_FETCH,
+  };
+}
 
 describe("ManagedMcpClient", () => {
   const httpServers: FakeHttpMcpServer[] = [];
@@ -68,12 +95,12 @@ describe("ManagedMcpClient", () => {
       clients.push(client);
 
       const echo = await client.invokeTool({
-        connectorVersion: httpVersion(server.endpointUrl),
+        executionConfig: toExecutionConfig(httpVersion(server.endpointUrl)),
         remoteToolName: "echo",
         input: { hello: "world" },
       });
       const structured = await client.invokeTool({
-        connectorVersion: httpVersion(server.endpointUrl),
+        executionConfig: toExecutionConfig(httpVersion(server.endpointUrl)),
         remoteToolName: "structured",
         input: { count: 2 },
       });
@@ -99,15 +126,19 @@ describe("ManagedMcpClient", () => {
         isAuthFailure(error),
       );
 
-      const wrongAuth = new ManagedMcpClient({
-        connectorVersion: httpVersion(server.endpointUrl, {
-          type: "BEARER",
-          tokenSecret: { key: "BAD_TOKEN" },
-        }),
-        secretResolver: testSecretResolver({
-          BAD_TOKEN: "not-the-right-token",
-        }),
-      });
+      const wrongAuth = new ManagedMcpClient(
+        testClientOptions(
+          toExecutionConfig(
+            httpVersion(server.endpointUrl, {
+              type: "BEARER",
+              tokenSecret: { key: "BAD_TOKEN" },
+            }),
+          ),
+          testSecretResolver({
+            BAD_TOKEN: "not-the-right-token",
+          }),
+        ),
+      );
       clients.push(wrongAuth);
       await expect(wrongAuth.discoverTools()).rejects.toSatisfy((error) =>
         isAuthFailure(error),
@@ -134,7 +165,7 @@ describe("ManagedMcpClient", () => {
       clients.push(client);
 
       const result = await client.invokeTool({
-        connectorVersion: httpVersion(server.endpointUrl),
+        executionConfig: toExecutionConfig(httpVersion(server.endpointUrl)),
         remoteToolName: "error",
         input: {},
       });
@@ -151,7 +182,7 @@ describe("ManagedMcpClient", () => {
 
       await expect(
         client.invokeTool({
-          connectorVersion: httpVersion(server.endpointUrl),
+          executionConfig: toExecutionConfig(httpVersion(server.endpointUrl)),
           remoteToolName: "malformed",
           input: {},
         }),
@@ -181,7 +212,7 @@ describe("ManagedMcpClient", () => {
       expect(tools.map((tool) => tool.remoteToolName)).toContain("echo");
 
       const result = await client.invokeTool({
-        connectorVersion: stdioVersion(),
+        executionConfig: toExecutionConfig(stdioVersion()),
         remoteToolName: "echo",
         input: { via: "stdio" },
       });
@@ -198,18 +229,18 @@ describe("ManagedMcpClient", () => {
       const version = stdioVersion();
 
       await client.invokeTool({
-        connectorVersion: version,
+        executionConfig: toExecutionConfig(version),
         remoteToolName: "echo",
         input: { call: 1 },
       });
       await client.invokeTool({
-        connectorVersion: version,
+        executionConfig: toExecutionConfig(version),
         remoteToolName: "echo",
         input: { call: 2 },
       });
 
       const structured = await client.invokeTool({
-        connectorVersion: version,
+        executionConfig: toExecutionConfig(version),
         remoteToolName: "structured",
         input: { call: 3 },
       });
@@ -239,7 +270,7 @@ describe("ManagedMcpClient", () => {
       const controller = new AbortController();
 
       const hangPromise = client.invokeTool({
-        connectorVersion: version,
+        executionConfig: toExecutionConfig(version),
         remoteToolName: "hang",
         input: {},
         signal: controller.signal,
@@ -255,7 +286,7 @@ describe("ManagedMcpClient", () => {
       });
 
       const result = await client.invokeTool({
-        connectorVersion: version,
+        executionConfig: toExecutionConfig(version),
         remoteToolName: "echo",
         input: { after: "cancel" },
       });
@@ -272,7 +303,7 @@ describe("ManagedMcpClient", () => {
 
       await expect(
         client.invokeTool({
-          connectorVersion: version,
+          executionConfig: toExecutionConfig(version),
           remoteToolName: "hang",
           input: {},
           timeoutMs: 200,
@@ -283,7 +314,7 @@ describe("ManagedMcpClient", () => {
       });
 
       const result = await client.invokeTool({
-        connectorVersion: version,
+        executionConfig: toExecutionConfig(version),
         remoteToolName: "echo",
         input: { after: "timeout" },
       });
@@ -329,20 +360,18 @@ describe("OsvaMcpClientPool", () => {
   it("reuses managed clients per ConnectorVersion id", async () => {
     const server = await startFakeHttpMcpServer();
     httpServers.push(server);
-    const pool = createMcpClientPool({
-      secretResolver: testSecretResolver({}),
-    });
+    const pool = createMcpClientPool(testPoolOptions(testSecretResolver({})));
     const version = httpVersion(server.endpointUrl);
 
-    await pool.discoverTools(version);
+    await pool.discoverTools(toExecutionConfig(version));
     server.resetToolCallCount();
     await pool.invokeTool({
-      connectorVersion: version,
+      executionConfig: toExecutionConfig(version),
       remoteToolName: "echo",
       input: { pooled: true },
     });
     await pool.invokeTool({
-      connectorVersion: version,
+      executionConfig: toExecutionConfig(version),
       remoteToolName: "echo",
       input: { pooled: true },
     });
@@ -354,12 +383,10 @@ describe("OsvaMcpClientPool", () => {
   it("closes all pooled clients cleanly", async () => {
     const server = await startFakeHttpMcpServer();
     httpServers.push(server);
-    const pool = createMcpClientPool({
-      secretResolver: testSecretResolver({}),
-    });
+    const pool = createMcpClientPool(testPoolOptions(testSecretResolver({})));
     const version = httpVersion(server.endpointUrl);
 
-    await pool.discoverTools(version);
+    await pool.discoverTools(toExecutionConfig(version));
     await expect(pool.close()).resolves.toBeUndefined();
     await expect(pool.close()).resolves.toBeUndefined();
   });
@@ -367,27 +394,40 @@ describe("OsvaMcpClientPool", () => {
 
 function createHttpClient(
   endpointUrl: string,
-  auth?: ConnectorVersionResourceV1["auth"],
+  auth?: ConnectorAuthConfig,
 ): ManagedMcpClient {
-  return new ManagedMcpClient({
-    connectorVersion: httpVersion(endpointUrl, auth),
-    secretResolver: testSecretResolver({
-      MCP_TEST_TOKEN: FAKE_MCP_BEARER_TOKEN,
-    }),
-  });
+  return new ManagedMcpClient(
+    testClientOptions(
+      toExecutionConfig(httpVersion(endpointUrl, auth)),
+      testSecretResolver({
+        MCP_TEST_TOKEN: FAKE_MCP_BEARER_TOKEN,
+      }),
+    ),
+  );
 }
 
 function createStdioClient(): ManagedMcpClient {
-  return new ManagedMcpClient({
-    connectorVersion: stdioVersion(),
-    secretResolver: testSecretResolver({}),
-  });
+  return new ManagedMcpClient(
+    testClientOptions(
+      toExecutionConfig(stdioVersion()),
+      testSecretResolver({}),
+    ),
+  );
 }
 
 function httpVersion(
   endpointUrl: string,
-  auth?: ConnectorVersionResourceV1["auth"],
-): ConnectorVersionResourceV1 {
+  auth?: ConnectorAuthConfig,
+): {
+  readonly id: ConnectorVersionId;
+  readonly connectorId: ConnectorId;
+  readonly version: number;
+  readonly kind: "MCP";
+  readonly transport: "STREAMABLE_HTTP";
+  readonly transportConfig: { readonly endpointUrl: string };
+  readonly auth?: ConnectorAuthConfig;
+  readonly createdAt: string;
+} {
   return {
     id: VERSION_ID,
     connectorId: CONNECTOR_ID,
@@ -397,6 +437,20 @@ function httpVersion(
     transportConfig: { endpointUrl },
     auth,
     createdAt: NOW,
+  };
+}
+
+function toExecutionConfig(input: {
+  readonly id: ConnectorVersionId;
+  readonly transport: McpConnectorExecutionConfig["transport"];
+  readonly transportConfig: McpConnectorExecutionConfig["transportConfig"];
+  readonly auth?: ConnectorAuthConfig;
+}): McpConnectorExecutionConfig {
+  return {
+    connectorVersionId: input.id,
+    transport: input.transport,
+    transportConfig: input.transportConfig,
+    auth: input.auth,
   };
 }
 
@@ -425,7 +479,18 @@ function testSecretResolver(
   };
 }
 
-function stdioVersion(): ConnectorVersionResourceV1 {
+function stdioVersion(): {
+  readonly id: ConnectorVersionId;
+  readonly connectorId: ConnectorId;
+  readonly version: number;
+  readonly kind: "MCP";
+  readonly transport: "STDIO";
+  readonly transportConfig: {
+    readonly command: string;
+    readonly args: readonly string[];
+  };
+  readonly createdAt: string;
+} {
   return {
     id: "connector-version-stdio" as ConnectorVersionId,
     connectorId: CONNECTOR_ID,

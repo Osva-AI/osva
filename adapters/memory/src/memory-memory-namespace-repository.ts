@@ -40,6 +40,18 @@ export class MemoryMemoryNamespaceRepository implements MemoryNamespaceRepositor
     return this.namespaces.get(id) ?? null;
   }
 
+  async findNamespaceByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: MemoryNamespaceId,
+  ): Promise<MemoryNamespace | null> {
+    const namespace = this.namespaces.get(id);
+    if (namespace === undefined || namespace.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return namespace;
+  }
+
   async listNamespacesByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly MemoryNamespace[]> {

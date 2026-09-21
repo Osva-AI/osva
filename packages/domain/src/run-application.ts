@@ -1,4 +1,5 @@
 import type { RunAttemptId, RunId } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import {
   DomainInvariantError,
@@ -13,6 +14,14 @@ import type {
 import { MAX_RUN_LIST_LIMIT } from "./ports/run-repository.js";
 import type { Run } from "./run.js";
 import type { RunAttempt } from "./run-attempt.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const RUN_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.run };
 
 export interface RunApplicationDependencies {
   readonly runs: RunRepository;
@@ -26,8 +35,16 @@ export interface GetRunAttemptCommand {
 export class GetRun {
   constructor(private readonly deps: RunApplicationDependencies) {}
 
-  async execute(runId: RunId): Promise<Run> {
-    const run = await this.deps.runs.findRunById(runId);
+  async execute(scope: ControlPlaneScope, runId: RunId): Promise<Run> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      RUN_RESOURCE,
+    );
+    const run = await this.deps.runs.findRunByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      runId,
+    );
     if (run === null) {
       throw new RunNotFoundError(runId);
     }
@@ -39,17 +56,41 @@ export class GetRun {
 export class ListRuns {
   constructor(private readonly deps: RunApplicationDependencies) {}
 
-  async execute(query: ListRunsQuery): Promise<ListRunsResult> {
+  async execute(
+    scope: ControlPlaneScope,
+    query: Omit<ListRunsQuery, "workspaceId">,
+  ): Promise<ListRunsResult> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      RUN_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     assertRunListLimit(query.limit);
-    return this.deps.runs.listRuns(query);
+    return this.deps.runs.listRuns({
+      ...query,
+      workspaceId,
+    });
   }
 }
 
 export class GetRunAttempt {
   constructor(private readonly deps: RunApplicationDependencies) {}
 
-  async execute(command: GetRunAttemptCommand): Promise<RunAttempt> {
-    const run = await this.deps.runs.findRunById(command.runId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: GetRunAttemptCommand,
+  ): Promise<RunAttempt> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      RUN_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const run = await this.deps.runs.findRunByWorkspaceAndId(
+      workspaceId,
+      command.runId,
+    );
     if (run === null) {
       throw new RunNotFoundError(command.runId);
     }
@@ -68,8 +109,19 @@ export class GetRunAttempt {
 export class ListRunAttempts {
   constructor(private readonly deps: RunApplicationDependencies) {}
 
-  async execute(runId: RunId): Promise<readonly RunAttempt[]> {
-    const run = await this.deps.runs.findRunById(runId);
+  async execute(
+    scope: ControlPlaneScope,
+    runId: RunId,
+  ): Promise<readonly RunAttempt[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      RUN_RESOURCE,
+    );
+    const run = await this.deps.runs.findRunByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      runId,
+    );
     if (run === null) {
       throw new RunNotFoundError(runId);
     }

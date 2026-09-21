@@ -1,4 +1,5 @@
 export { workspaces } from "./workspaces.js";
+export { apiKeys } from "./api-keys.js";
 export { agents } from "./agents.js";
 export { agentVersions } from "./agent-versions.js";
 export { deployments } from "./deployments.js";

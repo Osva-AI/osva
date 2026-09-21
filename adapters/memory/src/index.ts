@@ -25,3 +25,4 @@ export { MemoryMemoryNamespaceRepository } from "./memory-memory-namespace-repos
 export { MemoryEvaluationSuiteRepository } from "./memory-evaluation-suite-repository.js";
 export { MemoryOfficeRepository } from "./memory-office-repository.js";
 export { MemoryArtifactRepository } from "./memory-artifact-repository.js";
+export { MemoryApiKeyRepository } from "./memory-api-key-repository.js";

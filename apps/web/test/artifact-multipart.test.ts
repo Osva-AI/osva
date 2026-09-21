@@ -15,11 +15,6 @@ describe("parseArtifactMultipartUpload", () => {
     const { request, pushBody } = createMultipartRequest(boundary);
     pushBody(
       `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="workspaceId"\r\n\r\n` +
-        `ws-1\r\n`,
-    );
-    pushBody(
-      `--${boundary}\r\n` +
         `Content-Disposition: form-data; name="name"\r\n\r\n` +
         `large.bin\r\n`,
     );

@@ -19,17 +19,23 @@ import { describe, expect, it } from "vitest";
 import { MemoryEvaluationSuiteRepository } from "../src/memory-evaluation-suite-repository.js";
 import { MemoryWorkspaceRepository } from "../src/memory-workspace-repository.js";
 import { NOW, otherWorkspaceId, workspaceId } from "./fixtures.js";
+import { fakeControlPlaneScope } from "./test-scope.js";
+
+const scope = fakeControlPlaneScope(workspaceId);
 
 describe("MemoryEvaluationSuiteRepository", () => {
   it("creates, reads, and lists suites", async () => {
     const { application } = await createHarness();
-    const created = await application.createEvaluationSuite.execute({
+    const created = await application.createEvaluationSuite.execute(scope, {
       workspaceId,
       key: "smoke",
       name: "Smoke Suite",
     });
-    const loaded = await application.getEvaluationSuite.execute(created.id);
-    const listed = await application.listEvaluationSuites.execute(workspaceId);
+    const loaded = await application.getEvaluationSuite.execute(
+      scope,
+      created.id,
+    );
+    const listed = await application.listEvaluationSuites.execute(scope);
 
     expect(loaded).toEqual(created);
     expect(listed).toEqual([created]);
@@ -38,33 +44,39 @@ describe("MemoryEvaluationSuiteRepository", () => {
   it("rejects an unknown suite", async () => {
     const { application } = await createHarness();
     await expect(
-      application.getEvaluationSuite.execute("missing" as EvaluationSuiteId),
+      application.getEvaluationSuite.execute(
+        scope,
+        "missing" as EvaluationSuiteId,
+      ),
     ).rejects.toBeInstanceOf(EvaluationSuiteNotFoundError);
   });
 
   it("appends immutable suite versions with deterministic case ordering", async () => {
     const { application } = await createHarness();
-    const suite = await application.createEvaluationSuite.execute({
+    const suite = await application.createEvaluationSuite.execute(scope, {
       workspaceId,
       key: "suite",
       name: "Suite",
     });
 
-    const version = await application.appendEvaluationSuiteVersion.execute({
-      evaluationSuiteId: suite.id,
-      cases: [
-        {
-          key: "zulu",
-          input: { prompt: "z" },
-          evaluator: { type: "JSON_EXACT_MATCH", expected: { prompt: "z" } },
-        },
-        {
-          key: "alpha",
-          input: { prompt: "a" },
-          evaluator: { type: "JSON_EXACT_MATCH", expected: { prompt: "a" } },
-        },
-      ],
-    });
+    const version = await application.appendEvaluationSuiteVersion.execute(
+      scope,
+      {
+        evaluationSuiteId: suite.id,
+        cases: [
+          {
+            key: "zulu",
+            input: { prompt: "z" },
+            evaluator: { type: "JSON_EXACT_MATCH", expected: { prompt: "z" } },
+          },
+          {
+            key: "alpha",
+            input: { prompt: "a" },
+            evaluator: { type: "JSON_EXACT_MATCH", expected: { prompt: "a" } },
+          },
+        ],
+      },
+    );
 
     expect(version.version).toBe(1);
     expect(version.cases.map((evaluationCase) => evaluationCase.key)).toEqual([
@@ -72,7 +84,7 @@ describe("MemoryEvaluationSuiteRepository", () => {
       "zulu",
     ]);
 
-    const loaded = await application.getEvaluationSuiteVersion.execute({
+    const loaded = await application.getEvaluationSuiteVersion.execute(scope, {
       evaluationSuiteId: suite.id,
       evaluationSuiteVersionId: version.id,
     });
@@ -84,29 +96,35 @@ describe("MemoryEvaluationSuiteRepository", () => {
 
   it("enforces nested suite version ownership", async () => {
     const { application } = await createHarness();
-    const first = await application.createEvaluationSuite.execute({
+    const first = await application.createEvaluationSuite.execute(scope, {
       workspaceId,
       key: "first",
       name: "First",
     });
-    const second = await application.createEvaluationSuite.execute({
+    const second = await application.createEvaluationSuite.execute(scope, {
       workspaceId,
       key: "second",
       name: "Second",
     });
-    const version = await application.appendEvaluationSuiteVersion.execute({
-      evaluationSuiteId: first.id,
-      cases: [
-        {
-          key: "only",
-          input: { prompt: "one" },
-          evaluator: { type: "JSON_EXACT_MATCH", expected: { prompt: "one" } },
-        },
-      ],
-    });
+    const version = await application.appendEvaluationSuiteVersion.execute(
+      scope,
+      {
+        evaluationSuiteId: first.id,
+        cases: [
+          {
+            key: "only",
+            input: { prompt: "one" },
+            evaluator: {
+              type: "JSON_EXACT_MATCH",
+              expected: { prompt: "one" },
+            },
+          },
+        ],
+      },
+    );
 
     await expect(
-      application.getEvaluationSuiteVersion.execute({
+      application.getEvaluationSuiteVersion.execute(scope, {
         evaluationSuiteId: second.id,
         evaluationSuiteVersionId: version.id,
       }),
@@ -173,14 +191,14 @@ describe("MemoryEvaluationSuiteRepository", () => {
 
   it("rejects duplicate suite keys within the same workspace", async () => {
     const { application } = await createHarness();
-    await application.createEvaluationSuite.execute({
+    await application.createEvaluationSuite.execute(scope, {
       workspaceId,
       key: "shared",
       name: "Shared",
     });
 
     await expect(
-      application.createEvaluationSuite.execute({
+      application.createEvaluationSuite.execute(scope, {
         workspaceId,
         key: "shared",
         name: "Other",

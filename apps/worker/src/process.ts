@@ -171,6 +171,8 @@ export function createWorkerProcess(
       const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
       mcpClientPool = createMcpClientPool({
         secretResolver: new ProcessEnvSecretResolver(env),
+        stdioConnectorsEnabled: config.mcpStdioConnectorsEnabled,
+        allowPrivateNetworks: config.mcpConnectorAllowPrivateNetworks,
       });
       const modelGateway = new ModelGateway({
         modelProfiles,

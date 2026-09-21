@@ -20,7 +20,6 @@ import {
 } from "./ids.js";
 
 export const createEvaluationSuiteRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -76,7 +75,6 @@ export const evaluationSuiteVersionListResourceSchema = z.strictObject({
 });
 
 export const createEvaluationRunRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   evaluationSuiteVersionId: evaluationSuiteVersionIdSchema,
   targetType: z.enum(EVALUATION_RUN_TARGET_TYPES),
   targetVersionId: z.union([agentVersionIdSchema, workflowVersionIdSchema]),

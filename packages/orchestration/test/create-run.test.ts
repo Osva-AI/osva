@@ -42,6 +42,7 @@ import {
   seedAgentGraph,
   workspaceId,
   wrapRunRepository,
+  orchScope,
 } from "./fixtures.js";
 
 function createCommand() {
@@ -141,7 +142,7 @@ describe("CreateRun", () => {
     const createRun = new CreateRun({ runs, agents, queue });
 
     await expect(createRun.execute(createCommand())).rejects.toBeInstanceOf(
-      BindingMismatchError,
+      AgentNotFoundError,
     );
 
     expect(await runs.findRunById(runId)).toBeNull();
@@ -240,12 +241,12 @@ describe("CreateRun", () => {
       },
     });
 
-    await registry.createAgent.execute({
+    await registry.createAgent.execute(orchScope(), {
       workspaceId,
       key: "agent-key",
       name: "Example Agent",
     });
-    await registry.appendAgentVersion.execute({
+    await registry.appendAgentVersion.execute(orchScope(), {
       agentId,
       manifest: createManifest(),
     });

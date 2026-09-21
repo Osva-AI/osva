@@ -390,11 +390,11 @@ describe("PostgreSQL workflow wait and event schema", () => {
     );
   });
 
-  it("retains migration journal entries 17 through 21 in order", async () => {
+  it("retains migration journal entries 17 through 22 in order", async () => {
     const journalModule = await import("../../drizzle/meta/_journal.json");
     const journal = journalModule.default ?? journalModule;
     const tail = journal.entries
-      .slice(-5)
+      .slice(-6)
       .map((entry: { idx: number; tag: string }) => ({
         idx: entry.idx,
         tag: entry.tag,
@@ -405,6 +405,7 @@ describe("PostgreSQL workflow wait and event schema", () => {
       { idx: 19, tag: "0019_artifact_storage_slice" },
       { idx: 20, tag: "0020_knowledge_retrieval_slice" },
       { idx: 21, tag: "0021_knowledge_runtime_slice" },
+      { idx: 22, tag: "0022_api_security_slice" },
     ]);
   });
 

@@ -19,6 +19,7 @@ import {
 } from "../../../../packages/db/test/integration/postgres-harness.js";
 import {
   createKnowledgeIntegrationStack,
+  integrationControlPlaneScope,
   uploadTextArtifact,
 } from "./knowledge-stack.js";
 
@@ -64,16 +65,22 @@ describe("knowledge ingestion recovery", () => {
       "doc.txt",
       "Recovery document about widgets and refunds.",
     );
-    const source = await stack.knowledgeApp.createSource.execute({
-      workspaceId: WORKSPACE_ID,
-      key: "doc",
-      name: "Doc",
-      artifactId: artifact.id,
-    });
-    const index = await stack.knowledgeApp.createIndex.execute({
-      workspaceId: WORKSPACE_ID,
-      knowledgeSourceId: source.id,
-    });
+    const source = await stack.knowledgeApp.createSource.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        key: "doc",
+        name: "Doc",
+        artifactId: artifact.id,
+      },
+    );
+    const index = await stack.knowledgeApp.createIndex.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        knowledgeSourceId: source.id,
+      },
+    );
     await stack.ingestion.processIndex(index.id);
     return { stack, index, source, artifact };
   }
@@ -109,16 +116,22 @@ describe("knowledge ingestion recovery", () => {
       "reuse.txt",
       "Reuse extraction content for ingestion recovery.",
     );
-    const source = await stack.knowledgeApp.createSource.execute({
-      workspaceId: WORKSPACE_ID,
-      key: "reuse",
-      name: "Reuse",
-      artifactId: artifact.id,
-    });
-    const index = await stack.knowledgeApp.createIndex.execute({
-      workspaceId: WORKSPACE_ID,
-      knowledgeSourceId: source.id,
-    });
+    const source = await stack.knowledgeApp.createSource.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        key: "reuse",
+        name: "Reuse",
+        artifactId: artifact.id,
+      },
+    );
+    const index = await stack.knowledgeApp.createIndex.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        knowledgeSourceId: source.id,
+      },
+    );
 
     const openSpy = vi.spyOn(stack.artifacts.openArtifactContent, "execute");
     await stack.ingestion.processIndex(index.id);
@@ -126,7 +139,7 @@ describe("knowledge ingestion recovery", () => {
     expect(ready?.status).toBe("READY");
     const extractedId = ready!.extractedArtifactId!;
     const sourceOpensAfterReady = openSpy.mock.calls.filter(
-      (call) => call[0] === artifact.id,
+      (call) => call[1] === artifact.id,
     ).length;
 
     openSpy.mockClear();
@@ -142,6 +155,7 @@ describe("knowledge ingestion recovery", () => {
       }),
     );
     const retried = await stack.knowledgeApp.retryIndex.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
       WORKSPACE_ID,
       index.id,
     );
@@ -149,10 +163,10 @@ describe("knowledge ingestion recovery", () => {
     await stack.ingestion.processIndex(index.id);
 
     const sourceOpensOnRetry = openSpy.mock.calls.filter(
-      (call) => call[0] === artifact.id,
+      (call) => call[1] === artifact.id,
     ).length;
     const extractionOpensOnRetry = openSpy.mock.calls.filter(
-      (call) => call[0] === extractedId,
+      (call) => call[1] === extractedId,
     ).length;
     expect(sourceOpensOnRetry).toBe(0);
     expect(extractionOpensOnRetry).toBeGreaterThan(0);
@@ -193,16 +207,22 @@ describe("knowledge ingestion recovery", () => {
       "lease.txt",
       "Lease reclaim document.",
     );
-    const source = await stack.knowledgeApp.createSource.execute({
-      workspaceId: WORKSPACE_ID,
-      key: "lease",
-      name: "Lease",
-      artifactId: artifact.id,
-    });
-    const index = await stack.knowledgeApp.createIndex.execute({
-      workspaceId: WORKSPACE_ID,
-      knowledgeSourceId: source.id,
-    });
+    const source = await stack.knowledgeApp.createSource.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        key: "lease",
+        name: "Lease",
+        artifactId: artifact.id,
+      },
+    );
+    const index = await stack.knowledgeApp.createIndex.execute(
+      integrationControlPlaneScope(WORKSPACE_ID),
+      {
+        workspaceId: WORKSPACE_ID,
+        knowledgeSourceId: source.id,
+      },
+    );
 
     const firstClaim = await stack.knowledge.claimIndexLease({
       knowledgeIndexId: index.id,

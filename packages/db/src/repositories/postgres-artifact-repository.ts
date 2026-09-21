@@ -38,6 +38,24 @@ export class PostgresArtifactRepository implements ArtifactRepository {
     return row === undefined ? null : artifactFromRow(row);
   }
 
+  async findByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    artifactId: ArtifactId,
+  ): Promise<Artifact | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(artifacts)
+      .where(
+        and(
+          eq(artifacts.id, artifactId),
+          eq(artifacts.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    return row === undefined ? null : artifactFromRow(row);
+  }
+
   async findByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,

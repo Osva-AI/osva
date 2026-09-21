@@ -1,16 +1,11 @@
-import type { ConnectorVersionId } from "./ids.js";
-import type { JsonSchemaRecord } from "./json-schema.js";
+import type { DiscoveredMcpToolV1 } from "./connector-registry.js";
+import type { McpConnectorExecutionConfig } from "./mcp-connector-execution.js";
 import type { JsonValue } from "./json-value.js";
-import type { ConnectorVersionResourceV1 } from "./connector-registry.js";
 
-export interface DiscoveredMcpTool {
-  readonly remoteToolName: string;
-  readonly description?: string;
-  readonly inputSchema: JsonSchemaRecord;
-}
+export type DiscoveredMcpTool = DiscoveredMcpToolV1;
 
 export interface McpToolInvokeRequest {
-  readonly connectorVersion: ConnectorVersionResourceV1;
+  readonly executionConfig: McpConnectorExecutionConfig;
   readonly remoteToolName: string;
   readonly input: unknown;
   readonly timeoutMs?: number;
@@ -24,7 +19,7 @@ export interface McpToolInvokeResult {
 
 export interface McpClientAdapter {
   discoverTools(
-    connectorVersion: ConnectorVersionResourceV1,
+    executionConfig: McpConnectorExecutionConfig,
     options?: {
       readonly signal?: { readonly aborted: boolean };
       readonly timeoutMs?: number;
@@ -39,7 +34,7 @@ export interface McpClientAdapter {
 export interface McpClientPool {
   invokeTool(request: McpToolInvokeRequest): Promise<McpToolInvokeResult>;
   discoverTools(
-    connectorVersion: ConnectorVersionResourceV1,
+    executionConfig: McpConnectorExecutionConfig,
     options?: {
       readonly signal?: { readonly aborted: boolean };
       readonly timeoutMs?: number;
@@ -48,4 +43,4 @@ export interface McpClientPool {
   close(): Promise<void>;
 }
 
-export type McpClientPoolKey = ConnectorVersionId;
+export type { McpConnectorExecutionConfig } from "./mcp-connector-execution.js";

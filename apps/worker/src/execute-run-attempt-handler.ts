@@ -32,6 +32,7 @@ export function createExecuteRunAttemptHandler(
       result.outcome === "already-terminal"
     ) {
       await evaluationCoordinator.reconcileTerminalChildRun({
+        workspaceId: result.run.workspaceId,
         runId: result.run.id,
         runAttemptId: result.runAttempt.id,
         runAttemptStatus: result.runAttempt.status,

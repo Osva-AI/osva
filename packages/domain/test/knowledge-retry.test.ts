@@ -39,10 +39,15 @@ function createIndex(status: KnowledgeIndex["status"]): KnowledgeIndex {
   });
 }
 
+import { fakeControlPlaneScope } from "./control-plane-test-scope.js";
+
+const scope = fakeControlPlaneScope(WORKSPACE_ID);
+
 describe("RetryKnowledgeIndex", () => {
   it("returns NOT_FOUND for a missing index", async () => {
     const knowledge: KnowledgeRepository = {
       findIndexById: async () => null,
+      findIndexByWorkspaceAndId: async () => null,
     } as unknown as KnowledgeRepository;
     const app = createKnowledgeApplication({
       knowledge,
@@ -59,7 +64,7 @@ describe("RetryKnowledgeIndex", () => {
     });
 
     await expect(
-      app.retryIndex.execute(WORKSPACE_ID, INDEX_ID),
+      app.retryIndex.execute(scope, WORKSPACE_ID, INDEX_ID),
     ).rejects.toBeInstanceOf(KnowledgeIndexNotFoundError);
   });
 
@@ -68,6 +73,10 @@ describe("RetryKnowledgeIndex", () => {
     const enqueue = vi.fn(async () => undefined);
     const knowledge: KnowledgeRepository = {
       findIndexById: async () => stored,
+      findIndexByWorkspaceAndId: async (
+        _ws: WorkspaceId,
+        id: KnowledgeIndexId,
+      ) => (id === INDEX_ID ? stored : null),
       updateIndex: async (index: KnowledgeIndex) => {
         stored = index;
       },
@@ -86,7 +95,7 @@ describe("RetryKnowledgeIndex", () => {
       ids: { createId: () => "id" },
     });
 
-    const retried = await app.retryIndex.execute(WORKSPACE_ID, INDEX_ID);
+    const retried = await app.retryIndex.execute(scope, WORKSPACE_ID, INDEX_ID);
     expect(retried.status).toBe("PENDING");
     expect(enqueue).toHaveBeenCalledWith(INDEX_ID);
   });
@@ -95,6 +104,7 @@ describe("RetryKnowledgeIndex", () => {
     it(`rejects retry from ${status}`, async () => {
       const knowledge: KnowledgeRepository = {
         findIndexById: async () => createIndex(status),
+        findIndexByWorkspaceAndId: async () => createIndex(status),
       } as unknown as KnowledgeRepository;
       const app = createKnowledgeApplication({
         knowledge,
@@ -111,7 +121,7 @@ describe("RetryKnowledgeIndex", () => {
       });
 
       await expect(
-        app.retryIndex.execute(WORKSPACE_ID, INDEX_ID),
+        app.retryIndex.execute(scope, WORKSPACE_ID, INDEX_ID),
       ).rejects.toBeInstanceOf(KnowledgeIndexNotRetryableError);
     });
   }

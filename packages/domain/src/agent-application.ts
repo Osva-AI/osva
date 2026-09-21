@@ -4,6 +4,7 @@ import type {
   AgentVersionId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import { Agent } from "./agent.js";
 import type { AgentVersion } from "./agent-version.js";
@@ -26,6 +27,14 @@ import type { MemoryNamespaceRepository } from "./ports/memory-namespace-reposit
 import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
 import type { ToolRepository } from "./ports/tool-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const AGENT_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.agent };
 
 export interface AgentApplicationClock {
   now(): Date;
@@ -70,15 +79,24 @@ export interface GetAgentVersionCommand {
 export class CreateAgent {
   constructor(private readonly deps: AgentApplicationDependencies) {}
 
-  async execute(command: CreateAgentCommand): Promise<Agent> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateAgentCommand,
+  ): Promise<Agent> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      AGENT_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     const agent = Agent.create({
       id: this.deps.ids.createId() as AgentId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       createdAt: this.deps.clock.now(),
@@ -92,8 +110,16 @@ export class CreateAgent {
 export class GetAgent {
   constructor(private readonly deps: AgentApplicationDependencies) {}
 
-  async execute(agentId: AgentId): Promise<Agent> {
-    const agent = await this.deps.agents.findAgentById(agentId);
+  async execute(scope: ControlPlaneScope, agentId: AgentId): Promise<Agent> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      AGENT_RESOURCE,
+    );
+    const agent = await this.deps.agents.findAgentByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      agentId,
+    );
     if (agent === null) {
       throw new AgentNotFoundError(agentId);
     }
@@ -105,15 +131,39 @@ export class GetAgent {
 export class ListAgents {
   constructor(private readonly deps: AgentApplicationDependencies) {}
 
-  async execute(): Promise<Agent[]> {
-    return this.deps.agents.listAgents();
+  async execute(scope: ControlPlaneScope): Promise<Agent[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      AGENT_RESOURCE,
+    );
+    return this.deps.agents.listAgentsByWorkspaceId(
+      controlPlaneWorkspaceId(scope),
+    );
   }
 }
 
 export class UpdateAgentMetadata {
   constructor(private readonly deps: AgentApplicationDependencies) {}
 
-  async execute(command: UpdateAgentMetadataCommand): Promise<Agent> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateAgentMetadataCommand,
+  ): Promise<Agent> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      AGENT_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const existing = await this.deps.agents.findAgentByWorkspaceAndId(
+      workspaceId,
+      command.agentId,
+    );
+    if (existing === null) {
+      throw new AgentNotFoundError(command.agentId);
+    }
+
     const updated = await this.deps.agents.updateAgentMetadata(
       command.agentId,
       {
@@ -131,8 +181,19 @@ export class UpdateAgentMetadata {
 export class AppendAgentVersion {
   constructor(private readonly deps: AgentApplicationDependencies) {}
 
-  async execute(command: AppendAgentVersionCommand): Promise<AgentVersion> {
-    const agent = await this.deps.agents.findAgentById(command.agentId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: AppendAgentVersionCommand,
+  ): Promise<AgentVersion> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      AGENT_RESOURCE,
+    );
+    const agent = await this.deps.agents.findAgentByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.agentId,
+    );
     if (agent === null) {
       throw new AgentNotFoundError(command.agentId);
     }
@@ -170,8 +231,19 @@ export class AppendAgentVersion {
 export class GetAgentVersion {
   constructor(private readonly deps: AgentApplicationDependencies) {}
 
-  async execute(command: GetAgentVersionCommand): Promise<AgentVersion> {
-    const agent = await this.deps.agents.findAgentById(command.agentId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: GetAgentVersionCommand,
+  ): Promise<AgentVersion> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      AGENT_RESOURCE,
+    );
+    const agent = await this.deps.agents.findAgentByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.agentId,
+    );
     if (agent === null) {
       throw new AgentNotFoundError(command.agentId);
     }
@@ -190,8 +262,19 @@ export class GetAgentVersion {
 export class ListAgentVersions {
   constructor(private readonly deps: AgentApplicationDependencies) {}
 
-  async execute(agentId: AgentId): Promise<AgentVersion[]> {
-    const agent = await this.deps.agents.findAgentById(agentId);
+  async execute(
+    scope: ControlPlaneScope,
+    agentId: AgentId,
+  ): Promise<AgentVersion[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      AGENT_RESOURCE,
+    );
+    const agent = await this.deps.agents.findAgentByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      agentId,
+    );
     if (agent === null) {
       throw new AgentNotFoundError(agentId);
     }

@@ -1,4 +1,4 @@
-import type { ToolId, ToolVersionId } from "@osva/contracts";
+import type { ToolId, ToolVersionId, WorkspaceId } from "@osva/contracts";
 import {
   DomainInvariantError,
   DuplicateToolKeyError,
@@ -9,7 +9,7 @@ import {
   type ToolMetadataUpdate,
   type ToolRepository,
 } from "@osva/domain";
-import { asc, eq, max } from "drizzle-orm";
+import { and, asc, eq, max } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import { toolFromRow, toolToRow } from "../mappers/tool-mapper.js";
@@ -68,6 +68,29 @@ export class PostgresToolRepository implements ToolRepository {
       .limit(1);
 
     return row === undefined ? null : toolFromRow(row);
+  }
+
+  async findToolByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ToolId,
+  ): Promise<Tool | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(tools)
+      .where(and(eq(tools.id, id), eq(tools.workspaceId, workspaceId)))
+      .limit(1);
+
+    return row === undefined ? null : toolFromRow(row);
+  }
+
+  async listToolsByWorkspaceId(workspaceId: WorkspaceId): Promise<Tool[]> {
+    const rows = await this.database.db
+      .select()
+      .from(tools)
+      .where(eq(tools.workspaceId, workspaceId))
+      .orderBy(asc(tools.createdAt), asc(tools.id));
+
+    return rows.map(toolFromRow);
   }
 
   async listTools(): Promise<Tool[]> {

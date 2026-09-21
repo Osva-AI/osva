@@ -3,6 +3,7 @@ import http from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import { authHeadersForKey, setTestAuthHeaders } from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
@@ -17,21 +18,16 @@ describe("Artifact HTTP API", () => {
   });
 
   it("uploads and downloads artifact bytes", async () => {
-    const { server } = await createTestWebApplication({
-      workspaceId: WORKSPACE_ID,
-    });
-    const port = await listenHttpServer(server, "127.0.0.1", 0);
-    servers.push(server);
-    const origin = `http://127.0.0.1:${port}`;
+    const { origin, authHeaders } = await listen();
 
     const payload = Uint8Array.from([0x00, 0x01, 0xff]);
     const form = new FormData();
-    form.set("workspaceId", WORKSPACE_ID);
     form.set("name", "binary.bin");
     form.append("file", new Blob([payload]), "binary.bin");
 
     const created = await fetch(`${origin}/v1/artifacts`, {
       method: "POST",
+      headers: authHeaders,
       body: form,
     });
     expect(created.status).toBe(201);
@@ -43,6 +39,7 @@ describe("Artifact HTTP API", () => {
 
     const downloaded = await fetch(
       `${origin}/v1/artifacts/${createdBody.id}/content`,
+      { headers: authHeaders },
     );
     expect(downloaded.status).toBe(200);
     expect(downloaded.headers.get("content-disposition")).toContain(
@@ -52,48 +49,62 @@ describe("Artifact HTTP API", () => {
     const bytes = new Uint8Array(await downloaded.arrayBuffer());
     expect(bytes).toEqual(payload);
 
-    const metadata = await fetch(`${origin}/v1/artifacts/${createdBody.id}`);
+    const metadata = await fetch(`${origin}/v1/artifacts/${createdBody.id}`, {
+      headers: authHeaders,
+    });
     expect(metadata.status).toBe(200);
     const metadataBody = (await metadata.json()) as { createdAt: string };
     expect(metadataBody.createdAt).toBe(TEST_NOW.toISOString());
   });
 
   it("accepts large chunked multipart uploads byte-for-byte", async () => {
-    const { server } = await createTestWebApplication({
-      workspaceId: WORKSPACE_ID,
-    });
-    const port = await listenHttpServer(server, "127.0.0.1", 0);
-    servers.push(server);
-    const origin = `http://127.0.0.1:${port}`;
+    const { origin, authHeaders } = await listen();
 
     const fileSize = 128 * 1024;
     const payload = Buffer.alloc(fileSize, 0xcd);
     const boundary = "----osva-http-chunked";
     const body = buildMultipartBody({
       boundary,
-      workspaceId: WORKSPACE_ID,
       name: "chunked.bin",
       fileName: "chunked.bin",
       fileBytes: payload,
     });
 
-    const created = await postChunkedMultipart(origin, body, boundary);
+    const created = await postChunkedMultipart(
+      origin,
+      body,
+      boundary,
+      authHeaders,
+    );
     expect(created.status).toBe(201);
     const createdBody = (await created.json()) as { id: string };
     expect(createdBody.id.length).toBeGreaterThan(0);
 
     const downloaded = await fetch(
       `${origin}/v1/artifacts/${createdBody.id}/content`,
+      { headers: authHeaders },
     );
     expect(downloaded.status).toBe(200);
     const bytes = Buffer.from(await downloaded.arrayBuffer());
     expect(bytes).toEqual(payload);
   }, 30_000);
+
+  async function listen() {
+    const { server, testApiKey } = await createTestWebApplication({
+      workspaceId: WORKSPACE_ID,
+    });
+    const port = await listenHttpServer(server, "127.0.0.1", 0);
+    servers.push(server);
+    setTestAuthHeaders(testApiKey);
+    return {
+      origin: `http://127.0.0.1:${port}`,
+      authHeaders: authHeadersForKey(testApiKey),
+    };
+  }
 });
 
 function buildMultipartBody(input: {
   boundary: string;
-  workspaceId: string;
   name: string;
   fileName: string;
   fileBytes: Buffer;
@@ -103,11 +114,6 @@ function buildMultipartBody(input: {
     chunks.push(typeof value === "string" ? Buffer.from(value) : value);
   };
 
-  push(
-    `--${input.boundary}\r\n` +
-      `Content-Disposition: form-data; name="workspaceId"\r\n\r\n` +
-      `${input.workspaceId}\r\n`,
-  );
   push(
     `--${input.boundary}\r\n` +
       `Content-Disposition: form-data; name="name"\r\n\r\n` +
@@ -127,6 +133,7 @@ async function postChunkedMultipart(
   origin: string,
   body: Buffer,
   boundary: string,
+  authHeaders: Record<string, string>,
 ): Promise<Response> {
   const url = new URL(`${origin}/v1/artifacts`);
   const chunkSize = 4096;
@@ -139,6 +146,7 @@ async function postChunkedMultipart(
         path: url.pathname,
         method: "POST",
         headers: {
+          ...authHeaders,
           "content-type": `multipart/form-data; boundary=${boundary}`,
           "transfer-encoding": "chunked",
         },

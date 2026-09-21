@@ -1,4 +1,4 @@
-import type { RoleId, WorkspaceId } from "@osva/contracts";
+import type { RoleId } from "@osva/contracts";
 import {
   createRoleRequestSchema,
   roleListResourceSchema,
@@ -17,11 +17,10 @@ type UpdateRoleRequest = z.infer<typeof updateRoleRequestSchema>;
 export class RolesResource {
   constructor(private readonly client: OsvaHttpClient) {}
 
-  list(workspaceId: WorkspaceId): Promise<RoleListResource> {
+  list(): Promise<RoleListResource> {
     return this.client.request({
       method: "GET",
       path: "/v1/roles",
-      query: { workspaceId },
     });
   }
 

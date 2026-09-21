@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ConnectorId, ConnectorVersionId } from "@osva/contracts";
+import { mapConnectorVersionToPublicResource } from "@osva/contracts";
 import {
   connectorListResourceSchema,
   connectorResourceSchema,
@@ -18,6 +19,7 @@ import type {
   ConnectorVersion,
 } from "@osva/domain";
 
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -65,6 +67,7 @@ async function dispatchConnectorRoute(
   route: ConnectorRoute,
   connectors: ConnectorApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "import-tools") {
     if (method !== "POST") {
       sendJson(
@@ -84,7 +87,10 @@ async function dispatchConnectorRoute(
       return;
     }
 
-    const imported = await connectors.importMcpTools.execute(parsed.data);
+    const imported = await connectors.importMcpTools.execute(
+      scope,
+      parsed.data,
+    );
     sendJson(
       response,
       200,
@@ -112,11 +118,11 @@ async function dispatchConnectorRoute(
       return;
     }
 
-    await connectors.getConnectorVersion.execute({
+    await connectors.getConnectorVersion.execute(scope, {
       connectorId: route.connectorId,
       connectorVersionId: route.connectorVersionId,
     });
-    const tools = await connectors.discoverConnectorTools.execute({
+    const tools = await connectors.discoverConnectorTools.execute(scope, {
       connectorVersionId: route.connectorVersionId,
     });
     sendJson(
@@ -132,7 +138,7 @@ async function dispatchConnectorRoute(
 
   if (route.kind === "collection") {
     if (method === "GET") {
-      const list = await connectors.listConnectors.execute();
+      const list = await connectors.listConnectors.execute(scope);
       sendJson(response, 200, toConnectorListResource(list));
       return;
     }
@@ -146,7 +152,10 @@ async function dispatchConnectorRoute(
         return;
       }
 
-      const created = await connectors.createConnector.execute(parsed.data);
+      const created = await connectors.createConnector.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toConnectorResource(created));
       return;
     }
@@ -163,6 +172,7 @@ async function dispatchConnectorRoute(
   if (route.kind === "item") {
     if (method === "GET") {
       const connector = await connectors.getConnector.execute(
+        scope,
         route.connectorId,
       );
       sendJson(response, 200, toConnectorResource(connector));
@@ -178,7 +188,7 @@ async function dispatchConnectorRoute(
         return;
       }
 
-      const updated = await connectors.updateConnectorMetadata.execute({
+      const updated = await connectors.updateConnectorMetadata.execute(scope, {
         connectorId: route.connectorId,
         ...parsed.data,
       });
@@ -198,6 +208,7 @@ async function dispatchConnectorRoute(
   if (route.kind === "versions") {
     if (method === "GET") {
       const versions = await connectors.listConnectorVersions.execute(
+        scope,
         route.connectorId,
       );
       sendJson(response, 200, toConnectorVersionListResource(versions));
@@ -213,7 +224,7 @@ async function dispatchConnectorRoute(
         return;
       }
 
-      const created = await connectors.appendConnectorVersion.execute({
+      const created = await connectors.appendConnectorVersion.execute(scope, {
         connectorId: route.connectorId,
         ...parsed.data,
       });
@@ -231,7 +242,7 @@ async function dispatchConnectorRoute(
   }
 
   if (method === "GET") {
-    const version = await connectors.getConnectorVersion.execute({
+    const version = await connectors.getConnectorVersion.execute(scope, {
       connectorId: route.connectorId,
       connectorVersionId: route.connectorVersionId,
     });
@@ -338,16 +349,18 @@ function toConnectorListResource(items: readonly Connector[]) {
 }
 
 function toConnectorVersionResource(version: ConnectorVersion) {
-  return connectorVersionResourceSchema.parse({
-    id: version.id,
-    connectorId: version.connectorId,
-    version: version.version,
-    kind: version.kind,
-    transport: version.transport,
-    transportConfig: version.transportConfig,
-    auth: version.auth,
-    createdAt: version.createdAt.toISOString(),
-  });
+  return connectorVersionResourceSchema.parse(
+    mapConnectorVersionToPublicResource({
+      id: version.id,
+      connectorId: version.connectorId,
+      version: version.version,
+      kind: version.kind,
+      transport: version.transport,
+      transportConfig: version.transportConfig,
+      auth: version.auth,
+      createdAt: version.createdAt.toISOString(),
+    }),
+  );
 }
 
 function toConnectorVersionListResource(versions: readonly ConnectorVersion[]) {
@@ -355,3 +368,20 @@ function toConnectorVersionListResource(versions: readonly ConnectorVersion[]) {
     versions: versions.map((version) => toConnectorVersionResource(version)),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/connectors" },
+  { method: "POST", path: "/v1/connectors" },
+  { method: "GET", path: "/v1/connectors/:connectorId" },
+  { method: "PATCH", path: "/v1/connectors/:connectorId" },
+  { method: "GET", path: "/v1/connectors/:connectorId/versions" },
+  { method: "POST", path: "/v1/connectors/:connectorId/versions" },
+  {
+    method: "GET",
+    path: "/v1/connectors/:connectorId/versions/:connectorVersionId",
+  },
+  {
+    method: "POST",
+    path: "/v1/connectors/:connectorId/versions/:connectorVersionId/discover",
+  },
+  { method: "POST", path: "/v1/connectors/import-mcp-tools" },
+] as const;

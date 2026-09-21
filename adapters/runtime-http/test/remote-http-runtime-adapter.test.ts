@@ -2,7 +2,7 @@ import type { ExecutionRequest, RunAttemptId } from "@osva/contracts";
 import { MemorySecretResolver } from "@osva/adapters-memory";
 import { describe, expect, it } from "vitest";
 
-import { fetchWithPinnedConnection } from "../src/pinned-fetch.js";
+import { fetchWithPinnedConnection } from "@osva/outbound-network";
 import { RemoteHttpRuntimeAdapter } from "../src/remote-http-runtime-adapter.js";
 import { startFakeRemoteRuntime } from "./fake-remote-runtime.js";
 

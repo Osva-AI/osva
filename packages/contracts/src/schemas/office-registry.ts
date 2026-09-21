@@ -34,7 +34,6 @@ export const assignmentTargetTypeSchema = z.enum([
 ]);
 
 export const createOfficeWorkerRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -69,7 +68,6 @@ export const officeWorkerListResourceSchema = z.strictObject({
 });
 
 export const createRoleRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -102,7 +100,6 @@ export const roleListResourceSchema = z.strictObject({
 });
 
 export const createTeamRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -150,7 +147,6 @@ export const addTeamMembershipRequestSchema = z.strictObject({
 });
 
 export const createGoalRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   title: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -186,7 +182,6 @@ export const goalListResourceSchema = z.strictObject({
 });
 
 export const createAssignmentRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   goalId: goalIdSchema.optional(),
   officeWorkerId: officeWorkerIdSchema,
   title: z.string().min(1),
@@ -233,6 +228,4 @@ export const assignmentListResourceSchema = z.strictObject({
   items: z.array(assignmentResourceSchema),
 });
 
-export const listOfficeResourcesQuerySchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
-});
+export const listOfficeResourcesQuerySchema = z.strictObject({});

@@ -22,19 +22,22 @@ class OSVAClient:
         self,
         *,
         base_url: str,
-        workspace_id: str,
+        api_key: str,
         timeout_seconds: float = 30.0,
         client: HTTPClient | None = None,
     ) -> None:
-        self.workspace_id = workspace_id
-        self._http = client or HTTPClient(base_url, timeout_seconds=timeout_seconds)
+        self._http = client or HTTPClient(
+            base_url,
+            api_key=api_key,
+            timeout_seconds=timeout_seconds,
+        )
         self.agents = AgentsResource(self._http)
-        self.runs = RunsResource(self._http, workspace_id)
+        self.runs = RunsResource(self._http)
         self.workflows = WorkflowsResource(self._http)
-        self.workflow_runs = WorkflowRunsResource(self._http, workspace_id)
-        self.approvals = ApprovalsResource(self._http, workspace_id)
-        self.schedules = SchedulesResource(self._http, workspace_id)
-        self.artifacts = ArtifactsResource(self._http, workspace_id)
+        self.workflow_runs = WorkflowRunsResource(self._http)
+        self.approvals = ApprovalsResource(self._http)
+        self.schedules = SchedulesResource(self._http)
+        self.artifacts = ArtifactsResource(self._http)
         self.office_workers = OfficeWorkersResource(self._http)
         self.roles = RolesResource(self._http)
         self.teams = TeamsResource(self._http)

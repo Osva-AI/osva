@@ -1,8 +1,6 @@
-import type { WorkspaceId } from "@osva/contracts";
-
 export interface CliConfig {
   readonly baseUrl: string;
-  readonly workspaceId: WorkspaceId;
+  readonly apiKey: string;
   readonly json: boolean;
 }
 
@@ -42,23 +40,24 @@ export function loadCliConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): CliConfig {
   const baseUrl = pickString(flags, env, "base-url", "OSVA_BASE_URL");
-  const workspaceId = pickString(
-    flags,
-    env,
-    "workspace-id",
-    "OSVA_WORKSPACE_ID",
-  );
+  if ("api-key" in flags) {
+    throw new Error(
+      "The --api-key flag is not supported. Set OSVA_API_KEY in the environment.",
+    );
+  }
+
+  const apiKey = env.OSVA_API_KEY?.trim();
 
   if (baseUrl === undefined || baseUrl.length === 0) {
     throw new Error("Missing required --base-url or OSVA_BASE_URL.");
   }
-  if (workspaceId === undefined || workspaceId.length === 0) {
-    throw new Error("Missing required --workspace-id or OSVA_WORKSPACE_ID.");
+  if (apiKey === undefined || apiKey.length === 0) {
+    throw new Error("Missing required OSVA_API_KEY.");
   }
 
   return {
     baseUrl,
-    workspaceId: workspaceId as WorkspaceId,
+    apiKey,
     json: flags.json === true,
   };
 }

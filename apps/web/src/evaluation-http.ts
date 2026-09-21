@@ -3,7 +3,6 @@ import type {
   EvaluationRunId,
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
-  WorkspaceId,
 } from "@osva/contracts";
 import {
   createEvaluationRunRequestSchema,
@@ -15,7 +14,6 @@ import {
   evaluationSuiteResourceSchema,
   evaluationSuiteVersionListResourceSchema,
   evaluationSuiteVersionResourceSchema,
-  workspaceIdSchema,
 } from "@osva/contracts/schemas";
 import type {
   EvaluationCase,
@@ -26,6 +24,7 @@ import type {
   EvaluationSuiteVersion,
 } from "@osva/domain";
 
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -90,19 +89,10 @@ async function dispatchEvaluationRoute(
   searchParams: URLSearchParams,
   services: EvaluationHttpServices,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "suites") {
     if (method === "GET") {
-      const workspaceId = workspaceIdSchema.safeParse(
-        searchParams.get("workspaceId") ?? undefined,
-      );
-      if (!workspaceId.success) {
-        sendJson(response, 400, { status: "invalid_request" });
-        return;
-      }
-
-      const list = await services.suites.listEvaluationSuites.execute(
-        workspaceId.data as WorkspaceId,
-      );
+      const list = await services.suites.listEvaluationSuites.execute(scope);
       sendJson(response, 200, toEvaluationSuiteListResource(list));
       return;
     }
@@ -117,7 +107,11 @@ async function dispatchEvaluationRoute(
       }
 
       const created = await services.suites.createEvaluationSuite.execute(
-        parsed.data,
+        scope,
+        {
+          ...parsed.data,
+          workspaceId: scope.principal.workspaceId,
+        },
       );
       sendJson(response, 201, toEvaluationSuiteResource(created));
       return;
@@ -144,6 +138,7 @@ async function dispatchEvaluationRoute(
     }
 
     const suite = await services.suites.getEvaluationSuite.execute(
+      scope,
       route.evaluationSuiteId,
     );
     sendJson(response, 200, toEvaluationSuiteResource(suite));
@@ -154,6 +149,7 @@ async function dispatchEvaluationRoute(
     if (method === "GET") {
       const versions =
         await services.suites.listEvaluationSuiteVersions.execute(
+          scope,
           route.evaluationSuiteId,
         );
       sendJson(response, 200, toEvaluationSuiteVersionListResource(versions));
@@ -170,7 +166,7 @@ async function dispatchEvaluationRoute(
       }
 
       const created =
-        await services.suites.appendEvaluationSuiteVersion.execute({
+        await services.suites.appendEvaluationSuiteVersion.execute(scope, {
           evaluationSuiteId: route.evaluationSuiteId,
           cases: parsed.data.cases,
         });
@@ -198,10 +194,13 @@ async function dispatchEvaluationRoute(
       return;
     }
 
-    const version = await services.suites.getEvaluationSuiteVersion.execute({
-      evaluationSuiteId: route.evaluationSuiteId,
-      evaluationSuiteVersionId: route.evaluationSuiteVersionId,
-    });
+    const version = await services.suites.getEvaluationSuiteVersion.execute(
+      scope,
+      {
+        evaluationSuiteId: route.evaluationSuiteId,
+        evaluationSuiteVersionId: route.evaluationSuiteVersionId,
+      },
+    );
     sendJson(response, 200, toEvaluationSuiteVersionResource(version));
     return;
   }
@@ -225,10 +224,14 @@ async function dispatchEvaluationRoute(
       return;
     }
 
-    const launched = await services.runs.launchEvaluationRun.execute(
-      parsed.data,
+    const launched = await services.runs.launchEvaluationRun.execute(scope, {
+      ...parsed.data,
+      workspaceId: scope.principal.workspaceId,
+    });
+    const detail = await services.runs.getEvaluationRun.execute(
+      scope,
+      launched.id,
     );
-    const detail = await services.runs.getEvaluationRun.execute(launched.id);
     sendJson(
       response,
       201,
@@ -249,6 +252,7 @@ async function dispatchEvaluationRoute(
     }
 
     const results = await services.runs.listEvaluationCaseResults.execute(
+      scope,
       route.evaluationRunId,
     );
     sendJson(response, 200, toEvaluationCaseResultListResource(results));
@@ -261,6 +265,7 @@ async function dispatchEvaluationRoute(
   }
 
   const detail = await services.runs.getEvaluationRun.execute(
+    scope,
     route.evaluationRunId,
   );
   sendJson(
@@ -443,3 +448,17 @@ function toEvaluationCaseResultListResource(
     })),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/evaluation-suites" },
+  { method: "POST", path: "/v1/evaluation-suites" },
+  { method: "GET", path: "/v1/evaluation-suites/:evaluationSuiteId" },
+  { method: "GET", path: "/v1/evaluation-suites/:evaluationSuiteId/versions" },
+  { method: "POST", path: "/v1/evaluation-suites/:evaluationSuiteId/versions" },
+  {
+    method: "GET",
+    path: "/v1/evaluation-suites/:evaluationSuiteId/versions/:evaluationSuiteVersionId",
+  },
+  { method: "POST", path: "/v1/evaluation-runs" },
+  { method: "GET", path: "/v1/evaluation-runs/:evaluationRunId" },
+  { method: "GET", path: "/v1/evaluation-runs/:evaluationRunId/case-results" },
+] as const;

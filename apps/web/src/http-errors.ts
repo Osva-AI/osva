@@ -12,6 +12,12 @@ import {
   DuplicateScheduleKeyError,
   DuplicateWorkflowKeyError,
   EvaluationNotFoundError,
+  EvaluationRunNotFoundError,
+  EvaluationSuiteNotFoundError,
+  EvaluationSuiteVersionNotFoundError,
+  MemoryNamespaceNotFoundError,
+  OfficeWorkerNotFoundError,
+  TeamNotFoundError,
   InvalidRunAttemptStateError,
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
@@ -47,6 +53,10 @@ import {
   KnowledgeSourceNotFoundError,
   KnowledgeInvalidFilterError,
   KnowledgeIncompatibleIndexesError,
+  ApiKeyNotFoundError,
+  AuthenticationRequiredError,
+  PermissionDeniedError,
+  StdioConnectorsDisabledError,
 } from "@osva/domain";
 import {
   AgentNotFoundError as OrchestrationAgentNotFoundError,
@@ -62,15 +72,46 @@ import {
   RequestBodyTooLargeError,
   sendJson,
 } from "./json.js";
+import { resolveRequestId } from "./security-request-context.js";
+import { sendV1Error } from "./v1-api-error.js";
+import { PUBLIC_API_ERROR_CODES } from "@osva/contracts";
+import { emitSecurityEvent, SECURITY_EVENT_NAMES } from "@osva/observability";
 
 export function sendHttpError(response: ServerResponse, error: unknown): void {
+  const requestId = resolveRequestId();
+
+  if (error instanceof AuthenticationRequiredError) {
+    sendV1Error(
+      response,
+      401,
+      PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
+      requestId,
+    );
+    return;
+  }
+
+  if (error instanceof PermissionDeniedError) {
+    sendV1Error(
+      response,
+      403,
+      PUBLIC_API_ERROR_CODES.PERMISSION_DENIED,
+      requestId,
+    );
+    return;
+  }
+
   if (error instanceof InvalidJsonBodyError) {
     sendJson(response, 400, { status: "invalid_request" });
     return;
   }
 
   if (error instanceof RequestBodyTooLargeError) {
-    sendJson(response, 413, { status: "payload_too_large" });
+    sendV1Error(
+      response,
+      413,
+      PUBLIC_API_ERROR_CODES.REQUEST_TOO_LARGE,
+      requestId,
+    );
     return;
   }
 
@@ -128,6 +169,12 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof ToolVersionNotFoundError ||
     error instanceof RunStepNotFoundError ||
     error instanceof EvaluationNotFoundError ||
+    error instanceof EvaluationSuiteNotFoundError ||
+    error instanceof EvaluationSuiteVersionNotFoundError ||
+    error instanceof EvaluationRunNotFoundError ||
+    error instanceof MemoryNamespaceNotFoundError ||
+    error instanceof OfficeWorkerNotFoundError ||
+    error instanceof TeamNotFoundError ||
     error instanceof ScheduleNotFoundError ||
     error instanceof WorkflowNotFoundError ||
     error instanceof WorkflowVersionNotFoundError ||
@@ -140,9 +187,15 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof OrchestrationRunAttemptNotFoundError ||
     error instanceof ArtifactNotFoundError ||
     error instanceof KnowledgeSourceNotFoundError ||
-    error instanceof KnowledgeIndexNotFoundError
+    error instanceof KnowledgeIndexNotFoundError ||
+    error instanceof ApiKeyNotFoundError
   ) {
-    sendJson(response, 404, { status: "not_found" });
+    sendV1Error(
+      response,
+      404,
+      PUBLIC_API_ERROR_CODES.RESOURCE_NOT_FOUND,
+      requestId,
+    );
     return;
   }
 
@@ -171,6 +224,47 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
   ) {
     sendJson(response, 409, { status: "conflict" });
     return;
+  }
+
+  if (error instanceof StdioConnectorsDisabledError) {
+    emitSecurityEvent({
+      event: SECURITY_EVENT_NAMES.CONNECTOR_STDIO_DENIED,
+      requestId,
+      outcome: "DENIED",
+      reasonCode: "stdio_disabled",
+    });
+    sendV1Error(
+      response,
+      403,
+      PUBLIC_API_ERROR_CODES.PERMISSION_DENIED,
+      requestId,
+    );
+    return;
+  }
+
+  if (error instanceof Error && error.name === "OutboundNetworkPolicyError") {
+    emitSecurityEvent({
+      event: SECURITY_EVENT_NAMES.CONNECTOR_EGRESS_DENIED,
+      requestId,
+      outcome: "DENIED",
+      reasonCode: "outbound_policy",
+    });
+    sendV1Error(
+      response,
+      403,
+      PUBLIC_API_ERROR_CODES.PERMISSION_DENIED,
+      requestId,
+    );
+    return;
+  }
+
+  if (error instanceof Error && error.name === "SecretNotFoundError") {
+    emitSecurityEvent({
+      event: SECURITY_EVENT_NAMES.CONNECTOR_SECRET_RESOLUTION_FAILED,
+      requestId,
+      outcome: "DENIED",
+      reasonCode: "secret_resolution_failed",
+    });
   }
 
   if (

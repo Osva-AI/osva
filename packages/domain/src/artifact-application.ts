@@ -6,8 +6,17 @@ import type {
   RunId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import { Artifact } from "./artifact.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const ARTIFACT_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.artifact };
 import { artifactBlobStorageKey } from "./artifact-blob-key.js";
 import {
   ArtifactBlobUnavailableError,
@@ -76,13 +85,23 @@ export interface OpenArtifactContentResult {
 export class CreateArtifact {
   constructor(private readonly deps: ArtifactApplicationDependencies) {}
 
-  async execute(command: CreateArtifactCommand): Promise<Artifact> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateArtifactCommand,
+  ): Promise<Artifact> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      ARTIFACT_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
-    await validateProducer(command, this.deps);
+    const scopedCommand = { ...command, workspaceId };
+    await validateProducer(scopedCommand, this.deps);
 
     const artifactId = this.deps.ids.createId() as ArtifactId;
     const blobKey = artifactBlobStorageKey(artifactId);
@@ -111,7 +130,7 @@ export class CreateArtifact {
     if (command.idempotencyKey !== undefined) {
       const replay = await reconcileIdempotentCreation(
         this.deps,
-        command,
+        scopedCommand,
         writeResult.digest,
         writeResult.sizeBytes,
         blobKey,
@@ -124,7 +143,7 @@ export class CreateArtifact {
 
     const artifact = Artifact.create({
       id: artifactId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       name: command.name,
       mediaType: command.mediaType,
       sizeBytes: writeResult.sizeBytes,
@@ -176,8 +195,19 @@ export class GetArtifact {
     private readonly deps: Pick<ArtifactApplicationDependencies, "artifacts">,
   ) {}
 
-  async execute(artifactId: ArtifactId): Promise<Artifact> {
-    const artifact = await this.deps.artifacts.findById(artifactId);
+  async execute(
+    scope: ControlPlaneScope,
+    artifactId: ArtifactId,
+  ): Promise<Artifact> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      ARTIFACT_RESOURCE,
+    );
+    const artifact = await this.deps.artifacts.findByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      artifactId,
+    );
     if (artifact === null) {
       throw new ArtifactNotFoundError(artifactId);
     }
@@ -194,14 +224,24 @@ export class ListArtifacts {
     >,
   ) {}
 
-  async execute(query: ListArtifactsQuery): Promise<ListArtifactsResult> {
-    const workspace = await this.deps.workspaces.findById(query.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    query: Omit<ListArtifactsQuery, "workspaceId">,
+  ): Promise<ListArtifactsResult> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      ARTIFACT_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(query.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     return this.deps.artifacts.list({
       ...query,
+      workspaceId,
       limit: query.limit ?? DEFAULT_ARTIFACT_LIST_LIMIT,
     });
   }
@@ -210,8 +250,19 @@ export class ListArtifacts {
 export class OpenArtifactContent {
   constructor(private readonly deps: ArtifactApplicationDependencies) {}
 
-  async execute(artifactId: ArtifactId): Promise<OpenArtifactContentResult> {
-    const artifact = await this.deps.artifacts.findById(artifactId);
+  async execute(
+    scope: ControlPlaneScope,
+    artifactId: ArtifactId,
+  ): Promise<OpenArtifactContentResult> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      ARTIFACT_RESOURCE,
+    );
+    const artifact = await this.deps.artifacts.findByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      artifactId,
+    );
     if (artifact === null) {
       throw new ArtifactNotFoundError(artifactId);
     }
@@ -260,7 +311,10 @@ async function validateProducer(
     );
   }
 
-  const run = await deps.runs.findRunById(command.producerRunId!);
+  const run = await deps.runs.findRunByWorkspaceAndId(
+    command.workspaceId,
+    command.producerRunId!,
+  );
   if (run === null) {
     throw new RunNotFoundError(command.producerRunId!);
   }

@@ -11,6 +11,7 @@ import type {
   WorkflowVersionId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import { Assignment } from "./assignment.js";
 import {
@@ -30,6 +31,15 @@ import { OfficeWorker } from "./office-worker.js";
 import type { AgentRepository } from "./ports/agent-repository.js";
 import type { OfficeRepository } from "./ports/office-repository.js";
 import type { WorkflowRepository } from "./ports/workflow-repository.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const OFFICE_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.office };
+
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 import { Role } from "./role.js";
 import { Team } from "./team.js";
@@ -133,17 +143,26 @@ export interface UpdateAssignmentCommand {
 export class CreateOfficeWorker {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: CreateOfficeWorkerCommand): Promise<OfficeWorker> {
-    await assertWorkspaceExists(this.deps.workspaces, command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateOfficeWorkerCommand,
+  ): Promise<OfficeWorker> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    await assertWorkspaceExists(this.deps.workspaces, workspaceId);
     await assertAgentInWorkspace(
       this.deps.agents,
-      command.workspaceId,
+      workspaceId,
       command.agentId,
     );
 
     const officeWorker = OfficeWorker.create({
       id: this.deps.ids.createId() as OfficeWorkerId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       description: command.description,
@@ -159,9 +178,20 @@ export class CreateOfficeWorker {
 export class GetOfficeWorker {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(officeWorkerId: OfficeWorkerId): Promise<OfficeWorker> {
+  async execute(
+    scope: ControlPlaneScope,
+    officeWorkerId: OfficeWorkerId,
+  ): Promise<OfficeWorker> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
     const officeWorker =
-      await this.deps.office.findOfficeWorkerById(officeWorkerId);
+      await this.deps.office.findOfficeWorkerByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        officeWorkerId,
+      );
     if (officeWorker === null) {
       throw new OfficeWorkerNotFoundError(officeWorkerId);
     }
@@ -173,7 +203,13 @@ export class GetOfficeWorker {
 export class ListOfficeWorkers {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(workspaceId: WorkspaceId): Promise<readonly OfficeWorker[]> {
+  async execute(scope: ControlPlaneScope): Promise<readonly OfficeWorker[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     await assertWorkspaceExists(this.deps.workspaces, workspaceId);
     return this.deps.office.listOfficeWorkersByWorkspace(workspaceId);
   }
@@ -182,8 +218,17 @@ export class ListOfficeWorkers {
 export class UpdateOfficeWorker {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: UpdateOfficeWorkerCommand): Promise<OfficeWorker> {
-    const existing = await this.deps.office.findOfficeWorkerById(
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateOfficeWorkerCommand,
+  ): Promise<OfficeWorker> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const existing = await this.deps.office.findOfficeWorkerByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.officeWorkerId,
     );
     if (existing === null) {
@@ -207,12 +252,21 @@ export class UpdateOfficeWorker {
 export class CreateRole {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: CreateRoleCommand): Promise<Role> {
-    await assertWorkspaceExists(this.deps.workspaces, command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateRoleCommand,
+  ): Promise<Role> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    await assertWorkspaceExists(this.deps.workspaces, workspaceId);
 
     const role = Role.create({
       id: this.deps.ids.createId() as RoleId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       description: command.description,
@@ -227,8 +281,16 @@ export class CreateRole {
 export class GetRole {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(roleId: RoleId): Promise<Role> {
-    const role = await this.deps.office.findRoleById(roleId);
+  async execute(scope: ControlPlaneScope, roleId: RoleId): Promise<Role> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const role = await this.deps.office.findRoleByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      roleId,
+    );
     if (role === null) {
       throw new RoleNotFoundError(roleId);
     }
@@ -240,7 +302,13 @@ export class GetRole {
 export class ListRoles {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(workspaceId: WorkspaceId): Promise<readonly Role[]> {
+  async execute(scope: ControlPlaneScope): Promise<readonly Role[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     await assertWorkspaceExists(this.deps.workspaces, workspaceId);
     return this.deps.office.listRolesByWorkspace(workspaceId);
   }
@@ -249,8 +317,19 @@ export class ListRoles {
 export class UpdateRole {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: UpdateRoleCommand): Promise<Role> {
-    const existing = await this.deps.office.findRoleById(command.roleId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateRoleCommand,
+  ): Promise<Role> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const existing = await this.deps.office.findRoleByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.roleId,
+    );
     if (existing === null) {
       throw new RoleNotFoundError(command.roleId);
     }
@@ -272,12 +351,21 @@ export class UpdateRole {
 export class CreateTeam {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: CreateTeamCommand): Promise<Team> {
-    await assertWorkspaceExists(this.deps.workspaces, command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateTeamCommand,
+  ): Promise<Team> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    await assertWorkspaceExists(this.deps.workspaces, workspaceId);
 
     const team = Team.create({
       id: this.deps.ids.createId() as TeamId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       description: command.description,
@@ -292,8 +380,16 @@ export class CreateTeam {
 export class GetTeam {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(teamId: TeamId): Promise<Team> {
-    const team = await this.deps.office.findTeamById(teamId);
+  async execute(scope: ControlPlaneScope, teamId: TeamId): Promise<Team> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const team = await this.deps.office.findTeamByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      teamId,
+    );
     if (team === null) {
       throw new TeamNotFoundError(teamId);
     }
@@ -305,7 +401,13 @@ export class GetTeam {
 export class ListTeams {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(workspaceId: WorkspaceId): Promise<readonly Team[]> {
+  async execute(scope: ControlPlaneScope): Promise<readonly Team[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     await assertWorkspaceExists(this.deps.workspaces, workspaceId);
     return this.deps.office.listTeamsByWorkspace(workspaceId);
   }
@@ -314,8 +416,19 @@ export class ListTeams {
 export class UpdateTeam {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: UpdateTeamCommand): Promise<Team> {
-    const existing = await this.deps.office.findTeamById(command.teamId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateTeamCommand,
+  ): Promise<Team> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const existing = await this.deps.office.findTeamByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.teamId,
+    );
     if (existing === null) {
       throw new TeamNotFoundError(command.teamId);
     }
@@ -337,15 +450,28 @@ export class UpdateTeam {
 export class AddTeamMembership {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: AddTeamMembershipCommand): Promise<TeamMembership> {
-    const team = await this.deps.office.findTeamById(command.teamId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: AddTeamMembershipCommand,
+  ): Promise<TeamMembership> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const team = await this.deps.office.findTeamByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.teamId,
+    );
     if (team === null) {
       throw new TeamNotFoundError(command.teamId);
     }
 
-    const officeWorker = await this.deps.office.findOfficeWorkerById(
-      command.officeWorkerId,
-    );
+    const officeWorker =
+      await this.deps.office.findOfficeWorkerByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        command.officeWorkerId,
+      );
     if (officeWorker === null) {
       throw new OfficeWorkerNotFoundError(command.officeWorkerId);
     }
@@ -357,7 +483,10 @@ export class AddTeamMembership {
     }
 
     if (command.roleId !== undefined) {
-      const role = await this.deps.office.findRoleById(command.roleId);
+      const role = await this.deps.office.findRoleByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        command.roleId,
+      );
       if (role === null) {
         throw new RoleNotFoundError(command.roleId);
       }
@@ -383,8 +512,19 @@ export class AddTeamMembership {
 export class ListTeamMemberships {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(teamId: TeamId): Promise<readonly TeamMembership[]> {
-    const team = await this.deps.office.findTeamById(teamId);
+  async execute(
+    scope: ControlPlaneScope,
+    teamId: TeamId,
+  ): Promise<readonly TeamMembership[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const team = await this.deps.office.findTeamByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      teamId,
+    );
     if (team === null) {
       throw new TeamNotFoundError(teamId);
     }
@@ -396,12 +536,21 @@ export class ListTeamMemberships {
 export class CreateGoal {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: CreateGoalCommand): Promise<Goal> {
-    await assertWorkspaceExists(this.deps.workspaces, command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateGoalCommand,
+  ): Promise<Goal> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    await assertWorkspaceExists(this.deps.workspaces, workspaceId);
 
     const goal = Goal.create({
       id: this.deps.ids.createId() as GoalId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       title: command.title,
       description: command.description,
@@ -416,8 +565,16 @@ export class CreateGoal {
 export class GetGoal {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(goalId: GoalId): Promise<Goal> {
-    const goal = await this.deps.office.findGoalById(goalId);
+  async execute(scope: ControlPlaneScope, goalId: GoalId): Promise<Goal> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const goal = await this.deps.office.findGoalByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      goalId,
+    );
     if (goal === null) {
       throw new GoalNotFoundError(goalId);
     }
@@ -429,7 +586,13 @@ export class GetGoal {
 export class ListGoals {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(workspaceId: WorkspaceId): Promise<readonly Goal[]> {
+  async execute(scope: ControlPlaneScope): Promise<readonly Goal[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     await assertWorkspaceExists(this.deps.workspaces, workspaceId);
     return this.deps.office.listGoalsByWorkspace(workspaceId);
   }
@@ -438,8 +601,19 @@ export class ListGoals {
 export class UpdateGoal {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: UpdateGoalCommand): Promise<Goal> {
-    const existing = await this.deps.office.findGoalById(command.goalId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateGoalCommand,
+  ): Promise<Goal> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const existing = await this.deps.office.findGoalByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      command.goalId,
+    );
     if (existing === null) {
       throw new GoalNotFoundError(command.goalId);
     }
@@ -462,12 +636,23 @@ export class UpdateGoal {
 export class CreateAssignment {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: CreateAssignmentCommand): Promise<Assignment> {
-    await assertWorkspaceExists(this.deps.workspaces, command.workspaceId);
-
-    const officeWorker = await this.deps.office.findOfficeWorkerById(
-      command.officeWorkerId,
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateAssignmentCommand,
+  ): Promise<Assignment> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
     );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    await assertWorkspaceExists(this.deps.workspaces, workspaceId);
+
+    const officeWorker =
+      await this.deps.office.findOfficeWorkerByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        command.officeWorkerId,
+      );
     if (officeWorker === null) {
       throw new OfficeWorkerNotFoundError(command.officeWorkerId);
     }
@@ -479,7 +664,10 @@ export class CreateAssignment {
     }
 
     if (command.goalId !== undefined) {
-      const goal = await this.deps.office.findGoalById(command.goalId);
+      const goal = await this.deps.office.findGoalByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        command.goalId,
+      );
       if (goal === null) {
         throw new GoalNotFoundError(command.goalId);
       }
@@ -492,7 +680,7 @@ export class CreateAssignment {
     }
 
     await assertAssignmentTarget(this.deps, {
-      workspaceId: command.workspaceId,
+      workspaceId,
       officeWorker,
       targetType: command.targetType,
       targetVersionId: command.targetVersionId,
@@ -500,7 +688,7 @@ export class CreateAssignment {
 
     const assignment = Assignment.create({
       id: this.deps.ids.createId() as AssignmentId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       goalId: command.goalId,
       officeWorkerId: command.officeWorkerId,
       title: command.title,
@@ -519,8 +707,19 @@ export class CreateAssignment {
 export class GetAssignment {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(assignmentId: AssignmentId): Promise<Assignment> {
-    const assignment = await this.deps.office.findAssignmentById(assignmentId);
+  async execute(
+    scope: ControlPlaneScope,
+    assignmentId: AssignmentId,
+  ): Promise<Assignment> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const assignment = await this.deps.office.findAssignmentByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      assignmentId,
+    );
     if (assignment === null) {
       throw new AssignmentNotFoundError(assignmentId);
     }
@@ -532,7 +731,13 @@ export class GetAssignment {
 export class ListAssignments {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(workspaceId: WorkspaceId): Promise<readonly Assignment[]> {
+  async execute(scope: ControlPlaneScope): Promise<readonly Assignment[]> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      OFFICE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
     await assertWorkspaceExists(this.deps.workspaces, workspaceId);
     return this.deps.office.listAssignmentsByWorkspace(workspaceId);
   }
@@ -541,8 +746,19 @@ export class ListAssignments {
 export class CancelAssignment {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(assignmentId: AssignmentId): Promise<Assignment> {
-    const existing = await this.deps.office.findAssignmentById(assignmentId);
+  async execute(
+    scope: ControlPlaneScope,
+    assignmentId: AssignmentId,
+  ): Promise<Assignment> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.EXECUTE,
+      OFFICE_RESOURCE,
+    );
+    const existing = await this.deps.office.findAssignmentByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      assignmentId,
+    );
     if (existing === null) {
       throw new AssignmentNotFoundError(assignmentId);
     }
@@ -561,8 +777,17 @@ export class CancelAssignment {
 export class UpdateAssignment {
   constructor(private readonly deps: OfficeApplicationDependencies) {}
 
-  async execute(command: UpdateAssignmentCommand): Promise<Assignment> {
-    const existing = await this.deps.office.findAssignmentById(
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateAssignmentCommand,
+  ): Promise<Assignment> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      OFFICE_RESOURCE,
+    );
+    const existing = await this.deps.office.findAssignmentByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.assignmentId,
     );
     if (existing === null) {
@@ -570,7 +795,10 @@ export class UpdateAssignment {
     }
 
     if (command.goalId !== undefined && command.goalId !== null) {
-      const goal = await this.deps.office.findGoalById(command.goalId);
+      const goal = await this.deps.office.findGoalByWorkspaceAndId(
+        controlPlaneWorkspaceId(scope),
+        command.goalId,
+      );
       if (goal === null) {
         throw new GoalNotFoundError(command.goalId);
       }
@@ -668,15 +896,9 @@ async function assertAgentInWorkspace(
   workspaceId: WorkspaceId,
   agentId: AgentId,
 ): Promise<void> {
-  const agent = await agents.findAgentById(agentId);
+  const agent = await agents.findAgentByWorkspaceAndId(workspaceId, agentId);
   if (agent === null) {
     throw new AgentNotFoundError(agentId);
-  }
-
-  if (agent.workspaceId !== workspaceId) {
-    throw new DomainInvariantError(
-      `Agent ${agent.id} belongs to workspace ${agent.workspaceId}, not ${workspaceId}.`,
-    );
   }
 }
 

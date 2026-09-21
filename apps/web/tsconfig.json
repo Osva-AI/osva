@@ -13,6 +13,7 @@
     { "path": "../../packages/domain" },
     { "path": "../../packages/db" },
     { "path": "../../packages/orchestration" },
+    { "path": "../../packages/observability" },
     { "path": "../../adapters/bullmq" }
   ]
 }

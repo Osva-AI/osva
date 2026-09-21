@@ -18,6 +18,7 @@
   "dependencies": {
     "@osva/contracts": "workspace:*",
     "@osva/domain": "workspace:*",
+    "@osva/outbound-network": "workspace:*",
     "busboy": "1.6.0",
     "@osva/memory-gateway": "workspace:*",
     "@osva/model-gateway": "workspace:*",

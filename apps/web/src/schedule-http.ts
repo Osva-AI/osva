@@ -18,7 +18,7 @@ import {
   type ScheduleApplication,
   type ScheduleOccurrence,
 } from "@osva/domain";
-
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 import {
@@ -84,6 +84,7 @@ async function dispatchScheduleRoute(
   searchParams: URLSearchParams,
   services: ScheduleHttpServices,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "collection") {
     if (method === "GET") {
       await handleListSchedules(response, searchParams, services.schedules);
@@ -99,8 +100,8 @@ async function dispatchScheduleRoute(
         return;
       }
 
-      const created = await services.schedules.createSchedule.execute({
-        workspaceId: parsed.data.workspaceId,
+      const created = await services.schedules.createSchedule.execute(scope, {
+        workspaceId: scope.principal.workspaceId,
         key: parsed.data.key,
         name: parsed.data.name,
         agentId: parsed.data.agentId,
@@ -126,6 +127,7 @@ async function dispatchScheduleRoute(
   if (route.kind === "item") {
     if (method === "GET") {
       const schedule = await services.schedules.getSchedule.execute(
+        scope,
         route.scheduleId,
       );
       sendJson(response, 200, toScheduleResource(schedule));
@@ -141,7 +143,7 @@ async function dispatchScheduleRoute(
         return;
       }
 
-      const updated = await services.schedules.updateSchedule.execute({
+      const updated = await services.schedules.updateSchedule.execute(scope, {
         scheduleId: route.scheduleId,
         ...parsed.data,
       });
@@ -176,6 +178,7 @@ async function handleListSchedules(
   searchParams: URLSearchParams,
   schedules: ScheduleApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   const parsed = listSchedulesQuerySchema.safeParse(
     Object.fromEntries(searchParams.entries()),
   );
@@ -206,8 +209,7 @@ async function handleListSchedules(
     return;
   }
 
-  const result = await schedules.listSchedules.execute({
-    workspaceId: parsed.data.workspaceId,
+  const result = await schedules.listSchedules.execute(scope, {
     limit,
     cursor:
       cursor === null || cursor === undefined
@@ -227,6 +229,7 @@ async function handleListScheduleOccurrences(
   searchParams: URLSearchParams,
   schedules: ScheduleApplication,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   const parsed = listScheduleOccurrencesQuerySchema.safeParse(
     Object.fromEntries(searchParams.entries()),
   );
@@ -257,7 +260,7 @@ async function handleListScheduleOccurrences(
     return;
   }
 
-  const result = await schedules.listScheduleOccurrences.execute({
+  const result = await schedules.listScheduleOccurrences.execute(scope, {
     scheduleId,
     query: {
       scheduleId,
@@ -362,3 +365,10 @@ function toScheduleOccurrenceListResource(result: {
           }),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/schedules" },
+  { method: "POST", path: "/v1/schedules" },
+  { method: "GET", path: "/v1/schedules/:scheduleId" },
+  { method: "PATCH", path: "/v1/schedules/:scheduleId" },
+  { method: "GET", path: "/v1/schedules/:scheduleId/occurrences" },
+] as const;

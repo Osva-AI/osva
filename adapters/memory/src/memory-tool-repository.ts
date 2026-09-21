@@ -1,4 +1,4 @@
-import type { ToolId, ToolVersionId } from "@osva/contracts";
+import type { ToolId, ToolVersionId, WorkspaceId } from "@osva/contracts";
 import {
   DomainInvariantError,
   DuplicateToolKeyError,
@@ -30,6 +30,24 @@ export class MemoryToolRepository implements ToolRepository {
 
   async findToolById(id: ToolId): Promise<Tool | null> {
     return this.tools.get(id) ?? null;
+  }
+
+  async findToolByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ToolId,
+  ): Promise<Tool | null> {
+    const tool = this.tools.get(id);
+    if (tool === undefined || tool.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return tool;
+  }
+
+  async listToolsByWorkspaceId(workspaceId: WorkspaceId): Promise<Tool[]> {
+    return [...this.tools.values()]
+      .filter((tool) => tool.workspaceId === workspaceId)
+      .sort(compareTools);
   }
 
   async listTools(): Promise<Tool[]> {

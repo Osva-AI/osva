@@ -26,12 +26,12 @@ import {
   REMOTE_HTTP_FORBIDDEN_DESTINATION_MESSAGE,
   resolveRemoteHttpConnectionTarget,
   type HostnameLookup,
-} from "./outbound-network.js";
+} from "@osva/outbound-network";
 import {
   fetchWithPinnedConnection,
   type PinnedFetchInit,
   type PinnedRemoteHttpConnection,
-} from "./pinned-fetch.js";
+} from "@osva/outbound-network";
 import {
   executionFailure,
   sanitizePublicErrorMessage,

@@ -120,6 +120,7 @@ export {
   RunNotFoundError,
   RunStepNotFoundError,
   ScheduleNotFoundError,
+  StdioConnectorsDisabledError,
   WorkspaceNotFoundError,
   WorkflowNotFoundError,
   WorkflowNodeRunNotFoundError,
@@ -695,6 +696,7 @@ export {
   type ImportedMcpToolResult,
   type UpdateConnectorMetadataCommand,
 } from "./connector-application.js";
+export { toMcpConnectorExecutionConfig } from "./mcp-connector-execution.js";
 
 export {
   AppendModelProfileVersion,
@@ -816,3 +818,71 @@ export {
   type UpdateRoleCommand,
   type UpdateTeamCommand,
 } from "./office-application.js";
+
+export {
+  digestApiKeySecret,
+  generateApiKeySecretMaterial,
+  parseApiKeyToken,
+  verifyApiKeySecret,
+  AuthenticateApiKey,
+  toRequestPrincipal,
+  type AuthenticateApiKeyClock,
+  type AuthenticateApiKeyDependencies,
+} from "./authenticate-api-key.js";
+export {
+  API_KEY_SECRET_DIGEST_BYTE_LENGTH,
+  API_KEY_TOKEN_PREFIX,
+} from "./api-key-credential.js";
+export {
+  ApiKey,
+  validateApiKeyName,
+  type ApiKeyProps,
+  type CreateApiKeyProps,
+} from "./api-key.js";
+export {
+  BootstrapInstallation,
+  CreateApiKey,
+  createApiKeyApplication,
+  type ApiKeyApplication,
+  type ApiKeyApplicationClock,
+  type ApiKeyApplicationDependencies,
+  type ApiKeyApplicationIds,
+  type BootstrapInstallationCommand,
+  type BootstrapInstallationResult,
+  type CreateApiKeyCommand,
+  type CreateApiKeyResult,
+} from "./api-key-application.js";
+export {
+  authorize,
+  rolePermitsAction,
+  type AuthorizationContext,
+  type AuthorizationResource,
+} from "./authorization.js";
+export {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  runtimeControlPlaneScope,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+export {
+  CONTROL_PLANE_RESOURCE_KINDS,
+  type ControlPlaneResourceKind,
+} from "./control-plane-resource-kinds.js";
+export type {
+  ApiKeyCreateRecord,
+  ApiKeyPersistedRecord,
+  ApiKeyRepository,
+} from "./ports/api-key-repository.js";
+export {
+  classifyRestResourceAccess,
+  REST_RESOURCE_ACCESS_OUTCOME,
+  type RestResourceAccessOutcome,
+} from "./rest-resource-access.js";
+export {
+  ApiKeyNotFoundError,
+  DuplicateApiKeyIdError,
+  AuthenticationRequiredError,
+  BootstrapAlreadyCompletedError,
+  BootstrapExistingWorkspaceStateError,
+  PermissionDeniedError,
+} from "./security-errors.js";

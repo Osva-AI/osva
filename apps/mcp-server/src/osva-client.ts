@@ -1,16 +1,29 @@
-import type { WorkspaceId } from "@osva/contracts";
+import type { McpPrincipal } from "@osva/contracts";
 import { OsvaClient } from "@osva/sdk";
 
+import {
+  getMcpBearerCredential,
+  getMcpPrincipal,
+} from "./principal-context.js";
+
 export interface OsvaClientFactory {
-  forWorkspace(workspaceId: WorkspaceId): OsvaClient;
+  forPrincipal(principal: McpPrincipal): OsvaClient;
 }
 
 export function createOsvaClientFactory(baseUrl: string): OsvaClientFactory {
   return {
-    forWorkspace(workspaceId) {
+    forPrincipal(principal) {
+      const active = getMcpPrincipal();
+      if (
+        active.subjectId !== principal.subjectId ||
+        active.workspaceId !== principal.workspaceId ||
+        active.role !== principal.role
+      ) {
+        throw new Error("MCP principal mismatch for outbound REST client.");
+      }
       return new OsvaClient({
         baseUrl,
-        workspaceId,
+        apiKey: getMcpBearerCredential(),
       });
     },
   };

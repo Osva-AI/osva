@@ -39,6 +39,10 @@ export interface ListMemoryRecordsResult {
 export interface MemoryNamespaceRepository {
   saveNamespace(namespace: MemoryNamespace): Promise<void>;
   findNamespaceById(id: MemoryNamespaceId): Promise<MemoryNamespace | null>;
+  findNamespaceByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: MemoryNamespaceId,
+  ): Promise<MemoryNamespace | null>;
   listNamespacesByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly MemoryNamespace[]>;

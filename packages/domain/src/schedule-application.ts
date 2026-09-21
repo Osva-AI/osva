@@ -5,6 +5,7 @@ import type {
   ScheduleId,
   WorkspaceId,
 } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
 
 import {
   AgentNotFoundError,
@@ -23,6 +24,14 @@ import type {
   ScheduleRepository,
 } from "./ports/schedule-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const SCHEDULE_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.schedule };
 
 export interface ScheduleApplicationClock {
   now(): Date;
@@ -70,21 +79,30 @@ export interface ListScheduleOccurrencesCommand {
 export class CreateSchedule {
   constructor(private readonly deps: ScheduleApplicationDependencies) {}
 
-  async execute(command: CreateScheduleCommand): Promise<Schedule> {
-    const workspace = await this.deps.workspaces.findById(command.workspaceId);
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateScheduleCommand,
+  ): Promise<Schedule> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      SCHEDULE_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
     if (workspace === null) {
-      throw new WorkspaceNotFoundError(command.workspaceId);
+      throw new WorkspaceNotFoundError(workspaceId);
     }
 
     await assertScheduleAgentOwnership(this.deps.agents, {
-      workspaceId: command.workspaceId,
+      workspaceId,
       agentId: command.agentId,
       agentVersionId: command.agentVersionId,
     });
 
     const schedule = Schedule.create({
       id: this.deps.ids.createId() as ScheduleId,
-      workspaceId: command.workspaceId,
+      workspaceId,
       key: command.key,
       name: command.name,
       agentId: command.agentId,
@@ -104,8 +122,19 @@ export class CreateSchedule {
 export class GetSchedule {
   constructor(private readonly deps: ScheduleApplicationDependencies) {}
 
-  async execute(scheduleId: ScheduleId): Promise<Schedule> {
-    const schedule = await this.deps.schedules.findScheduleById(scheduleId);
+  async execute(
+    scope: ControlPlaneScope,
+    scheduleId: ScheduleId,
+  ): Promise<Schedule> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      SCHEDULE_RESOURCE,
+    );
+    const schedule = await this.deps.schedules.findScheduleByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
+      scheduleId,
+    );
     if (schedule === null) {
       throw new ScheduleNotFoundError(scheduleId);
     }
@@ -117,16 +146,36 @@ export class GetSchedule {
 export class ListSchedules {
   constructor(private readonly deps: ScheduleApplicationDependencies) {}
 
-  async execute(query: ListSchedulesQuery): Promise<ListSchedulesResult> {
-    return this.deps.schedules.listSchedules(query);
+  async execute(
+    scope: ControlPlaneScope,
+    query: Omit<ListSchedulesQuery, "workspaceId">,
+  ): Promise<ListSchedulesResult> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      SCHEDULE_RESOURCE,
+    );
+    return this.deps.schedules.listSchedules({
+      ...query,
+      workspaceId: controlPlaneWorkspaceId(scope),
+    });
   }
 }
 
 export class UpdateSchedule {
   constructor(private readonly deps: ScheduleApplicationDependencies) {}
 
-  async execute(command: UpdateScheduleCommand): Promise<Schedule> {
-    const existing = await this.deps.schedules.findScheduleById(
+  async execute(
+    scope: ControlPlaneScope,
+    command: UpdateScheduleCommand,
+  ): Promise<Schedule> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      SCHEDULE_RESOURCE,
+    );
+    const existing = await this.deps.schedules.findScheduleByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.scheduleId,
     );
     if (existing === null) {
@@ -160,9 +209,16 @@ export class ListScheduleOccurrences {
   constructor(private readonly deps: ScheduleApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     command: ListScheduleOccurrencesCommand,
   ): Promise<ListScheduleOccurrencesResult> {
-    const schedule = await this.deps.schedules.findScheduleById(
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      SCHEDULE_RESOURCE,
+    );
+    const schedule = await this.deps.schedules.findScheduleByWorkspaceAndId(
+      controlPlaneWorkspaceId(scope),
       command.scheduleId,
     );
     if (schedule === null) {
@@ -205,15 +261,12 @@ async function assertScheduleAgentOwnership(
     readonly agentVersionId: AgentVersionId;
   },
 ): Promise<void> {
-  const agent = await agents.findAgentById(command.agentId);
+  const agent = await agents.findAgentByWorkspaceAndId(
+    command.workspaceId,
+    command.agentId,
+  );
   if (agent === null) {
     throw new AgentNotFoundError(command.agentId);
-  }
-
-  if (agent.workspaceId !== command.workspaceId) {
-    throw new DomainInvariantError(
-      `Agent ${agent.id} belongs to workspace ${agent.workspaceId}, not ${command.workspaceId}.`,
-    );
   }
 
   const agentVersion = await agents.findAgentVersionById(

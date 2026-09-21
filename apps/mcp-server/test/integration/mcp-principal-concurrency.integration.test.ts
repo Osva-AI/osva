@@ -32,11 +32,13 @@ import {
   stopValkeyForTests,
   type ValkeyTestContext,
 } from "../../../../adapters/bullmq/test/integration/valkey-harness.js";
+import {
+  authorizationHeader,
+  seedWorkspaceAdminApiKeys,
+} from "./support/workspace-api-keys.js";
 
 const WORKSPACE_A = "ws-mcp-concurrency-a" as WorkspaceId;
 const WORKSPACE_B = "ws-mcp-concurrency-b" as WorkspaceId;
-const TOKEN_A = "concurrency-token-a";
-const TOKEN_B = "concurrency-token-b";
 const FIXTURE_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../../adapters/runtime-typescript/test/fixtures",
@@ -105,14 +107,16 @@ describe("MCP principal concurrency isolation", () => {
 
     const webPort = await web.listen();
     const webOrigin = `http://127.0.0.1:${String(webPort)}`;
+    const apiKeys = await seedWorkspaceAdminApiKeys(database, [
+      { id: WORKSPACE_A, name: "workspace-a" },
+      { id: WORKSPACE_B, name: "workspace-b" },
+    ]);
+    const authA = authorizationHeader(apiKeys[WORKSPACE_A]);
+    const authB = authorizationHeader(apiKeys[WORKSPACE_B]);
     const mcp = createMcpServerProcess({
       OSVA_API_BASE_URL: webOrigin,
       OSVA_MCP_HOST: "127.0.0.1",
       OSVA_MCP_PORT: "0",
-      OSVA_MCP_BEARER_TOKENS: JSON.stringify([
-        { token: TOKEN_A, workspaceId: WORKSPACE_A },
-        { token: TOKEN_B, workspaceId: WORKSPACE_B },
-      ]),
     });
 
     try {
@@ -120,11 +124,11 @@ describe("MCP principal concurrency isolation", () => {
       await mcp.start();
       const mcpEndpoint = `http://127.0.0.1:${String(mcp.port)}/mcp`;
 
-      const seedA = await seedRun(webOrigin, WORKSPACE_A, trustedRuntimeRoot);
-      const seedB = await seedRun(webOrigin, WORKSPACE_B, trustedRuntimeRoot);
+      const seedA = await seedRun(webOrigin, trustedRuntimeRoot, authA);
+      const seedB = await seedRun(webOrigin, trustedRuntimeRoot, authB);
 
-      const clientA = await connectMcpClient(mcpEndpoint, TOKEN_A);
-      const clientB = await connectMcpClient(mcpEndpoint, TOKEN_B);
+      const clientA = await connectMcpClient(mcpEndpoint, apiKeys[WORKSPACE_A]);
+      const clientB = await connectMcpClient(mcpEndpoint, apiKeys[WORKSPACE_B]);
 
       const unauthorized = await fetch(mcpEndpoint, { method: "POST" });
       expect(unauthorized.status).toBe(401);
@@ -207,23 +211,25 @@ function parseStructured(result: {
 
 async function seedRun(
   origin: string,
-  workspaceId: WorkspaceId,
   trustedRuntimeRoot: string,
+  authHeaders: Record<string, string>,
 ) {
   const integrity = sha256IntegrityOf(
     await fs.readFile(path.join(trustedRuntimeRoot, "echo-agent.ts")),
   );
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
-    body: { workspaceId, key: `echo-${workspaceId}`, name: "Echo" },
+    headers: authHeaders,
+    body: { key: "echo-concurrency", name: "Echo" },
   });
   const agentId = (agent.body as { id: string }).id;
   const version = await fetchJson(`${origin}/v1/agents/${agentId}/versions`, {
     method: "POST",
+    headers: authHeaders,
     body: {
       manifest: {
         schemaVersion: "1",
-        key: `echo-${workspaceId}`,
+        key: "echo-concurrency",
         name: "Echo",
         runtime: {
           type: "TRUSTED_TYPESCRIPT",
@@ -240,16 +246,18 @@ async function seedRun(
   const agentVersionId = (version.body as { id: string }).id;
   const created = await fetchJson(`${origin}/v1/runs`, {
     method: "POST",
+    headers: authHeaders,
     body: {
-      workspaceId,
       agentId,
       agentVersionId,
-      input: { workspaceId },
+      input: { hello: "concurrency" },
     },
   });
   const runId = (created.body as { run: { id: string } }).run.id;
   await waitUntil(async () => {
-    const run = await fetchJson(`${origin}/v1/runs/${runId}`);
+    const run = await fetchJson(`${origin}/v1/runs/${runId}`, {
+      headers: authHeaders,
+    });
     return (run.body as { status?: string }).status === "SUCCEEDED";
   });
   return { runId };
@@ -268,14 +276,20 @@ async function copyAgentFixture(file: string) {
 
 async function fetchJson(
   url: string,
-  init?: { readonly method?: string; readonly body?: unknown },
+  init?: {
+    readonly method?: string;
+    readonly body?: unknown;
+    readonly headers?: Record<string, string>;
+  },
 ) {
   const response = await fetch(url, {
     method: init?.method ?? "GET",
-    headers:
-      init?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
+    headers: {
+      ...init?.headers,
+      ...(init?.body === undefined
+        ? {}
+        : { "content-type": "application/json" }),
+    },
     body: init?.body === undefined ? undefined : JSON.stringify(init.body),
   });
   return {

@@ -11,4 +11,12 @@ export class MemoryWorkspaceRepository implements WorkspaceRepository {
   async findById(id: WorkspaceId): Promise<Workspace | null> {
     return this.workspaces.get(id) ?? null;
   }
+
+  async countAll(): Promise<number> {
+    return this.workspaces.size;
+  }
+
+  async listIds(): Promise<readonly WorkspaceId[]> {
+    return [...this.workspaces.keys()].sort();
+  }
 }

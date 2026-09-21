@@ -15,6 +15,7 @@ import type {
   CreateArtifactCommand,
   OpenArtifactContentResult,
 } from "./artifact-application.js";
+import { runtimeControlPlaneScope } from "./control-plane.js";
 
 export interface RuntimeExecutionIdentity {
   readonly workspaceId: WorkspaceId;
@@ -92,7 +93,11 @@ export class CreateRuntimeArtifact {
       producerRunAttemptId: command.execution.runAttemptId,
     };
 
-    const artifact = await this.artifacts.createArtifact.execute(createCommand);
+    const scope = runtimeControlPlaneScope(command.execution.workspaceId);
+    const artifact = await this.artifacts.createArtifact.execute(
+      scope,
+      createCommand,
+    );
     return toRuntimeArtifactView(artifact);
   }
 }
@@ -104,7 +109,11 @@ export class GetRuntimeArtifact {
     artifactId: ArtifactId,
     execution: RuntimeExecutionIdentity,
   ): Promise<RuntimeArtifactView> {
-    const artifact = await this.artifacts.getArtifact.execute(artifactId);
+    const scope = runtimeControlPlaneScope(execution.workspaceId);
+    const artifact = await this.artifacts.getArtifact.execute(
+      scope,
+      artifactId,
+    );
     assertWorkspaceAccess(artifact, execution.workspaceId);
     return toRuntimeArtifactView(artifact);
   }
@@ -117,9 +126,13 @@ export class OpenRuntimeArtifactContent {
     artifactId: ArtifactId,
     execution: RuntimeExecutionIdentity,
   ): Promise<OpenArtifactContentResult> {
-    const artifact = await this.artifacts.getArtifact.execute(artifactId);
+    const scope = runtimeControlPlaneScope(execution.workspaceId);
+    const artifact = await this.artifacts.getArtifact.execute(
+      scope,
+      artifactId,
+    );
     assertWorkspaceAccess(artifact, execution.workspaceId);
-    return this.artifacts.openArtifactContent.execute(artifactId);
+    return this.artifacts.openArtifactContent.execute(scope, artifactId);
   }
 }
 

@@ -1,4 +1,4 @@
-import type { AgentId, AgentVersionId } from "@osva/contracts";
+import type { AgentId, AgentVersionId, WorkspaceId } from "@osva/contracts";
 import {
   AgentNotFoundError,
   AgentVersion,
@@ -30,6 +30,24 @@ export class MemoryAgentRepository implements AgentRepository {
 
   async findAgentById(id: AgentId): Promise<Agent | null> {
     return this.agents.get(id) ?? null;
+  }
+
+  async findAgentByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: AgentId,
+  ): Promise<Agent | null> {
+    const agent = this.agents.get(id);
+    if (agent === undefined || agent.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return agent;
+  }
+
+  async listAgentsByWorkspaceId(workspaceId: WorkspaceId): Promise<Agent[]> {
+    return [...this.agents.values()]
+      .filter((agent) => agent.workspaceId === workspaceId)
+      .sort(compareAgents);
   }
 
   async listAgents(): Promise<Agent[]> {

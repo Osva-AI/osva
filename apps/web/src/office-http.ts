@@ -5,7 +5,6 @@ import type {
   OfficeWorkerId,
   RoleId,
   TeamId,
-  WorkspaceId,
 } from "@osva/contracts";
 import type { RunAttemptId, RunId, WorkflowRunId } from "@osva/contracts";
 import {
@@ -19,7 +18,6 @@ import {
   createTeamRequestSchema,
   goalListResourceSchema,
   goalResourceSchema,
-  listOfficeResourcesQuerySchema,
   officeWorkerListResourceSchema,
   officeWorkerResourceSchema,
   roleListResourceSchema,
@@ -47,6 +45,7 @@ import type {
   ReconcileAssignment,
 } from "@osva/orchestration";
 
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -124,14 +123,10 @@ async function dispatchOfficeRoute(
   searchParams: URLSearchParams,
   services: OfficeHttpServices,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "officeWorkers") {
     if (method === "GET") {
-      const workspaceId = parseWorkspaceQuery(searchParams, response);
-      if (workspaceId === undefined) {
-        return;
-      }
-
-      const list = await services.office.listOfficeWorkers.execute(workspaceId);
+      const list = await services.office.listOfficeWorkers.execute(scope);
       sendJson(response, 200, toOfficeWorkerListResource(list));
       return;
     }
@@ -145,9 +140,10 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const created = await services.office.createOfficeWorker.execute(
-        parsed.data,
-      );
+      const created = await services.office.createOfficeWorker.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toOfficeWorkerResource(created));
       return;
     }
@@ -164,6 +160,7 @@ async function dispatchOfficeRoute(
   if (route.kind === "officeWorker") {
     if (method === "GET") {
       const worker = await services.office.getOfficeWorker.execute(
+        scope,
         route.officeWorkerId,
       );
       sendJson(response, 200, toOfficeWorkerResource(worker));
@@ -179,7 +176,7 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const updated = await services.office.updateOfficeWorker.execute({
+      const updated = await services.office.updateOfficeWorker.execute(scope, {
         officeWorkerId: route.officeWorkerId,
         ...parsed.data,
       });
@@ -198,12 +195,7 @@ async function dispatchOfficeRoute(
 
   if (route.kind === "roles") {
     if (method === "GET") {
-      const workspaceId = parseWorkspaceQuery(searchParams, response);
-      if (workspaceId === undefined) {
-        return;
-      }
-
-      const list = await services.office.listRoles.execute(workspaceId);
+      const list = await services.office.listRoles.execute(scope);
       sendJson(response, 200, toRoleListResource(list));
       return;
     }
@@ -217,7 +209,10 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const created = await services.office.createRole.execute(parsed.data);
+      const created = await services.office.createRole.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toRoleResource(created));
       return;
     }
@@ -233,7 +228,7 @@ async function dispatchOfficeRoute(
 
   if (route.kind === "role") {
     if (method === "GET") {
-      const role = await services.office.getRole.execute(route.roleId);
+      const role = await services.office.getRole.execute(scope, route.roleId);
       sendJson(response, 200, toRoleResource(role));
       return;
     }
@@ -247,7 +242,7 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const updated = await services.office.updateRole.execute({
+      const updated = await services.office.updateRole.execute(scope, {
         roleId: route.roleId,
         ...parsed.data,
       });
@@ -266,12 +261,7 @@ async function dispatchOfficeRoute(
 
   if (route.kind === "teams") {
     if (method === "GET") {
-      const workspaceId = parseWorkspaceQuery(searchParams, response);
-      if (workspaceId === undefined) {
-        return;
-      }
-
-      const list = await services.office.listTeams.execute(workspaceId);
+      const list = await services.office.listTeams.execute(scope);
       sendJson(response, 200, toTeamListResource(list));
       return;
     }
@@ -285,7 +275,10 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const created = await services.office.createTeam.execute(parsed.data);
+      const created = await services.office.createTeam.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toTeamResource(created));
       return;
     }
@@ -301,7 +294,7 @@ async function dispatchOfficeRoute(
 
   if (route.kind === "team") {
     if (method === "GET") {
-      const team = await services.office.getTeam.execute(route.teamId);
+      const team = await services.office.getTeam.execute(scope, route.teamId);
       sendJson(response, 200, toTeamResource(team));
       return;
     }
@@ -315,7 +308,7 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const updated = await services.office.updateTeam.execute({
+      const updated = await services.office.updateTeam.execute(scope, {
         teamId: route.teamId,
         ...parsed.data,
       });
@@ -335,6 +328,7 @@ async function dispatchOfficeRoute(
   if (route.kind === "teamMemberships") {
     if (method === "GET") {
       const memberships = await services.office.listTeamMemberships.execute(
+        scope,
         route.teamId,
       );
       sendJson(response, 200, toTeamMembershipListResource(memberships));
@@ -350,7 +344,7 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const created = await services.office.addTeamMembership.execute({
+      const created = await services.office.addTeamMembership.execute(scope, {
         teamId: route.teamId,
         ...parsed.data,
       });
@@ -369,12 +363,7 @@ async function dispatchOfficeRoute(
 
   if (route.kind === "goals") {
     if (method === "GET") {
-      const workspaceId = parseWorkspaceQuery(searchParams, response);
-      if (workspaceId === undefined) {
-        return;
-      }
-
-      const list = await services.office.listGoals.execute(workspaceId);
+      const list = await services.office.listGoals.execute(scope);
       sendJson(response, 200, toGoalListResource(list));
       return;
     }
@@ -388,7 +377,10 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const created = await services.office.createGoal.execute(parsed.data);
+      const created = await services.office.createGoal.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toGoalResource(created));
       return;
     }
@@ -404,7 +396,7 @@ async function dispatchOfficeRoute(
 
   if (route.kind === "goal") {
     if (method === "GET") {
-      const goal = await services.office.getGoal.execute(route.goalId);
+      const goal = await services.office.getGoal.execute(scope, route.goalId);
       sendJson(response, 200, toGoalResource(goal));
       return;
     }
@@ -418,7 +410,7 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const updated = await services.office.updateGoal.execute({
+      const updated = await services.office.updateGoal.execute(scope, {
         goalId: route.goalId,
         ...parsed.data,
       });
@@ -437,12 +429,7 @@ async function dispatchOfficeRoute(
 
   if (route.kind === "assignments") {
     if (method === "GET") {
-      const workspaceId = parseWorkspaceQuery(searchParams, response);
-      if (workspaceId === undefined) {
-        return;
-      }
-
-      const list = await services.office.listAssignments.execute(workspaceId);
+      const list = await services.office.listAssignments.execute(scope);
       sendJson(response, 200, toAssignmentListResource(list));
       return;
     }
@@ -456,9 +443,10 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const created = await services.office.createAssignment.execute(
-        parsed.data,
-      );
+      const created = await services.office.createAssignment.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toAssignmentResource(created));
       return;
     }
@@ -491,7 +479,7 @@ async function dispatchOfficeRoute(
         return;
       }
 
-      const updated = await services.office.updateAssignment.execute({
+      const updated = await services.office.updateAssignment.execute(scope, {
         assignmentId: route.assignmentId,
         ...parsed.data,
       });
@@ -542,6 +530,7 @@ async function dispatchOfficeRoute(
     }
 
     const cancelled = await services.office.cancelAssignment.execute(
+      scope,
       route.assignmentId,
     );
     sendJson(response, 200, toAssignmentResource(cancelled));
@@ -550,97 +539,87 @@ async function dispatchOfficeRoute(
 
 function matchOfficeRoute(path: string): OfficeRoute | undefined {
   const segments = path.split("/").filter((segment) => segment.length > 0);
-  if (segments.length < 2 || segments[0] !== "v1") {
+  if (segments.length < 3 || segments[0] !== "v1" || segments[1] !== "office") {
     return undefined;
   }
 
-  if (segments[1] === "office-workers") {
-    if (segments.length === 2) {
+  const resource = segments[2];
+
+  if (resource === "workers") {
+    if (segments.length === 3) {
       return { kind: "officeWorkers" };
     }
 
-    if (segments.length === 3) {
+    if (segments.length === 4) {
       return {
         kind: "officeWorker",
-        officeWorkerId: segments[2] as OfficeWorkerId,
+        officeWorkerId: segments[3] as OfficeWorkerId,
       };
     }
   }
 
-  if (segments[1] === "roles") {
-    if (segments.length === 2) {
+  if (resource === "roles") {
+    if (segments.length === 3) {
       return { kind: "roles" };
     }
 
-    if (segments.length === 3) {
-      return { kind: "role", roleId: segments[2] as RoleId };
+    if (segments.length === 4) {
+      return { kind: "role", roleId: segments[3] as RoleId };
     }
   }
 
-  if (segments[1] === "teams") {
-    if (segments.length === 2) {
+  if (resource === "teams") {
+    if (segments.length === 3) {
       return { kind: "teams" };
     }
 
-    if (segments.length === 3) {
-      return { kind: "team", teamId: segments[2] as TeamId };
+    if (segments.length === 4) {
+      return { kind: "team", teamId: segments[3] as TeamId };
     }
 
-    if (segments.length === 4 && segments[3] === "memberships") {
-      return { kind: "teamMemberships", teamId: segments[2] as TeamId };
+    if (segments.length === 5 && segments[4] === "memberships") {
+      return { kind: "teamMemberships", teamId: segments[3] as TeamId };
     }
   }
 
-  if (segments[1] === "goals") {
-    if (segments.length === 2) {
+  if (resource === "goals") {
+    if (segments.length === 3) {
       return { kind: "goals" };
     }
 
-    if (segments.length === 3) {
-      return { kind: "goal", goalId: segments[2] as GoalId };
+    if (segments.length === 4) {
+      return { kind: "goal", goalId: segments[3] as GoalId };
     }
   }
 
-  if (segments[1] === "assignments") {
-    if (segments.length === 2) {
+  if (resource === "assignments") {
+    if (segments.length === 3) {
       return { kind: "assignments" };
     }
 
-    if (segments.length === 3) {
-      return { kind: "assignment", assignmentId: segments[2] as AssignmentId };
-    }
-
-    if (segments.length === 4 && segments[3] === "launch") {
+    if (segments.length === 4) {
       return {
-        kind: "assignmentLaunch",
-        assignmentId: segments[2] as AssignmentId,
+        kind: "assignment",
+        assignmentId: segments[3] as AssignmentId,
       };
     }
 
-    if (segments.length === 4 && segments[3] === "cancel") {
+    if (segments.length === 5 && segments[4] === "launch") {
+      return {
+        kind: "assignmentLaunch",
+        assignmentId: segments[3] as AssignmentId,
+      };
+    }
+
+    if (segments.length === 5 && segments[4] === "cancel") {
       return {
         kind: "assignmentCancel",
-        assignmentId: segments[2] as AssignmentId,
+        assignmentId: segments[3] as AssignmentId,
       };
     }
   }
 
   return undefined;
-}
-
-function parseWorkspaceQuery(
-  searchParams: URLSearchParams,
-  response: ServerResponse,
-): WorkspaceId | undefined {
-  const parsed = listOfficeResourcesQuerySchema.safeParse({
-    workspaceId: searchParams.get("workspaceId") ?? undefined,
-  });
-  if (!parsed.success) {
-    sendJson(response, 400, { status: "invalid_request" });
-    return undefined;
-  }
-
-  return parsed.data.workspaceId as WorkspaceId;
 }
 
 function toOfficeWorkerResource(worker: OfficeWorker) {
@@ -757,3 +736,29 @@ function toAssignmentListResource(assignments: readonly Assignment[]) {
     items: assignments.map(toAssignmentResource),
   });
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/office/workers" },
+  { method: "POST", path: "/v1/office/workers" },
+  { method: "GET", path: "/v1/office/workers/:officeWorkerId" },
+  { method: "PATCH", path: "/v1/office/workers/:officeWorkerId" },
+  { method: "GET", path: "/v1/office/roles" },
+  { method: "POST", path: "/v1/office/roles" },
+  { method: "GET", path: "/v1/office/roles/:roleId" },
+  { method: "PATCH", path: "/v1/office/roles/:roleId" },
+  { method: "GET", path: "/v1/office/teams" },
+  { method: "POST", path: "/v1/office/teams" },
+  { method: "GET", path: "/v1/office/teams/:teamId" },
+  { method: "PATCH", path: "/v1/office/teams/:teamId" },
+  { method: "GET", path: "/v1/office/teams/:teamId/memberships" },
+  { method: "POST", path: "/v1/office/teams/:teamId/memberships" },
+  { method: "GET", path: "/v1/office/goals" },
+  { method: "POST", path: "/v1/office/goals" },
+  { method: "GET", path: "/v1/office/goals/:goalId" },
+  { method: "PATCH", path: "/v1/office/goals/:goalId" },
+  { method: "GET", path: "/v1/office/assignments" },
+  { method: "POST", path: "/v1/office/assignments" },
+  { method: "GET", path: "/v1/office/assignments/:assignmentId" },
+  { method: "PATCH", path: "/v1/office/assignments/:assignmentId" },
+  { method: "POST", path: "/v1/office/assignments/:assignmentId/launch" },
+  { method: "POST", path: "/v1/office/assignments/:assignmentId/cancel" },
+] as const;

@@ -13,15 +13,25 @@ class HTTPClient:
         self,
         base_url: str,
         *,
+        api_key: str,
         timeout_seconds: float = 30.0,
         client: httpx.Client | None = None,
     ) -> None:
         normalized = base_url.strip().rstrip("/")
         if not normalized:
             raise ValueError("base_url must not be empty.")
+        trimmed_key = api_key.strip()
+        if not trimmed_key:
+            raise ValueError("api_key must not be empty.")
         self._base_url = normalized
         self._timeout = timeout_seconds
+        self._api_key = trimmed_key
         self._client = client or httpx.Client(timeout=timeout_seconds)
+
+    def _auth_headers(self, headers: dict[str, str] | None = None) -> dict[str, str]:
+        merged = dict(headers or {})
+        merged.setdefault("authorization", f"Bearer {self._api_key}")
+        return merged
 
     def request(
         self,
@@ -34,9 +44,9 @@ class HTTPClient:
     ) -> dict[str, Any]:
         params = {key: value for key, value in (query or {}).items() if value is not None}
         url = f"{self._base_url}{path if path.startswith('/') else f'/{path}'}"
-        request_headers = headers
+        request_headers = self._auth_headers(headers)
         if body is not None:
-            request_headers = {**(request_headers or {}), "content-type": "application/json"}
+            request_headers = {**request_headers, "content-type": "application/json"}
         try:
             response = self._client.request(
                 method,
@@ -74,7 +84,12 @@ class HTTPClient:
     ) -> dict[str, Any]:
         url = f"{self._base_url}{path if path.startswith('/') else f'/{path}'}"
         try:
-            response = self._client.post(url, data=data, files=files, headers=headers)
+            response = self._client.post(
+                url,
+                data=data,
+                files=files,
+                headers=self._auth_headers(headers),
+            )
         except httpx.HTTPError as error:
             raise OSVATransportError("OSVA API transport failed.") from error
 
@@ -103,7 +118,11 @@ class HTTPClient:
         params = {key: value for key, value in (query or {}).items() if value is not None}
         url = f"{self._base_url}{path if path.startswith('/') else f'/{path}'}"
         try:
-            response = self._client.get(url, params=params)
+            response = self._client.get(
+                url,
+                params=params,
+                headers=self._auth_headers(),
+            )
         except httpx.HTTPError as error:
             raise OSVATransportError("OSVA API transport failed.") from error
 

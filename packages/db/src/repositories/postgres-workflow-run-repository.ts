@@ -2,6 +2,7 @@ import type {
   WorkflowNodeRunId,
   WorkflowRunId,
   WorkflowRunState,
+  WorkspaceId,
 } from "@osva/contracts";
 import {
   DomainInvariantError,
@@ -49,6 +50,21 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
       .select()
       .from(workflowRuns)
       .where(eq(workflowRuns.id, id))
+      .limit(1);
+
+    return row === undefined ? null : workflowRunFromRow(row);
+  }
+
+  async findWorkflowRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: WorkflowRunId,
+  ): Promise<WorkflowRun | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(workflowRuns)
+      .where(
+        and(eq(workflowRuns.id, id), eq(workflowRuns.workspaceId, workspaceId)),
+      )
       .limit(1);
 
     return row === undefined ? null : workflowRunFromRow(row);

@@ -133,3 +133,10 @@ export const PERSISTED_ASSIGNMENT_TARGET_TYPES = [
   "AGENT_VERSION",
   "WORKFLOW_VERSION",
 ] as const;
+
+export const PERSISTED_COMMUNITY_EDITION_ROLES = [
+  "VIEWER",
+  "OPERATOR",
+  "EDITOR",
+  "ADMIN",
+] as const;

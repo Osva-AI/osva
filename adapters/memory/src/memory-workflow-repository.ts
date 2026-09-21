@@ -1,4 +1,8 @@
-import type { WorkflowId, WorkflowVersionId } from "@osva/contracts";
+import type {
+  WorkflowId,
+  WorkflowVersionId,
+  WorkspaceId,
+} from "@osva/contracts";
 import {
   DomainInvariantError,
   DuplicateWorkflowKeyError,
@@ -32,6 +36,26 @@ export class MemoryWorkflowRepository implements WorkflowRepository {
 
   async findWorkflowById(id: WorkflowId): Promise<Workflow | null> {
     return this.workflows.get(id) ?? null;
+  }
+
+  async findWorkflowByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: WorkflowId,
+  ): Promise<Workflow | null> {
+    const workflow = this.workflows.get(id);
+    if (workflow === undefined || workflow.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return workflow;
+  }
+
+  async listWorkflowsByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<Workflow[]> {
+    return [...this.workflows.values()]
+      .filter((workflow) => workflow.workspaceId === workspaceId)
+      .sort(compareWorkflows);
   }
 
   async listWorkflows(): Promise<Workflow[]> {

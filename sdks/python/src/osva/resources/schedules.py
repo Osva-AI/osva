@@ -6,16 +6,11 @@ from osva.http_client import HTTPClient
 
 
 class SchedulesResource:
-    def __init__(self, client: HTTPClient, workspace_id: str) -> None:
+    def __init__(self, client: HTTPClient) -> None:
         self._client = client
-        self._workspace_id = workspace_id
 
     def list(self, **query: str | None) -> dict[str, Any]:
-        return self._client.request(
-            "GET",
-            "/v1/schedules",
-            query={"workspaceId": self._workspace_id, **query},
-        )
+        return self._client.request("GET", "/v1/schedules", query=query)
 
     def get(self, schedule_id: str) -> dict[str, Any]:
         return self._client.request("GET", f"/v1/schedules/{schedule_id}")

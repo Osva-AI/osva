@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { WorkspaceId } from "@osva/contracts";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import { fetchJson, setTestAuthHeaders } from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 import {
   FAKE_MCP_BEARER_TOKEN,
@@ -27,7 +28,6 @@ describe("Connector Registry HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/connectors`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "fake-mcp",
         name: "Fake MCP",
       },
@@ -35,7 +35,6 @@ describe("Connector Registry HTTP API", () => {
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({
       id: "id-1",
-      workspaceId: WORKSPACE_ID,
       key: "fake-mcp",
       name: "Fake MCP",
       createdAt: TEST_NOW.toISOString(),
@@ -67,7 +66,6 @@ describe("Connector Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/connectors`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "fake-mcp",
         name: "Fake MCP",
       },
@@ -185,6 +183,39 @@ describe("Connector Registry HTTP API", () => {
     });
   });
 
+  it("redacts secret-reference keys from public ConnectorVersion responses", async () => {
+    const fakeMcp = await startFakeHttpMcpServer({ requireAuth: true });
+    fakeMcpServers.push(fakeMcp);
+    const { origin } = await listen({
+      secrets: { SUPER_SECRET_MCP_KEY_NAME: FAKE_MCP_BEARER_TOKEN },
+    });
+    await fetchJson(`${origin}/v1/connectors`, {
+      method: "POST",
+      body: {
+        key: "secure-mcp",
+        name: "Secure MCP",
+      },
+    });
+    const version = await fetchJson(`${origin}/v1/connectors/id-1/versions`, {
+      method: "POST",
+      body: {
+        kind: "MCP",
+        transport: "STREAMABLE_HTTP",
+        transportConfig: { endpointUrl: fakeMcp.endpointUrl },
+        auth: {
+          type: "BEARER",
+          tokenSecret: { key: "SUPER_SECRET_MCP_KEY_NAME" },
+        },
+      },
+    });
+    expect(version.status).toBe(201);
+    const bodyText = JSON.stringify(version.body);
+    expect(bodyText).not.toContain("SUPER_SECRET_MCP_KEY_NAME");
+    expect(version.body).toMatchObject({
+      auth: { type: "BEARER", configured: true },
+    });
+  });
+
   it("supports bearer auth on ConnectorVersions during discovery", async () => {
     const fakeMcp = await startFakeHttpMcpServer({ requireAuth: true });
     fakeMcpServers.push(fakeMcp);
@@ -194,7 +225,6 @@ describe("Connector Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/connectors`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "secure-mcp",
         name: "Secure MCP",
       },
@@ -231,7 +261,6 @@ describe("Connector Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/connectors`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "fake-mcp",
         name: "Fake MCP",
       },
@@ -245,13 +274,14 @@ describe("Connector Registry HTTP API", () => {
   async function listen(options?: {
     readonly secrets?: Readonly<Record<string, string>>;
   }) {
-    const { server } = await createTestWebApplication({
+    const { server, testApiKey } = await createTestWebApplication({
       workspaceId: WORKSPACE_ID,
       secrets: options?.secrets,
     });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);
-    return { origin: `http://127.0.0.1:${String(port)}` };
+    setTestAuthHeaders(testApiKey);
+    return { origin: `http://127.0.0.1:${String(port)}`, testApiKey };
   }
 });
 
@@ -262,7 +292,6 @@ async function seedConnectorVersion(
   await fetchJson(`${origin}/v1/connectors`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "fake-mcp",
       name: "Fake MCP",
     },
@@ -276,25 +305,4 @@ async function seedConnectorVersion(
     },
   });
   return (version.body as { id: string }).id;
-}
-
-async function fetchJson(
-  url: string,
-  init?: {
-    readonly method?: string;
-    readonly body?: unknown;
-  },
-) {
-  const response = await fetch(url, {
-    method: init?.method ?? "GET",
-    headers:
-      init?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return {
-    status: response.status,
-    body: await response.json(),
-  };
 }

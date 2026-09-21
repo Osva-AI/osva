@@ -38,6 +38,7 @@ export type {
   KnowledgeSourceId,
   KnowledgeIndexId,
   KnowledgeChunkId,
+  ApiKeyId,
 } from "./ids.js";
 
 export type { JsonSchemaRecord } from "./json-schema.js";
@@ -122,10 +123,22 @@ export type {
 } from "./connector-registry.js";
 
 export type {
+  PublicConnectorAuthConfigV1,
+  PublicConnectorTransportConfigV1,
+  PublicSecretBindingV1,
+} from "./connector-public.js";
+export {
+  mapConnectorAuthToPublic,
+  mapConnectorTransportConfigToPublic,
+  mapConnectorVersionToPublicResource,
+} from "./connector-public.js";
+
+export type { McpConnectorExecutionConfig } from "./mcp-connector-execution.js";
+
+export type {
   DiscoveredMcpTool,
   McpClientAdapter,
   McpClientPool,
-  McpClientPoolKey,
   McpToolInvokeRequest,
   McpToolInvokeResult,
 } from "./mcp-client.js";
@@ -137,6 +150,26 @@ export {
   buildOsvaMcpResourceUri,
   parseOsvaMcpResourceUri,
 } from "./mcp-server.js";
+export {
+  API_KEY_NAME_MAX_LENGTH,
+  AUTHENTICATION_FAILURE_REASONS,
+  AUTHENTICATION_METHODS,
+  AUTHORIZATION_ACTIONS,
+  COMMUNITY_EDITION_ROLES,
+  OSVA_DEFAULT_JSON_BODY_MAX_BYTES,
+  OSVA_REQUEST_ID_HEADER,
+  PUBLIC_API_ERROR_CODES,
+} from "./security.js";
+export type {
+  AuthenticationFailureReason,
+  AuthenticationMethod,
+  AuthContextResourceV1,
+  AuthorizationAction,
+  CommunityEditionRole,
+  PublicApiErrorCode,
+  RequestPrincipal,
+} from "./security.js";
+
 export type {
   McpPrincipal,
   OsvaMcpAgentRunV1Input,

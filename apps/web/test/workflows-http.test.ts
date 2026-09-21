@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { AgentVersionId, WorkspaceId } from "@osva/contracts";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import {
+  authHeadersForKey,
+  fetchJson,
+  setTestAuthHeaders,
+} from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
@@ -35,7 +40,6 @@ describe("Workflow Registry HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/workflows`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "research-report",
         name: "Research Report",
       },
@@ -89,7 +93,6 @@ describe("Workflow Registry HTTP API", () => {
     const workflow = await fetchJson(`${origin}/v1/workflows`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "research-report",
         name: "Research Report",
       },
@@ -150,7 +153,6 @@ describe("Workflow Registry HTTP API", () => {
     const workflow = await fetchJson(`${origin}/v1/workflows`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "research-report",
         name: "Research Report",
       },
@@ -183,7 +185,6 @@ describe("Workflow Registry HTTP API", () => {
     const workflow = await fetchJson(`${origin}/v1/workflows`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "research-report",
         name: "Research Report",
       },
@@ -213,7 +214,6 @@ describe("Workflow Registry HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/workflow-runs`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         workflowVersionId,
         input: { topic: "osva" },
       },
@@ -235,11 +235,10 @@ describe("Workflow Registry HTTP API", () => {
   });
 
   it("rejects WorkflowVersion mutation methods", async () => {
-    const { origin, agentVersionId } = await listenWithAgent();
+    const { origin, agentVersionId, authHeaders } = await listenWithAgent();
     const workflow = await fetchJson(`${origin}/v1/workflows`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "research-report",
         name: "Research Report",
       },
@@ -269,7 +268,10 @@ describe("Workflow Registry HTTP API", () => {
       `${origin}/v1/workflows/${workflowId}/versions/${String((version.body as { id: string }).id)}`,
       {
         method: "PATCH",
-        headers: { "content-type": "application/json" },
+        headers: {
+          ...authHeaders,
+          "content-type": "application/json",
+        },
         body: JSON.stringify({ definition: version.body }),
       },
     );
@@ -282,7 +284,6 @@ describe("Workflow Registry HTTP API", () => {
     const workflow = await fetchJson(`${origin}/v1/workflows`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "routing-report",
         name: "Routing Report",
       },
@@ -358,16 +359,16 @@ describe("Workflow Registry HTTP API", () => {
   });
 
   async function listenWithAgent() {
-    const { server, agents, queue } = await createTestWebApplication({
-      workspaceId: WORKSPACE_ID,
-    });
+    const { server, agents, queue, testApiKey } =
+      await createTestWebApplication({ workspaceId: WORKSPACE_ID });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);
+    setTestAuthHeaders(testApiKey);
     const origin = `http://127.0.0.1:${String(port)}`;
+    const authHeaders = authHeadersForKey(testApiKey);
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
       },
@@ -380,23 +381,8 @@ describe("Workflow Registry HTTP API", () => {
       origin,
       queue,
       agents,
+      authHeaders,
       agentVersionId: (created.body as { id: string }).id as AgentVersionId,
     };
   }
 });
-
-async function fetchJson(
-  url: string,
-  options?: { readonly method?: string; readonly body?: unknown },
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: options?.method ?? "GET",
-    headers:
-      options?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body:
-      options?.body === undefined ? undefined : JSON.stringify(options.body),
-  });
-  return { status: response.status, body: await response.json() };
-}

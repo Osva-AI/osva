@@ -12,18 +12,21 @@ import { describe, expect, it } from "vitest";
 import { MemoryToolRepository } from "../src/memory-tool-repository.js";
 import { MemoryWorkspaceRepository } from "../src/memory-workspace-repository.js";
 import { NOW, workspaceId } from "./fixtures.js";
+import { fakeControlPlaneScope } from "./test-scope.js";
+
+const scope = fakeControlPlaneScope(workspaceId);
 
 describe("MemoryToolRepository", () => {
   it("creates, reads, lists, and renames Tools", async () => {
     const { application } = await createHarness();
-    const created = await application.createTool.execute({
+    const created = await application.createTool.execute(scope, {
       workspaceId,
       key: "echo",
       name: "Echo",
     });
-    const loaded = await application.getTool.execute(created.id);
-    const listed = await application.listTools.execute();
-    const renamed = await application.updateToolMetadata.execute({
+    const loaded = await application.getTool.execute(scope, created.id);
+    const listed = await application.listTools.execute(scope);
+    const renamed = await application.updateToolMetadata.execute(scope, {
       toolId: created.id,
       name: "Renamed Echo",
     });
@@ -37,33 +40,33 @@ describe("MemoryToolRepository", () => {
   it("rejects an unknown Tool", async () => {
     const { application } = await createHarness();
     await expect(
-      application.getTool.execute("missing" as ToolId),
+      application.getTool.execute(scope, "missing" as ToolId),
     ).rejects.toBeInstanceOf(ToolNotFoundError);
   });
 
   it("appends immutable ToolVersions with per-tool numbering", async () => {
     const { application } = await createHarness();
-    const first = await application.createTool.execute({
+    const first = await application.createTool.execute(scope, {
       workspaceId,
       key: "echo",
       name: "Echo",
     });
-    const second = await application.createTool.execute({
+    const second = await application.createTool.execute(scope, {
       workspaceId,
       key: "clock",
       name: "Clock",
     });
-    const v1 = await application.appendToolVersion.execute({
+    const v1 = await application.appendToolVersion.execute(scope, {
       toolId: first.id,
       type: "INTERNAL",
       implementation: "OSVA_ECHO_V1",
     });
-    const v2 = await application.appendToolVersion.execute({
+    const v2 = await application.appendToolVersion.execute(scope, {
       toolId: first.id,
       type: "INTERNAL",
       implementation: "OSVA_ECHO_V1",
     });
-    const otherV1 = await application.appendToolVersion.execute({
+    const otherV1 = await application.appendToolVersion.execute(scope, {
       toolId: second.id,
       type: "INTERNAL",
       implementation: "OSVA_CLOCK_NOW_V1",
@@ -76,24 +79,24 @@ describe("MemoryToolRepository", () => {
 
   it("enforces nested ToolVersion ownership", async () => {
     const { application } = await createHarness();
-    const first = await application.createTool.execute({
+    const first = await application.createTool.execute(scope, {
       workspaceId,
       key: "echo",
       name: "Echo",
     });
-    const second = await application.createTool.execute({
+    const second = await application.createTool.execute(scope, {
       workspaceId,
       key: "clock",
       name: "Clock",
     });
-    const version = await application.appendToolVersion.execute({
+    const version = await application.appendToolVersion.execute(scope, {
       toolId: first.id,
       type: "INTERNAL",
       implementation: "OSVA_ECHO_V1",
     });
 
     await expect(
-      application.getToolVersion.execute({
+      application.getToolVersion.execute(scope, {
         toolId: second.id,
         toolVersionId: version.id,
       }),
@@ -123,14 +126,14 @@ describe("MemoryToolRepository", () => {
       },
     });
 
-    await application.createTool.execute({
+    await application.createTool.execute(scope, {
       workspaceId,
       key: "echo",
       name: "Echo",
     });
 
     await expect(
-      application.createTool.execute({
+      application.createTool.execute(scope, {
         workspaceId,
         key: "echo",
         name: "Duplicate",
@@ -141,12 +144,12 @@ describe("MemoryToolRepository", () => {
   it("rejects replacing an immutable ToolVersion", async () => {
     const tools = new MemoryToolRepository();
     const { application } = await createHarnessWithRepo(tools);
-    const tool = await application.createTool.execute({
+    const tool = await application.createTool.execute(scope, {
       workspaceId,
       key: "echo",
       name: "Echo",
     });
-    const version = await application.appendToolVersion.execute({
+    const version = await application.appendToolVersion.execute(scope, {
       toolId: tool.id,
       type: "INTERNAL",
       implementation: "OSVA_ECHO_V1",

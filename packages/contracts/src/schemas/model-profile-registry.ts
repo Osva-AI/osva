@@ -13,7 +13,6 @@ import { modelProfileVersionPricingSchema } from "./model-pricing.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 
 export const createModelProfileRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
 });

@@ -1,6 +1,8 @@
+import type { CommunityEditionRole } from "./security.js";
 import type {
   AgentId,
   AgentVersionId,
+  ApiKeyId,
   RunId,
   WorkflowId,
   WorkflowRunId,
@@ -32,8 +34,11 @@ export const OSVA_MCP_ERROR_CATEGORY = {
 export type OsvaMcpErrorCategory =
   (typeof OSVA_MCP_ERROR_CATEGORY)[keyof typeof OSVA_MCP_ERROR_CATEGORY];
 
+/** Secret-free MCP request identity (aligned with RequestPrincipal). */
 export interface McpPrincipal {
+  readonly subjectId: ApiKeyId;
   readonly workspaceId: WorkspaceId;
+  readonly role: CommunityEditionRole;
 }
 
 export interface OsvaMcpAgentRunV1Input {

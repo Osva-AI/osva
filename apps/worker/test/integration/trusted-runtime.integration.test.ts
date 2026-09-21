@@ -13,12 +13,11 @@ import {
   createDatabase,
   migrateDatabase,
   PostgresRunRepository,
-  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
 
 import { createWebProcess } from "../../../../apps/web/src/process.js";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { createWorkerProcess } from "../../src/process.js";
 import {
   resetStage0Tables,
@@ -69,13 +68,7 @@ describe("trusted TypeScript runtime end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("runs HTTP CreateRun through the trusted runtime and persists output", async () => {
@@ -111,7 +104,6 @@ describe("trusted TypeScript runtime end-to-end", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "echo-agent",
           name: "Echo Agent",
         },
@@ -134,7 +126,6 @@ describe("trusted TypeScript runtime end-to-end", () => {
       const created = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId,
           input: { prompt: "e2e" },
@@ -165,7 +156,6 @@ describe("trusted TypeScript runtime end-to-end", () => {
           ids: {
             runId,
             runAttemptId,
-            workspaceId: WORKSPACE_ID,
             agentId,
             agentVersionId,
           },
@@ -423,7 +413,6 @@ async function createTrustedRun(
   const agent = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: `agent-${entrypoint}`,
       name: "Trusted Agent",
     },
@@ -437,7 +426,6 @@ async function createTrustedRun(
   const created = await fetchJson(`${origin}/v1/runs`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       agentId,
       agentVersionId,
       input,
@@ -459,18 +447,6 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     await delay(50);
   }
   throw new Error("Timed out waiting for trusted runtime execution.");
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }
 
 function delay(ms: number): Promise<void> {

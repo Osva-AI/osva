@@ -27,10 +27,7 @@ export interface ListRunsParams {
 }
 
 export class RunsResource {
-  constructor(
-    private readonly client: OsvaHttpClient,
-    private readonly workspaceId: string,
-  ) {}
+  constructor(private readonly client: OsvaHttpClient) {}
 
   list(params: ListRunsParams = {}): Promise<RunListResource> {
     return this.client.request({
@@ -53,16 +50,11 @@ export class RunsResource {
     });
   }
 
-  create(
-    input: Omit<CreateRunRequest, "workspaceId">,
-  ): Promise<CreateRunResponse> {
+  create(input: CreateRunRequest): Promise<CreateRunResponse> {
     return this.client.request({
       method: "POST",
       path: "/v1/runs",
-      body: {
-        ...input,
-        workspaceId: this.workspaceId,
-      },
+      body: input,
     });
   }
 

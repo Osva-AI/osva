@@ -33,6 +33,7 @@ passes or a concrete environmental limitation is explicitly reported.
 | `pnpm verify:ci` | Same as GitHub `verify` | Fail-fast: format check, lint, typecheck, unit tests, **then** build, integration (including Python SDK runtime E2E), `git diff --check`. Non-mutating. |
 | `pnpm verify:python` | Same as GitHub `python-sdk` | From `sdks/python`: Ruff format/check, mypy, pytest, `python -m build`, then clean generated Python artifacts. |
 | `pnpm verify:ci:clean` | Before review | Environment check, safe generated-artifact clean, `pnpm install --frozen-lockfile`, Python SDK deps, `verify:ci`, `verify:python`, final clean, `git diff --check`, `git status`. |
+| `pnpm db:migrations:verify` | Before review (schema changes) | Read-only verification of locked Drizzle migration history (manifest hashes + journal order). Also run via CI harness tests. |
 
 Typecheck always runs before build. That prevents stale `dist/*.d.ts` from
 hiding TypeScript errors.

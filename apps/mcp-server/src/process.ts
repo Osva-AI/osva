@@ -1,6 +1,6 @@
 import type { McpServerConfig } from "./config.js";
 import { loadMcpServerConfig } from "./config.js";
-import { createBearerTokenMcpAuthenticator } from "./auth.js";
+import { createRestAuthContextMcpAuthenticator } from "./auth.js";
 import { createMcpHttpServer } from "./http-server.js";
 import { logEvent } from "./log.js";
 import { createOsvaClientFactory } from "./osva-client.js";
@@ -15,8 +15,8 @@ export function createMcpServerProcess(
   env: NodeJS.ProcessEnv = process.env,
 ): McpServerProcess {
   const config = loadMcpServerConfig(env);
-  const authenticator = createBearerTokenMcpAuthenticator({
-    tokens: config.bearerTokens,
+  const authenticator = createRestAuthContextMcpAuthenticator({
+    osvaApiBaseUrl: config.osvaApiBaseUrl,
   });
   const clients = createOsvaClientFactory(config.osvaApiBaseUrl);
   const httpServer = createMcpHttpServer({

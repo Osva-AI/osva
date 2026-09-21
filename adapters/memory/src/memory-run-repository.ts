@@ -83,6 +83,18 @@ export class MemoryRunRepository implements RunRepository {
     return this.runs.get(id) ?? null;
   }
 
+  async findRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: RunId,
+  ): Promise<Run | null> {
+    const run = this.runs.get(id);
+    if (run === undefined || run.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return run;
+  }
+
   async findRunByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,
@@ -99,6 +111,10 @@ export class MemoryRunRepository implements RunRepository {
 
   async listRuns(query: ListRunsQuery): Promise<ListRunsResult> {
     const filtered = [...this.runs.values()].filter((run) => {
+      if (run.workspaceId !== query.workspaceId) {
+        return false;
+      }
+
       if (query.agentId !== undefined && run.agentId !== query.agentId) {
         return false;
       }

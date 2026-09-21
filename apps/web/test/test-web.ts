@@ -1,9 +1,14 @@
-import type { WorkflowEventId, WorkspaceId } from "@osva/contracts";
+import type {
+  SecretResolver,
+  WorkflowEventId,
+  WorkspaceId,
+} from "@osva/contracts";
 import {
   createArtifactBlobStore,
   loadArtifactStorageConfig,
 } from "@osva/adapters-artifact-storage";
 import {
+  MemoryApiKeyRepository,
   MemoryAgentRepository,
   MemoryConnectorRepository,
   MemoryEvaluationRepository,
@@ -33,6 +38,7 @@ import {
   createEvaluationApplication,
   createEvaluationRunApplication,
   createEvaluationSuiteApplication,
+  createKnowledgeApplication,
   createMemoryApplication,
   createModelProfileApplication,
   createRunApplication,
@@ -41,9 +47,9 @@ import {
   createToolApplication,
   createWorkflowApplication,
   createOfficeApplication,
-  type KnowledgeApplication,
-  type KnowledgeRepository,
-  type KnowledgeRetriever,
+  AuthenticateApiKey,
+  KnowledgeRetriever,
+  createApiKeyApplication,
 } from "@osva/domain";
 import {
   CreateRun,
@@ -56,16 +62,30 @@ import { createMcpClientPool } from "@osva/adapters-mcp-client";
 import os from "node:os";
 import path from "node:path";
 
+import { TestMemoryKnowledgeRepository } from "./support/memory-knowledge-repository.js";
+
 import { createWebApplication } from "../src/http.js";
 import type { RunHttpServices } from "../src/run-http.js";
+import {
+  createTestWebSecurityServices,
+  seedTestApiKey,
+} from "../src/test-security.js";
 
 export const TEST_NOW = new Date("2026-01-15T12:00:00.000Z");
+
+export {
+  authorizationHeader,
+  seedTestApiKey,
+  type TestApiKeyRecord,
+} from "../src/test-security.js";
 
 export async function createTestWebApplication(options?: {
   readonly readinessCheck?: () => Promise<boolean>;
   readonly workspaceId?: WorkspaceId;
   readonly idPrefix?: string;
   readonly secrets?: Readonly<Record<string, string>>;
+  readonly stdioConnectorsEnabled?: boolean;
+  readonly secretResolver?: SecretResolver;
 }) {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
@@ -116,15 +136,27 @@ export async function createTestWebApplication(options?: {
     },
   };
 
-  if (options?.workspaceId !== undefined) {
-    await workspaces.save(
-      Workspace.create({
-        id: options.workspaceId,
-        name: "Workspace",
-        createdAt: TEST_NOW,
-      }),
-    );
-  }
+  const workspaceId =
+    options?.workspaceId ?? (`ws-test-${String(process.pid)}` as WorkspaceId);
+  await workspaces.save(
+    Workspace.create({
+      id: workspaceId,
+      name: "Workspace",
+      createdAt: TEST_NOW,
+    }),
+  );
+
+  const apiKeys = new MemoryApiKeyRepository();
+  const testApiKey = await seedTestApiKey({
+    apiKeys,
+    workspaceId,
+    now: TEST_NOW,
+  });
+  const authenticateApiKey = new AuthenticateApiKey({
+    apiKeys,
+    clock: { now: () => TEST_NOW },
+  });
+  const security = createTestWebSecurityServices(authenticateApiKey);
 
   const createRun = new CreateRun({ runs, agents, queue });
   const reconcileAssignment = new ReconcileAssignment({
@@ -148,45 +180,44 @@ export async function createTestWebApplication(options?: {
     ids,
   };
 
+  const stdioConnectorsEnabled = options?.stdioConnectorsEnabled ?? true;
+  const secretResolver =
+    options?.secretResolver ?? new MemorySecretResolver(options?.secrets ?? {});
   const mcpClientPool = createMcpClientPool({
-    secretResolver: new MemorySecretResolver(options?.secrets ?? {}),
+    secretResolver,
+    stdioConnectorsEnabled,
+    allowPrivateNetworks: true,
   });
+  const mcpRuntimePolicy = { stdioConnectorsEnabled };
 
-  const stubKnowledge = {
-    createSource: {
-      execute: async () => {
-        throw new Error("stub");
-      },
+  const knowledgeRepository = new TestMemoryKnowledgeRepository();
+  const embeddingDefaults = {
+    provider: "DETERMINISTIC",
+    model: "test",
+    dimensions: 8,
+  };
+  const knowledgeApplication = createKnowledgeApplication({
+    knowledge: knowledgeRepository,
+    artifacts: artifactsRepository,
+    workspaces,
+    indexQueue: {
+      enqueue: async () => undefined,
+      start: async () => undefined,
+      stop: async () => undefined,
     },
-    getSource: {
-      execute: async () => {
-        throw new Error("stub");
-      },
-    },
-    listSources: { execute: async () => ({ sources: [] }) },
-    createIndex: {
-      execute: async () => {
-        throw new Error("stub");
-      },
-    },
-    getIndex: {
-      execute: async () => {
-        throw new Error("stub");
-      },
-    },
-    listIndexes: { execute: async () => ({ indexes: [] }) },
-    retryIndex: {
-      execute: async () => {
-        throw new Error("stub");
-      },
-    },
-  } as unknown as KnowledgeApplication;
-  const stubRetriever = {
-    retrieve: async () => [],
-  } as unknown as KnowledgeRetriever;
-  const stubKnowledgeRepository = {
-    findIndexById: async () => null,
-  } as unknown as KnowledgeRepository;
+    embeddingDefaults,
+    clock,
+    ids,
+  });
+  const knowledgeRetriever = new KnowledgeRetriever({
+    knowledge: knowledgeRepository,
+    embeddings: {
+      embed: async () => ({ vectors: [] }),
+    } as never,
+    vectorStore: {
+      search: async () => [],
+    } as never,
+  });
 
   const server = createWebApplication({
     readinessCheck: options?.readinessCheck ?? (async () => true),
@@ -196,7 +227,7 @@ export async function createTestWebApplication(options?: {
       modelProfiles,
       tools,
       memoryNamespaces,
-      knowledge: stubKnowledgeRepository,
+      knowledge: knowledgeRepository,
       clock,
       ids,
     }),
@@ -217,6 +248,7 @@ export async function createTestWebApplication(options?: {
       tools,
       workspaces,
       mcpClientPool,
+      mcpRuntimePolicy,
       clock,
       ids,
     }),
@@ -307,13 +339,23 @@ export async function createTestWebApplication(options?: {
       ids,
     },
     knowledge: {
-      knowledge: stubKnowledge,
-      retriever: stubRetriever,
+      knowledge: knowledgeApplication,
+      retriever: knowledgeRetriever,
     },
+    apiKeys: createApiKeyApplication({
+      apiKeys,
+      workspaces,
+      clock,
+      ids,
+    }),
+    security,
   });
 
   return {
     server,
+    workspaceId,
+    testApiKey,
+    apiKeys,
     workspaces,
     agents,
     modelProfiles,
@@ -325,6 +367,12 @@ export async function createTestWebApplication(options?: {
     workflowRuns: workflowRunRepository,
     approvalRequests: approvalRequestRepository,
     workflowEvents: workflowEventRepository,
+    workflowWaits: workflowWaitRepository,
+    knowledgeRepository,
+    memoryNamespaces,
+    artifactsRepository,
+    evaluationSuites,
+    office: officeRepository,
     queue,
   };
 }

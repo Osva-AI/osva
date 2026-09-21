@@ -12,7 +12,6 @@ import { jsonValueSchema } from "./json-value.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 
 export const createScheduleRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   key: z.string().min(1),
   name: z.string().min(1),
   agentId: agentIdSchema,
@@ -69,7 +68,6 @@ export const scheduleOccurrenceListResourceSchema = z.strictObject({
 });
 
 export const listSchedulesQuerySchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   limit: z.string().min(1).optional(),
   cursor: z.string().min(1).optional(),
 });

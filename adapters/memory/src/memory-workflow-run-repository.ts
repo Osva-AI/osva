@@ -2,6 +2,7 @@ import type {
   WorkflowNodeRunId,
   WorkflowRunId,
   WorkflowRunState,
+  WorkspaceId,
 } from "@osva/contracts";
 import {
   DomainInvariantError,
@@ -32,6 +33,18 @@ export class MemoryWorkflowRunRepository implements WorkflowRunRepository {
 
   async findWorkflowRunById(id: WorkflowRunId): Promise<WorkflowRun | null> {
     return this.workflowRuns.get(id) ?? null;
+  }
+
+  async findWorkflowRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: WorkflowRunId,
+  ): Promise<WorkflowRun | null> {
+    const workflowRun = this.workflowRuns.get(id);
+    if (workflowRun === undefined || workflowRun.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return workflowRun;
   }
 
   async listActiveWorkflowRuns(limit: number): Promise<readonly WorkflowRun[]> {

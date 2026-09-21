@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { WorkspaceId } from "@osva/contracts";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import {
+  authHeadersForKey,
+  fetchJson,
+  setTestAuthHeaders,
+} from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
 
@@ -34,7 +39,6 @@ describe("Agent Registry HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
       },
@@ -42,7 +46,6 @@ describe("Agent Registry HTTP API", () => {
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({
       id: "id-1",
-      workspaceId: WORKSPACE_ID,
       key: "example-agent",
       name: "Example Agent",
       createdAt: TEST_NOW.toISOString(),
@@ -72,7 +75,10 @@ describe("Agent Registry HTTP API", () => {
     const { origin } = await listen();
     const response = await fetchJson(`${origin}/v1/agents/missing`);
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: "not_found" });
+    expect(response.body).toMatchObject({
+      status: "error",
+      code: "RESOURCE_NOT_FOUND",
+    });
   });
 
   it("rejects client-supplied ids, timestamps, and version numbers", async () => {
@@ -82,7 +88,6 @@ describe("Agent Registry HTTP API", () => {
       method: "POST",
       body: {
         id: "chosen-id",
-        workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
         createdAt: TEST_NOW.toISOString(),
@@ -94,7 +99,6 @@ describe("Agent Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
       },
@@ -116,7 +120,6 @@ describe("Agent Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
       },
@@ -243,7 +246,6 @@ describe("Agent Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
       },
@@ -251,7 +253,6 @@ describe("Agent Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "other-agent",
         name: "Other Agent",
       },
@@ -305,7 +306,10 @@ describe("Agent Registry HTTP API", () => {
       body: { manifest: VALID_MANIFEST },
     });
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: "not_found" });
+    expect(response.body).toMatchObject({
+      status: "error",
+      code: "RESOURCE_NOT_FOUND",
+    });
   });
 
   it("does not leak an AgentVersion through another Agent nested route", async () => {
@@ -313,7 +317,6 @@ describe("Agent Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
       },
@@ -321,7 +324,6 @@ describe("Agent Registry HTTP API", () => {
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "other-agent",
         name: "Other Agent",
       },
@@ -335,15 +337,17 @@ describe("Agent Registry HTTP API", () => {
       `${origin}/v1/agents/id-2/versions/${String((created.body as { id: string }).id)}`,
     );
     expect(leaked.status).toBe(404);
-    expect(leaked.body).toEqual({ status: "not_found" });
+    expect(leaked.body).toMatchObject({
+      status: "error",
+      code: "RESOURCE_NOT_FOUND",
+    });
   });
 
   it("rejects AgentVersion mutation methods", async () => {
-    const { origin } = await listen();
+    const { origin, authHeaders } = await listen();
     await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "example-agent",
         name: "Example Agent",
       },
@@ -357,7 +361,10 @@ describe("Agent Registry HTTP API", () => {
       `${origin}/v1/agents/id-1/versions/${String((created.body as { id: string }).id)}`,
       {
         method: "PATCH",
-        headers: { "content-type": "application/json" },
+        headers: {
+          ...authHeaders,
+          "content-type": "application/json",
+        },
         body: JSON.stringify({ manifest: VALID_MANIFEST }),
       },
     );
@@ -367,27 +374,15 @@ describe("Agent Registry HTTP API", () => {
   });
 
   async function listen() {
-    const { server } = await createTestWebApplication({
+    const { server, testApiKey } = await createTestWebApplication({
       workspaceId: WORKSPACE_ID,
     });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);
-    return { origin: `http://127.0.0.1:${String(port)}` };
+    setTestAuthHeaders(testApiKey);
+    return {
+      origin: `http://127.0.0.1:${String(port)}`,
+      authHeaders: authHeadersForKey(testApiKey),
+    };
   }
 });
-
-async function fetchJson(
-  url: string,
-  options?: { readonly method?: string; readonly body?: unknown },
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: options?.method ?? "GET",
-    headers:
-      options?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body:
-      options?.body === undefined ? undefined : JSON.stringify(options.body),
-  });
-  return { status: response.status, body: await response.json() };
-}

@@ -3,6 +3,7 @@ import type {
   ModelProfileVersionId,
   ModelProfileVersionPricing,
   ModelProvider,
+  WorkspaceId,
 } from "@osva/contracts";
 
 import type { ModelProfile } from "../model-profile.js";
@@ -24,7 +25,14 @@ export interface AppendModelProfileVersionInput {
 export interface ModelProfileRepository {
   saveModelProfile(profile: ModelProfile): Promise<void>;
   findModelProfileById(id: ModelProfileId): Promise<ModelProfile | null>;
+  findModelProfileByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ModelProfileId,
+  ): Promise<ModelProfile | null>;
   listModelProfiles(): Promise<ModelProfile[]>;
+  listModelProfilesByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<ModelProfile[]>;
   updateModelProfileMetadata(
     id: ModelProfileId,
     metadata: ModelProfileMetadataUpdate,

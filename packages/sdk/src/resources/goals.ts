@@ -1,4 +1,4 @@
-import type { GoalId, WorkspaceId } from "@osva/contracts";
+import type { GoalId } from "@osva/contracts";
 import {
   createGoalRequestSchema,
   goalListResourceSchema,
@@ -17,11 +17,10 @@ type UpdateGoalRequest = z.infer<typeof updateGoalRequestSchema>;
 export class GoalsResource {
   constructor(private readonly client: OsvaHttpClient) {}
 
-  list(workspaceId: WorkspaceId): Promise<GoalListResource> {
+  list(): Promise<GoalListResource> {
     return this.client.request({
       method: "GET",
       path: "/v1/goals",
-      query: { workspaceId },
     });
   }
 

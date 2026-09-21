@@ -2,6 +2,7 @@ import type { AgentId, WorkspaceId } from "@osva/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
+import { fetchJson, setTestAuthHeaders } from "./http-test-helpers.js";
 import { TEST_NOW, createTestWebApplication } from "./test-web.js";
 
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
@@ -36,7 +37,6 @@ describe("Schedule HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/schedules`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "daily-report",
         name: "Daily Report",
         agentId: agent.agentId,
@@ -49,7 +49,6 @@ describe("Schedule HTTP API", () => {
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({
       id: "id-3",
-      workspaceId: WORKSPACE_ID,
       key: "daily-report",
       name: "Daily Report",
       agentId: agent.agentId,
@@ -67,9 +66,7 @@ describe("Schedule HTTP API", () => {
     expect(loaded.status).toBe(200);
     expect(loaded.body).toEqual(created.body);
 
-    const listed = await fetchJson(
-      `${origin}/v1/schedules?workspaceId=${WORKSPACE_ID}`,
-    );
+    const listed = await fetchJson(`${origin}/v1/schedules`);
     expect(listed.status).toBe(200);
     expect(listed.body).toEqual({ schedules: [created.body] });
 
@@ -96,7 +93,6 @@ describe("Schedule HTTP API", () => {
     const created = await fetchJson(`${origin}/v1/schedules`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "hourly-report",
         name: "Hourly Report",
         agentId: agent.agentId,
@@ -137,7 +133,10 @@ describe("Schedule HTTP API", () => {
     const { origin } = await listen();
     const response = await fetchJson(`${origin}/v1/schedules/missing`);
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: "not_found" });
+    expect(response.body).toMatchObject({
+      status: "error",
+      code: "RESOURCE_NOT_FOUND",
+    });
   });
 
   it("rejects invalid schedule requests", async () => {
@@ -147,7 +146,6 @@ describe("Schedule HTTP API", () => {
     const invalidCron = await fetchJson(`${origin}/v1/schedules`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "bad-cron",
         name: "Bad Cron",
         agentId: agent.agentId,
@@ -163,7 +161,6 @@ describe("Schedule HTTP API", () => {
     const invalidTimezone = await fetchJson(`${origin}/v1/schedules`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "bad-timezone",
         name: "Bad Timezone",
         agentId: agent.agentId,
@@ -183,6 +180,7 @@ describe("Schedule HTTP API", () => {
     });
     servers.push(context.server);
     const port = await listenHttpServer(context.server, "127.0.0.1", 0);
+    setTestAuthHeaders(context.testApiKey);
     return {
       origin: `http://127.0.0.1:${String(port)}`,
       schedules: context.schedules,
@@ -197,7 +195,6 @@ async function registerAgent(origin: string): Promise<{
   const created = await fetchJson(`${origin}/v1/agents`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "example-agent",
       name: "Example Agent",
     },
@@ -211,20 +208,4 @@ async function registerAgent(origin: string): Promise<{
     agentId,
     agentVersionId: (version.body as { id: string }).id,
   };
-}
-
-async function fetchJson(
-  url: string,
-  options?: { readonly method?: string; readonly body?: unknown },
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: options?.method ?? "GET",
-    headers:
-      options?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body:
-      options?.body === undefined ? undefined : JSON.stringify(options.body),
-  });
-  return { status: response.status, body: await response.json() };
 }

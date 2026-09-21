@@ -53,6 +53,11 @@ export {
 } from "./schedule-repository.js";
 export type { WorkspaceRepository } from "./workspace-repository.js";
 export type {
+  ApiKeyCreateRecord,
+  ApiKeyPersistedRecord,
+  ApiKeyRepository,
+} from "./api-key-repository.js";
+export type {
   AppendWorkflowVersionInput,
   WorkflowRepository,
 } from "./workflow-repository.js";

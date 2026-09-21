@@ -16,18 +16,21 @@ import { MemoryConnectorRepository } from "../src/memory-connector-repository.js
 import { MemoryToolRepository } from "../src/memory-tool-repository.js";
 import { MemoryWorkspaceRepository } from "../src/memory-workspace-repository.js";
 import { NOW, otherWorkspaceId, workspaceId } from "./fixtures.js";
+import { fakeControlPlaneScope } from "./test-scope.js";
+
+const scope = fakeControlPlaneScope(workspaceId);
 
 describe("MemoryConnectorRepository", () => {
   it("creates, reads, lists, and renames Connectors", async () => {
     const { application } = await createHarness();
-    const created = await application.createConnector.execute({
+    const created = await application.createConnector.execute(scope, {
       workspaceId,
       key: "github",
       name: "GitHub",
     });
-    const loaded = await application.getConnector.execute(created.id);
-    const listed = await application.listConnectors.execute();
-    const renamed = await application.updateConnectorMetadata.execute({
+    const loaded = await application.getConnector.execute(scope, created.id);
+    const listed = await application.listConnectors.execute(scope);
+    const renamed = await application.updateConnectorMetadata.execute(scope, {
       connectorId: created.id,
       name: "Renamed GitHub",
     });
@@ -42,35 +45,35 @@ describe("MemoryConnectorRepository", () => {
   it("rejects an unknown Connector", async () => {
     const { application } = await createHarness();
     await expect(
-      application.getConnector.execute("missing" as ConnectorId),
+      application.getConnector.execute(scope, "missing" as ConnectorId),
     ).rejects.toBeInstanceOf(ConnectorNotFoundError);
   });
 
   it("appends immutable ConnectorVersions with per-connector numbering", async () => {
     const { application } = await createHarness();
-    const first = await application.createConnector.execute({
+    const first = await application.createConnector.execute(scope, {
       workspaceId,
       key: "primary",
       name: "Primary",
     });
-    const second = await application.createConnector.execute({
+    const second = await application.createConnector.execute(scope, {
       workspaceId,
       key: "secondary",
       name: "Secondary",
     });
-    const v1 = await application.appendConnectorVersion.execute({
+    const v1 = await application.appendConnectorVersion.execute(scope, {
       connectorId: first.id,
       kind: "MCP",
       transport: "STREAMABLE_HTTP",
       transportConfig: { endpointUrl: "http://127.0.0.1:9001" },
     });
-    const v2 = await application.appendConnectorVersion.execute({
+    const v2 = await application.appendConnectorVersion.execute(scope, {
       connectorId: first.id,
       kind: "MCP",
       transport: "STDIO",
       transportConfig: { command: "node", args: ["server.mjs"] },
     });
-    const otherV1 = await application.appendConnectorVersion.execute({
+    const otherV1 = await application.appendConnectorVersion.execute(scope, {
       connectorId: second.id,
       kind: "MCP",
       transport: "STREAMABLE_HTTP",
@@ -88,17 +91,17 @@ describe("MemoryConnectorRepository", () => {
 
   it("enforces nested ConnectorVersion ownership", async () => {
     const { application } = await createHarness();
-    const first = await application.createConnector.execute({
+    const first = await application.createConnector.execute(scope, {
       workspaceId,
       key: "primary",
       name: "Primary",
     });
-    const second = await application.createConnector.execute({
+    const second = await application.createConnector.execute(scope, {
       workspaceId,
       key: "secondary",
       name: "Secondary",
     });
-    const version = await application.appendConnectorVersion.execute({
+    const version = await application.appendConnectorVersion.execute(scope, {
       connectorId: first.id,
       kind: "MCP",
       transport: "STREAMABLE_HTTP",
@@ -106,7 +109,7 @@ describe("MemoryConnectorRepository", () => {
     });
 
     await expect(
-      application.getConnectorVersion.execute({
+      application.getConnectorVersion.execute(scope, {
         connectorId: second.id,
         connectorVersionId: version.id,
       }),
@@ -157,13 +160,13 @@ describe("MemoryConnectorRepository", () => {
 
   it("rejects a duplicate Connector key in the same workspace", async () => {
     const { application } = await createHarness();
-    await application.createConnector.execute({
+    await application.createConnector.execute(scope, {
       workspaceId,
       key: "primary",
       name: "Primary",
     });
     await expect(
-      application.createConnector.execute({
+      application.createConnector.execute(scope, {
         workspaceId,
         key: "primary",
         name: "Other",
@@ -219,7 +222,7 @@ describe("MemoryConnectorRepository", () => {
   it("rejects appending a version to a missing Connector", async () => {
     const { application } = await createHarness();
     await expect(
-      application.appendConnectorVersion.execute({
+      application.appendConnectorVersion.execute(scope, {
         connectorId: "missing" as ConnectorId,
         kind: "MCP",
         transport: "STREAMABLE_HTTP",
@@ -253,6 +256,7 @@ async function createHarness() {
       tools,
       workspaces,
       mcpClientPool,
+      mcpRuntimePolicy: { stdioConnectorsEnabled: true },
       clock: { now: () => NOW },
       ids: {
         createId() {

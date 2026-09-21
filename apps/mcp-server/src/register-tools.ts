@@ -56,7 +56,7 @@ export function registerOsvaMcpTools(
               throw invalidInput("Invalid osva_agent_run_v1 input.");
             }
 
-            const client = clients.forWorkspace(principal.workspaceId);
+            const client = clients.forPrincipal(principal);
             span.setAttributes({
               [OSVA_ATTR.AGENT_VERSION_ID]: parsed.data.agentVersionId,
             });
@@ -105,7 +105,7 @@ export function registerOsvaMcpTools(
               throw invalidInput("Invalid osva_run_get_v1 input.");
             }
 
-            const client = clients.forWorkspace(principal.workspaceId);
+            const client = clients.forPrincipal(principal);
             span.setAttributes({ [OSVA_ATTR.RUN_ID]: parsed.data.runId });
 
             const run = await client.runs.get(parsed.data.runId);
@@ -150,7 +150,7 @@ export function registerOsvaMcpTools(
               throw invalidInput("Invalid osva_workflow_run_v1 input.");
             }
 
-            const client = clients.forWorkspace(principal.workspaceId);
+            const client = clients.forPrincipal(principal);
             span.setAttributes({
               [OSVA_ATTR.WORKFLOW_VERSION_ID]: parsed.data.workflowVersionId,
             });
@@ -197,7 +197,7 @@ export function registerOsvaMcpTools(
               throw invalidInput("Invalid osva_workflow_run_get_v1 input.");
             }
 
-            const client = clients.forWorkspace(principal.workspaceId);
+            const client = clients.forPrincipal(principal);
             span.setAttributes({
               [OSVA_ATTR.WORKFLOW_RUN_ID]: parsed.data.workflowRunId,
             });

@@ -5,9 +5,17 @@ import type {
   RunAttemptId,
   RunId,
 } from "@osva/contracts";
-import { isCanonicalJsonValue } from "@osva/contracts";
+import { AUTHORIZATION_ACTIONS, isCanonicalJsonValue } from "@osva/contracts";
 
 import { Evaluation } from "./evaluation.js";
+import {
+  controlPlaneWorkspaceId,
+  requireControlPlaneAuthorization,
+  type ControlPlaneScope,
+} from "./control-plane.js";
+import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+
+const EVALUATION_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.evaluation };
 import {
   EvaluationNotFoundError,
   InvalidRunAttemptStateError,
@@ -48,9 +56,18 @@ export interface GetEvaluationCommand {
 export class CreateEvaluation {
   constructor(private readonly deps: EvaluationApplicationDependencies) {}
 
-  async execute(command: CreateEvaluationCommand): Promise<Evaluation> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: CreateEvaluationCommand,
+  ): Promise<Evaluation> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.WRITE,
+      EVALUATION_RESOURCE,
+    );
     const attempt = await loadSucceededAttempt(
       this.deps.runs,
+      controlPlaneWorkspaceId(scope),
       command.runId,
       command.runAttemptId,
     );
@@ -93,10 +110,21 @@ export class ListEvaluations {
   constructor(private readonly deps: EvaluationApplicationDependencies) {}
 
   async execute(
+    scope: ControlPlaneScope,
     runId: RunId,
     runAttemptId: RunAttemptId,
   ): Promise<readonly Evaluation[]> {
-    await assertRunAttemptOwnership(this.deps.runs, runId, runAttemptId);
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_RESOURCE,
+    );
+    await assertRunAttemptOwnership(
+      this.deps.runs,
+      controlPlaneWorkspaceId(scope),
+      runId,
+      runAttemptId,
+    );
 
     const evaluations =
       await this.deps.evaluations.listEvaluationsByRunAttempt(runAttemptId);
@@ -107,9 +135,18 @@ export class ListEvaluations {
 export class GetEvaluation {
   constructor(private readonly deps: EvaluationApplicationDependencies) {}
 
-  async execute(command: GetEvaluationCommand): Promise<Evaluation> {
+  async execute(
+    scope: ControlPlaneScope,
+    command: GetEvaluationCommand,
+  ): Promise<Evaluation> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_RESOURCE,
+    );
     await assertRunAttemptOwnership(
       this.deps.runs,
+      controlPlaneWorkspaceId(scope),
       command.runId,
       command.runAttemptId,
     );
@@ -147,10 +184,11 @@ export function createEvaluationApplication(
 
 async function loadSucceededAttempt(
   runs: RunRepository,
+  workspaceId: import("@osva/contracts").WorkspaceId,
   runId: RunId,
   runAttemptId: RunAttemptId,
 ) {
-  const run = await runs.findRunById(runId);
+  const run = await runs.findRunByWorkspaceAndId(workspaceId, runId);
   if (run === null) {
     throw new RunNotFoundError(runId);
   }
@@ -173,10 +211,11 @@ async function loadSucceededAttempt(
 
 async function assertRunAttemptOwnership(
   runs: RunRepository,
+  workspaceId: import("@osva/contracts").WorkspaceId,
   runId: RunId,
   runAttemptId: RunAttemptId,
 ): Promise<void> {
-  const run = await runs.findRunById(runId);
+  const run = await runs.findRunByWorkspaceAndId(workspaceId, runId);
   if (run === null) {
     throw new RunNotFoundError(runId);
   }

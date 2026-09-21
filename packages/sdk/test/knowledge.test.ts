@@ -69,7 +69,7 @@ describe("OsvaClient knowledge", () => {
 
     const client = new OsvaClient({
       baseUrl: server.origin,
-      workspaceId: "ws-1" as never,
+      apiKey: "osva_ak_test.secret" as never,
     });
 
     const created = await client.knowledgeSources.create({

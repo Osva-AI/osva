@@ -21,6 +21,9 @@ import {
   runId,
   workspaceId,
 } from "./fixtures.js";
+import { fakeControlPlaneScope } from "./control-plane-test-scope.js";
+
+const scope = fakeControlPlaneScope(workspaceId);
 
 class FakeRunRepository implements RunRepository {
   constructor(
@@ -40,13 +43,27 @@ class FakeRunRepository implements RunRepository {
     return this.runs.get(id) ?? null;
   }
 
+  async findRunByWorkspaceAndId(
+    workspaceId: import("@osva/contracts").WorkspaceId,
+    id: RunId,
+  ): Promise<Run | null> {
+    const run = this.runs.get(id);
+    if (run === undefined || run.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return run;
+  }
+
   async findRunByWorkspaceIdempotencyKey(): Promise<Run | null> {
     return null;
   }
 
   async listRuns(query: ListRunsQuery): Promise<ListRunsResult> {
     return {
-      runs: [...this.runs.values()].slice(0, query.limit),
+      runs: [...this.runs.values()]
+        .filter((run) => run.workspaceId === query.workspaceId)
+        .slice(0, query.limit),
     };
   }
 
@@ -121,9 +138,9 @@ describe("Run application", () => {
     repository.seed(run);
     const application = createRunApplication({ runs: repository });
 
-    expect(await application.getRun.execute(runId)).toEqual(run);
+    expect(await application.getRun.execute(scope, runId)).toEqual(run);
     await expect(
-      application.getRun.execute("missing" as RunId),
+      application.getRun.execute(scope, "missing" as RunId),
     ).rejects.toBeInstanceOf(RunNotFoundError);
   });
 
@@ -133,10 +150,10 @@ describe("Run application", () => {
     });
 
     await expect(
-      application.listRuns.execute({ limit: 0 }),
+      application.listRuns.execute(scope, { limit: 0 }),
     ).rejects.toBeInstanceOf(DomainInvariantError);
     await expect(
-      application.listRuns.execute({ limit: 101 }),
+      application.listRuns.execute(scope, { limit: 101 }),
     ).rejects.toBeInstanceOf(DomainInvariantError);
   });
 
@@ -145,7 +162,7 @@ describe("Run application", () => {
     const application = createRunApplication({ runs: repository });
 
     await expect(
-      application.listRunAttempts.execute(runId),
+      application.listRunAttempts.execute(scope, runId),
     ).rejects.toBeInstanceOf(RunNotFoundError);
 
     const run = Run.create({
@@ -163,7 +180,9 @@ describe("Run application", () => {
     });
     repository.seed(run, attempt);
 
-    expect(await application.listRunAttempts.execute(runId)).toEqual([attempt]);
+    expect(await application.listRunAttempts.execute(scope, runId)).toEqual([
+      attempt,
+    ]);
   });
 
   it("hides a RunAttempt that belongs to another Run", async () => {
@@ -185,7 +204,7 @@ describe("Run application", () => {
     const application = createRunApplication({ runs: repository });
 
     await expect(
-      application.getRunAttempt.execute({
+      application.getRunAttempt.execute(scope, {
         runId,
         runAttemptId,
       }),

@@ -54,6 +54,21 @@ export class MemoryOfficeRepository implements OfficeRepository {
     return this.officeWorkers.get(id) ?? null;
   }
 
+  async findOfficeWorkerByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: OfficeWorkerId,
+  ): Promise<OfficeWorker | null> {
+    const officeWorker = this.officeWorkers.get(id);
+    if (
+      officeWorker === undefined ||
+      officeWorker.workspaceId !== workspaceId
+    ) {
+      return null;
+    }
+
+    return officeWorker;
+  }
+
   async listOfficeWorkersByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly OfficeWorker[]> {
@@ -97,6 +112,18 @@ export class MemoryOfficeRepository implements OfficeRepository {
     return this.roles.get(id) ?? null;
   }
 
+  async findRoleByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: RoleId,
+  ): Promise<Role | null> {
+    const role = this.roles.get(id);
+    if (role === undefined || role.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return role;
+  }
+
   async listRolesByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly Role[]> {
@@ -136,6 +163,18 @@ export class MemoryOfficeRepository implements OfficeRepository {
 
   async findTeamById(id: TeamId): Promise<Team | null> {
     return this.teams.get(id) ?? null;
+  }
+
+  async findTeamByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: TeamId,
+  ): Promise<Team | null> {
+    const team = this.teams.get(id);
+    if (team === undefined || team.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return team;
   }
 
   async listTeamsByWorkspace(
@@ -208,6 +247,18 @@ export class MemoryOfficeRepository implements OfficeRepository {
     return this.goals.get(id) ?? null;
   }
 
+  async findGoalByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: GoalId,
+  ): Promise<Goal | null> {
+    const goal = this.goals.get(id);
+    if (goal === undefined || goal.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return goal;
+  }
+
   async listGoalsByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly Goal[]> {
@@ -237,6 +288,18 @@ export class MemoryOfficeRepository implements OfficeRepository {
 
   async findAssignmentById(id: AssignmentId): Promise<Assignment | null> {
     return this.assignments.get(id) ?? null;
+  }
+
+  async findAssignmentByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: AssignmentId,
+  ): Promise<Assignment | null> {
+    const assignment = this.assignments.get(id);
+    if (assignment === undefined || assignment.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return assignment;
   }
 
   async listAssignmentsByWorkspace(

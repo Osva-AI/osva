@@ -1,7 +1,6 @@
-import type { WorkspaceId } from "@osva/contracts";
-
 import { OsvaHttpClient, type OsvaHttpClientOptions } from "./http-client.js";
 import { AgentsResource } from "./resources/agents.js";
+import { ApiKeysResource } from "./resources/api-keys.js";
 import { ApprovalsResource } from "./resources/approvals.js";
 import {
   EvaluationRunsResource,
@@ -22,13 +21,11 @@ import { TeamsResource } from "./resources/office-teams.js";
 import { GoalsResource } from "./resources/goals.js";
 import { AssignmentsResource } from "./resources/assignments.js";
 
-export interface OsvaClientOptions extends OsvaHttpClientOptions {
-  readonly workspaceId: WorkspaceId;
-}
+export type OsvaClientOptions = OsvaHttpClientOptions;
 
 export class OsvaClient {
-  readonly workspaceId: WorkspaceId;
   readonly agents: AgentsResource;
+  readonly apiKeys: ApiKeysResource;
   readonly runs: RunsResource;
   readonly workflows: WorkflowsResource;
   readonly workflowRuns: WorkflowRunsResource;
@@ -50,33 +47,21 @@ export class OsvaClient {
   private readonly http: OsvaHttpClient;
 
   constructor(options: OsvaClientOptions) {
-    this.workspaceId = options.workspaceId;
     this.http = new OsvaHttpClient(options);
     this.agents = new AgentsResource(this.http);
-    this.runs = new RunsResource(this.http, options.workspaceId);
+    this.apiKeys = new ApiKeysResource(this.http);
+    this.runs = new RunsResource(this.http);
     this.workflows = new WorkflowsResource(this.http);
-    this.workflowRuns = new WorkflowRunsResource(
-      this.http,
-      options.workspaceId,
-    );
-    this.approvals = new ApprovalsResource(this.http, options.workspaceId);
-    this.schedules = new SchedulesResource(this.http, options.workspaceId);
+    this.workflowRuns = new WorkflowRunsResource(this.http);
+    this.approvals = new ApprovalsResource(this.http);
+    this.schedules = new SchedulesResource(this.http);
     this.memoryNamespaces = new MemoryNamespacesResource(this.http);
-    this.artifacts = new ArtifactsResource(this.http, options.workspaceId);
-    this.knowledgeSources = new KnowledgeSourcesResource(
-      this.http,
-      options.workspaceId,
-    );
-    this.knowledgeIndexes = new KnowledgeIndexesResource(
-      this.http,
-      options.workspaceId,
-    );
-    this.knowledge = new KnowledgeResource(this.http, options.workspaceId);
+    this.artifacts = new ArtifactsResource(this.http);
+    this.knowledgeSources = new KnowledgeSourcesResource(this.http);
+    this.knowledgeIndexes = new KnowledgeIndexesResource(this.http);
+    this.knowledge = new KnowledgeResource(this.http);
     this.evaluationSuites = new EvaluationSuitesResource(this.http);
-    this.evaluationRuns = new EvaluationRunsResource(
-      this.http,
-      options.workspaceId,
-    );
+    this.evaluationRuns = new EvaluationRunsResource(this.http);
     this.officeWorkers = new OfficeWorkersResource(this.http);
     this.roles = new RolesResource(this.http);
     this.teams = new TeamsResource(this.http);

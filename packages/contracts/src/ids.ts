@@ -42,3 +42,4 @@ export type AssignmentId = OsvaId<"AssignmentId">;
 export type KnowledgeSourceId = OsvaId<"KnowledgeSourceId">;
 export type KnowledgeIndexId = OsvaId<"KnowledgeIndexId">;
 export type KnowledgeChunkId = OsvaId<"KnowledgeChunkId">;
+export type ApiKeyId = OsvaId<"ApiKeyId">;

@@ -30,6 +30,7 @@ export interface RunStepListCursor {
 }
 
 export interface ListRunsQuery {
+  readonly workspaceId: WorkspaceId;
   readonly limit: number;
   readonly cursor?: RunListCursor;
   readonly agentId?: AgentId;
@@ -74,6 +75,10 @@ export interface RunRepository {
   createRunWithInitialAttempt(run: Run, attempt: RunAttempt): Promise<void>;
   saveRun(run: Run): Promise<void>;
   findRunById(id: RunId): Promise<Run | null>;
+  findRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: RunId,
+  ): Promise<Run | null>;
   findRunByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,

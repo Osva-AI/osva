@@ -1,4 +1,4 @@
-import type { ArtifactId, WorkspaceId } from "@osva/contracts";
+import type { ArtifactId } from "@osva/contracts";
 import {
   artifactListResourceSchema,
   artifactResourceSchema,
@@ -13,7 +13,6 @@ type ArtifactListResource = z.infer<typeof artifactListResourceSchema>;
 type ListArtifactsQuery = z.infer<typeof listArtifactsQuerySchema>;
 
 export interface CreateArtifactInput {
-  readonly workspaceId: WorkspaceId;
   readonly name: string;
   readonly content: Blob;
   readonly mediaType?: string;
@@ -23,19 +22,13 @@ export interface CreateArtifactInput {
 }
 
 export class ArtifactsResource {
-  constructor(
-    private readonly client: OsvaHttpClient,
-    private readonly workspaceId: WorkspaceId,
-  ) {}
+  constructor(private readonly client: OsvaHttpClient) {}
 
-  list(
-    query: Omit<ListArtifactsQuery, "workspaceId"> = {},
-  ): Promise<ArtifactListResource> {
+  list(query: ListArtifactsQuery = {}): Promise<ArtifactListResource> {
     return this.client.request({
       method: "GET",
       path: "/v1/artifacts",
       query: {
-        workspaceId: this.workspaceId,
         runId: query.runId,
         runAttemptId: query.runAttemptId,
         limit: query.limit,
@@ -53,7 +46,6 @@ export class ArtifactsResource {
 
   create(input: CreateArtifactInput): Promise<ArtifactResource> {
     const form = new FormData();
-    form.set("workspaceId", input.workspaceId);
     form.set("name", input.name);
     if (input.mediaType !== undefined) {
       form.set("mediaType", input.mediaType);

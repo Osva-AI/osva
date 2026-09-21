@@ -39,7 +39,7 @@ Agent runtime
 Configure:
 
 - `OSVA_API_BASE_URL` — OSVA web API base URL
-- `OSVA_MCP_BEARER_TOKENS` — JSON array `[{"token":"...","workspaceId":"..."}]` (recommended), or legacy `token:workspaceId` comma-separated pairs when tokens do not contain `:`
+- **Historical (Stage 3.6):** `OSVA_MCP_BEARER_TOKENS` env bearer mappings. **Superseded in Stage 3.7** by OSVA API keys via `Authorization: Bearer` and `GET /v1/auth/context` (see `STAGE-3-7-API-SECURITY-STABILITY-PASS-3.md`).
 - `OSVA_MCP_HOST`, `OSVA_MCP_PORT`, `OSVA_MCP_PATH` (optional)
 
 Workspace identity is derived from the bearer token. MCP tool arguments cannot supply `workspaceId`.

@@ -1,5 +1,6 @@
 import {
   APPROVAL_REQUEST_STATES,
+  COMMUNITY_EDITION_ROLES,
   MODEL_PROVIDERS,
   RUN_ATTEMPT_STATES,
   RUN_STATES,
@@ -10,6 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   PERSISTED_APPROVAL_REQUEST_STATES,
+  PERSISTED_COMMUNITY_EDITION_ROLES,
   PERSISTED_MODEL_PROVIDERS,
   PERSISTED_RUN_ATTEMPT_STATES,
   PERSISTED_RUN_STATES,
@@ -39,6 +41,12 @@ describe("persisted Stage 0 state columns", () => {
     ]);
     expect([...PERSISTED_APPROVAL_REQUEST_STATES]).toEqual([
       ...APPROVAL_REQUEST_STATES,
+    ]);
+  });
+
+  it("keeps Community Edition API key role CHECK values identical to @osva/contracts", () => {
+    expect([...PERSISTED_COMMUNITY_EDITION_ROLES]).toEqual([
+      ...Object.values(COMMUNITY_EDITION_ROLES),
     ]);
   });
 });

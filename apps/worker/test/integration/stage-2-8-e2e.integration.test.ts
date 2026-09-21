@@ -10,12 +10,11 @@ import {
   createDatabase,
   migrateDatabase,
   PostgresMemoryNamespaceRepository,
-  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
 
 import { createWebProcess } from "../../../../apps/web/src/process.js";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { createWorkerProcess } from "../../src/process.js";
 import {
   resetStage0Tables,
@@ -66,13 +65,7 @@ describe("Stage 2.8 memory and evaluation end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("runs evaluation child runs with memory reads, blocked writes, and PASS/FAIL outcomes", async () => {
@@ -106,10 +99,9 @@ describe("Stage 2.8 memory and evaluation end-to-end", () => {
       await worker.start();
       const origin = `http://127.0.0.1:${String(port)}`;
 
-      const namespace = await fetchJson(`${origin}/v1/memory-namespaces`, {
+      const namespace = await fetchJson(`${origin}/v1/memory/namespaces`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "store",
           name: "Store",
         },
@@ -127,7 +119,6 @@ describe("Stage 2.8 memory and evaluation end-to-end", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "memory-echo-agent",
           name: "Memory Echo Agent",
         },
@@ -176,7 +167,6 @@ describe("Stage 2.8 memory and evaluation end-to-end", () => {
       const suite = await fetchJson(`${origin}/v1/evaluation-suites`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "memory-smoke",
           name: "Memory Smoke",
         },
@@ -229,7 +219,6 @@ describe("Stage 2.8 memory and evaluation end-to-end", () => {
       const evaluationRun = await fetchJson(`${origin}/v1/evaluation-runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           evaluationSuiteVersionId,
           targetType: "AGENT_VERSION",
           targetVersionId: agentVersionId,
@@ -343,18 +332,6 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     await delay(50);
   }
   throw new Error("Timed out waiting for Stage 2.8 evaluation execution.");
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }
 
 function delay(ms: number): Promise<void> {

@@ -39,7 +39,7 @@ export function registerOsvaMcpResources(
     },
     async () =>
       await readResource(instrumentation, "agents", agentsUri, async () => {
-        const client = clients.forWorkspace(principal.workspaceId);
+        const client = clients.forPrincipal(principal);
         const list = await client.agents.list();
         const agents = list.agents.filter(
           (agent) => agent.workspaceId === principal.workspaceId,
@@ -62,7 +62,7 @@ export function registerOsvaMcpResources(
         "workflows",
         workflowsUri,
         async () => {
-          const client = clients.forWorkspace(principal.workspaceId);
+          const client = clients.forPrincipal(principal);
           const list = await client.workflows.list();
           const workflows = list.workflows.filter(
             (workflow) => workflow.workspaceId === principal.workspaceId,
@@ -92,7 +92,7 @@ export function registerOsvaMcpResources(
         "agent-versions",
         resourceUri,
         async () => {
-          const client = clients.forWorkspace(principal.workspaceId);
+          const client = clients.forPrincipal(principal);
           const agentId = String(variables.agentId ?? "");
           const agent = await client.agents.get(agentId as never);
           if (agent.workspaceId !== principal.workspaceId) {
@@ -123,7 +123,7 @@ export function registerOsvaMcpResources(
         "workflow-versions",
         resourceUri,
         async () => {
-          const client = clients.forWorkspace(principal.workspaceId);
+          const client = clients.forPrincipal(principal);
           const workflowId = String(variables.workflowId ?? "");
           const workflow = await client.workflows.get(workflowId as never);
           if (workflow.workspaceId !== principal.workspaceId) {
@@ -154,7 +154,7 @@ export function registerOsvaMcpResources(
         "run",
         resourceUri,
         async () => {
-          const client = clients.forWorkspace(principal.workspaceId);
+          const client = clients.forPrincipal(principal);
           const runId = String(variables.runId ?? "");
           const run = await client.runs.get(runId as never);
           if (run.workspaceId !== principal.workspaceId) {
@@ -184,7 +184,7 @@ export function registerOsvaMcpResources(
         "workflow-run",
         resourceUri,
         async () => {
-          const client = clients.forWorkspace(principal.workspaceId);
+          const client = clients.forPrincipal(principal);
           const workflowRunId = String(variables.workflowRunId ?? "");
           const workflowRun = await client.workflowRuns.get(
             workflowRunId as never,

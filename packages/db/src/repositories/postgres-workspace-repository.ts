@@ -1,6 +1,6 @@
 import type { WorkspaceId } from "@osva/contracts";
 import type { Workspace, WorkspaceRepository } from "@osva/domain";
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import {
@@ -38,5 +38,22 @@ export class PostgresWorkspaceRepository implements WorkspaceRepository {
       .limit(1);
 
     return row === undefined ? null : workspaceFromRow(row);
+  }
+
+  async countAll(): Promise<number> {
+    const [row] = await this.database.db
+      .select({ value: count() })
+      .from(workspaces);
+
+    return Number(row?.value ?? 0);
+  }
+
+  async listIds(): Promise<readonly WorkspaceId[]> {
+    const rows = await this.database.db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .orderBy(workspaces.id);
+
+    return rows.map((row) => row.id as WorkspaceId);
   }
 }

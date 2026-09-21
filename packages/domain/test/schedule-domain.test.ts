@@ -21,6 +21,7 @@ import {
   type ScheduleRepository,
   type WorkspaceRepository,
 } from "../src/index.js";
+import { fakeControlPlaneScope } from "./control-plane-test-scope.js";
 import {
   NOW,
   LATER,
@@ -220,6 +221,14 @@ class FakeWorkspaceRepository implements WorkspaceRepository {
   async findById(id: WorkspaceId): Promise<Workspace | null> {
     return this.items.get(id) ?? null;
   }
+
+  async countAll(): Promise<number> {
+    return this.items.size;
+  }
+
+  async listIds(): Promise<readonly WorkspaceId[]> {
+    return [...this.items.keys()].sort();
+  }
 }
 
 class FakeAgentRepository implements AgentRepository {
@@ -232,6 +241,20 @@ class FakeAgentRepository implements AgentRepository {
 
   async findAgentById(id: AgentId): Promise<Agent | null> {
     return this.agents.get(id) ?? null;
+  }
+
+  async findAgentByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: AgentId,
+  ): Promise<Agent | null> {
+    const agent = this.agents.get(id);
+    return agent?.workspaceId === workspaceId ? agent : null;
+  }
+
+  async listAgentsByWorkspaceId(workspaceId: WorkspaceId): Promise<Agent[]> {
+    return [...this.agents.values()].filter(
+      (agent) => agent.workspaceId === workspaceId,
+    );
   }
 
   async listAgents(): Promise<Agent[]> {
@@ -270,6 +293,14 @@ class FakeScheduleRepository implements ScheduleRepository {
 
   async findScheduleById(id: ScheduleId): Promise<Schedule | null> {
     return this.items.get(id) ?? null;
+  }
+
+  async findScheduleByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ScheduleId,
+  ): Promise<Schedule | null> {
+    const schedule = this.items.get(id);
+    return schedule?.workspaceId === workspaceId ? schedule : null;
   }
 
   async findScheduleByWorkspaceKey(): Promise<Schedule | null> {
@@ -369,7 +400,8 @@ describe("schedule application", () => {
 
   it("creates and updates schedules through the application layer", async () => {
     const { app } = await createApplication();
-    const created = await app.createSchedule.execute({
+    const scope = fakeControlPlaneScope(workspaceId);
+    const created = await app.createSchedule.execute(scope, {
       workspaceId,
       key: "daily-report",
       name: "Daily Report",
@@ -384,13 +416,13 @@ describe("schedule application", () => {
       nextCronInstantAfter(EVERY_MINUTE, UTC, NOW),
     );
 
-    const updated = await app.updateSchedule.execute({
+    const updated = await app.updateSchedule.execute(scope, {
       scheduleId: created.id,
       enabled: false,
     });
     expect(updated.nextRunAt).toBeNull();
 
-    const restored = await app.updateSchedule.execute({
+    const restored = await app.updateSchedule.execute(scope, {
       scheduleId: created.id,
       enabled: true,
       agentVersionId: otherAgentVersionId,

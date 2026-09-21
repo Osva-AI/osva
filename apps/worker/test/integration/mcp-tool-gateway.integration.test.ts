@@ -5,15 +5,10 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { ToolVersionId, WorkspaceId } from "@osva/contracts";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
-import {
-  createDatabase,
-  migrateDatabase,
-  PostgresWorkspaceRepository,
-  type Database,
-} from "@osva/db";
-import { Workspace } from "@osva/domain";
+import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 
 import { startFakeHttpMcpServer } from "@osva/adapters-mcp-client/testing";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { createWebProcess } from "../../../web/src/process.js";
 import { createWorkerProcess } from "../../src/process.js";
 import {
@@ -29,6 +24,13 @@ import {
 } from "../../../../adapters/bullmq/test/integration/valkey-harness.js";
 
 const WORKSPACE_ID = "ws-mcp-e2e" as WorkspaceId;
+const MCP_INTEGRATION_WEB_ENV = {
+  OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
+} as const;
+
+const MCP_INTEGRATION_WORKER_ENV = {
+  OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
+} as const;
 const NOW = new Date("2026-01-15T12:00:00.000Z");
 const FIXTURE_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -64,13 +66,7 @@ describe("MCP tool gateway end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("runs HTTP CreateRun through ToolGateway with an imported MCP tool", async () => {
@@ -82,11 +78,13 @@ describe("MCP tool gateway end-to-end", () => {
       OSVA_VALKEY_URL: valkey.url,
       OSVA_WEB_HOST: "127.0.0.1",
       OSVA_WEB_PORT: "0",
+      ...MCP_INTEGRATION_WEB_ENV,
     });
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,
       OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+      ...MCP_INTEGRATION_WORKER_ENV,
     });
 
     try {
@@ -101,7 +99,6 @@ describe("MCP tool gateway end-to-end", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "mcp-agent",
           name: "MCP Agent",
         },
@@ -137,7 +134,6 @@ describe("MCP tool gateway end-to-end", () => {
       const created = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId,
           input: { hello: "mcp-e2e" },
@@ -189,11 +185,13 @@ describe("MCP tool gateway end-to-end", () => {
       OSVA_VALKEY_URL: valkey.url,
       OSVA_WEB_HOST: "127.0.0.1",
       OSVA_WEB_PORT: "0",
+      ...MCP_INTEGRATION_WEB_ENV,
     });
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,
       OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+      ...MCP_INTEGRATION_WORKER_ENV,
     });
 
     try {
@@ -210,7 +208,6 @@ describe("MCP tool gateway end-to-end", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "mcp-unauthorized-agent",
           name: "MCP Unauthorized Agent",
         },
@@ -246,7 +243,6 @@ describe("MCP tool gateway end-to-end", () => {
       const created = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId,
           input: {},
@@ -288,7 +284,6 @@ async function seedMcpEchoTool(
   const connector = await fetchJson(`${origin}/v1/connectors`, {
     method: "POST",
     body: {
-      workspaceId: WORKSPACE_ID,
       key: "fake-mcp",
       name: "Fake MCP",
     },
@@ -335,27 +330,6 @@ async function copyAgentFixtures(...files: readonly string[]) {
     );
   }
   return trustedRuntimeRoot;
-}
-
-async function fetchJson(
-  url: string,
-  init?: {
-    readonly method?: string;
-    readonly body?: unknown;
-  },
-) {
-  const response = await fetch(url, {
-    method: init?.method ?? "GET",
-    headers:
-      init?.body === undefined
-        ? undefined
-        : { "content-type": "application/json" },
-    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return {
-    status: response.status,
-    body: await response.json(),
-  };
 }
 
 async function waitUntil(

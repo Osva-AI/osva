@@ -229,7 +229,7 @@ Reference: `apps/worker/test/integration/mcp-tool-gateway.integration.test.ts`
 Persistent memory is JSON key/value through MemoryGateway.
 
 ```text
-POST /v1/memory-namespaces
+POST /v1/memory/namespaces
 POST /v1/agents/:agentId/versions   # memory.store.namespaceId + access
 POST /v1/runs
 ```

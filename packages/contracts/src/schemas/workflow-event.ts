@@ -13,7 +13,6 @@ import { utcIso8601TimestampSchema } from "./utc-instant.js";
 const workflowEventIdentityString = (max: number) => z.string().min(1).max(max);
 
 export const ingestWorkflowEventRequestSchema = z.strictObject({
-  workspaceId: workspaceIdSchema,
   source: workflowEventIdentityString(WORKFLOW_EVENT_SOURCE_MAX_LENGTH),
   eventType: workflowEventIdentityString(WORKFLOW_EVENT_TYPE_MAX_LENGTH),
   correlationKey: workflowEventIdentityString(

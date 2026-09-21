@@ -9,8 +9,10 @@ from osva.client import OSVAClient
 from osva.errors import OSVAAPIError
 from osva.http_client import HTTPClient
 
+API_KEY = "osva_ak_test"
 
-def test_artifacts_create_uses_multipart_and_workspace() -> None:
+
+def test_artifacts_create_uses_multipart() -> None:
     captured: dict[str, Any] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -32,8 +34,12 @@ def test_artifacts_create_uses_multipart_and_workspace() -> None:
         )
 
     transport = httpx.MockTransport(handler)
-    http = HTTPClient("http://127.0.0.1:9", client=httpx.Client(transport=transport))
-    client = OSVAClient(base_url="http://127.0.0.1:9", workspace_id="ws-1", client=http)
+    http = HTTPClient(
+        "http://127.0.0.1:9",
+        api_key=API_KEY,
+        client=httpx.Client(transport=transport),
+    )
+    client = OSVAClient(base_url="http://127.0.0.1:9", api_key=API_KEY, client=http)
     result = client.artifacts.create(name="data.bin", content=b"\x01\x02\x03")
     assert result["id"] == "art-1"
     assert captured["method"] == "POST"
@@ -54,8 +60,12 @@ def test_artifacts_download_returns_streaming_response() -> None:
         )
 
     transport = httpx.MockTransport(handler)
-    http = HTTPClient("http://127.0.0.1:9", client=httpx.Client(transport=transport))
-    client = OSVAClient(base_url="http://127.0.0.1:9", workspace_id="ws-1", client=http)
+    http = HTTPClient(
+        "http://127.0.0.1:9",
+        api_key=API_KEY,
+        client=httpx.Client(transport=transport),
+    )
+    client = OSVAClient(base_url="http://127.0.0.1:9", api_key=API_KEY, client=http)
     response = client.artifacts.download("art-1")
     assert response.content == b"payload"
 
@@ -64,8 +74,12 @@ def test_artifacts_download_maps_api_errors() -> None:
     transport = httpx.MockTransport(
         lambda request: httpx.Response(404, json={"status": "not_found"})
     )
-    http = HTTPClient("http://127.0.0.1:9", client=httpx.Client(transport=transport))
-    client = OSVAClient(base_url="http://127.0.0.1:9", workspace_id="ws-1", client=http)
+    http = HTTPClient(
+        "http://127.0.0.1:9",
+        api_key=API_KEY,
+        client=httpx.Client(transport=transport),
+    )
+    client = OSVAClient(base_url="http://127.0.0.1:9", api_key=API_KEY, client=http)
     with pytest.raises(OSVAAPIError) as error:
         client.artifacts.download("missing")
     assert error.value.status == 404

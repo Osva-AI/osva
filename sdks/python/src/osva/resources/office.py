@@ -9,12 +9,8 @@ class OfficeWorkersResource:
     def __init__(self, client: HTTPClient) -> None:
         self._client = client
 
-    def list(self, workspace_id: str) -> dict[str, Any]:
-        return self._client.request(
-            "GET",
-            "/v1/office-workers",
-            query={"workspaceId": workspace_id},
-        )
+    def list(self) -> dict[str, Any]:
+        return self._client.request("GET", "/v1/office/workers")
 
     def get(self, office_worker_id: str) -> dict[str, Any]:
         return self._client.request("GET", f"/v1/office-workers/{office_worker_id}")
@@ -34,12 +30,8 @@ class RolesResource:
     def __init__(self, client: HTTPClient) -> None:
         self._client = client
 
-    def list(self, workspace_id: str) -> dict[str, Any]:
-        return self._client.request(
-            "GET",
-            "/v1/roles",
-            query={"workspaceId": workspace_id},
-        )
+    def list(self) -> dict[str, Any]:
+        return self._client.request("GET", "/v1/office/roles")
 
     def get(self, role_id: str) -> dict[str, Any]:
         return self._client.request("GET", f"/v1/roles/{role_id}")
@@ -55,12 +47,8 @@ class TeamsResource:
     def __init__(self, client: HTTPClient) -> None:
         self._client = client
 
-    def list(self, workspace_id: str) -> dict[str, Any]:
-        return self._client.request(
-            "GET",
-            "/v1/teams",
-            query={"workspaceId": workspace_id},
-        )
+    def list(self) -> dict[str, Any]:
+        return self._client.request("GET", "/v1/office/teams")
 
     def get(self, team_id: str) -> dict[str, Any]:
         return self._client.request("GET", f"/v1/teams/{team_id}")
@@ -86,12 +74,8 @@ class GoalsResource:
     def __init__(self, client: HTTPClient) -> None:
         self._client = client
 
-    def list(self, workspace_id: str) -> dict[str, Any]:
-        return self._client.request(
-            "GET",
-            "/v1/goals",
-            query={"workspaceId": workspace_id},
-        )
+    def list(self) -> dict[str, Any]:
+        return self._client.request("GET", "/v1/office/goals")
 
     def get(self, goal_id: str) -> dict[str, Any]:
         return self._client.request("GET", f"/v1/goals/{goal_id}")
@@ -107,12 +91,8 @@ class AssignmentsResource:
     def __init__(self, client: HTTPClient) -> None:
         self._client = client
 
-    def list(self, workspace_id: str) -> dict[str, Any]:
-        return self._client.request(
-            "GET",
-            "/v1/assignments",
-            query={"workspaceId": workspace_id},
-        )
+    def list(self) -> dict[str, Any]:
+        return self._client.request("GET", "/v1/office/assignments")
 
     def get(self, assignment_id: str) -> dict[str, Any]:
         return self._client.request("GET", f"/v1/assignments/{assignment_id}")

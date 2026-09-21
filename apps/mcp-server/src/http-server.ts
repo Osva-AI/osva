@@ -13,11 +13,15 @@ import {
 } from "@osva/observability";
 
 import type { McpAuthenticator } from "./auth.js";
+import { McpAuthenticationServiceUnavailableError } from "./auth.js";
 import type { McpServerConfig } from "./config.js";
 import { createOsvaMcpServer } from "./create-osva-mcp-server.js";
 import { logEvent } from "./log.js";
 import type { OsvaClientFactory } from "./osva-client.js";
-import { getMcpPrincipal, runWithMcpPrincipal } from "./principal-context.js";
+import {
+  getMcpPrincipal,
+  runWithMcpAuthenticatedIdentity,
+} from "./principal-context.js";
 
 export interface McpHttpServer {
   listen(): Promise<number>;
@@ -80,8 +84,19 @@ export function createMcpHttpServer(
       return;
     }
 
-    const principal = options.authenticator.authenticate(request);
-    if (principal === undefined) {
+    let identity: Awaited<ReturnType<McpAuthenticator["authenticate"]>>;
+    try {
+      identity = await options.authenticator.authenticate(request);
+    } catch (error) {
+      if (error instanceof McpAuthenticationServiceUnavailableError) {
+        response.writeHead(503, { "content-type": "application/json" });
+        response.end(JSON.stringify({ status: "service_unavailable" }));
+        return;
+      }
+      throw error;
+    }
+
+    if (identity === undefined) {
       response.writeHead(401, { "content-type": "application/json" });
       response.end(
         JSON.stringify({
@@ -98,7 +113,7 @@ export function createMcpHttpServer(
       OSVA_SPAN.MCP_INBOUND_REQUEST,
       { [OSVA_ATTR.OPERATION]: "mcp_http" },
       async () => {
-        await runWithMcpPrincipal(principal, async () => {
+        await runWithMcpAuthenticatedIdentity(identity, async () => {
           try {
             await mcpHandler(request, response);
           } catch (error) {

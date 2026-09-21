@@ -17,11 +17,11 @@ async function main(): Promise<void> {
     const exitCode = await runCommand(
       new OsvaClient({
         baseUrl: "http://127.0.0.1:9",
-        workspaceId: "ws" as never,
+        apiKey: "osva_ak_test.placeholder",
       }),
       {
         baseUrl: "http://127.0.0.1:9",
-        workspaceId: "ws" as never,
+        apiKey: "osva_ak_test.placeholder",
         json: false,
       },
       parsed.command.length === 0 ? ["help"] : parsed.command,
@@ -44,7 +44,7 @@ async function main(): Promise<void> {
 
   const client = new OsvaClient({
     baseUrl: config.baseUrl,
-    workspaceId: config.workspaceId,
+    apiKey: config.apiKey,
   });
 
   const exitCode = await runCommand(

@@ -100,6 +100,24 @@ export class PostgresEvaluationSuiteRepository implements EvaluationSuiteReposit
     return row === undefined ? null : evaluationSuiteFromRow(row);
   }
 
+  async findSuiteByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: EvaluationSuiteId,
+  ): Promise<EvaluationSuite | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(evaluationSuites)
+      .where(
+        and(
+          eq(evaluationSuites.id, id),
+          eq(evaluationSuites.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    return row === undefined ? null : evaluationSuiteFromRow(row);
+  }
+
   async listSuitesByWorkspace(
     workspaceId: WorkspaceId,
   ): Promise<readonly EvaluationSuite[]> {
@@ -236,6 +254,24 @@ export class PostgresEvaluationSuiteRepository implements EvaluationSuiteReposit
       .select()
       .from(evaluationRuns)
       .where(eq(evaluationRuns.id, id))
+      .limit(1);
+
+    return row === undefined ? null : evaluationRunFromRow(row);
+  }
+
+  async findEvaluationRunByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: EvaluationRunId,
+  ): Promise<EvaluationRun | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(evaluationRuns)
+      .where(
+        and(
+          eq(evaluationRuns.id, id),
+          eq(evaluationRuns.workspaceId, workspaceId),
+        ),
+      )
       .limit(1);
 
     return row === undefined ? null : evaluationRunFromRow(row);

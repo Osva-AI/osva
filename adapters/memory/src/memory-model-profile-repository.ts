@@ -1,4 +1,8 @@
-import type { ModelProfileId, ModelProfileVersionId } from "@osva/contracts";
+import type {
+  ModelProfileId,
+  ModelProfileVersionId,
+  WorkspaceId,
+} from "@osva/contracts";
 import {
   DomainInvariantError,
   DuplicateModelProfileKeyError,
@@ -36,6 +40,26 @@ export class MemoryModelProfileRepository implements ModelProfileRepository {
 
   async findModelProfileById(id: ModelProfileId): Promise<ModelProfile | null> {
     return this.profiles.get(id) ?? null;
+  }
+
+  async findModelProfileByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ModelProfileId,
+  ): Promise<ModelProfile | null> {
+    const profile = this.profiles.get(id);
+    if (profile === undefined || profile.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return profile;
+  }
+
+  async listModelProfilesByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<ModelProfile[]> {
+    return [...this.profiles.values()]
+      .filter((profile) => profile.workspaceId === workspaceId)
+      .sort(compareModelProfiles);
   }
 
   async listModelProfiles(): Promise<ModelProfile[]> {

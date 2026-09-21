@@ -26,6 +26,7 @@ import {
   createKnowledgeApplication,
   KnowledgeIngestionService,
   KnowledgeRetriever,
+  runtimeControlPlaneScope,
   type KnowledgeEmbeddingDefaults,
   type KnowledgeIndexQueue,
 } from "@osva/domain";
@@ -151,6 +152,10 @@ export async function createKnowledgeIntegrationStack(
   };
 }
 
+export function integrationControlPlaneScope(workspaceId: WorkspaceId) {
+  return runtimeControlPlaneScope(workspaceId);
+}
+
 export async function uploadTextArtifact(
   stack: KnowledgeIntegrationStack,
   workspaceId: WorkspaceId,
@@ -158,10 +163,13 @@ export async function uploadTextArtifact(
   body: string,
   mediaType = "text/plain",
 ) {
-  return stack.artifacts.createArtifact.execute({
-    workspaceId,
-    name,
-    mediaType,
-    content: Readable.from(body),
-  });
+  return stack.artifacts.createArtifact.execute(
+    integrationControlPlaneScope(workspaceId),
+    {
+      workspaceId,
+      name,
+      mediaType,
+      content: Readable.from(body),
+    },
+  );
 }

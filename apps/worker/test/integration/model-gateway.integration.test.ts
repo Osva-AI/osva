@@ -10,12 +10,11 @@ import {
   createDatabase,
   migrateDatabase,
   PostgresRunRepository,
-  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
-import { Workspace } from "@osva/domain";
 
 import { startFakeAnthropicMessagesServer } from "../../../../adapters/model-anthropic/test/fake-anthropic-server.js";
+import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
 import { startFakeGeminiGenerateContentServer } from "../../../../adapters/model-gemini/test/fake-gemini-server.js";
 import { startFakeOpenAIResponsesServer } from "../../../../adapters/model-openai/test/fake-openai-server.js";
 import { createWebProcess } from "../../../../apps/web/src/process.js";
@@ -69,13 +68,7 @@ describe("model gateway end-to-end", () => {
 
   beforeEach(async () => {
     await resetStage0Tables(database);
-    await new PostgresWorkspaceRepository(database).save(
-      Workspace.create({
-        id: WORKSPACE_ID,
-        name: "Workspace",
-        createdAt: NOW,
-      }),
-    );
+    await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
   it("freezes model bindings and executes generateText through the OpenAI adapter", async () => {
@@ -122,7 +115,6 @@ describe("model gateway end-to-end", () => {
       const profile = await fetchJson(`${origin}/v1/model-profiles`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "primary",
           name: "Primary",
         },
@@ -152,7 +144,6 @@ describe("model gateway end-to-end", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "model-text-agent",
           name: "Model Text Agent",
         },
@@ -188,7 +179,6 @@ describe("model gateway end-to-end", () => {
       const created = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId: (agentVersion.body as { id: string }).id,
           input: { prompt: "e2e-model" },
@@ -420,7 +410,6 @@ describe("model gateway end-to-end", () => {
       const profile = await fetchJson(`${origin}/v1/model-profiles`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "primary",
           name: "Primary",
         },
@@ -437,7 +426,6 @@ describe("model gateway end-to-end", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "model-text-agent",
           name: "Model Text Agent",
         },
@@ -471,7 +459,6 @@ describe("model gateway end-to-end", () => {
       const created = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId: (agentVersion.body as { id: string }).id,
           input: { prompt: "e2e-gemini-unpriced" },
@@ -549,7 +536,6 @@ describe("model gateway end-to-end", () => {
       const profile = await fetchJson(`${origin}/v1/model-profiles`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "primary",
           name: "Primary",
         },
@@ -565,7 +551,6 @@ describe("model gateway end-to-end", () => {
       const agent = await fetchJson(`${origin}/v1/agents`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           key: "model-unavailable",
           name: "Model Unavailable",
         },
@@ -601,7 +586,6 @@ describe("model gateway end-to-end", () => {
       const created = await fetchJson(`${origin}/v1/runs`, {
         method: "POST",
         body: {
-          workspaceId: WORKSPACE_ID,
           agentId,
           agentVersionId: (agentVersion.body as { id: string }).id,
           input: {},
@@ -698,7 +682,6 @@ async function runProviderEndToEnd(
     const profile = await fetchJson(`${origin}/v1/model-profiles`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "primary",
         name: "Primary",
       },
@@ -723,7 +706,6 @@ async function runProviderEndToEnd(
     const agent = await fetchJson(`${origin}/v1/agents`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         key: "model-text-agent",
         name: "Model Text Agent",
       },
@@ -757,7 +739,6 @@ async function runProviderEndToEnd(
     const created = await fetchJson(`${origin}/v1/runs`, {
       method: "POST",
       body: {
-        workspaceId: WORKSPACE_ID,
         agentId,
         agentVersionId: (agentVersion.body as { id: string }).id,
         input: { prompt: `e2e-${options.provider.toLowerCase()}` },
@@ -816,18 +797,6 @@ async function waitUntil(check: () => Promise<boolean>): Promise<void> {
     await delay(50);
   }
   throw new Error("Timed out waiting for model gateway execution.");
-}
-
-async function fetchJson(
-  url: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: init.body ? { "content-type": "application/json" } : undefined,
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: response.status, body: await response.json() };
 }
 
 function delay(ms: number): Promise<void> {

@@ -212,7 +212,7 @@ describe("runtime artifact capabilities", () => {
       const getBody = await getResponse.json();
       expect(getBody).toMatchObject({
         outcome: "FAILED",
-        error: { code: ARTIFACT_ERROR_CODES.ARTIFACT_WORKSPACE_MISMATCH },
+        error: { code: ARTIFACT_ERROR_CODES.ARTIFACT_NOT_FOUND },
       });
       expect(JSON.stringify(getBody)).not.toMatch(
         /s3|bucket|filesystem|\.osva/i,
@@ -229,7 +229,7 @@ describe("runtime artifact capabilities", () => {
       const contentBody = await contentResponse.json();
       expect(contentBody).toMatchObject({
         outcome: "FAILED",
-        error: { code: ARTIFACT_ERROR_CODES.ARTIFACT_WORKSPACE_MISMATCH },
+        error: { code: ARTIFACT_ERROR_CODES.ARTIFACT_NOT_FOUND },
       });
       expect(JSON.stringify(contentBody)).not.toMatch(
         /v1\/|secret-bucket|AccessKey/i,
@@ -309,6 +309,12 @@ async function seedExecution() {
     async save() {},
     async findById(id: WorkspaceId) {
       return Workspace.create({ id, name: "Workspace", createdAt: NOW });
+    },
+    async countAll() {
+      return 1;
+    },
+    async listIds() {
+      return [workspaceId];
     },
   };
 
@@ -411,6 +417,12 @@ async function seedCrossWorkspaceExecution(options: {
     async findById(id: WorkspaceId) {
       return Workspace.create({ id, name: "Workspace", createdAt: NOW });
     },
+    async countAll() {
+      return 2;
+    },
+    async listIds() {
+      return [options.workspaceA, options.workspaceB];
+    },
   };
 
   const artifactApplication = createArtifactApplication({
@@ -439,6 +451,17 @@ class FakeArtifactRepository implements ArtifactRepository {
 
   async findById(artifactId: ArtifactId): Promise<Artifact | null> {
     return this.artifacts.get(artifactId) ?? null;
+  }
+
+  async findByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    artifactId: ArtifactId,
+  ): Promise<Artifact | null> {
+    const artifact = this.artifacts.get(artifactId);
+    if (artifact === undefined || artifact.workspaceId !== workspaceId) {
+      return null;
+    }
+    return artifact;
   }
 
   async findByWorkspaceIdempotencyKey(): Promise<Artifact | null> {

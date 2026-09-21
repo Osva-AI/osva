@@ -24,7 +24,8 @@
     "@osva/contracts": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/domain": "workspace:*",
-    "@osva/orchestration": "workspace:*"
+    "@osva/orchestration": "workspace:*",
+    "@osva/observability": "workspace:*"
   },
   "devDependencies": {
     "@osva/adapters-mcp-client": "workspace:*",

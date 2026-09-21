@@ -4,7 +4,6 @@ import type {
   WorkflowId,
   WorkflowRunId,
   WorkflowVersionId,
-  WorkspaceId,
 } from "@osva/contracts";
 import {
   createWorkflowRequestSchema,
@@ -27,7 +26,7 @@ import type {
   WorkflowRunView,
   WorkflowVersion,
 } from "@osva/domain";
-
+import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -37,7 +36,6 @@ export async function handleWorkflowRequest(
   method: string,
   path: string,
   workflows: WorkflowApplication,
-  searchParams: URLSearchParams = new URLSearchParams(),
 ): Promise<boolean> {
   const route = matchWorkflowRoute(path);
   if (route === undefined) {
@@ -45,14 +43,7 @@ export async function handleWorkflowRequest(
   }
 
   try {
-    await dispatchWorkflowRoute(
-      request,
-      response,
-      method,
-      route,
-      workflows,
-      searchParams,
-    );
+    await dispatchWorkflowRoute(request, response, method, route, workflows);
   } catch (error) {
     sendHttpError(response, error);
   }
@@ -86,11 +77,11 @@ async function dispatchWorkflowRoute(
   method: string,
   route: WorkflowRoute,
   workflows: WorkflowApplication,
-  searchParams: URLSearchParams,
 ): Promise<void> {
+  const scope = requireControlPlaneScope();
   if (route.kind === "collection") {
     if (method === "GET") {
-      const list = await workflows.listWorkflows.execute();
+      const list = await workflows.listWorkflows.execute(scope);
       sendJson(response, 200, toWorkflowListResource(list));
       return;
     }
@@ -104,7 +95,10 @@ async function dispatchWorkflowRoute(
         return;
       }
 
-      const created = await workflows.createWorkflow.execute(parsed.data);
+      const created = await workflows.createWorkflow.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(response, 201, toWorkflowResource(created));
       return;
     }
@@ -120,7 +114,10 @@ async function dispatchWorkflowRoute(
 
   if (route.kind === "item") {
     if (method === "GET") {
-      const workflow = await workflows.getWorkflow.execute(route.workflowId);
+      const workflow = await workflows.getWorkflow.execute(
+        scope,
+        route.workflowId,
+      );
       sendJson(response, 200, toWorkflowResource(workflow));
       return;
     }
@@ -132,6 +129,7 @@ async function dispatchWorkflowRoute(
   if (route.kind === "versions") {
     if (method === "GET") {
       const versions = await workflows.listWorkflowVersions.execute(
+        scope,
         route.workflowId,
       );
       sendJson(response, 200, toWorkflowVersionListResource(versions));
@@ -147,7 +145,7 @@ async function dispatchWorkflowRoute(
         return;
       }
 
-      const created = await workflows.appendWorkflowVersion.execute({
+      const created = await workflows.appendWorkflowVersion.execute(scope, {
         workflowId: route.workflowId,
         definition: parsed.data.definition,
       });
@@ -166,7 +164,7 @@ async function dispatchWorkflowRoute(
 
   if (route.kind === "version") {
     if (method === "GET") {
-      const version = await workflows.getWorkflowVersion.execute({
+      const version = await workflows.getWorkflowVersion.execute(scope, {
         workflowId: route.workflowId,
         workflowVersionId: route.workflowVersionId,
       });
@@ -188,7 +186,10 @@ async function dispatchWorkflowRoute(
         return;
       }
 
-      const created = await workflows.createWorkflowRun.execute(parsed.data);
+      const created = await workflows.createWorkflowRun.execute(scope, {
+        ...parsed.data,
+        workspaceId: scope.principal.workspaceId,
+      });
       sendJson(
         response,
         201,
@@ -212,16 +213,13 @@ async function dispatchWorkflowRoute(
 
   if (route.kind === "approval") {
     if (method === "GET") {
-      const workspaceId = searchParams.get("workspaceId");
-      if (workspaceId === null || workspaceId.length === 0) {
-        sendJson(response, 400, { status: "invalid_request" });
-        return;
-      }
-
-      const approvalRequest = await workflows.getApprovalRequest.execute({
-        workspaceId: workspaceId as WorkspaceId,
-        approvalRequestId: route.approvalRequestId,
-      });
+      const approvalRequest = await workflows.getApprovalRequest.execute(
+        scope,
+        {
+          workspaceId: scope.principal.workspaceId,
+          approvalRequestId: route.approvalRequestId,
+        },
+      );
       sendJson(response, 200, toApprovalRequestResource(approvalRequest));
       return;
     }
@@ -240,8 +238,8 @@ async function dispatchWorkflowRoute(
         return;
       }
 
-      const decided = await workflows.decideApprovalRequest.execute({
-        workspaceId: parsed.data.workspaceId,
+      const decided = await workflows.decideApprovalRequest.execute(scope, {
+        workspaceId: scope.principal.workspaceId,
         approvalRequestId: route.approvalRequestId,
         decision: parsed.data.decision,
         comment: parsed.data.comment,
@@ -260,7 +258,10 @@ async function dispatchWorkflowRoute(
   }
 
   if (method === "GET") {
-    const view = await workflows.getWorkflowRun.execute(route.workflowRunId);
+    const view = await workflows.getWorkflowRun.execute(
+      scope,
+      route.workflowRunId,
+    );
     sendJson(response, 200, toWorkflowRunResource(view));
     return;
   }
@@ -469,3 +470,18 @@ function toApprovalRequestFields(request: ApprovalRequest) {
 function toApprovalRequestResource(request: ApprovalRequest) {
   return approvalRequestResourceSchema.parse(toApprovalRequestFields(request));
 }
+export const V1_HTTP_ROUTES = [
+  { method: "GET", path: "/v1/workflows" },
+  { method: "POST", path: "/v1/workflows" },
+  { method: "GET", path: "/v1/workflows/:workflowId" },
+  { method: "GET", path: "/v1/workflows/:workflowId/versions" },
+  { method: "POST", path: "/v1/workflows/:workflowId/versions" },
+  {
+    method: "GET",
+    path: "/v1/workflows/:workflowId/versions/:workflowVersionId",
+  },
+  { method: "POST", path: "/v1/workflow-runs" },
+  { method: "GET", path: "/v1/workflow-runs/:workflowRunId" },
+  { method: "GET", path: "/v1/approval-requests/:approvalRequestId" },
+  { method: "POST", path: "/v1/approval-requests/:approvalRequestId/decision" },
+] as const;

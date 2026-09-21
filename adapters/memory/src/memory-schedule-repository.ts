@@ -42,6 +42,18 @@ export class MemoryScheduleRepository implements ScheduleRepository {
     return this.schedules.get(id) ?? null;
   }
 
+  async findScheduleByWorkspaceAndId(
+    workspaceId: WorkspaceId,
+    id: ScheduleId,
+  ): Promise<Schedule | null> {
+    const schedule = this.schedules.get(id);
+    if (schedule === undefined || schedule.workspaceId !== workspaceId) {
+      return null;
+    }
+
+    return schedule;
+  }
+
   async findScheduleByWorkspaceKey(
     workspaceId: WorkspaceId,
     key: string,
