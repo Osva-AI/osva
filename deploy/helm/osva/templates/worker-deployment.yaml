@@ -49,10 +49,12 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- include "osva.artifactVolumeMount" . | nindent 12 }}
             - name: trusted-runtime
               mountPath: {{ .Values.trustedRuntimeRoot }}
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- include "osva.artifactVolume" . | nindent 8 }}
         - name: trusted-runtime
           emptyDir: {}

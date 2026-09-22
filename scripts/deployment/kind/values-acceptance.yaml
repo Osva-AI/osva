@@ -11,6 +11,7 @@ valkey:
 
 artifactStorage:
   driver: filesystem
+  maxBytes: 67108864
   filesystemRoot: /var/lib/osva/artifacts
 
 trustedRuntimeRoot: /var/lib/osva/trusted-runtime

@@ -37,6 +37,8 @@ function writeDefaultValues() {
       "image:",
       "  repository: osva",
       "  tag: test-1",
+      "artifactStorage:",
+      "  driver: filesystem",
       "",
     ].join("\n"),
     "utf8",
@@ -132,6 +134,10 @@ function assertDefaultTemplate(output) {
   assert.doesNotMatch(output, /privileged: true/);
   assert.doesNotMatch(output, /kind: StatefulSet/);
   assert.doesNotMatch(output, /bitnami\/postgresql/);
+  assert.match(output, /name: artifacts/);
+  assert.match(output, /mountPath: "\/var\/lib\/osva\/artifacts"/);
+  assert.match(output, /OSVA_ARTIFACT_MAX_BYTES: "67108864"/);
+  assert.doesNotMatch(output, /OSVA_ARTIFACT_MAX_BYTES: "6\.7108864e\+07"/);
 }
 
 function assertProductionTemplate(output) {
@@ -139,6 +145,7 @@ function assertProductionTemplate(output) {
     existingSecret: true,
   });
   assert.match(output, /OSVA_ARTIFACT_STORAGE_DRIVER: "s3"/);
+  assert.doesNotMatch(output, /name: artifacts/);
   assert.match(output, /OSVA_ARTIFACT_S3_BUCKET: "osva-artifacts-example"/);
   assert.match(output, /OSVA_MCP_ALLOWED_HOSTS: "mcp.example.com"/);
   assert.match(output, /host: mcp\.example\.com/);

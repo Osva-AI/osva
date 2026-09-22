@@ -10,7 +10,7 @@ data:
   OSVA_DATABASE_URL: {{ required "database.url is required" .Values.database.url | quote }}
   OSVA_VALKEY_URL: {{ required "valkey.url is required" .Values.valkey.url | quote }}
   OSVA_ARTIFACT_STORAGE_DRIVER: {{ .Values.artifactStorage.driver | quote }}
-  OSVA_ARTIFACT_MAX_BYTES: {{ .Values.artifactStorage.maxBytes | toString | quote }}
+  OSVA_ARTIFACT_MAX_BYTES: {{ .Values.artifactStorage.maxBytes | int | printf "%d" | quote }}
   OSVA_ARTIFACT_FILESYSTEM_ROOT: {{ .Values.artifactStorage.filesystemRoot | quote }}
   OSVA_ARTIFACT_S3_BUCKET: {{ .Values.artifactStorage.s3.bucket | quote }}
   OSVA_ARTIFACT_S3_REGION: {{ .Values.artifactStorage.s3.region | quote }}

@@ -52,3 +52,17 @@
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "osva.artifactVolumeMount" }}
+{{- if eq .Values.artifactStorage.driver "filesystem" }}
+- name: artifacts
+  mountPath: {{ .Values.artifactStorage.filesystemRoot | quote }}
+{{- end }}
+{{- end }}
+
+{{- define "osva.artifactVolume" }}
+{{- if eq .Values.artifactStorage.driver "filesystem" }}
+- name: artifacts
+  emptyDir: {}
+{{- end }}
+{{- end }}
