@@ -162,8 +162,10 @@ jobs:
 
       - name: Install kind
         run: |
-          curl -fsSL https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64 -o /usr/local/bin/kind
-          chmod +x /usr/local/bin/kind
+          curl -fsSL https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64 -o "$RUNNER_TEMP/kind"
+          chmod +x "$RUNNER_TEMP/kind"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/kind" version
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
