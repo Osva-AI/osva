@@ -132,6 +132,44 @@ async function assertMcpHostBehavior(mcpPort) {
   }
 }
 
+const EXPECTED_MIGRATION_HEAD = "0022_api_security_slice";
+
+function assertMigrationStatus(password, composeEnv) {
+  const databaseUrl = `postgres://osva:${password}@postgres:5432/osva`;
+  const output = runCapture(
+    "docker",
+    [
+      "compose",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--entrypoint",
+      "node",
+      "migrate",
+      "/app/packages/db/dist/migrations-status-cli.js",
+      databaseUrl,
+    ],
+    { env: composeEnv },
+  );
+  console.log(output);
+  if (!output.includes(`repository head: ${EXPECTED_MIGRATION_HEAD}`)) {
+    throw new Error(
+      `Migration status missing repository head ${EXPECTED_MIGRATION_HEAD}`,
+    );
+  }
+  if (!output.includes(`database head: ${EXPECTED_MIGRATION_HEAD}`)) {
+    throw new Error(
+      `Migration status missing database head ${EXPECTED_MIGRATION_HEAD}`,
+    );
+  }
+  if (!output.includes("pending migrations: (none)")) {
+    throw new Error("Migration status reports pending migrations");
+  }
+  if (!output.includes("status: current")) {
+    throw new Error("Migration status is not current");
+  }
+}
+
 async function fetchWithRetry(url, options, attempts = 10) {
   let lastError;
   for (let i = 0; i < attempts; i += 1) {
@@ -200,6 +238,8 @@ async function main() {
 
   assertServicesRunning(password);
   assertStartupLogs(password);
+
+  assertMigrationStatus(password, composeEnv);
 
   await waitHttp(`http://127.0.0.1:${webPort}/health`);
   await waitHttp(`http://127.0.0.1:${webPort}/ready`);
