@@ -47,7 +47,7 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ 3.5 Knowledge retrieval
 - ✅ 3.6 MCP server + connector SDK
 - ✅ 3.7 API security and stability
-- ✅ 3.8 OSS 1.0 deployment and release packaging (OSS 1.0 RC implementation and release acceptance complete)
+- ✅ 3.8 OSS 1.0 deployment and release packaging (OSS 1.0 implementation and release acceptance complete)
 
 ## Totals
 
@@ -58,4 +58,4 @@ Status is recorded after locally verifiable checks for each slice.
 - Overall: 33/33 OSS 1.0 slices complete
 
 **Community Beta:** complete
-**OSS 1.0:** release candidate fully verified (in-repo gates and Linux release-readiness CI); public release still requires merge to `main` and deliberate publishing/tagging
+**OSS 1.0:** OSVA 1.0.0 release (33/33 slices; in-repo gates and Linux release-readiness CI verified; registry artifact availability depends on publication)

@@ -6,12 +6,12 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** **OSS 1.0 release candidate fully verified** (Stage 3 complete: 3.8.1–3.8.7 including Linux kind acceptance in release-readiness CI).
+> **Status:** **OSVA OSS 1.0** (`v1.0.0` source release; Stage 3 complete: 3.8.1–3.8.7 including Linux kind acceptance in release-readiness CI).
 > Community Edition includes authenticated `/v1`, workflows, scheduling, MCP client
 > and MCP server, knowledge/RAG, artifact storage, container/trusted/remote runtimes,
 > TypeScript/Python SDKs, CLI, self-hosted Compose, Helm/Kubernetes packaging, and
-> optional OpenTelemetry. **Public `v1.0.0` tag, image publish, and npm/PyPI release
-> are intentional maintainer steps—not done automatically.** Start with
+> optional OpenTelemetry. Registry installs (`npm`, PyPI, `ghcr.io`) depend on
+> publication of the corresponding artifacts. Start with
 > [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
 
 ## Why OSVA?
@@ -110,7 +110,7 @@ See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
 **Authentication:** all `/v1/*` routes require API keys. Run bootstrap once per environment to mint the initial key.
 
-**Public SDKs (release 1.0.0, publish pending):** `@osva/contracts`, `@osva/runtime-protocol`, `@osva/sdk`, `@osva/cli`, `@osva/connector-sdk`, and Python `osva-sdk`.
+**Public SDKs (OSVA 1.0.0):** `@osva/contracts`, `@osva/runtime-protocol`, `@osva/sdk`, `@osva/cli`, `@osva/connector-sdk`, and Python `osva-sdk` (registry availability depends on publication).
 
 Historical Beta docs: [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) (legacy local dev path).
 
@@ -212,7 +212,7 @@ and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
 
 ### SDK and CLI
 
-Public packages at version **1.0.0** (packed and verified locally; npm/PyPI publish requires maintainer approval):
+Public packages at version **1.0.0** (build from this repository, or install from npm/PyPI once published):
 
 - `@osva/contracts`, `@osva/runtime-protocol` — shared types/schemas
 - `@osva/sdk` — TypeScript client (`OsvaClient`) and `@osva/sdk/runtime`

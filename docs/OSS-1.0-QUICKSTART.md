@@ -1,8 +1,8 @@
 # OSVA OSS 1.0 quickstart
 
-Authoritative path for a **self-hosted** OSVA 1.0 release candidate using Docker Compose, authenticated `/v1`, TypeScript and Python SDKs, and optional MCP.
+Authoritative path for a **self-hosted OSVA OSS 1.0** deployment using Docker Compose, authenticated `/v1`, TypeScript and Python SDKs, and optional MCP.
 
-> **Not a public release yet.** This documents the release-candidate installation workflow. In-repo release acceptance (including Linux kind CI) is complete. Publishing tags, images, and packages requires explicit maintainer approval after merge to `main`.
+> **OSVA 1.0.0** source release. This quickstart matches the self-hosted Compose distribution in-tree. npm, PyPI, and container registry installs use the same versions once those artifacts are published.
 
 ## Prerequisites
 
@@ -65,12 +65,12 @@ node --input-type=module -e "
 "
 ```
 
-Published npm install (`@osva/sdk@1.0.0`) follows the same client surface once packages are released.
+Published npm install (`@osva/sdk@1.0.0`) follows the same client surface when the package is available on npm.
 
 ## 6. Python SDK
 
 ```bash
-python -m pip install ./sdks/python   # or osva-sdk wheel after release
+python -m pip install ./sdks/python   # or `pip install osva-sdk==1.0.0` when on PyPI
 export OSVA_BASE_URL=http://127.0.0.1:8080
 export OSVA_API_KEY='osva_ak_…'
 python -c "

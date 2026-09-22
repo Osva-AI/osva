@@ -27,7 +27,7 @@ function main() {
   const version = readReleaseVersion();
   const inventory = {
     releaseVersion: version,
-    status: "OSS 1.0 release candidate (not publicly tagged or published)",
+    status: "OSS 1.0 release-candidate acceptance inventory",
     ociImage: `osva:${version}`,
     helmChart: {
       path: "deploy/helm/osva",

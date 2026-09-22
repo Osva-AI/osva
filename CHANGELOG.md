@@ -4,9 +4,9 @@ All notable OSVA changes are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-09-22
 
-OSS 1.0 Community Edition baseline. Release candidate implementation and release acceptance verified in-repository (including Linux kind CI). Public tag and registry publication remain pending maintainer approval.
+OSS 1.0 Community Edition baseline. Release implementation and release acceptance verified in-repository (including Linux kind CI).
 
 ### Workflow / runtime
 

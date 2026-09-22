@@ -12,7 +12,7 @@
 | 3.8.6 OSS 1.0 documentation | **Complete** | README, quickstart, operations/runbooks, security/compatibility |
 | 3.8.7 Release candidate acceptance | **Complete** | Local and Linux `release-readiness` gates passed (including kind); no public publish/tag |
 
-Stage 3.8 is **complete**: OSS 1.0 RC implementation and release acceptance verified (3.8.1–3.8.7). Public `v1.0.0` tag, GitHub Release, and registry uploads remain explicit maintainer actions after merge to `main`.
+Stage 3.8 is **complete**: OSS 1.0 implementation and release acceptance verified (3.8.1–3.8.7). Source is versioned **1.0.0**; npm, PyPI, GHCR, and GitHub Release artifacts are published separately when operators choose to publish them.
 
 ## Decisions
 
