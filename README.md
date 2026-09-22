@@ -6,7 +6,7 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** **OSS 1.0 release candidate implementation complete** (Stage 3.8 slices 3.8.1–3.8.7 implemented; **final Linux kind acceptance pending**).
+> **Status:** **OSS 1.0 release candidate fully verified** (Stage 3 complete: 3.8.1–3.8.7 including Linux kind acceptance in release-readiness CI).
 > Community Edition includes authenticated `/v1`, workflows, scheduling, MCP client
 > and MCP server, knowledge/RAG, artifact storage, container/trusted/remote runtimes,
 > TypeScript/Python SDKs, CLI, self-hosted Compose, Helm/Kubernetes packaging, and

@@ -10,9 +10,9 @@
 | 3.8.4 Helm / Kubernetes | **Complete** | `deploy/helm/osva/` + Dockerized Helm validation |
 | 3.8.5 Public packages + release CI | **Complete** | `VERSION`, npm/Python pack smoke, license inventory, `release-readiness` workflow |
 | 3.8.6 OSS 1.0 documentation | **Complete** | README, quickstart, operations/runbooks, security/compatibility |
-| 3.8.7 Release candidate acceptance | **Pending** | Local gates passed except kind; Linux `release-readiness` kind job pending (no public publish/tag) |
+| 3.8.7 Release candidate acceptance | **Complete** | Local and Linux `release-readiness` gates passed (including kind); no public publish/tag |
 
-Stage 3.8 **implementation** is complete (3.8.1–3.8.6 and local 3.8.7 gates except kind). **Final release acceptance** is pending successful Linux kind CI. Public `v1.0.0` tag, GitHub Release, and registry uploads remain explicit maintainer actions.
+Stage 3.8 is **complete**: OSS 1.0 RC implementation and release acceptance verified (3.8.1–3.8.7). Public `v1.0.0` tag, GitHub Release, and registry uploads remain explicit maintainer actions after merge to `main`.
 
 ## Decisions
 

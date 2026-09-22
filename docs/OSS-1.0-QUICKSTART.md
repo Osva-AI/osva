@@ -2,7 +2,7 @@
 
 Authoritative path for a **self-hosted** OSVA 1.0 release candidate using Docker Compose, authenticated `/v1`, TypeScript and Python SDKs, and optional MCP.
 
-> **Not a public release yet.** This documents the release-candidate installation workflow. Final Linux kind acceptance in CI is still pending before release sign-off. Publishing tags, images, and packages requires explicit maintainer approval.
+> **Not a public release yet.** This documents the release-candidate installation workflow. In-repo release acceptance (including Linux kind CI) is complete. Publishing tags, images, and packages requires explicit maintainer approval after merge to `main`.
 
 ## Prerequisites
 

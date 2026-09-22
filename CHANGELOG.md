@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.0.0] - Unreleased
 
-OSS 1.0 Community Edition baseline. Release candidate implementation in-repository; final Linux kind acceptance pending before release sign-off. Public tag and registry publication remain pending maintainer approval.
+OSS 1.0 Community Edition baseline. Release candidate implementation and release acceptance verified in-repository (including Linux kind CI). Public tag and registry publication remain pending maintainer approval.
 
 ### Workflow / runtime
 

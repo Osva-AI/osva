@@ -47,15 +47,15 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ 3.5 Knowledge retrieval
 - ✅ 3.6 MCP server + connector SDK
 - ✅ 3.7 API security and stability
-- 🔄 3.8 OSS 1.0 deployment and release packaging (implementation complete; final release acceptance pending Linux kind CI)
+- ✅ 3.8 OSS 1.0 deployment and release packaging (OSS 1.0 RC implementation and release acceptance complete)
 
 ## Totals
 
 - Stage 0: 8/8 complete
 - Stage 1: 8/8 complete
 - Stage 2: 9/9 complete
-- Stage 3: 7/8 complete (3.8 final acceptance pending)
-- Overall: 32/33 OSS 1.0 slices complete
+- Stage 3: 8/8 complete
+- Overall: 33/33 OSS 1.0 slices complete
 
 **Community Beta:** complete
-**OSS 1.0:** release candidate implementation complete; final Linux kind acceptance pending before release sign-off
+**OSS 1.0:** release candidate fully verified (in-repo gates and Linux release-readiness CI); public release still requires merge to `main` and deliberate publishing/tagging
