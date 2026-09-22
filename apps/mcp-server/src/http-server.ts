@@ -1,10 +1,7 @@
 import http from "node:http";
 
 import { createMcpHandler } from "@modelcontextprotocol/server";
-import {
-  localhostHostValidation,
-  toNodeHandler,
-} from "@modelcontextprotocol/node";
+import { toNodeHandler } from "@modelcontextprotocol/node";
 import {
   OSVA_ATTR,
   OSVA_SPAN,
@@ -15,6 +12,7 @@ import {
 import type { McpAuthenticator } from "./auth.js";
 import { McpAuthenticationServiceUnavailableError } from "./auth.js";
 import type { McpServerConfig } from "./config.js";
+import { createMcpHostHeaderValidator } from "./host-validation.js";
 import { createOsvaMcpServer } from "./create-osva-mcp-server.js";
 import { logEvent } from "./log.js";
 import type { OsvaClientFactory } from "./osva-client.js";
@@ -47,7 +45,9 @@ export function createMcpHttpServer(
     }),
   );
   const mcpHandler = toNodeHandler(handler);
-  const validateHost = localhostHostValidation();
+  const validateHost = createMcpHostHeaderValidator(
+    options.config.allowedHosts,
+  );
 
   const server = http.createServer((request, response) => {
     void handleRequest(request, response);
@@ -57,14 +57,14 @@ export function createMcpHttpServer(
     request: http.IncomingMessage,
     response: http.ServerResponse,
   ): Promise<void> {
-    if (!validateHost(request, response)) {
-      return;
-    }
-
     const path = request.url?.split("?")[0] ?? "";
     if (path === "/health" || path === "/health/") {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify({ status: "ok" }));
+      return;
+    }
+
+    if (!validateHost(request, response)) {
       return;
     }
 

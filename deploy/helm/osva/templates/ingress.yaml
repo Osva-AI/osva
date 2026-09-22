@@ -1,0 +1,67 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "osva.fullname" . }}-web
+  labels:
+    app.kubernetes.io/name: {{ include "osva.name" . }}
+    app.kubernetes.io/component: web
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.web.tls }}
+  tls:
+    {{- toYaml .Values.ingress.web.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ required "ingress.web.host is required when ingress.enabled" .Values.ingress.web.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "osva.fullname" . }}-web
+                port:
+                  number: {{ .Values.web.service.port }}
+{{- end }}
+{{- if and .Values.ingress.enabled .Values.ingress.mcp.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "osva.fullname" . }}-mcp
+  labels:
+    app.kubernetes.io/name: {{ include "osva.name" . }}
+    app.kubernetes.io/component: mcp
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.mcp.tls }}
+  tls:
+    {{- toYaml .Values.ingress.mcp.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ required "ingress.mcp.host is required when ingress.mcp.enabled" .Values.ingress.mcp.host }}
+      http:
+        paths:
+          - path: {{ .Values.mcp.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "osva.fullname" . }}-mcp
+                port:
+                  number: {{ .Values.mcp.service.port }}
+{{- end }}

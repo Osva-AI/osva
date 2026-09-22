@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "osva.fullname" . }}-env
+  labels:
+    app.kubernetes.io/name: {{ include "osva.name" . }}
+    helm.sh/chart: {{ include "osva.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  OSVA_DATABASE_URL: {{ required "database.url is required" .Values.database.url | quote }}
+  OSVA_VALKEY_URL: {{ required "valkey.url is required" .Values.valkey.url | quote }}
+  OSVA_ARTIFACT_STORAGE_DRIVER: {{ .Values.artifactStorage.driver | quote }}
+  OSVA_ARTIFACT_MAX_BYTES: {{ .Values.artifactStorage.maxBytes | toString | quote }}
+  OSVA_ARTIFACT_FILESYSTEM_ROOT: {{ .Values.artifactStorage.filesystemRoot | quote }}
+  OSVA_ARTIFACT_S3_BUCKET: {{ .Values.artifactStorage.s3.bucket | quote }}
+  OSVA_ARTIFACT_S3_REGION: {{ .Values.artifactStorage.s3.region | quote }}
+  OSVA_ARTIFACT_S3_ENDPOINT: {{ .Values.artifactStorage.s3.endpoint | quote }}
+  OSVA_ARTIFACT_S3_FORCE_PATH_STYLE: {{ .Values.artifactStorage.s3.forcePathStyle | toString | quote }}
+  OSVA_TRUSTED_RUNTIME_ROOT: {{ .Values.trustedRuntimeRoot | quote }}
+  OSVA_KNOWLEDGE_EMBEDDING_PROVIDER: {{ .Values.knowledgeEmbedding.provider | quote }}
+  OSVA_KNOWLEDGE_EMBEDDING_MODEL: {{ .Values.knowledgeEmbedding.model | quote }}
+  OSVA_KNOWLEDGE_EMBEDDING_DIMENSIONS: {{ .Values.knowledgeEmbedding.dimensions | toString | quote }}
+  OSVA_CONTAINER_ENABLED: {{ .Values.worker.containerEnabled | toString | quote }}
+  OSVA_WEB_HOST: {{ .Values.web.host | quote }}
+  OSVA_WEB_PORT: {{ .Values.web.port | toString | quote }}
+  OSVA_SCHEDULER_POLL_MS: {{ .Values.scheduler.pollMs | toString | quote }}
+  OSVA_WORKFLOW_ORCHESTRATOR_POLL_MS: {{ .Values.workflowOrchestrator.pollMs | toString | quote }}
+  OSVA_MCP_HOST: {{ .Values.mcp.host | quote }}
+  OSVA_MCP_PORT: {{ .Values.mcp.port | toString | quote }}
+  OSVA_MCP_PATH: {{ .Values.mcp.path | quote }}
+  OSVA_MCP_ALLOWED_HOSTS: {{ include "osva.mcpAllowedHosts" . | quote }}
+  OSVA_API_BASE_URL: {{ include "osva.mcpApiBaseUrl" . | quote }}

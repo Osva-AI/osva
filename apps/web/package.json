@@ -25,7 +25,8 @@
     "@osva/db": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva/orchestration": "workspace:*",
-    "@osva/observability": "workspace:*"
+    "@osva/observability": "workspace:*",
+    "busboy": "1.6.0"
   },
   "devDependencies": {
     "@osva/adapters-mcp-client": "workspace:*",
@@ -35,7 +36,6 @@
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "busboy": "1.6.0",
     "@types/busboy": "1.5.4"
   }
 }

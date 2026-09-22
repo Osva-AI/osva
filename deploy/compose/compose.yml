@@ -1,0 +1,186 @@
+name: osva-self-hosted
+
+x-osva-image: &osva-image
+  image: ${OSVA_IMAGE:-osva:local}
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+
+x-osva-common-env: &osva-common-env
+  OSVA_DATABASE_URL: postgres://osva:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/osva
+  OSVA_VALKEY_URL: redis://valkey:6379
+  OSVA_ARTIFACT_STORAGE_DRIVER: filesystem
+  OSVA_ARTIFACT_FILESYSTEM_ROOT: /var/lib/osva/artifacts
+  OSVA_ARTIFACT_MAX_BYTES: ${OSVA_ARTIFACT_MAX_BYTES:-67108864}
+  OSVA_TRUSTED_RUNTIME_ROOT: /var/lib/osva/trusted-runtime
+  OSVA_KNOWLEDGE_EMBEDDING_PROVIDER: ${OSVA_KNOWLEDGE_EMBEDDING_PROVIDER:-DETERMINISTIC}
+  OSVA_KNOWLEDGE_EMBEDDING_MODEL: ${OSVA_KNOWLEDGE_EMBEDDING_MODEL:-deterministic-v1}
+  OSVA_KNOWLEDGE_EMBEDDING_DIMENSIONS: ${OSVA_KNOWLEDGE_EMBEDDING_DIMENSIONS:-384}
+  OSVA_CONTAINER_ENABLED: "false"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: osva
+      POSTGRES_USER: osva
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - osva-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osva -d osva"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  valkey:
+    image: valkey/valkey:8.1.10-alpine
+    restart: unless-stopped
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - osva-valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  migrate:
+    <<: *osva-image
+    restart: "no"
+    environment:
+      <<: *osva-common-env
+      OSVA_PROCESS: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    <<: *osva-image
+    restart: unless-stopped
+    environment:
+      <<: *osva-common-env
+      OSVA_PROCESS: web
+      OSVA_WEB_HOST: 0.0.0.0
+      OSVA_WEB_PORT: "3000"
+    ports:
+      - "${OSVA_PUBLISH_WEB_PORT:-8080}:3000"
+    volumes:
+      - osva-artifacts:/var/lib/osva/artifacts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  worker:
+    <<: *osva-image
+    restart: unless-stopped
+    environment:
+      <<: *osva-common-env
+      OSVA_PROCESS: worker
+    volumes:
+      - osva-artifacts:/var/lib/osva/artifacts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+
+  scheduler:
+    <<: *osva-image
+    restart: unless-stopped
+    environment:
+      <<: *osva-common-env
+      OSVA_PROCESS: scheduler
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+
+  workflow-orchestrator:
+    <<: *osva-image
+    restart: unless-stopped
+    environment:
+      <<: *osva-common-env
+      OSVA_PROCESS: workflow-orchestrator
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+
+  knowledge-worker:
+    <<: *osva-image
+    restart: unless-stopped
+    environment:
+      <<: *osva-common-env
+      OSVA_PROCESS: knowledge-worker
+    volumes:
+      - osva-artifacts:/var/lib/osva/artifacts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+
+  mcp-server:
+    <<: *osva-image
+    restart: unless-stopped
+    environment:
+      <<: *osva-common-env
+      OSVA_PROCESS: mcp-server
+      OSVA_MCP_HOST: 0.0.0.0
+      OSVA_MCP_PORT: "3100"
+      OSVA_API_BASE_URL: http://web:3000
+      OSVA_MCP_ALLOWED_HOSTS: ${OSVA_MCP_ALLOWED_HOSTS:-}
+    ports:
+      - "${OSVA_PUBLISH_MCP_PORT:-3100}:3100"
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3100/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  bootstrap:
+    <<: *osva-image
+    restart: "no"
+    environment:
+      <<: *osva-common-env
+      OSVA_PROCESS: bootstrap
+      OSVA_BOOTSTRAP_WORKSPACE_NAME: ${OSVA_BOOTSTRAP_WORKSPACE_NAME:-Default Workspace}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles: ["bootstrap"]
+
+volumes:
+  osva-postgres-data:
+  osva-valkey-data:
+  osva-artifacts:

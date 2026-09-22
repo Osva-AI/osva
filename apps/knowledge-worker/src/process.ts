@@ -13,6 +13,7 @@ import {
   KNOWLEDGE_MAX_SOURCE_BYTES,
 } from "@osva/contracts";
 import {
+  checkDatabaseConnection,
   createDatabase,
   PostgresArtifactRepository,
   PostgresKnowledgeRepository,
@@ -107,6 +108,8 @@ export function createKnowledgeWorkerProcess(
   return {
     config,
     async start() {
+      await checkDatabaseConnection(database);
+      await queue.ping();
       await queue.start(async (knowledgeIndexId) => {
         try {
           await ingestion.processIndex(knowledgeIndexId);

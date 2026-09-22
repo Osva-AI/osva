@@ -46,8 +46,8 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ 3.4 Artifact storage
 - ✅ 3.5 Knowledge retrieval
 - ✅ 3.6 MCP server + connector SDK
-- ✅ 3.7 API security and stability (implementation complete; pending final acceptance)
-- ⬜ 3.8 OSS 1.0 deployment and release packaging
+- ✅ 3.7 API security and stability
+- 🔄 3.8 OSS 1.0 deployment and release packaging (in progress; 3.8.1–3.8.4 implemented)
 
 ## Totals
 

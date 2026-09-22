@@ -890,6 +890,9 @@ importers:
       '@osva/orchestration':
         specifier: workspace:*
         version: link:../../packages/orchestration
+      busboy:
+        specifier: 1.6.0
+        version: 1.6.0
     devDependencies:
       '@osva/adapters-memory':
         specifier: workspace:*
@@ -900,9 +903,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4
-      busboy:
-        specifier: 1.6.0
-        version: 1.6.0
       eslint:
         specifier: 'catalog:'
         version: 10.10.0

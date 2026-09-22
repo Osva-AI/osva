@@ -10,22 +10,35 @@ Redis/Valkey
 Local filesystem artifact blobs (.osva/artifacts by default)
 ```
 
+Root `docker-compose.yml` provides PostgreSQL + Valkey for local development only. Application processes run via `pnpm` on the host.
+
 Stage 3.4 uses PostgreSQL for Artifact metadata and a configurable BlobStore (`filesystem` for single-host/shared-filesystem deployments; S3-compatible object storage recommended for multi-node production). Web and worker compose the same ArtifactApplication with independent adapter instances.
 
-## Self-hosted production
+## Self-hosted production (Compose)
 
 ```text
-Web/API replicas
-PostgreSQL
-Redis/Valkey
-ExecutionWorker replicas
-Object storage
-Optional telemetry services
+deploy/compose/
+  PostgreSQL (pgvector) + Valkey (internal network)
+  migration job (one-shot)
+  Web, Worker, Scheduler, Workflow Orchestrator, Knowledge Worker, MCP Server
+  shared filesystem artifact volume (single-host)
 ```
 
-## Kubernetes
+Uses one OSVA OCI image (`Dockerfile` at repository root) selected by `OSVA_PROCESS`. See `deploy/compose/README.md`.
 
-OSS 1.0 may provide Helm-based deployment.
+## Kubernetes (Helm)
+
+```text
+External PostgreSQL (pgvector)
+External Valkey
+External S3-compatible artifact store
+Helm release: deploy/helm/osva/
+  migration Job (pre-install/upgrade hook)
+  Web, Worker, Scheduler, Workflow Orchestrator, Knowledge Worker, MCP Deployments
+  optional Ingress (TLS at ingress/proxy)
+```
+
+`OSVA_CONTAINER_ENABLED` defaults to **false** — the current container runtime adapter requires Docker Engine, which is not assumed on Kubernetes nodes.
 
 ## Advanced
 
