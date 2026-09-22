@@ -1,8 +1,10 @@
 # OSVA Community Beta
 
-Stage 2 Community Beta is the first open-source release where OSVA supports a practical local path from Agent registry through multi-agent workflows, MCP, memory, evaluation, scheduling, optional OpenTelemetry, and basic AI Office.
+> **Historical document.** Community Beta (Stage 2) is complete. For current OSS 1.0 installation and authenticated API usage, start with [`OSS-1.0-QUICKSTART.md`](./OSS-1.0-QUICKSTART.md). Capability notes below remain useful context but may omit Stage 3 features (artifacts, knowledge retrieval, MCP server, API security hardening, deployment packaging).
 
-**Quickstart:** [`COMMUNITY-BETA-QUICKSTART.md`](./COMMUNITY-BETA-QUICKSTART.md)
+Stage 2 Community Beta was the first open-source milestone with a practical local path from Agent registry through multi-agent workflows, MCP, memory, evaluation, scheduling, optional OpenTelemetry, and basic AI Office.
+
+**Legacy quickstart:** [`COMMUNITY-BETA-QUICKSTART.md`](./COMMUNITY-BETA-QUICKSTART.md)
 
 ## Capability matrix
 

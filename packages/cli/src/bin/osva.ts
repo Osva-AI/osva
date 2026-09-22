@@ -12,8 +12,9 @@ async function main(): Promise<void> {
     parsed.command.length === 0 ||
     parsed.command[0] === "help" ||
     parsed.command[0] === "--help";
+  const versionCommand = parsed.command[0] === "version";
 
-  if (helpCommand) {
+  if (helpCommand || versionCommand) {
     const exitCode = await runCommand(
       new OsvaClient({
         baseUrl: "http://127.0.0.1:9",
@@ -24,7 +25,11 @@ async function main(): Promise<void> {
         apiKey: "osva_ak_test.placeholder",
         json: false,
       },
-      parsed.command.length === 0 ? ["help"] : parsed.command,
+      parsed.command.length === 0
+        ? ["help"]
+        : versionCommand
+          ? ["version"]
+          : parsed.command,
       parsed.flags,
     );
     process.exit(exitCode);

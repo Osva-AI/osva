@@ -1,0 +1,179 @@
+name: Release readiness
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "feat/**"
+    paths:
+      - "VERSION"
+      - "packages/**"
+      - "sdks/python/**"
+      - "deploy/**"
+      - "Dockerfile"
+      - "scripts/release/**"
+      - "scripts/deployment/**"
+      - ".github/workflows/release-readiness.yml"
+
+concurrency:
+  group: release-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python SDK for integration tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./sdks/python
+
+      - name: Version consistency
+        run: node scripts/release/version-consistency.mjs
+
+      - name: Docs link check
+        run: node scripts/release/docs-link-check.mjs
+
+      - name: Secrets scan
+        run: node scripts/release/secrets-scan.mjs
+
+      - name: Verify CI
+        run: pnpm verify:ci
+
+      - name: Migration history verify
+        run: pnpm db:migrations:verify
+
+  packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: verify-core
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: License inventory
+        run: node scripts/release/generate-license-inventory.mjs
+
+      - name: npm pack consumer smoke
+        run: node scripts/release/npm-pack-smoke.mjs
+
+      - name: Python wheel install smoke
+        run: node scripts/release/python-pack-smoke.mjs
+
+  oci-compose-helm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: verify-core
+    env:
+      OSVA_DEPLOY_ACCEPTANCE: "true"
+      OSVA_IMAGE: osva:1.0.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build production OCI image
+        run: docker build -t osva:1.0.0 .
+
+      - name: Runtime image verification
+        run: node scripts/deployment/verify-runtime-image.mjs
+
+      - name: Docker image smoke
+        run: node scripts/deployment/docker-image-smoke.mjs
+
+      - name: Compose acceptance
+        run: node scripts/deployment/deploy-compose-acceptance.mjs
+
+      - name: Helm lint and template
+        run: node --test scripts/verification/helm-chart.test.mjs
+
+      - name: Helm package
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/work" -w /work alpine/helm:3.16.4 \
+            package deploy/helm/osva --version 1.0.0 --app-version 1.0.0 -d /tmp
+
+  kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: oci-compose-helm
+    env:
+      OSVA_KIND_ACCEPTANCE: "true"
+      OSVA_IMAGE: osva:1.0.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+
+      - name: Install kind
+        run: |
+          curl -fsSL https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64 -o "$RUNNER_TEMP/kind"
+          chmod +x "$RUNNER_TEMP/kind"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/kind" version
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - name: Kind acceptance
+        run: node scripts/deployment/kind-acceptance.mjs

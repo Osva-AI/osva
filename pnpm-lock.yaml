@@ -890,6 +890,9 @@ importers:
       '@osva/orchestration':
         specifier: workspace:*
         version: link:../../packages/orchestration
+      busboy:
+        specifier: 1.6.0
+        version: 1.6.0
     devDependencies:
       '@osva/adapters-memory':
         specifier: workspace:*
@@ -900,9 +903,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4
-      busboy:
-        specifier: 1.6.0
-        version: 1.6.0
       eslint:
         specifier: 'catalog:'
         version: 10.10.0
@@ -1111,6 +1111,9 @@ importers:
       '@osva/contracts':
         specifier: workspace:*
         version: link:../contracts
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1124,9 +1127,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.0(@opentelemetry/api@1.9.0)(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.5
 
   packages/contracts:
     dependencies:

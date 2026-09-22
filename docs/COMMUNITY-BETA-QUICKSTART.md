@@ -1,5 +1,7 @@
 # OSVA Community Beta Quickstart
 
+> **Historical document.** Prefer [`OSS-1.0-QUICKSTART.md`](./OSS-1.0-QUICKSTART.md) for OSS 1.0 self-hosted Compose, bootstrap, and authenticated `/v1` examples.
+
 Authoritative local setup and first-use guide for **Stage 2 Community Beta**.
 
 For capability boundaries and non-goals see [`COMMUNITY-BETA.md`](./COMMUNITY-BETA.md).

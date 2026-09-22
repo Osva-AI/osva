@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 .next/
 dist/
+/dist-helm-rc/
 build/
 out/
 coverage/

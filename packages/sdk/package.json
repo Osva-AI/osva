@@ -1,7 +1,17 @@
 {
   "name": "@osva/sdk",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Official OSVA SDK for TypeScript and JavaScript",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Osva-AI/osva.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/Osva-AI/osva/tree/main/packages/sdk",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -14,7 +24,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

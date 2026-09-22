@@ -1,3 +1,5 @@
+import { parseMcpAllowedHosts } from "./host-validation.js";
+
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 3100;
 const DEFAULT_MCP_PATH = "/mcp";
@@ -7,6 +9,7 @@ export interface McpServerConfig {
   readonly port: number;
   readonly osvaApiBaseUrl: string;
   readonly mcpPath: string;
+  readonly allowedHosts: readonly string[];
   readonly connectorAllowPrivateNetworks: boolean;
   readonly stdioConnectorsEnabled: boolean;
 }
@@ -31,12 +34,14 @@ export function loadMcpServerConfig(
     env.OSVA_MCP_STDIO_CONNECTORS_ENABLED,
     false,
   );
+  const allowedHosts = parseMcpAllowedHosts(env.OSVA_MCP_ALLOWED_HOSTS);
 
   return {
     host,
     port,
     osvaApiBaseUrl,
     mcpPath,
+    allowedHosts,
     connectorAllowPrivateNetworks,
     stdioConnectorsEnabled,
   };

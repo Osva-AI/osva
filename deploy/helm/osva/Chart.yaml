@@ -1,0 +1,6 @@
+apiVersion: v2
+name: osva
+description: OSVA Community Edition control and execution plane
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

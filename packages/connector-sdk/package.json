@@ -1,7 +1,17 @@
 {
   "name": "@osva/connector-sdk",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Build OSVA Connector Profile V1 compatible MCP connectors",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Osva-AI/osva.git",
+    "directory": "packages/connector-sdk"
+  },
+  "homepage": "https://github.com/Osva-AI/osva/tree/main/packages/connector-sdk",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -10,7 +20,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -21,14 +32,14 @@
   "dependencies": {
     "@modelcontextprotocol/node": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
-    "@osva/contracts": "workspace:*"
+    "@osva/contracts": "workspace:*",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "zod": "catalog:"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=24"

@@ -36,7 +36,8 @@ export async function runCommand(
       return await runSchedules(client, config, command.slice(1));
     }
     if (command[0] === "version") {
-      printResult({ version: "0.0.0" }, config.json);
+      const { CLI_VERSION } = await import("../version.js");
+      printResult({ version: CLI_VERSION }, config.json);
       return 0;
     }
     if (command[0] === "help" || command[0] === "--help") {

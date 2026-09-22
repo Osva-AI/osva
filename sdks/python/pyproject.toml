@@ -4,13 +4,19 @@ build-backend = "hatchling.build"
 
 [project]
 name = "osva-sdk"
-version = "0.0.0"
+version = "1.0.0"
 description = "Official OSVA SDK for Python"
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
   "httpx>=0.27",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Osva-AI/osva"
+Repository = "https://github.com/Osva-AI/osva"
+Documentation = "https://github.com/Osva-AI/osva/blob/main/docs/OSS-1.0-QUICKSTART.md"
 
 [project.optional-dependencies]
 dev = [

@@ -1,0 +1,32 @@
+image:
+  repository: osva
+  tag: acceptance
+  pullPolicy: IfNotPresent
+
+database:
+  url: postgres://osva:osva-acceptance@postgres.osva-acceptance.svc.cluster.local:5432/osva
+
+valkey:
+  url: redis://valkey.osva-acceptance.svc.cluster.local:6379
+
+artifactStorage:
+  driver: filesystem
+  maxBytes: 67108864
+  filesystemRoot: /var/lib/osva/artifacts
+
+trustedRuntimeRoot: /var/lib/osva/trusted-runtime
+
+web:
+  host: 0.0.0.0
+
+mcp:
+  apiBaseUrl: http://osva-web.osva-acceptance.svc.cluster.local:80
+  allowedHosts:
+    - localhost
+    - 127.0.0.1
+
+migration:
+  enabled: true
+
+worker:
+  containerEnabled: false

@@ -1,0 +1,113 @@
+image:
+  repository: osva
+  tag: ""
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+database:
+  url: postgres://osva:override-me@postgresql.invalid:5432/osva
+
+valkey:
+  url: redis://valkey.invalid:6379
+
+# Production Helm installs should use S3-compatible storage. Filesystem mode is not
+# safe for multi-replica Deployments without an operator-provided shared volume.
+artifactStorage:
+  driver: s3
+  maxBytes: 67108864
+  filesystemRoot: /var/lib/osva/artifacts
+  s3:
+    bucket: ""
+    region: us-east-1
+    endpoint: ""
+    forcePathStyle: true
+
+trustedRuntimeRoot: /var/lib/osva/trusted-runtime
+
+knowledgeEmbedding:
+  provider: DETERMINISTIC
+  model: deterministic-v1
+  dimensions: 384
+
+web:
+  replicaCount: 1
+  host: 0.0.0.0
+  port: 3000
+  service:
+    type: ClusterIP
+    port: 80
+  resources: {}
+
+worker:
+  replicaCount: 1
+  containerEnabled: false
+  resources: {}
+
+scheduler:
+  replicaCount: 1
+  pollMs: 5000
+  resources: {}
+
+workflowOrchestrator:
+  replicaCount: 1
+  pollMs: 5000
+  resources: {}
+
+knowledgeWorker:
+  replicaCount: 1
+  resources: {}
+
+mcp:
+  replicaCount: 1
+  host: 0.0.0.0
+  port: 3100
+  path: /mcp
+  allowedHosts: []
+  apiBaseUrl: ""
+  service:
+    type: ClusterIP
+    port: 80
+  resources: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  web:
+    host: ""
+    tls: []
+  mcp:
+    enabled: false
+    host: ""
+    tls: []
+
+existingSecret: ""
+secretEnv: {}
+
+extraEnv: []
+extraEnvFrom: []
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+migration:
+  enabled: true
+  # Empty uses the namespace default ServiceAccount (migration does not need chart SA).
+  serviceAccountName: ""

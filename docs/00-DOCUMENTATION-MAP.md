@@ -52,7 +52,18 @@
 - `engineering/SDK.md`
 - `engineering/OSS_LICENSE_STRATEGY.md`
 
-## Community Beta
+## OSS 1.0
+- `OSS-1.0-QUICKSTART.md`
+- `deployment/CONFIGURATION.md`
+- `architecture/DEPLOYMENT_TOPOLOGIES.md`
+- `operations/RUNBOOK.md`
+- `operations/UPGRADE.md`
+- `operations/BACKUP_AND_RECOVERY.md`
+- `release/COMPATIBILITY.md`
+- `release/THIRD_PARTY_LICENSES_NODE.md` (generated)
+- `release/THIRD_PARTY_LICENSES_PYTHON.md` (generated)
+
+## Community Beta (historical)
 - `COMMUNITY-BETA-QUICKSTART.md`
 - `COMMUNITY-BETA.md`
 
@@ -67,6 +78,7 @@
 - `implementation/STAGE-1-COMMUNITY-ALPHA.md`
 - `implementation/STAGE-2-COMMUNITY-BETA.md`
 - `implementation/STAGE-3-OSS-1.0.md`
+- `implementation/STAGE-3-8-DEPLOYMENT.md`
 
 ## ADRs
 - `adr/ADR-001-target-architecture-first.md`
