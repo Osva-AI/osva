@@ -27,6 +27,15 @@ Mount provider keys and S3 credentials through `existingSecret` and/or `extraEnv
 
 The chart renders a Helm pre-install/pre-upgrade Job using the **same image tag** as application pods. It runs `migrate` only (no bootstrap).
 
+The migration hook is **self-contained**: it does not reference the application `-env` ConfigMap or the chart-created application ServiceAccount (those are created after pre-install hooks on a fresh install).
+
+Database URL precedence for the migration container:
+
+1. When `existingSecret` is set, `OSVA_DATABASE_URL` must come from that Secret (and optional `extraEnvFrom`). The chart does **not** inject `database.url` into the migration Job env in that mode.
+2. When `existingSecret` is empty, the migration Job sets `OSVA_DATABASE_URL` directly from `database.url`.
+
+`extraEnv` on the migration Job is applied only when set; avoid defining `OSVA_DATABASE_URL` in `extraEnv` when using `existingSecret`.
+
 ## Container agent runtime
 
 `worker.containerEnabled` defaults to `false`. The current `CONTAINER` runtime adapter targets Docker Engine via dockerode; normal Kubernetes nodes are not assumed to expose Docker Engine. Do not mount the Docker socket by default.

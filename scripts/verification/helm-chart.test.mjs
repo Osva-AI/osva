@@ -82,10 +82,45 @@ function writeProductionValues() {
   );
 }
 
+function extractMigrationJobManifest(output) {
+  const documents = output
+    .split(/^---\s*$/m)
+    .filter((doc) => doc.trim().length > 0);
+  const job = documents.find((doc) =>
+    /app\.kubernetes\.io\/component: migrate/.test(doc),
+  );
+  if (!job) {
+    throw new Error("migration Job manifest not found in helm template output");
+  }
+  return job;
+}
+
+function assertMigrationJobLifecycle(job, { existingSecret = false } = {}) {
+  assert.match(job, /helm\.sh\/hook: pre-install,pre-upgrade/);
+  assert.match(job, /name: migrate/);
+  assert.match(job, /(\["migrate"\]|- migrate)/);
+  assert.match(job, /automountServiceAccountToken: false/);
+  assert.doesNotMatch(job, /configMapRef/);
+  assert.doesNotMatch(job, /serviceAccountName:/);
+  assert.doesNotMatch(job, /bootstrap/);
+  assert.doesNotMatch(job, /OSVA_VALKEY_URL/);
+  if (existingSecret) {
+    assert.match(job, /secretRef:\s*\n\s*name: osva-secrets/);
+    assert.doesNotMatch(job, /- name: OSVA_DATABASE_URL\s*\n\s*value:/);
+  } else {
+    assert.match(job, /- name: OSVA_DATABASE_URL/);
+    assert.match(
+      job,
+      /value: "?postgres:\/\/osva:example@postgres\.example\.invalid:5432\/osva"?/,
+    );
+  }
+}
+
 function assertDefaultTemplate(output) {
   assert.match(output, /kind: Job/);
   assert.match(output, /helm\.sh\/hook: pre-install/);
   assert.match(output, /image: osva:test-1/);
+  assertMigrationJobLifecycle(extractMigrationJobManifest(output));
   assert.match(output, /OSVA_CONTAINER_ENABLED: "false"/);
   assert.match(output, /replicas: 1/);
   assert.match(output, /path: \/health/);
@@ -100,6 +135,9 @@ function assertDefaultTemplate(output) {
 }
 
 function assertProductionTemplate(output) {
+  assertMigrationJobLifecycle(extractMigrationJobManifest(output), {
+    existingSecret: true,
+  });
   assert.match(output, /OSVA_ARTIFACT_STORAGE_DRIVER: "s3"/);
   assert.match(output, /OSVA_ARTIFACT_S3_BUCKET: "osva-artifacts-example"/);
   assert.match(output, /OSVA_MCP_ALLOWED_HOSTS: "mcp.example.com"/);

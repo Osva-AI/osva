@@ -75,6 +75,36 @@ function helm(args, options = {}) {
   return run("helm", args, options);
 }
 
+function tryKubectl(args) {
+  const result = spawnSync("kubectl", args, {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.stdout) {
+    console.error(result.stdout);
+  }
+  if (result.stderr) {
+    console.error(result.stderr);
+  }
+}
+
+function dumpKindHelmDiagnostics(releaseName) {
+  console.error("::group::kind helm failure diagnostics");
+  tryKubectl(["get", "jobs,pods", "-n", NAMESPACE, "-o", "wide"]);
+  tryKubectl(["get", "events", "-n", NAMESPACE, "--sort-by=.lastTimestamp"]);
+  tryKubectl(["describe", `job/${releaseName}-migrate`, "-n", NAMESPACE]);
+  tryKubectl([
+    "logs",
+    "-n",
+    NAMESPACE,
+    "-l",
+    "app.kubernetes.io/component=migrate",
+    "--all-containers=true",
+  ]);
+  console.error("::endgroup::");
+}
+
 function spawnDetached(command, args) {
   const child = spawn(command, args, {
     detached: true,
@@ -148,26 +178,31 @@ async function main() {
     { stdio: "inherit" },
   );
 
-  helm(
-    [
-      "upgrade",
-      "--install",
-      RELEASE,
-      CHART_DIR,
-      "-n",
-      NAMESPACE,
-      "-f",
-      VALUES,
-      "--set",
-      `image.repository=${imageRepo}`,
-      "--set",
-      `image.tag=${imageTagOnly}`,
-      "--wait",
-      "--timeout",
-      "10m",
-    ],
-    { stdio: "inherit" },
-  );
+  try {
+    helm(
+      [
+        "upgrade",
+        "--install",
+        RELEASE,
+        CHART_DIR,
+        "-n",
+        NAMESPACE,
+        "-f",
+        VALUES,
+        "--set",
+        `image.repository=${imageRepo}`,
+        "--set",
+        `image.tag=${imageTagOnly}`,
+        "--wait",
+        "--timeout",
+        "10m",
+      ],
+      { stdio: "inherit" },
+    );
+  } catch (error) {
+    dumpKindHelmDiagnostics(RELEASE);
+    throw error;
+  }
 
   kubectl(
     [

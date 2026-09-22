@@ -109,3 +109,5 @@ securityContext:
 
 migration:
   enabled: true
+  # Empty uses the namespace default ServiceAccount (migration does not need chart SA).
+  serviceAccountName: ""

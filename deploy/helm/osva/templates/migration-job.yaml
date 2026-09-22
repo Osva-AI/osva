@@ -21,7 +21,10 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       restartPolicy: Never
-      serviceAccountName: {{ include "osva.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      {{- with .Values.migration.serviceAccountName }}
+      serviceAccountName: {{ . }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -31,9 +34,18 @@ spec:
           args: ["migrate"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if or (not .Values.existingSecret) .Values.extraEnv }}
+          env:
+            {{- if not .Values.existingSecret }}
+            - name: OSVA_DATABASE_URL
+              value: {{ required "database.url is required" .Values.database.url | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          {{- if or .Values.existingSecret .Values.extraEnvFrom }}
           envFrom:
-            - configMapRef:
-                name: {{ include "osva.fullname" . }}-env
             {{- if .Values.existingSecret }}
             - secretRef:
                 name: {{ .Values.existingSecret }}
@@ -41,9 +53,6 @@ spec:
             {{- with .Values.extraEnvFrom }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-          {{- with .Values.extraEnv }}
-          env:
-            {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: tmp
