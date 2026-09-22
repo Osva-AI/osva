@@ -1,0 +1,59 @@
+{
+  "releaseVersion": "1.0.0",
+  "status": "OSS 1.0 release candidate (not publicly tagged or published)",
+  "ociImage": "osva:1.0.0",
+  "helmChart": {
+    "path": "deploy/helm/osva",
+    "chartVersion": "1.0.0",
+    "appVersion": "1.0.0",
+    "packageCommand": "helm package deploy/helm/osva --version 1.0.0 --app-version 1.0.0"
+  },
+  "npmPackages": [
+    {
+      "name": "@osva/contracts",
+      "version": "1.0.0",
+      "pack": "pnpm --filter @osva/contracts pack"
+    },
+    {
+      "name": "@osva/runtime-protocol",
+      "version": "1.0.0",
+      "pack": "pnpm --filter @osva/runtime-protocol pack"
+    },
+    {
+      "name": "@osva/sdk",
+      "version": "1.0.0",
+      "pack": "pnpm --filter @osva/sdk pack"
+    },
+    {
+      "name": "@osva/cli",
+      "version": "1.0.0",
+      "pack": "pnpm --filter @osva/cli pack"
+    },
+    {
+      "name": "@osva/connector-sdk",
+      "version": "1.0.0",
+      "pack": "pnpm --filter @osva/connector-sdk pack"
+    }
+  ],
+  "pythonPackage": {
+    "name": "osva-sdk",
+    "version": "1.0.0",
+    "path": "sdks/python"
+  },
+  "migrationHead": "0022_api_security_slice",
+  "license": "Apache-2.0",
+  "thirdPartyLicenses": [
+    "docs/release/THIRD_PARTY_LICENSES_NODE.md",
+    "docs/release/THIRD_PARTY_LICENSES_PYTHON.md"
+  ],
+  "documentation": [
+    "README.md",
+    "docs/OSS-1.0-QUICKSTART.md",
+    "docs/deployment/CONFIGURATION.md",
+    "docs/architecture/DEPLOYMENT_TOPOLOGIES.md",
+    "docs/operations/RUNBOOK.md",
+    "docs/operations/UPGRADE.md",
+    "docs/operations/BACKUP_AND_RECOVERY.md",
+    "docs/release/COMPATIBILITY.md"
+  ]
+}

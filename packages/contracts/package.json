@@ -1,7 +1,17 @@
 {
   "name": "@osva/contracts",
-  "version": "0.0.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "OSVA public contracts and schemas",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Osva-AI/osva.git",
+    "directory": "packages/contracts"
+  },
+  "homepage": "https://github.com/Osva-AI/osva/tree/main/packages/contracts",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -13,6 +23,10 @@
       "import": "./dist/schemas/index.js"
     }
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
@@ -27,5 +41,8 @@
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

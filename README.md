@@ -6,13 +6,13 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** **Community Beta complete** (Stage 2, 9/9 slices). OSVA supports
-> Agent registry, immutable AgentVersions, Run lifecycle, trusted TypeScript and
-> Remote HTTP runtimes, ModelGateway (OpenAI / Anthropic / Gemini), ToolGateway
-> (internal tools + MCP), persistent memory, EvaluationSuites, scheduling,
-> versioned workflows (sequential + DAG + approval), Node/Python SDKs, CLI,
-> optional OpenTelemetry, and basic AI Office. See
-> [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md).
+> **Status:** **OSS 1.0 release candidate implementation complete** (Stage 3.8 slices 3.8.1–3.8.7 implemented; **final Linux kind acceptance pending**).
+> Community Edition includes authenticated `/v1`, workflows, scheduling, MCP client
+> and MCP server, knowledge/RAG, artifact storage, container/trusted/remote runtimes,
+> TypeScript/Python SDKs, CLI, self-hosted Compose, Helm/Kubernetes packaging, and
+> optional OpenTelemetry. **Public `v1.0.0` tag, image publish, and npm/PyPI release
+> are intentional maintainer steps—not done automatically.** Start with
+> [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
 
 ## Why OSVA?
 
@@ -94,10 +94,25 @@ AI Office
 
 See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
-## Community Beta quickstart
+## OSS 1.0 quickstart and installation
 
-1. [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) — authoritative local setup
-2. [`docs/COMMUNITY-BETA.md`](docs/COMMUNITY-BETA.md) — capability matrix and non-goals
+| Path | Document |
+|------|----------|
+| Self-hosted Compose (recommended) | [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md) |
+| Configuration reference | [`docs/deployment/CONFIGURATION.md`](docs/deployment/CONFIGURATION.md) |
+| Topologies (Compose vs Kubernetes) | [`docs/architecture/DEPLOYMENT_TOPOLOGIES.md`](docs/architecture/DEPLOYMENT_TOPOLOGIES.md) |
+| Helm chart | [`deploy/helm/osva/README.md`](deploy/helm/osva/README.md) |
+| Operations | [`docs/operations/RUNBOOK.md`](docs/operations/RUNBOOK.md) |
+| Upgrades | [`docs/operations/UPGRADE.md`](docs/operations/UPGRADE.md) |
+| Compatibility | [`docs/release/COMPATIBILITY.md`](docs/release/COMPATIBILITY.md) |
+
+**Community Edition scope:** full control/execution plane for agents and workflows without enterprise IAM, billing, or multi-tenant SaaS packaging. **Kubernetes agent execution** is not provided: `CONTAINER` runtime targets Docker Engine on the worker host and is **disabled by default** in Helm/Compose.
+
+**Authentication:** all `/v1/*` routes require API keys. Run bootstrap once per environment to mint the initial key.
+
+**Public SDKs (release 1.0.0, publish pending):** `@osva/contracts`, `@osva/runtime-protocol`, `@osva/sdk`, `@osva/cli`, `@osva/connector-sdk`, and Python `osva-sdk`.
+
+Historical Beta docs: [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) (legacy local dev path).
 
 ## Documentation
 
@@ -195,15 +210,17 @@ commit the result.
 `pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web, worker, scheduler,
 and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
 
-### SDK and CLI (Stage 2.5)
+### SDK and CLI
 
-Publish-ready packages (not yet published externally):
+Public packages at version **1.0.0** (packed and verified locally; npm/PyPI publish requires maintainer approval):
 
-- `@osva/sdk` — TypeScript control-plane client (`OsvaClient`) and Runtime Protocol V1 helpers (`@osva/sdk/runtime`)
-- `@osva/cli` — `osva` CLI built on the Node SDK
-- `osva-sdk` — Python package (`import osva`) for Python >= 3.11
+- `@osva/contracts`, `@osva/runtime-protocol` — shared types/schemas
+- `@osva/sdk` — TypeScript client (`OsvaClient`) and `@osva/sdk/runtime`
+- `@osva/cli` — `osva` CLI
+- `@osva/connector-sdk` — MCP connector authoring
+- `osva-sdk` — Python (`from osva import OSVAClient`)
 
-See [`docs/engineering/SDK.md`](docs/engineering/SDK.md).
+See [`docs/engineering/SDK.md`](docs/engineering/SDK.md) and [`docs/release/COMPATIBILITY.md`](docs/release/COMPATIBILITY.md).
 
 ```text
 export OSVA_BASE_URL=http://127.0.0.1:3000
@@ -356,9 +373,10 @@ pnpm verify:ci:clean
 pnpm verify:community-beta   # alias for verify:ci:clean
 ```
 
-`pnpm verify:quick` is the inner development loop. `pnpm verify:ci:clean` is
-the authoritative Stage 2 release gate. GitHub CI runs the same `pnpm verify:ci`
-and `pnpm verify:python` commands. See `docs/engineering/DEVELOPMENT_GATES.md`.
+`pnpm verify:quick` is the inner development loop. `pnpm verify:ci:clean` is the
+authoritative clean gate. Release-candidate checks live in
+[`.github/workflows/release-readiness.yml`](.github/workflows/release-readiness.yml)
+and `pnpm release:acceptance`. See `docs/engineering/DEVELOPMENT_GATES.md`.
 
 ## Contributing
 

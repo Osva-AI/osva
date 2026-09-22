@@ -4,15 +4,15 @@
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| 3.8.1 Deployment contract & lifecycle hardening | **Implemented (acceptance hardening)** | Configuration inventory, MCP host validation, knowledge worker startup checks |
-| 3.8.2 Production OCI image | **Implemented (acceptance hardening)** | Root `Dockerfile`, pruned runtime stage, portable smoke |
-| 3.8.3 Self-hosted Compose | **Implemented (acceptance hardening)** | `deploy/compose/` + full acceptance harness |
-| 3.8.4 Helm / Kubernetes | **Implemented (acceptance hardening)** | `deploy/helm/osva/` + Dockerized Helm validation |
-| 3.8.5 | Not started | |
-| 3.8.6 | Not started | OSS 1.0 documentation overhaul |
-| 3.8.7 | Not started | Final release acceptance |
+| 3.8.1 Deployment contract & lifecycle hardening | **Complete** | Configuration inventory, MCP host validation, knowledge worker startup checks |
+| 3.8.2 Production OCI image | **Complete** | Root `Dockerfile`, pruned runtime stage, portable smoke |
+| 3.8.3 Self-hosted Compose | **Complete** | `deploy/compose/` + full acceptance harness |
+| 3.8.4 Helm / Kubernetes | **Complete** | `deploy/helm/osva/` + Dockerized Helm validation |
+| 3.8.5 Public packages + release CI | **Complete** | `VERSION`, npm/Python pack smoke, license inventory, `release-readiness` workflow |
+| 3.8.6 OSS 1.0 documentation | **Complete** | README, quickstart, operations/runbooks, security/compatibility |
+| 3.8.7 Release candidate acceptance | **Pending** | Local gates passed except kind; Linux `release-readiness` kind job pending (no public publish/tag) |
 
-Stage 3.8 is **not** complete and OSS 1.0 is **not** released.
+Stage 3.8 **implementation** is complete (3.8.1–3.8.6 and local 3.8.7 gates except kind). **Final release acceptance** is pending successful Linux kind CI. Public `v1.0.0` tag, GitHub Release, and registry uploads remain explicit maintainer actions.
 
 ## Decisions
 
@@ -21,3 +21,19 @@ Stage 3.8 is **not** complete and OSS 1.0 is **not** released.
 - `OSVA_CONTAINER_ENABLED` defaults to `false` in Helm (Docker Engine container runtime is not a normal Kubernetes assumption).
 - Migrations run as an explicit Job/step; applications do not auto-migrate on startup.
 - Bootstrap remains an explicit operator action.
+- Public npm surface: `@osva/contracts`, `@osva/runtime-protocol`, `@osva/sdk`, `@osva/cli`, `@osva/connector-sdk` at version **1.0.0** aligned via root `VERSION`.
+
+## Acceptance commands
+
+```bash
+pnpm release:version:check
+node scripts/release/generate-license-inventory.mjs
+OSVA_RELEASE_ACCEPTANCE=true node scripts/release/npm-pack-smoke.mjs
+node scripts/release/python-pack-smoke.mjs
+OSVA_DEPLOY_ACCEPTANCE=true OSVA_IMAGE=osva:1.0.0 node scripts/deployment/docker-image-smoke.mjs
+OSVA_DEPLOY_ACCEPTANCE=true node scripts/deployment/deploy-compose-acceptance.mjs
+node --test scripts/verification/helm-chart.test.mjs
+OSVA_KIND_ACCEPTANCE=true OSVA_IMAGE=osva:1.0.0 node scripts/deployment/kind-acceptance.mjs
+pnpm db:migrations:verify
+pnpm release:acceptance   # orchestrates local RC checks (kind optional via OSVA_KIND_ACCEPTANCE)
+```

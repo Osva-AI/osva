@@ -1,7 +1,17 @@
 {
   "name": "@osva/runtime-protocol",
-  "version": "0.0.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "OSVA Runtime Protocol V1 types and helpers",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Osva-AI/osva.git",
+    "directory": "packages/runtime-protocol"
+  },
+  "homepage": "https://github.com/Osva-AI/osva/tree/main/packages/runtime-protocol",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -9,6 +19,10 @@
       "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
@@ -24,5 +38,8 @@
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }
