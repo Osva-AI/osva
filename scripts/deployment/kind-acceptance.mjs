@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { spawn } from "node:child_process";
 
+import { KUBECTL_PREFLIGHT_ARGS, requireBinary } from "./kind-preflight.mjs";
 import { readReleaseVersion } from "../release/read-version.mjs";
 
 const REPO_ROOT = path.resolve(
@@ -45,13 +46,6 @@ function run(command, args, options = {}) {
     );
   }
   return result.stdout ?? "";
-}
-
-function requireBinary(name) {
-  const check = spawnSync(name, ["version"], { encoding: "utf8" });
-  if (check.status !== 0) {
-    throw new Error(`${name} is required for kind acceptance`);
-  }
 }
 
 async function waitHttp(url, attempts = 120) {
@@ -99,7 +93,7 @@ async function main() {
     : "acceptance";
 
   requireBinary("kind");
-  requireBinary("kubectl");
+  requireBinary("kubectl", KUBECTL_PREFLIGHT_ARGS);
 
   console.log(`kind acceptance (image ${imageRepo}:${imageTagOnly})`);
 
