@@ -60,7 +60,7 @@ export OSVA_API_KEY='osva_ak_…'
 node --input-type=module -e "
   import { OsvaClient } from '@osva/sdk';
   const client = new OsvaClient({ baseUrl: process.env.OSVA_BASE_URL, apiKey: process.env.OSVA_API_KEY });
-  const keys = await client.listApiKeys();
+  const keys = await client.apiKeys.list();
   console.log(keys);
 "
 ```
@@ -77,7 +77,7 @@ python -c "
 import os
 from osva import OSVAClient
 client = OSVAClient(base_url=os.environ['OSVA_BASE_URL'], api_key=os.environ['OSVA_API_KEY'])
-print(client.list_api_keys())
+print(client.agents.list())
 "
 ```
 
