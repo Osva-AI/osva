@@ -3,7 +3,7 @@ import type {
   RunId,
   ScheduleId,
   ScheduleOccurrenceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   MemoryAgentRepository,
   MemoryJobQueue,

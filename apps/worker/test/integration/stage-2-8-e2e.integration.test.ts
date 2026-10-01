@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { MemoryNamespaceId, WorkspaceId } from "@osva/contracts";
+import type { MemoryNamespaceId, WorkspaceId } from "@osva-ai/contracts";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import {

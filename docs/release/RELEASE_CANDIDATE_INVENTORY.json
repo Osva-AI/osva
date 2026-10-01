@@ -10,29 +10,29 @@
   },
   "npmPackages": [
     {
-      "name": "@osva/contracts",
+      "name": "@osva-ai/contracts",
       "version": "1.0.0",
-      "pack": "pnpm --filter @osva/contracts pack"
+      "pack": "pnpm --filter @osva-ai/contracts pack"
     },
     {
-      "name": "@osva/runtime-protocol",
+      "name": "@osva-ai/runtime-protocol",
       "version": "1.0.0",
-      "pack": "pnpm --filter @osva/runtime-protocol pack"
+      "pack": "pnpm --filter @osva-ai/runtime-protocol pack"
     },
     {
-      "name": "@osva/sdk",
+      "name": "@osva-ai/sdk",
       "version": "1.0.0",
-      "pack": "pnpm --filter @osva/sdk pack"
+      "pack": "pnpm --filter @osva-ai/sdk pack"
     },
     {
-      "name": "@osva/cli",
+      "name": "@osva-ai/cli",
       "version": "1.0.0",
-      "pack": "pnpm --filter @osva/cli pack"
+      "pack": "pnpm --filter @osva-ai/cli pack"
     },
     {
-      "name": "@osva/connector-sdk",
+      "name": "@osva-ai/connector-sdk",
       "version": "1.0.0",
-      "pack": "pnpm --filter @osva/connector-sdk pack"
+      "pack": "pnpm --filter @osva-ai/connector-sdk pack"
     }
   ],
   "pythonPackage": {

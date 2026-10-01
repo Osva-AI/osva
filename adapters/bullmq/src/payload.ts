@@ -1,5 +1,5 @@
-import type { JobQueuePayload } from "@osva/contracts";
-import { jobQueuePayloadSchema } from "@osva/contracts/schemas";
+import type { JobQueuePayload } from "@osva-ai/contracts";
+import { jobQueuePayloadSchema } from "@osva-ai/contracts/schemas";
 import { BULLMQ_TRACE_CARRIER_KEY } from "@osva/observability";
 
 import { InvalidQueuePayloadError } from "./errors.js";

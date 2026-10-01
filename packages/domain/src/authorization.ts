@@ -3,11 +3,11 @@ import type {
   CommunityEditionRole,
   RequestPrincipal,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   AUTHORIZATION_ACTIONS,
   COMMUNITY_EDITION_ROLES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { PermissionDeniedError } from "./security-errors.js";
 

@@ -20,9 +20,9 @@ Stage 2 Community Beta was the first open-source milestone with a practical loca
 | Scheduling | **Supported** | Cron + timezone; scheduler process |
 | Trusted TypeScript runtime | **Supported** | Operator-installed trusted entrypoints |
 | Remote HTTP runtime | **Supported** | Runtime Protocol V1 + capability bridge |
-| Node SDK | **Supported** | `@osva/sdk` over `/v1` |
+| Node SDK | **Supported** | `@osva-ai/sdk` over `/v1` |
 | Python SDK | **Supported** | `osva-sdk` package |
-| CLI | **Supported** | `@osva/cli` via Node SDK |
+| CLI | **Supported** | `@osva-ai/cli` via Node SDK |
 | OpenAI models | **Supported** | Optional worker API key |
 | Anthropic models | **Supported** | Optional worker API key |
 | Google Gemini models | **Supported** | Optional worker API key |

@@ -1,8 +1,8 @@
 import {
   OSVA_MCP_RESOURCE_URI_PREFIX,
   buildOsvaMcpResourceUri,
-} from "@osva/contracts";
-import type { McpPrincipal } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import type { McpPrincipal } from "@osva-ai/contracts";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { ResourceTemplate } from "@modelcontextprotocol/server";
 import {
@@ -11,7 +11,7 @@ import {
   resolveInstrumentation,
   type OsvaInstrumentation,
 } from "@osva/observability";
-import { OsvaApiError } from "@osva/sdk";
+import { OsvaApiError } from "@osva-ai/sdk";
 
 import type { OsvaClientFactory } from "./osva-client.js";
 import { notFound } from "./errors.js";

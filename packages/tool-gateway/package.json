@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@osva/adapters-mcp-client": "workspace:*",
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/domain": "workspace:*"
   },
   "devDependencies": {

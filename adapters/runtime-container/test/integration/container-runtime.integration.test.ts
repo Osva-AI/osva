@@ -12,7 +12,7 @@ import type {
   RunAttemptId,
   RunId,
   ToolVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   Agent,
   AgentVersion,
@@ -21,7 +21,7 @@ import {
   RunAttempt,
 } from "@osva/domain";
 import type { RuntimeToolGateway } from "@osva/observability";
-import { RUNTIME_PROTOCOL_ERROR_CODES } from "@osva/runtime-protocol";
+import { RUNTIME_PROTOCOL_ERROR_CODES } from "@osva-ai/runtime-protocol";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {

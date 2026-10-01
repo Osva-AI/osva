@@ -2,10 +2,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import { createDatabase, migrateDatabase, type Database } from "@osva/db";
-import { createNodeHttpServer, createRuntime } from "@osva/sdk/runtime";
+import { createNodeHttpServer, createRuntime } from "@osva-ai/sdk/runtime";
 
 import { createWebProcess } from "../../../web/src/process.js";
 import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
@@ -58,7 +58,7 @@ describe("Node SDK runtime end-to-end", () => {
     await bootstrapIntegrationAuth(database, WORKSPACE_ID, NOW);
   });
 
-  it("executes through @osva/sdk runtime handler and completes the RunAttempt", async () => {
+  it("executes through @osva-ai/sdk runtime handler and completes the RunAttempt", async () => {
     const runtime = createRuntime({
       execute: async (input) => input,
     });

@@ -5,12 +5,12 @@ import type {
   ArtifactId,
   KnowledgeChunkId,
   KnowledgeIndexId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   KNOWLEDGE_EXTRACTION_MEDIA_TYPE,
   KNOWLEDGE_MAX_TEXT_SEGMENTS,
   type KnowledgeTextSegmentV1,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type {
   CreateArtifact,
@@ -270,7 +270,7 @@ export class KnowledgeIngestionService {
   }
 
   private async loadExtractionSegments(
-    workspaceId: import("@osva/contracts").WorkspaceId,
+    workspaceId: import("@osva-ai/contracts").WorkspaceId,
     artifactId: ArtifactId,
   ): Promise<readonly KnowledgeTextSegmentV1[]> {
     const scope = runtimeControlPlaneScope(workspaceId);

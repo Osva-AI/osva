@@ -1,4 +1,4 @@
-import type { WorkflowDefinitionBranchNodeV2 } from "@osva/contracts";
+import type { WorkflowDefinitionBranchNodeV2 } from "@osva-ai/contracts";
 import { isTerminalWorkflowNodeRunState } from "./workflow-node-run-state-machine.js";
 import type { WorkflowNodeRun } from "./workflow-node-run.js";
 import {

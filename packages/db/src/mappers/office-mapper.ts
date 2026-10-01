@@ -8,7 +8,7 @@ import type {
   TeamId,
   WorkflowRunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   Assignment,
   Goal,

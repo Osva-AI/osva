@@ -2,11 +2,11 @@ import type {
   ApiKeyId,
   CommunityEditionRole,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   AUTHORIZATION_ACTIONS,
   COMMUNITY_EDITION_ROLES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { ApiKey } from "./api-key.js";
 import { generateApiKeySecretMaterial } from "./api-key-credential.js";

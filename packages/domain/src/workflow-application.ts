@@ -7,8 +7,8 @@ import type {
   WorkflowRunId,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import { ApprovalRequest } from "./approval-request.js";
 import {

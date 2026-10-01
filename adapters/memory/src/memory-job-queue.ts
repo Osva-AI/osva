@@ -3,7 +3,7 @@ import type {
   JobQueueHandler,
   JobQueuePayload,
   RunAttemptId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { JobQueueShutdownError } from "./errors.js";
 

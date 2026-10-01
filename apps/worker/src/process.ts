@@ -18,7 +18,7 @@ import {
   OpenAIProviderAdapter,
   type OpenAIProviderAdapterOptions,
 } from "@osva/adapters-model-openai";
-import type { ModelProvider } from "@osva/contracts";
+import type { ModelProvider } from "@osva-ai/contracts";
 import {
   createArtifactBlobStore,
   loadArtifactStorageConfig,
@@ -35,7 +35,7 @@ import {
   assertTrustedTypeScriptRuntimeReady,
   TrustedTypeScriptRuntimeAdapter,
 } from "@osva/adapters-runtime-typescript";
-import type { RuntimeAdapter } from "@osva/contracts";
+import type { RuntimeAdapter } from "@osva-ai/contracts";
 import {
   checkDatabaseConnection,
   createDatabase,
@@ -53,7 +53,7 @@ import {
 } from "@osva/db";
 import { PgVectorStore } from "@osva/adapters-vector-pgvector";
 import { OpenAiCompatibleEmbeddingAdapter } from "@osva/adapters-embedding-openai-compatible";
-import type { ArtifactId, JsonObject } from "@osva/contracts";
+import type { ArtifactId, JsonObject } from "@osva-ai/contracts";
 import {
   KnowledgeRetriever,
   RuntimeKnowledgeGateway,
@@ -484,9 +484,9 @@ function createTrustedRuntimeArtifactBridge(
       execute: (
         artifactId: string,
         execution: {
-          readonly workspaceId: import("@osva/contracts").WorkspaceId;
-          readonly runId: import("@osva/contracts").RunId;
-          readonly runAttemptId: import("@osva/contracts").RunAttemptId;
+          readonly workspaceId: import("@osva-ai/contracts").WorkspaceId;
+          readonly runId: import("@osva-ai/contracts").RunId;
+          readonly runAttemptId: import("@osva-ai/contracts").RunAttemptId;
         },
       ) =>
         artifacts.getRuntimeArtifact.execute(
@@ -497,9 +497,9 @@ function createTrustedRuntimeArtifactBridge(
     createRuntimeArtifact: {
       execute: (command: {
         readonly execution: {
-          readonly workspaceId: import("@osva/contracts").WorkspaceId;
-          readonly runId: import("@osva/contracts").RunId;
-          readonly runAttemptId: import("@osva/contracts").RunAttemptId;
+          readonly workspaceId: import("@osva-ai/contracts").WorkspaceId;
+          readonly runId: import("@osva-ai/contracts").RunId;
+          readonly runAttemptId: import("@osva-ai/contracts").RunAttemptId;
         };
         readonly name: string;
         readonly mediaType: string;
@@ -513,9 +513,9 @@ function createTrustedRuntimeArtifactBridge(
       execute: async (
         artifactId: string,
         execution: {
-          readonly workspaceId: import("@osva/contracts").WorkspaceId;
-          readonly runId: import("@osva/contracts").RunId;
-          readonly runAttemptId: import("@osva/contracts").RunAttemptId;
+          readonly workspaceId: import("@osva-ai/contracts").WorkspaceId;
+          readonly runId: import("@osva-ai/contracts").RunId;
+          readonly runAttemptId: import("@osva-ai/contracts").RunAttemptId;
         },
       ) => {
         const view = await artifacts.getRuntimeArtifact.execute(

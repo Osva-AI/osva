@@ -4,7 +4,7 @@ import type {
   EvaluationSuiteVersionId,
   JsonValue,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   EvaluationCase,

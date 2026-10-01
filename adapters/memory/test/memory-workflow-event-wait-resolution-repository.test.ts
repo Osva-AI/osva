@@ -3,7 +3,7 @@ import type {
   WorkflowEventId,
   WorkflowNodeRunId,
   WorkflowRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { WorkflowEvent, armWorkflowWait } from "@osva/domain";
 import { describe, expect, it } from "vitest";
 

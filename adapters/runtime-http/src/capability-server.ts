@@ -8,7 +8,7 @@ import {
 import {
   RUNTIME_CAPABILITY_PATHS,
   RUNTIME_PROTOCOL_MAX_BODY_BYTES,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import { OversizedBodyError } from "./errors.js";
 import { isJsonContentType, readLimitedNodeBody } from "./limited-body.js";

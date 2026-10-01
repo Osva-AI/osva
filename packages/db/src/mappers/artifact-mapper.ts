@@ -1,10 +1,10 @@
-import type { JsonObject } from "@osva/contracts";
+import type { JsonObject } from "@osva-ai/contracts";
 import type {
   ArtifactId,
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { Artifact } from "@osva/domain";
 

@@ -3,8 +3,8 @@ import type {
   JsonObject,
   KnowledgeSourceId,
   WorkspaceId,
-} from "@osva/contracts";
-import { KNOWLEDGE_ATTRIBUTES_MAX_SERIALIZED_BYTES } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { KNOWLEDGE_ATTRIBUTES_MAX_SERIALIZED_BYTES } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, requireNonEmptyString } from "./internals.js";

@@ -105,10 +105,10 @@ function forbiddenDomainImport(specifier: string): string | undefined {
   }
 
   if (
-    specifier === "@osva/contracts/schemas" ||
-    specifier.startsWith("@osva/contracts/schemas/")
+    specifier === "@osva-ai/contracts/schemas" ||
+    specifier.startsWith("@osva-ai/contracts/schemas/")
   ) {
-    return "@osva/contracts/schemas";
+    return "@osva-ai/contracts/schemas";
   }
 
   return undefined;

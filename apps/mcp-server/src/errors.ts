@@ -1,4 +1,4 @@
-import { OSVA_MCP_ERROR_CATEGORY } from "@osva/contracts";
+import { OSVA_MCP_ERROR_CATEGORY } from "@osva-ai/contracts";
 
 export class McpServerError extends Error {
   readonly category: string;

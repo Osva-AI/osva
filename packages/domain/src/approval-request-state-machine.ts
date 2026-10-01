@@ -3,7 +3,7 @@ import {
   TERMINAL_APPROVAL_REQUEST_STATES,
   type ApprovalRequestState,
   type TerminalApprovalRequestState,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { InvalidApprovalRequestTransitionError } from "./errors.js";
 

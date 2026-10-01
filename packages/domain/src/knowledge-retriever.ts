@@ -3,8 +3,8 @@ import type {
   KnowledgeHitV1,
   KnowledgeIndexId,
   WorkspaceId,
-} from "@osva/contracts";
-import { KNOWLEDGE_MAX_TOP_K } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { KNOWLEDGE_MAX_TOP_K } from "@osva-ai/contracts";
 
 import {
   KnowledgeIncompatibleIndexesError,

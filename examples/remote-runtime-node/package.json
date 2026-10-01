@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@osva/sdk": "workspace:*"
+    "@osva-ai/sdk": "workspace:*"
   }
 }

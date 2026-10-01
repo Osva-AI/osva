@@ -1,4 +1,4 @@
-import { PUBLIC_API_ERROR_CODES } from "@osva/contracts";
+import { PUBLIC_API_ERROR_CODES } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { sendHttpError } from "../src/http-errors.js";

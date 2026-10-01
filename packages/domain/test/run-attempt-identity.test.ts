@@ -1,4 +1,4 @@
-import type { RunAttemptId } from "@osva/contracts";
+import type { RunAttemptId } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

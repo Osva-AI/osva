@@ -4,7 +4,7 @@ import type {
   MemoryNamespaceBinding,
   ModelProfileVersionId,
   ToolVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { freezeRecord } from "./internals.js";

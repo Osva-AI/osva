@@ -1,5 +1,5 @@
-import type { JsonValue } from "@osva/contracts";
-import type { MemoryNamespaceId } from "@osva/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
+import type { MemoryNamespaceId } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, requireNonEmptyString } from "./internals.js";

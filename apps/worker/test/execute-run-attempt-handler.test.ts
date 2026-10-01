@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RunAttemptId } from "@osva/contracts";
+import type { RunAttemptId } from "@osva-ai/contracts";
 
 import { createExecuteRunAttemptHandler } from "../src/execute-run-attempt-handler.js";
 

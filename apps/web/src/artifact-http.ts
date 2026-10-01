@@ -1,10 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
-import type { ArtifactId } from "@osva/contracts";
+import type { ArtifactId } from "@osva-ai/contracts";
 import {
   artifactResourceSchema,
   listArtifactsQuerySchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import {
   DEFAULT_ARTIFACT_LIST_LIMIT,
   MAX_ARTIFACT_LIST_LIMIT,

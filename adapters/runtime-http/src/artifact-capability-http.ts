@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
 
-import type { ArtifactId, ExecutionRequest } from "@osva/contracts";
-import { ARTIFACT_ERROR_CODES } from "@osva/contracts";
+import type { ArtifactId, ExecutionRequest } from "@osva-ai/contracts";
+import { ARTIFACT_ERROR_CODES } from "@osva-ai/contracts";
 import {
   type RuntimeArtifactApplication,
   type RuntimeArtifactView,
@@ -11,7 +11,7 @@ import {
 import {
   RUNTIME_CAPABILITY_PATHS,
   RUNTIME_PROTOCOL_VERSION,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import { mapArtifactDomainError } from "./artifact-errors.js";
 import type { RuntimeCapabilityBridge } from "./capability-bridge.js";

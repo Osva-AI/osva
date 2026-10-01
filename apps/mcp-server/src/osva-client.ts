@@ -1,5 +1,5 @@
-import type { McpPrincipal } from "@osva/contracts";
-import { OsvaClient } from "@osva/sdk";
+import type { McpPrincipal } from "@osva-ai/contracts";
+import { OsvaClient } from "@osva-ai/sdk";
 
 import {
   getMcpBearerCredential,

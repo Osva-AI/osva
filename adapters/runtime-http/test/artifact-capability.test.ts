@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 
-import { ARTIFACT_ERROR_CODES } from "@osva/contracts";
+import { ARTIFACT_ERROR_CODES } from "@osva-ai/contracts";
 import type {
   AgentId,
   AgentVersionId,
@@ -9,7 +9,7 @@ import type {
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   MemoryAgentRepository,
   MemoryRunRepository,
@@ -28,7 +28,7 @@ import {
   type ArtifactRepository,
   type RunRepository,
 } from "@osva/domain";
-import { RUNTIME_CAPABILITY_PATHS } from "@osva/runtime-protocol";
+import { RUNTIME_CAPABILITY_PATHS } from "@osva-ai/runtime-protocol";
 import { describe, expect, it } from "vitest";
 
 import {

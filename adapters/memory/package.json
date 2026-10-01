@@ -16,7 +16,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/domain": "workspace:*"
   },
   "devDependencies": {

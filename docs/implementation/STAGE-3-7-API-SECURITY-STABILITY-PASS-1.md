@@ -18,7 +18,7 @@ unauthenticated until Pass 2 workspace hardening.
 
 ## Principal model
 
-`RequestPrincipal` (in `@osva/contracts`) is the long-term provider-neutral identity:
+`RequestPrincipal` (in `@osva-ai/contracts`) is the long-term provider-neutral identity:
 
 ```text
 subjectId

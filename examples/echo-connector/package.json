@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@osva/connector-sdk": "workspace:*"
+    "@osva-ai/connector-sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

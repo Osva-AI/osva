@@ -1,4 +1,4 @@
-import type { RunAttemptId, RunId } from "@osva/contracts";
+import type { RunAttemptId, RunId } from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   InvalidRunAttemptTransitionError,
@@ -341,7 +341,7 @@ describe("MemoryRunRepository", () => {
       bindingName: "default",
       startedAt: NOW,
       modelProfileVersionId:
-        "model-profile-version-1" as import("@osva/contracts").ModelProfileVersionId,
+        "model-profile-version-1" as import("@osva-ai/contracts").ModelProfileVersionId,
     });
 
     await port.insertRunningRunStep(step);

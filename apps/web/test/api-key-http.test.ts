@@ -1,7 +1,7 @@
 import {
   COMMUNITY_EDITION_ROLES,
   PUBLIC_API_ERROR_CODES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { authorizationHeader, seedTestApiKey } from "./test-web.js";
@@ -26,19 +26,19 @@ describe("API key lifecycle HTTP API", () => {
       apiKeys: harness.ctx.apiKeys,
       workspaceId: WS_A,
       role: COMMUNITY_EDITION_ROLES.EDITOR,
-      apiKeyId: "ak-editor-keys" as import("@osva/contracts").ApiKeyId,
+      apiKeyId: "ak-editor-keys" as import("@osva-ai/contracts").ApiKeyId,
     });
     const viewer = await seedTestApiKey({
       apiKeys: harness.ctx.apiKeys,
       workspaceId: WS_A,
       role: COMMUNITY_EDITION_ROLES.VIEWER,
-      apiKeyId: "ak-viewer-keys" as import("@osva/contracts").ApiKeyId,
+      apiKeyId: "ak-viewer-keys" as import("@osva-ai/contracts").ApiKeyId,
     });
     const operator = await seedTestApiKey({
       apiKeys: harness.ctx.apiKeys,
       workspaceId: WS_A,
       role: COMMUNITY_EDITION_ROLES.OPERATOR,
-      apiKeyId: "ak-operator-keys" as import("@osva/contracts").ApiKeyId,
+      apiKeyId: "ak-operator-keys" as import("@osva-ai/contracts").ApiKeyId,
     });
 
     for (const token of [
@@ -75,7 +75,7 @@ describe("API key lifecycle HTTP API", () => {
     await seedTestApiKey({
       apiKeys: harness.ctx.apiKeys,
       workspaceId: WS_B,
-      apiKeyId: "ak-b-only" as import("@osva/contracts").ApiKeyId,
+      apiKeyId: "ak-b-only" as import("@osva-ai/contracts").ApiKeyId,
       role: COMMUNITY_EDITION_ROLES.ADMIN,
     });
 
@@ -109,7 +109,7 @@ describe("API key lifecycle HTTP API", () => {
     const keyInB = await seedTestApiKey({
       apiKeys: harness.ctx.apiKeys,
       workspaceId: WS_B,
-      apiKeyId: "ak-revoke-b" as import("@osva/contracts").ApiKeyId,
+      apiKeyId: "ak-revoke-b" as import("@osva-ai/contracts").ApiKeyId,
       role: COMMUNITY_EDITION_ROLES.ADMIN,
     });
 

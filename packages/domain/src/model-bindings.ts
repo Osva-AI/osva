@@ -1,4 +1,7 @@
-import type { AgentManifestV1, ModelProfileVersionId } from "@osva/contracts";
+import type {
+  AgentManifestV1,
+  ModelProfileVersionId,
+} from "@osva-ai/contracts";
 
 export function modelProfileVersionBindingsFromManifest(
   manifest: AgentManifestV1,

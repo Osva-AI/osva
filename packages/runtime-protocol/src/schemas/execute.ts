@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { jsonValueSchema } from "@osva/contracts/schemas";
+import { jsonValueSchema } from "@osva-ai/contracts/schemas";
 
 import {
   RUNTIME_PROTOCOL_ERROR_CODES,

@@ -1,4 +1,8 @@
-import type { AgentId, AgentManifestV1, AgentVersionId } from "@osva/contracts";
+import type {
+  AgentId,
+  AgentManifestV1,
+  AgentVersionId,
+} from "@osva-ai/contracts";
 import { AgentVersion, DomainInvariantError } from "@osva/domain";
 
 import type { agentVersions } from "../schema/agent-versions.js";

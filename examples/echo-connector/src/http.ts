@@ -1,4 +1,4 @@
-import { serveStreamableHttp } from "@osva/connector-sdk";
+import { serveStreamableHttp } from "@osva-ai/connector-sdk";
 
 import { echoConnector } from "./connector.js";
 

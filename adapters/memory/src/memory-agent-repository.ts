@@ -1,4 +1,4 @@
-import type { AgentId, AgentVersionId, WorkspaceId } from "@osva/contracts";
+import type { AgentId, AgentVersionId, WorkspaceId } from "@osva-ai/contracts";
 import {
   AgentNotFoundError,
   AgentVersion,

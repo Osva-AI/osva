@@ -1,4 +1,8 @@
-import type { JsonValue, WorkflowEventId, WorkspaceId } from "@osva/contracts";
+import type {
+  JsonValue,
+  WorkflowEventId,
+  WorkspaceId,
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   WorkflowEvent,

@@ -1,5 +1,5 @@
-import type { JsonValue } from "@osva/contracts";
-import { isCanonicalJsonValue } from "@osva/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
+import { isCanonicalJsonValue } from "@osva-ai/contracts";
 
 import { mcpAdapterError } from "./errors.js";
 

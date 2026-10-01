@@ -1,4 +1,4 @@
-import type { InternalToolImplementationId } from "@osva/contracts";
+import type { InternalToolImplementationId } from "@osva-ai/contracts";
 
 import { clockNowImplementation } from "./clock-now.js";
 import { echoImplementation } from "./echo.js";

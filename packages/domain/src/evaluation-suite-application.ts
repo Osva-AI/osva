@@ -4,8 +4,8 @@ import type {
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import { EvaluationCase } from "./evaluation-case.js";
 import { EvaluationSuite } from "./evaluation-suite.js";

@@ -1,7 +1,7 @@
 import type { ServerResponse } from "node:http";
 
-import type { PublicApiErrorCode } from "@osva/contracts";
-import { OSVA_REQUEST_ID_HEADER } from "@osva/contracts";
+import type { PublicApiErrorCode } from "@osva-ai/contracts";
+import { OSVA_REQUEST_ID_HEADER } from "@osva-ai/contracts";
 
 import { sendJson } from "./json.js";
 

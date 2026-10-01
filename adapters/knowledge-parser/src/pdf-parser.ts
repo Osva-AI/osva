@@ -1,6 +1,6 @@
 import type { Readable } from "node:stream";
 
-import type { KnowledgeTextSegmentV1 } from "@osva/contracts";
+import type { KnowledgeTextSegmentV1 } from "@osva-ai/contracts";
 import type { KnowledgeParser, KnowledgeParserParseInput } from "@osva/domain";
 import {
   getDocument,

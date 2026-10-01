@@ -2,7 +2,7 @@ import type {
   AgentVersionId,
   WorkflowDefinitionV3,
   WorkflowDefinitionWaitConfigurationV3,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { InvalidWorkflowDefinitionError } from "../src/errors.js";

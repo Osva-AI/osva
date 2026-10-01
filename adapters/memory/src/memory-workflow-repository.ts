@@ -2,7 +2,7 @@ import type {
   WorkflowId,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   DuplicateWorkflowKeyError,

@@ -16,7 +16,7 @@
     "test": "tsc -p tsconfig.json && vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva/outbound-network": "workspace:*",
     "busboy": "1.6.0",
@@ -24,7 +24,7 @@
     "@osva/model-gateway": "workspace:*",
     "@osva/observability": "workspace:*",
     "@osva/runtime-core": "workspace:*",
-    "@osva/runtime-protocol": "workspace:*",
+    "@osva-ai/runtime-protocol": "workspace:*",
     "@osva/tool-gateway": "workspace:*"
   },
   "devDependencies": {

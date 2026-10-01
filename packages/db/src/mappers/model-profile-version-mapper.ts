@@ -2,7 +2,7 @@ import type {
   ModelProfileId,
   ModelProfileVersionId,
   ModelProvider,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { ModelProfileVersion } from "@osva/domain";
 
 import type { modelProfileVersions } from "../schema/model-profile-versions.js";

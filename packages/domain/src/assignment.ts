@@ -8,8 +8,8 @@ import type {
   RunId,
   WorkflowRunId,
   WorkspaceId,
-} from "@osva/contracts";
-import { isCanonicalJsonValue } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { isCanonicalJsonValue } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import {

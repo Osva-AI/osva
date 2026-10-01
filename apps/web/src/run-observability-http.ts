@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { RunAttemptId, RunId, RunStepId } from "@osva/contracts";
+import type { RunAttemptId, RunId, RunStepId } from "@osva-ai/contracts";
 import {
   createEvaluationRequestSchema,
   evaluationListResourceSchema,
@@ -8,7 +8,7 @@ import {
   runAttemptUsageResourceSchema,
   runStepListResourceSchema,
   runStepResourceSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import {
   DEFAULT_RUN_STEP_LIST_LIMIT,
   MAX_RUN_STEP_LIST_LIMIT,
@@ -190,7 +190,7 @@ async function dispatchRunObservabilityRoute(
       runId: route.runId,
       runAttemptId: route.runAttemptId,
       evaluationId:
-        route.evaluationId as import("@osva/contracts").EvaluationId,
+        route.evaluationId as import("@osva-ai/contracts").EvaluationId,
     });
     sendJson(response, 200, toEvaluationResource(evaluation));
     return;

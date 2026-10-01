@@ -4,7 +4,7 @@ import type {
   WorkflowId,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { WorkflowVersion } from "../src/workflow-version.js";

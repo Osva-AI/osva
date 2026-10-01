@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { ConnectorId, ConnectorVersionId } from "@osva/contracts";
-import { mapConnectorVersionToPublicResource } from "@osva/contracts";
+import type { ConnectorId, ConnectorVersionId } from "@osva-ai/contracts";
+import { mapConnectorVersionToPublicResource } from "@osva-ai/contracts";
 import {
   connectorListResourceSchema,
   connectorResourceSchema,
@@ -12,7 +12,7 @@ import {
   importMcpToolsRequestSchema,
   importMcpToolsResponseSchema,
   updateConnectorRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type {
   Connector,
   ConnectorApplication,

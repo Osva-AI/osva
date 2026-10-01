@@ -1,4 +1,4 @@
-import type { RunAttemptId } from "@osva/contracts";
+import type { RunAttemptId } from "@osva-ai/contracts";
 import {
   MemoryAgentRepository,
   MemoryRunRepository,
@@ -15,7 +15,7 @@ import {
   RUNTIME_PROTOCOL_ERROR_CODES,
   RUNTIME_PROTOCOL_VERSION,
   runtimeExecuteRequestSchema,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 import { describe, expect, it } from "vitest";
 
 import { RuntimeCapabilityBridge } from "../src/capability-bridge.js";

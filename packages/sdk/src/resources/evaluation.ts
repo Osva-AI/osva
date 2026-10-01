@@ -2,7 +2,7 @@ import type {
   EvaluationRunId,
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   createEvaluationRunRequestSchema,
   createEvaluationSuiteRequestSchema,
@@ -13,7 +13,7 @@ import {
   evaluationSuiteResourceSchema,
   evaluationSuiteVersionListResourceSchema,
   evaluationSuiteVersionResourceSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

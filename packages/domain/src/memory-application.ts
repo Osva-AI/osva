@@ -2,8 +2,8 @@ import type {
   JsonValue,
   MemoryNamespaceId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import { MemoryNamespace } from "./memory-namespace.js";
 import { MemoryRecord } from "./memory-record.js";

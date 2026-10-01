@@ -1,4 +1,4 @@
-import type { ApiKeyId, WorkspaceId } from "@osva/contracts";
+import type { ApiKeyId, WorkspaceId } from "@osva-ai/contracts";
 import type {
   ApiKey,
   ApiKeyCreateRecord,

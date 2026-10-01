@@ -1,5 +1,5 @@
-import type { ArtifactId } from "@osva/contracts";
-import { artifactListCursorPayloadSchema } from "@osva/contracts/schemas";
+import type { ArtifactId } from "@osva-ai/contracts";
+import { artifactListCursorPayloadSchema } from "@osva-ai/contracts/schemas";
 
 export function encodeArtifactListCursor(cursor: {
   createdAt: Date;

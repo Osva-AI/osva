@@ -72,5 +72,5 @@ Architecturally significant files only (~50). Use as canonical precedents when i
 | `packages/contracts/src/tool-gateway.ts` | ToolGateway port | tool-gateway | — | — |
 | `packages/contracts/src/memory-gateway.ts` | MemoryGateway port | memory-gateway | — | Authorization shape |
 | `packages/sdk/src/client.ts` | OsvaClient entry | CLI, external users | HTTP /v1 | Public SDK surface |
-| `packages/cli/src/bin/osva.ts` | CLI entry | shell | @osva/sdk | No parallel HTTP impl |
+| `packages/cli/src/bin/osva.ts` | CLI entry | shell | @osva-ai/sdk | No parallel HTTP impl |
 | `scripts/verification/verify.mjs` | Verification harness | package.json scripts | turbo, prettier | verify:quick / verify:ci:clean |

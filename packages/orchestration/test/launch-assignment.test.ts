@@ -4,7 +4,7 @@ import type {
   RunAttemptId,
   RunId,
   WorkflowRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   MemoryAgentRepository,
   MemoryJobQueue,

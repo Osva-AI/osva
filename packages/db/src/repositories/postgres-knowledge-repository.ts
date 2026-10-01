@@ -3,7 +3,7 @@ import type {
   KnowledgeIndexId,
   KnowledgeSourceId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   KnowledgeChunk,
   KnowledgeIndex,

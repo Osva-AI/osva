@@ -1,4 +1,4 @@
-import { defineConnector, defineTool } from "@osva/connector-sdk";
+import { defineConnector, defineTool } from "@osva-ai/connector-sdk";
 
 export const echoConnector = defineConnector({
   key: "osva-echo-connector",

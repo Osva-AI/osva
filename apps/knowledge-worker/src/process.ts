@@ -11,7 +11,7 @@ import { PgVectorStore } from "@osva/adapters-vector-pgvector";
 import {
   KNOWLEDGE_MAX_EXTRACTED_BYTES,
   KNOWLEDGE_MAX_SOURCE_BYTES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   checkDatabaseConnection,
   createDatabase,

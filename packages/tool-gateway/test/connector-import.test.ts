@@ -1,4 +1,4 @@
-import type { DiscoveredMcpTool, McpClientPool } from "@osva/contracts";
+import type { DiscoveredMcpTool, McpClientPool } from "@osva-ai/contracts";
 import {
   MemoryConnectorRepository,
   MemoryToolRepository,
@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fakeControlPlaneScope } from "./test-scope.js";
 
 const NOW = new Date("2026-01-15T12:00:00.000Z");
-const WORKSPACE_ID = "ws-1" as import("@osva/contracts").WorkspaceId;
+const WORKSPACE_ID = "ws-1" as import("@osva-ai/contracts").WorkspaceId;
 const scope = fakeControlPlaneScope(WORKSPACE_ID);
 
 describe("ConnectorApplication MCP import versioning", () => {

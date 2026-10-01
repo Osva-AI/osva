@@ -3,7 +3,7 @@ import type {
   WorkflowRunId,
   WorkflowRunState,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   LifecycleConflictError,

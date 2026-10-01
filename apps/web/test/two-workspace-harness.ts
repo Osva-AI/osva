@@ -1,8 +1,8 @@
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import {
   OSVA_REQUEST_ID_HEADER,
   PUBLIC_API_ERROR_CODES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { expect } from "vitest";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
@@ -37,7 +37,7 @@ export async function createTwoWorkspaceHarness(
   const keyB = await seedTestApiKey({
     apiKeys: ctx.apiKeys,
     workspaceId: WS_B,
-    apiKeyId: "ak-matrix-b" as import("@osva/contracts").ApiKeyId,
+    apiKeyId: "ak-matrix-b" as import("@osva-ai/contracts").ApiKeyId,
   });
 
   servers.push(ctx.server);

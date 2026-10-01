@@ -19,14 +19,14 @@ export function readReleaseVersion() {
 }
 
 export const PUBLIC_NPM_PACKAGES = [
-  "@osva/contracts",
-  "@osva/runtime-protocol",
-  "@osva/sdk",
-  "@osva/cli",
-  "@osva/connector-sdk",
+  "@osva-ai/contracts",
+  "@osva-ai/runtime-protocol",
+  "@osva-ai/sdk",
+  "@osva-ai/cli",
+  "@osva-ai/connector-sdk",
 ];
 
 export function packageJsonPath(packageName) {
-  const dir = packageName.replace("@osva/", "");
+  const dir = packageName.replace(/^@osva-ai\//, "");
   return path.join(REPO_ROOT, "packages", dir, "package.json");
 }

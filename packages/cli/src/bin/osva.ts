@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { OsvaClient } from "@osva/sdk";
+import { OsvaClient } from "@osva-ai/sdk";
 
 import { runCommand } from "../commands/index.js";
 import { loadCliConfig, parseCliArgs } from "../config.js";

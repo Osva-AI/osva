@@ -8,7 +8,7 @@ import {
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
-import type { McpToolVersionConfig } from "@osva/contracts";
+import type { McpToolVersionConfig } from "@osva-ai/contracts";
 
 import { sqlTextInList } from "./sql.js";
 import { PERSISTED_TOOL_TYPES } from "./states.js";

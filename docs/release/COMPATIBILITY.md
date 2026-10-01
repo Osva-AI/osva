@@ -15,11 +15,11 @@ Versioned documents under `docs/contracts/` define manifests, runtime protocol m
 
 | Artifact | Package | Semver at 1.0 |
 |----------|---------|----------------|
-| Contracts | `@osva/contracts` | 1.0.0 |
-| Runtime protocol | `@osva/runtime-protocol` | 1.0.0 |
-| TypeScript SDK | `@osva/sdk` | 1.0.0 |
-| CLI | `@osva/cli` | 1.0.0 |
-| Connector SDK | `@osva/connector-sdk` | 1.0.0 |
+| Contracts | `@osva-ai/contracts` | 1.0.0 |
+| Runtime protocol | `@osva-ai/runtime-protocol` | 1.0.0 |
+| TypeScript SDK | `@osva-ai/sdk` | 1.0.0 |
+| CLI | `@osva-ai/cli` | 1.0.0 |
+| Connector SDK | `@osva-ai/connector-sdk` | 1.0.0 |
 | Python SDK | `osva-sdk` | 1.0.0 |
 
 Semver applies to published packages. Patch/minor releases should remain compatible with the same `/v1` API unless release notes state otherwise.

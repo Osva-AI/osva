@@ -27,7 +27,7 @@ export type {
   WorkflowRunState,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 export {
   APPROVAL_REJECTED_ERROR_CODE,
@@ -41,7 +41,7 @@ export {
   WORKFLOW_EVENT_TIMEOUT_ERROR_CODE,
   WORKFLOW_NODE_RUN_STATES,
   WORKFLOW_RUN_STATES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 export {
   AgentNotFoundError,

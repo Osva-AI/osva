@@ -2,11 +2,11 @@ import type {
   ApiKeyId,
   CommunityEditionRole,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   AUTHENTICATION_METHODS,
   COMMUNITY_EDITION_ROLES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { ControlPlaneScope } from "../src/control-plane.js";
 

@@ -1,4 +1,4 @@
-import type { ApiKeyId } from "@osva/contracts";
+import type { ApiKeyId } from "@osva-ai/contracts";
 
 import { DomainError } from "./errors.js";
 

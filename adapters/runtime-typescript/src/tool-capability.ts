@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { JsonValue } from "@osva/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
 
 import { ToolErrorCode, isToolBindingName } from "./constants.js";
 import {

@@ -8,7 +8,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { JsonValue } from "@osva/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
 
 import { memoryNamespaces } from "./memory-namespaces.js";
 

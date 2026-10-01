@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { JsonValue } from "@osva/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
 
 import { MemoryErrorCode, isMemoryBindingName } from "./constants.js";
 import {

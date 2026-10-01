@@ -11,7 +11,7 @@ import {
 import type {
   ConnectorAuthConfig,
   ConnectorTransportConfig,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { connectors } from "./connectors.js";
 import { sqlTextInList } from "./sql.js";

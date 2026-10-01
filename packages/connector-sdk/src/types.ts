@@ -1,4 +1,4 @@
-import type { JsonSchemaRecord } from "@osva/contracts";
+import type { JsonSchemaRecord } from "@osva-ai/contracts";
 
 export interface ConnectorMetadata {
   readonly key: string;

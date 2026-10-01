@@ -4,12 +4,12 @@ import type {
   ToolId,
   ToolType,
   ToolVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   isInternalToolImplementationId,
   isToolType,
   MCP_TOOL_IMPLEMENTATION,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import {

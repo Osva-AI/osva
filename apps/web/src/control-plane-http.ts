@@ -1,5 +1,5 @@
-import type { AuthorizationAction } from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+import type { AuthorizationAction } from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 import { emitSecurityEvent, SECURITY_EVENT_NAMES } from "@osva/observability";
 import {
   PermissionDeniedError,

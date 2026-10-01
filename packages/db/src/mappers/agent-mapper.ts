@@ -1,4 +1,4 @@
-import type { AgentId, WorkspaceId } from "@osva/contracts";
+import type { AgentId, WorkspaceId } from "@osva-ai/contracts";
 import { Agent } from "@osva/domain";
 
 import type { agents } from "../schema/agents.js";

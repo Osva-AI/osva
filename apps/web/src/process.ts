@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { WorkflowEventId } from "@osva/contracts";
+import type { WorkflowEventId } from "@osva-ai/contracts";
 import type { Server } from "node:http";
 import {
   BullMqJobQueue,

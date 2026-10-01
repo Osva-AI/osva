@@ -1,4 +1,4 @@
-import type { AgentId, RunAttemptId, RunId } from "@osva/contracts";
+import type { AgentId, RunAttemptId, RunId } from "@osva-ai/contracts";
 
 export class OrchestrationError extends Error {
   constructor(message: string) {

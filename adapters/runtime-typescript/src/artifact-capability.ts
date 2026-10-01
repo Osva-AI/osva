@@ -5,7 +5,7 @@ import {
   type Readable as ReadableStream,
 } from "node:stream";
 
-import type { JsonObject } from "@osva/contracts";
+import type { JsonObject } from "@osva-ai/contracts";
 
 import {
   ArtifactErrorCode,

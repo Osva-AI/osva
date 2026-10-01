@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { SHA256_INTEGRITY_PREFIX } from "@osva/contracts";
+import { SHA256_INTEGRITY_PREFIX } from "@osva-ai/contracts";
 
 export function sha256IntegrityOf(content: Buffer | string): string {
   return `${SHA256_INTEGRITY_PREFIX}${createHash("sha256")

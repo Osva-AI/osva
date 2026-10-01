@@ -1,4 +1,4 @@
-import type { RunAttemptId } from "@osva/contracts";
+import type { RunAttemptId } from "@osva-ai/contracts";
 
 /**
  * Runtime Protocol executionId has a 1:1 identity with canonical RunAttempt.

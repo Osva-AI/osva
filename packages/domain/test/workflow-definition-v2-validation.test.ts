@@ -1,4 +1,4 @@
-import type { AgentVersionId, WorkflowDefinitionV2 } from "@osva/contracts";
+import type { AgentVersionId, WorkflowDefinitionV2 } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { InvalidWorkflowDefinitionError } from "../src/errors.js";

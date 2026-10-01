@@ -4,7 +4,7 @@ import type {
   WorkflowNodeRunId,
   WorkflowRunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { ApprovalRequest } from "../approval-request.js";
 

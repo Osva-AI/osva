@@ -1,4 +1,4 @@
-import type { EvaluationId, RunAttemptId } from "@osva/contracts";
+import type { EvaluationId, RunAttemptId } from "@osva-ai/contracts";
 
 import type { Evaluation } from "../evaluation.js";
 

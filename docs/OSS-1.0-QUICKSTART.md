@@ -54,18 +54,18 @@ curl -sS -H "Authorization: Bearer $OSVA_API_KEY" \
 ```bash
 cd /path/to/osva
 pnpm install
-pnpm exec turbo run build --filter=@osva/sdk
+pnpm exec turbo run build --filter=@osva-ai/sdk
 export OSVA_BASE_URL=http://127.0.0.1:8080
 export OSVA_API_KEY='osva_ak_…'
 node --input-type=module -e "
-  import { OsvaClient } from '@osva/sdk';
+  import { OsvaClient } from '@osva-ai/sdk';
   const client = new OsvaClient({ baseUrl: process.env.OSVA_BASE_URL, apiKey: process.env.OSVA_API_KEY });
   const keys = await client.apiKeys.list();
   console.log(keys);
 "
 ```
 
-Published npm install (`@osva/sdk@1.0.0`) follows the same client surface when the package is available on npm.
+Published npm install (`@osva-ai/sdk@1.0.0`) follows the same client surface when the package is available on npm.
 
 ## 6. Python SDK
 

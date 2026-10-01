@@ -1,4 +1,4 @@
-import { createNodeHttpServer, createRuntime } from "@osva/sdk/runtime";
+import { createNodeHttpServer, createRuntime } from "@osva-ai/sdk/runtime";
 
 const runtime = createRuntime({
   execute: async (input, context) => {

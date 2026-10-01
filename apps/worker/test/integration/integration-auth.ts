@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import type { Database } from "@osva/db";
 import {
   PostgresApiKeyRepository,

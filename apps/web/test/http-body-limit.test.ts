@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   OSVA_DEFAULT_JSON_BODY_MAX_BYTES,
   PUBLIC_API_ERROR_CODES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
 import { authorizationHeader, createTestWebApplication } from "./test-web.js";

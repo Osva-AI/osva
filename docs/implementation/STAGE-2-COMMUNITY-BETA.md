@@ -18,7 +18,7 @@
   remains one RuntimeAdapter; remote HTTP is synchronous Protocol V1 with
   executionId = RunAttemptId and an OSVA capability bridge);
 - ✅ Slice 2.5: Node SDK, Python SDK, CLI, and public SDK surface
-  (`@osva/sdk`, `@osva/cli`, `osva-sdk`; control-plane clients over `/v1`;
+  (`@osva-ai/sdk`, `@osva-ai/cli`, `osva-sdk`; control-plane clients over `/v1`;
   Runtime Protocol V1 runtime helpers; shared fixtures; Python CI);
 - ✅ Slice 2.6: additional model providers
   (Anthropic direct API and Google Gemini Developer API behind ModelGateway;

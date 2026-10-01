@@ -1,4 +1,4 @@
-import type { ArtifactId, WorkspaceId } from "@osva/contracts";
+import type { ArtifactId, WorkspaceId } from "@osva-ai/contracts";
 import { Artifact, Workspace } from "@osva/domain";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 

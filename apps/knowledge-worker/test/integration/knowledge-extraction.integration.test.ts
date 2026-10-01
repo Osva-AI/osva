@@ -1,6 +1,6 @@
 import { text } from "node:stream/consumers";
-import type { WorkspaceId } from "@osva/contracts";
-import { KNOWLEDGE_EXTRACTION_MEDIA_TYPE } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
+import { KNOWLEDGE_EXTRACTION_MEDIA_TYPE } from "@osva-ai/contracts";
 import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 import { Workspace } from "@osva/domain";
 import type { VectorStore } from "@osva/domain";

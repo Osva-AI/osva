@@ -1,6 +1,6 @@
-import type { JsonValue } from "@osva/contracts";
-import type { OsvaClient } from "@osva/sdk";
-import { OsvaApiError } from "@osva/sdk";
+import type { JsonValue } from "@osva-ai/contracts";
+import type { OsvaClient } from "@osva-ai/sdk";
+import { OsvaApiError } from "@osva-ai/sdk";
 
 import type { CliConfig } from "../config.js";
 import { printError, printResult } from "../output.js";

@@ -1,5 +1,5 @@
-import type { WorkflowNodeRunId, WorkflowRunId } from "@osva/contracts";
-import { WORKFLOW_NODE_RUN_STATES } from "@osva/contracts";
+import type { WorkflowNodeRunId, WorkflowRunId } from "@osva-ai/contracts";
+import { WORKFLOW_NODE_RUN_STATES } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { InvalidWorkflowNodeRunTransitionError } from "../src/errors.js";

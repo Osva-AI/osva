@@ -1,4 +1,4 @@
-import type { ExecutionRequest } from "@osva/contracts";
+import type { ExecutionRequest } from "@osva-ai/contracts";
 import type { AgentVersion, Run, RunAttempt } from "@osva/domain";
 import { DomainInvariantError } from "@osva/domain";
 

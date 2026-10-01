@@ -1,5 +1,5 @@
-import type { ModelErrorCode } from "@osva/contracts";
-import { MODEL_ERROR_CODES } from "@osva/contracts";
+import type { ModelErrorCode } from "@osva-ai/contracts";
+import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
 
 export interface ModelGatewayErrorOptions {
   readonly retryable?: boolean;

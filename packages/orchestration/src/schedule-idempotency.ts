@@ -1,4 +1,4 @@
-import type { ScheduleId } from "@osva/contracts";
+import type { ScheduleId } from "@osva-ai/contracts";
 
 export function scheduleOccurrenceRunIdempotencyKey(
   scheduleId: ScheduleId,

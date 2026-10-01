@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { JsonObject } from "@osva/contracts";
+import type { JsonObject } from "@osva-ai/contracts";
 
 import { KnowledgeErrorCode, isKnowledgeBindingName } from "./constants.js";
 import {

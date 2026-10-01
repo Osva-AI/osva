@@ -31,21 +31,21 @@ domain / orchestration / gateways / runtime-core (services)
 | BullMQ carries work, not lifecycle | Job payload is `{ runAttemptId }`; CreateRun owns attempt creation |
 | apps/web is control-plane composition | HTTP + persist + enqueue |
 | apps/worker is execution-plane composition | consume + ExecuteRunAttempt + gateways |
-| Public SDKs depend on public HTTP contracts | `@osva/sdk` mirrors `/v1` resources |
-| CLI depends on Node SDK | `@osva/cli` → `@osva/sdk`, no duplicate HTTP client |
+| Public SDKs depend on public HTTP contracts | `@osva-ai/sdk` mirrors `/v1` resources |
+| CLI depends on Node SDK | `@osva-ai/cli` → `@osva-ai/sdk`, no duplicate HTTP client |
 | Remote runtime never receives DB/queue/provider credentials | Capability bridge + scoped tokens only |
 
 ## Package-specific boundaries
 
 ### packages/domain
 
-- May import `@osva/contracts`.
+- May import `@osva-ai/contracts`.
 - Defines repository **ports**, not Postgres implementations.
 - State machines and aggregates live here.
 
 ### packages/orchestration
 
-- May import `@osva/domain`, `@osva/contracts`, `@osva/runtime-core`.
+- May import `@osva/domain`, `@osva-ai/contracts`, `@osva/runtime-core`.
 - Must not import `apps/*` or adapters.
 - Accepts `JobQueue` and `RuntimeAdapter` as injected ports.
 

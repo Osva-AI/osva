@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { ModelProfileId, ModelProfileVersionId } from "@osva/contracts";
+import type { ModelProfileId, ModelProfileVersionId } from "@osva-ai/contracts";
 import {
   createModelProfileRequestSchema,
   createModelProfileVersionRequestSchema,
@@ -8,7 +8,7 @@ import {
   modelProfileVersionListResourceSchema,
   modelProfileVersionResourceSchema,
   updateModelProfileRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type {
   ModelProfile,
   ModelProfileApplication,

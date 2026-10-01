@@ -1,5 +1,5 @@
 import { Queue, Worker, type Job } from "bullmq";
-import type { JobQueueHandler, RunAttemptId } from "@osva/contracts";
+import type { JobQueueHandler, RunAttemptId } from "@osva-ai/contracts";
 import {
   extractBullMqTraceCarrier,
   withBullMqTraceCarrier,

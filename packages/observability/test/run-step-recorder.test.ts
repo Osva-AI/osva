@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ExecutionRequest, GenerateTextRequest } from "@osva/contracts";
+import type { ExecutionRequest, GenerateTextRequest } from "@osva-ai/contracts";
 import {
   MemoryModelProfileRepository,
   MemoryRunRepository,
@@ -16,12 +16,12 @@ describe("RunStepRecorder", () => {
     const runs = new MemoryRunRepository();
     const modelProfiles = new MemoryModelProfileRepository();
     const modelProfileVersionId =
-      "mpv-1" as import("@osva/contracts").ModelProfileVersionId;
+      "mpv-1" as import("@osva-ai/contracts").ModelProfileVersionId;
 
     await modelProfiles.saveModelProfile(
       ModelProfile.create({
-        id: "mp-1" as import("@osva/contracts").ModelProfileId,
-        workspaceId: "ws-1" as import("@osva/contracts").WorkspaceId,
+        id: "mp-1" as import("@osva-ai/contracts").ModelProfileId,
+        workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
         key: "primary",
         name: "Primary",
         createdAt: NOW,
@@ -30,7 +30,7 @@ describe("RunStepRecorder", () => {
     await modelProfiles.saveModelProfileVersion(
       ModelProfileVersion.create({
         id: modelProfileVersionId,
-        modelProfileId: "mp-1" as import("@osva/contracts").ModelProfileId,
+        modelProfileId: "mp-1" as import("@osva-ai/contracts").ModelProfileId,
         version: 1,
         provider: "OPENAI",
         model: "gpt-test",
@@ -44,11 +44,11 @@ describe("RunStepRecorder", () => {
     );
 
     const execution: ExecutionRequest = {
-      runId: "run-1" as import("@osva/contracts").RunId,
-      runAttemptId: "attempt-1" as import("@osva/contracts").RunAttemptId,
-      workspaceId: "ws-1" as import("@osva/contracts").WorkspaceId,
-      agentId: "agent-1" as import("@osva/contracts").AgentId,
-      agentVersionId: "av-1" as import("@osva/contracts").AgentVersionId,
+      runId: "run-1" as import("@osva-ai/contracts").RunId,
+      runAttemptId: "attempt-1" as import("@osva-ai/contracts").RunAttemptId,
+      workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
+      agentId: "agent-1" as import("@osva-ai/contracts").AgentId,
+      agentVersionId: "av-1" as import("@osva-ai/contracts").AgentVersionId,
       timeoutMs: 30_000,
       input: { prompt: "hello" },
       effectiveConfig: {},
@@ -107,11 +107,11 @@ describe("RunStepRecorder", () => {
   it("records a succeeded knowledge step without query text", async () => {
     const runs = new MemoryRunRepository();
     const execution: ExecutionRequest = {
-      runId: "run-1" as import("@osva/contracts").RunId,
-      runAttemptId: "attempt-1" as import("@osva/contracts").RunAttemptId,
-      workspaceId: "ws-1" as import("@osva/contracts").WorkspaceId,
-      agentId: "agent-1" as import("@osva/contracts").AgentId,
-      agentVersionId: "av-1" as import("@osva/contracts").AgentVersionId,
+      runId: "run-1" as import("@osva-ai/contracts").RunId,
+      runAttemptId: "attempt-1" as import("@osva-ai/contracts").RunAttemptId,
+      workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
+      agentId: "agent-1" as import("@osva-ai/contracts").AgentId,
+      agentVersionId: "av-1" as import("@osva-ai/contracts").AgentVersionId,
       timeoutMs: 30_000,
       input: { prompt: "hello" },
       effectiveConfig: {},
@@ -124,7 +124,7 @@ describe("RunStepRecorder", () => {
       toolVersionBindings: {},
       memoryNamespaceBindings: {},
       knowledgeIndexBindings: {
-        docs: ["idx-1" as import("@osva/contracts").KnowledgeIndexId],
+        docs: ["idx-1" as import("@osva-ai/contracts").KnowledgeIndexId],
       },
       toolGrants: [],
       policyContext: {},
@@ -134,14 +134,14 @@ describe("RunStepRecorder", () => {
       search: vi.fn(async () => [
         {
           knowledgeChunkId:
-            "chunk-1" as import("@osva/contracts").KnowledgeChunkId,
+            "chunk-1" as import("@osva-ai/contracts").KnowledgeChunkId,
           knowledgeIndexId:
-            "idx-1" as import("@osva/contracts").KnowledgeIndexId,
+            "idx-1" as import("@osva-ai/contracts").KnowledgeIndexId,
           knowledgeSourceId:
-            "src-1" as import("@osva/contracts").KnowledgeSourceId,
+            "src-1" as import("@osva-ai/contracts").KnowledgeSourceId,
           artifactReference: {
             type: "artifact" as const,
-            artifactId: "art-1" as import("@osva/contracts").ArtifactId,
+            artifactId: "art-1" as import("@osva-ai/contracts").ArtifactId,
           },
           text: "fact",
           score: 0.9,

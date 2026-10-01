@@ -1,7 +1,7 @@
 import type {
   WorkflowDefinitionWaitConfigurationV3,
   WorkflowNodeRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   WORKFLOW_EVENT_TIMEOUT_ERROR_CODE,
   DomainInvariantError,

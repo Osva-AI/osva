@@ -2,7 +2,7 @@ import type {
   KnowledgeIndexId,
   KnowledgeSourceId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {

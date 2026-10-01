@@ -5,8 +5,8 @@ import type {
   RemoteHttpRuntime,
   RuntimeAdapter,
   SecretResolver,
-} from "@osva/contracts";
-import { isCanonicalJsonValue } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { isCanonicalJsonValue } from "@osva-ai/contracts";
 import { toRuntimeExecutionId } from "@osva/runtime-core";
 import {
   RUNTIME_PROTOCOL_ERROR_CODES,
@@ -14,7 +14,7 @@ import {
   RUNTIME_PROTOCOL_VERSION,
   runtimeExecuteResponseSchema,
   type RuntimeExecuteRequest,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import {
   CAPABILITY_TOKEN_SKEW_MS,

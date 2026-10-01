@@ -1,8 +1,8 @@
 import type { ChildProcess } from "node:child_process";
 import { PassThrough } from "node:stream";
 
-import type { ExecutionRequest } from "@osva/contracts";
-import { ARTIFACT_ERROR_CODES } from "@osva/contracts";
+import type { ExecutionRequest } from "@osva-ai/contracts";
+import { ARTIFACT_ERROR_CODES } from "@osva-ai/contracts";
 
 import { TRUSTED_RUNTIME_ARTIFACT_IPC_CHUNK_BYTES } from "./constants.js";
 import { sanitizePublicErrorMessage } from "./public-error.js";

@@ -9,7 +9,10 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { KnowledgeIndexId, MemoryNamespaceBinding } from "@osva/contracts";
+import type {
+  KnowledgeIndexId,
+  MemoryNamespaceBinding,
+} from "@osva-ai/contracts";
 
 import { agentVersions } from "./agent-versions.js";
 import { agents } from "./agents.js";

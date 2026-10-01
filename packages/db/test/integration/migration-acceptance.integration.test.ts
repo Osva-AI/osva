@@ -19,7 +19,7 @@ import {
   PostgresWorkspaceRepository,
 } from "../../src/index.js";
 import { Agent, Workspace } from "@osva/domain";
-import type { AgentId, WorkspaceId } from "@osva/contracts";
+import type { AgentId, WorkspaceId } from "@osva-ai/contracts";
 
 import {
   startPostgresForTests,

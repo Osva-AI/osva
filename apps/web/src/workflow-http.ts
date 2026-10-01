@@ -4,7 +4,7 @@ import type {
   WorkflowId,
   WorkflowRunId,
   WorkflowVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   createWorkflowRequestSchema,
   createWorkflowRunRequestSchema,
@@ -16,7 +16,7 @@ import {
   workflowVersionListResourceSchema,
   workflowVersionResourceSchema,
   approvalRequestResourceSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type {
   ApprovalRequest,
   Workflow,

@@ -1,4 +1,4 @@
-import type { ConnectorId, ConnectorVersionId } from "@osva/contracts";
+import type { ConnectorId, ConnectorVersionId } from "@osva-ai/contracts";
 import {
   Connector,
   ConnectorNotFoundError,
@@ -10,7 +10,7 @@ import {
   createConnectorApplication,
 } from "@osva/domain";
 import { describe, expect, it, vi } from "vitest";
-import type { McpClientPool } from "@osva/contracts";
+import type { McpClientPool } from "@osva-ai/contracts";
 
 import { MemoryConnectorRepository } from "../src/memory-connector-repository.js";
 import { MemoryToolRepository } from "../src/memory-tool-repository.js";

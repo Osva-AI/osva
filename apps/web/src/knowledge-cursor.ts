@@ -1,5 +1,5 @@
-import type { KnowledgeIndexId, KnowledgeSourceId } from "@osva/contracts";
-import { knowledgeListCursorPayloadSchema } from "@osva/contracts/schemas";
+import type { KnowledgeIndexId, KnowledgeSourceId } from "@osva-ai/contracts";
+import { knowledgeListCursorPayloadSchema } from "@osva-ai/contracts/schemas";
 
 export function encodeKnowledgeListCursor(cursor: {
   createdAt: Date;

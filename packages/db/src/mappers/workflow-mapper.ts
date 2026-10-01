@@ -1,4 +1,4 @@
-import type { WorkflowId, WorkspaceId } from "@osva/contracts";
+import type { WorkflowId, WorkspaceId } from "@osva-ai/contracts";
 import { Workflow } from "@osva/domain";
 
 import type { workflows } from "../schema/workflows.js";

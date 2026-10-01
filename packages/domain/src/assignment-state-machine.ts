@@ -1,4 +1,4 @@
-import { ASSIGNMENT_STATES, type AssignmentState } from "@osva/contracts";
+import { ASSIGNMENT_STATES, type AssignmentState } from "@osva-ai/contracts";
 
 import { InvalidAssignmentTransitionError } from "./errors.js";
 

@@ -1,4 +1,4 @@
-import type { JsonValue } from "@osva/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
 import {
   RUNTIME_PROTOCOL_ERROR_CODES,
   RUNTIME_PROTOCOL_MAX_BODY_BYTES,
@@ -6,7 +6,7 @@ import {
   runtimeCapabilityCredentialSchema,
   runtimeExecuteRequestSchema,
   type RuntimeExecuteResponse,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import { CapabilityCredential } from "./capability-credential.js";
 import { createRuntimeContext, type RuntimeContext } from "./context.js";

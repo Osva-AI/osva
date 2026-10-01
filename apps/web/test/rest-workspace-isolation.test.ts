@@ -1,5 +1,5 @@
-import type { WorkspaceId } from "@osva/contracts";
-import { COMMUNITY_EDITION_ROLES } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
+import { COMMUNITY_EDITION_ROLES } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
@@ -75,14 +75,14 @@ describe("REST workspace isolation (Pass 2)", () => {
     await seedTestApiKey({
       apiKeys,
       workspaceId: WS_B,
-      apiKeyId: "ak-b" as import("@osva/contracts").ApiKeyId,
+      apiKeyId: "ak-b" as import("@osva-ai/contracts").ApiKeyId,
     });
     const authB = authorizationHeader(
       (
         await seedTestApiKey({
           apiKeys,
           workspaceId: WS_B,
-          apiKeyId: "ak-b2" as import("@osva/contracts").ApiKeyId,
+          apiKeyId: "ak-b2" as import("@osva-ai/contracts").ApiKeyId,
         })
       ).plaintextToken,
     );
@@ -110,7 +110,7 @@ describe("REST workspace isolation (Pass 2)", () => {
       apiKeys,
       workspaceId: WS_A,
       role: COMMUNITY_EDITION_ROLES.VIEWER,
-      apiKeyId: "ak-viewer" as import("@osva/contracts").ApiKeyId,
+      apiKeyId: "ak-viewer" as import("@osva-ai/contracts").ApiKeyId,
     });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);

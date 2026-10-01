@@ -1,4 +1,4 @@
-import type { OfficeWorkerId, RoleId, TeamId } from "@osva/contracts";
+import type { OfficeWorkerId, RoleId, TeamId } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 

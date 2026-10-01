@@ -3,7 +3,7 @@ import type {
   RunAttemptState,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import type { ReconcileEvaluationCase } from "@osva/domain";
 import {
   isTerminalRunAttemptState,

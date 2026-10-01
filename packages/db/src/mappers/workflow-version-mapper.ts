@@ -3,7 +3,7 @@ import type {
   WorkflowId,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { DomainInvariantError, WorkflowVersion } from "@osva/domain";
 
 import type { workflowVersions } from "../schema/workflow-versions.js";

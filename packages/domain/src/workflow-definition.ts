@@ -9,7 +9,7 @@ import type {
   WorkflowDefinitionV2,
   WorkflowDefinitionV3,
   WorkflowBranchEqualsValue,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   WORKFLOW_APPROVAL_DESCRIPTION_MAX_LENGTH,
   WORKFLOW_APPROVAL_TITLE_MAX_LENGTH,
@@ -23,7 +23,7 @@ import {
   isWorkflowDefinitionV1,
   isWorkflowDefinitionV2,
   isWorkflowDefinitionV3,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import {
   InvalidWorkflowDefinitionError,

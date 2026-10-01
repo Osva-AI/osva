@@ -1,4 +1,4 @@
-import type { ToolId, WorkspaceId } from "@osva/contracts";
+import type { ToolId, WorkspaceId } from "@osva-ai/contracts";
 import { Tool } from "@osva/domain";
 
 import type { tools } from "../schema/tools.js";

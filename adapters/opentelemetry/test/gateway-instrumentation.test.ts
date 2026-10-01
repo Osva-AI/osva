@@ -12,8 +12,8 @@ import type {
   ToolInvokeRequest,
   ToolVersionId,
   WorkspaceId,
-} from "@osva/contracts";
-import type { MemoryGateway } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import type { MemoryGateway } from "@osva-ai/contracts";
 import {
   MemoryModelProfileRepository,
   MemoryRunRepository,

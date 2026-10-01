@@ -3,9 +3,9 @@ import type {
   GenerateTextResult,
   ModelGateway as ModelGatewayPort,
   ModelProvider,
-} from "@osva/contracts";
-import { MODEL_ERROR_CODES } from "@osva/contracts";
-import { generateTextInputSchema } from "@osva/contracts/schemas";
+} from "@osva-ai/contracts";
+import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
+import { generateTextInputSchema } from "@osva-ai/contracts/schemas";
 import type { ModelProfileRepository } from "@osva/domain";
 
 import { ModelGatewayError } from "./errors.js";

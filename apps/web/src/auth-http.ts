@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { PUBLIC_API_ERROR_CODES } from "@osva/contracts";
+import { PUBLIC_API_ERROR_CODES } from "@osva-ai/contracts";
 import {
   AuthenticationRequiredError,
   PermissionDeniedError,

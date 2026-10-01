@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { RunAttemptId, RunId } from "@osva/contracts";
+import type { RunAttemptId, RunId } from "@osva-ai/contracts";
 import {
   createRunRequestSchema,
   createRunResponseSchema,
@@ -8,7 +8,7 @@ import {
   runAttemptResourceSchema,
   runListResourceSchema,
   runResourceSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import {
   DEFAULT_RUN_LIST_LIMIT,
   MAX_RUN_LIST_LIMIT,

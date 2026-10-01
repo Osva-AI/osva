@@ -2,7 +2,7 @@ import type {
   GenerateTextInput,
   GenerateTextResult,
   JsonValue,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import {
   MODEL_MAX_OUTPUT_TOKENS_MAX,

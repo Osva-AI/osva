@@ -3,7 +3,7 @@ import type {
   ExecutionRequest,
   ExecutionResult,
   RuntimeAdapter,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 const UNSUPPORTED_RUNTIME = "UNSUPPORTED_RUNTIME";
 

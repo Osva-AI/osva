@@ -1,4 +1,4 @@
-import type { SecretReference, SecretResolver } from "@osva/contracts";
+import type { SecretReference, SecretResolver } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import { toMcpConnectorExecutionConfig } from "@osva/domain";
 
@@ -116,7 +116,7 @@ describe("connector public secret redaction", () => {
 
     const httpVersionId = (httpVersion.body as { id: string }).id;
     const stored = await ctx.connectors.findConnectorVersionById(
-      httpVersionId as import("@osva/contracts").ConnectorVersionId,
+      httpVersionId as import("@osva-ai/contracts").ConnectorVersionId,
     );
     expect(stored).not.toBeNull();
     const execution = toMcpConnectorExecutionConfig(stored!);

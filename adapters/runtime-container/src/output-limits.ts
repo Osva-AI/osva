@@ -1,4 +1,4 @@
-import { RUNTIME_PROTOCOL_MAX_BODY_BYTES } from "@osva/runtime-protocol";
+import { RUNTIME_PROTOCOL_MAX_BODY_BYTES } from "@osva-ai/runtime-protocol";
 
 /**
  * Maximum bytes captured from container stdout for one RuntimeExecuteResponse.

@@ -5,8 +5,11 @@ import type {
   WorkflowNodeRunId,
   WorkflowRunId,
   WorkspaceId,
-} from "@osva/contracts";
-import { isValidUtcIso8601Instant, resolveJsonPointer } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import {
+  isValidUtcIso8601Instant,
+  resolveJsonPointer,
+} from "@osva-ai/contracts";
 
 import {
   DomainInvariantError,

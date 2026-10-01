@@ -4,8 +4,8 @@ import type {
   EvaluationRunTargetType,
   EvaluationSuiteVersionId,
   WorkspaceId,
-} from "@osva/contracts";
-import { EVALUATION_RUN_TARGET_TYPES } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { EVALUATION_RUN_TARGET_TYPES } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, requireNonEmptyString } from "./internals.js";

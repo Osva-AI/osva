@@ -1,7 +1,7 @@
 import {
   COMMUNITY_EDITION_ROLES,
   PUBLIC_API_ERROR_CODES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { seedWorkspaceBFixtures } from "./seed-workspace-b-fixtures.js";
@@ -270,7 +270,7 @@ describe("REST two-workspace security matrix", () => {
         apiKeys: harness.ctx.apiKeys,
         workspaceId: WS_A,
         role: COMMUNITY_EDITION_ROLES.EDITOR,
-        apiKeyId: "ak-editor" as import("@osva/contracts").ApiKeyId,
+        apiKeyId: "ak-editor" as import("@osva-ai/contracts").ApiKeyId,
       });
       expectForbidden(
         await fetchV1(`${harness.origin}/v1/connectors`, {
@@ -473,7 +473,7 @@ describe("REST two-workspace security matrix", () => {
         apiKeys: harness.ctx.apiKeys,
         workspaceId: WS_A,
         role: COMMUNITY_EDITION_ROLES.VIEWER,
-        apiKeyId: "ak-viewer-matrix" as import("@osva/contracts").ApiKeyId,
+        apiKeyId: "ak-viewer-matrix" as import("@osva-ai/contracts").ApiKeyId,
       });
       expectForbidden(
         await fetchV1(`${harness.origin}/v1/agents`, {

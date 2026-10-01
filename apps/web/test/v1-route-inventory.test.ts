@@ -87,7 +87,7 @@ describe("V1_ROUTE_INVENTORY", () => {
 
   it("matches implemented handler routes discovered from source probes", async () => {
     const ctx = await createTestWebApplication({
-      workspaceId: "ws-route-probe" as import("@osva/contracts").WorkspaceId,
+      workspaceId: "ws-route-probe" as import("@osva-ai/contracts").WorkspaceId,
     });
     servers.push(ctx.server);
     const port = await listenHttpServer(ctx.server, "127.0.0.1", 0);

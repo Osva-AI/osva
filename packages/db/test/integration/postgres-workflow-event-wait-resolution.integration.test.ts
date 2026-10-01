@@ -5,7 +5,7 @@ import type {
   WorkflowRunId,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   Workflow,
   WorkflowEvent,

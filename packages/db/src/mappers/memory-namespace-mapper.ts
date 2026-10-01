@@ -1,4 +1,4 @@
-import type { MemoryNamespaceId, WorkspaceId } from "@osva/contracts";
+import type { MemoryNamespaceId, WorkspaceId } from "@osva-ai/contracts";
 import { MemoryNamespace } from "@osva/domain";
 
 import type { memoryNamespaces } from "../schema/memory-namespaces.js";

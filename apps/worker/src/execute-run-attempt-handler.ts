@@ -1,4 +1,4 @@
-import type { JobQueueHandler } from "@osva/contracts";
+import type { JobQueueHandler } from "@osva-ai/contracts";
 import type {
   EvaluationCoordinator,
   ExecuteRunAttempt,

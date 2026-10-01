@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
-import type { ApiKeyId } from "@osva/contracts";
+import type { ApiKeyId } from "@osva-ai/contracts";
 
 export const API_KEY_TOKEN_PREFIX = "osva_ak_";
 

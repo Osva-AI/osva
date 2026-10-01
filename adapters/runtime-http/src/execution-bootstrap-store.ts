@@ -1,4 +1,4 @@
-import type { RuntimeExecuteRequest } from "@osva/runtime-protocol";
+import type { RuntimeExecuteRequest } from "@osva-ai/runtime-protocol";
 
 interface PendingExecutionBootstrap {
   readonly request: RuntimeExecuteRequest;

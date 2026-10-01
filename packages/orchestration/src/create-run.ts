@@ -1,4 +1,4 @@
-import type { JobQueue } from "@osva/contracts";
+import type { JobQueue } from "@osva-ai/contracts";
 import type {
   AgentId,
   AgentVersionId,
@@ -7,7 +7,7 @@ import type {
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   EffectiveRunBindings,
   Run,

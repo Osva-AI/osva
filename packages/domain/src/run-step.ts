@@ -6,8 +6,8 @@ import type {
   RunStepKind,
   RunStepStatus,
   ToolVersionId,
-} from "@osva/contracts";
-import { isRunStepKind, isRunStepStatus } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { isRunStepKind, isRunStepStatus } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import {

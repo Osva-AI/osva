@@ -7,7 +7,7 @@ import {
   KNOWLEDGE_PARSER_KEY_OSVA_NATIVE,
   KNOWLEDGE_PARSER_VERSION_OSVA_NATIVE,
   type KnowledgeDistanceMetric,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { ResolvedKnowledgePipelineConfig } from "./knowledge-pipeline-fingerprint.js";
 

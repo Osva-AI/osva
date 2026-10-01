@@ -1,11 +1,11 @@
-import type { ScheduleId } from "@osva/contracts";
+import type { ScheduleId } from "@osva-ai/contracts";
 import {
   createScheduleRequestSchema,
   scheduleListResourceSchema,
   scheduleOccurrenceListResourceSchema,
   scheduleResourceSchema,
   updateScheduleRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

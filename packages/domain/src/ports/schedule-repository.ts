@@ -2,7 +2,7 @@ import type {
   ScheduleId,
   ScheduleOccurrenceId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { Schedule } from "../schedule.js";
 import type { ScheduleOccurrence } from "../schedule-occurrence.js";

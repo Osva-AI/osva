@@ -5,11 +5,11 @@ import type {
   KnowledgeChunkLocationV1,
   KnowledgeIndexId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   KNOWLEDGE_CHUNK_TEXT_MAX_BYTES,
   KNOWLEDGE_LOCATION_MAX_SERIALIZED_BYTES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, requireNonEmptyString } from "./internals.js";

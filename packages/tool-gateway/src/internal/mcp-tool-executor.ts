@@ -1,6 +1,6 @@
 import type { ConnectorRepository, ToolVersion } from "@osva/domain";
 import { toMcpConnectorExecutionConfig } from "@osva/domain";
-import type { McpClientPool, ToolInvokeRequest } from "@osva/contracts";
+import type { McpClientPool, ToolInvokeRequest } from "@osva-ai/contracts";
 import { isMcpAdapterError } from "@osva/adapters-mcp-client";
 
 import { ToolGatewayError, toolGatewayError } from "../errors.js";

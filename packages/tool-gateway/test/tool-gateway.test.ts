@@ -7,8 +7,8 @@ import type {
   ToolPolicy,
   ToolVersionId,
   WorkspaceId,
-} from "@osva/contracts";
-import { TOOL_ERROR_CODES } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { TOOL_ERROR_CODES } from "@osva-ai/contracts";
 import {
   MemoryToolRepository,
   MemoryWorkspaceRepository,

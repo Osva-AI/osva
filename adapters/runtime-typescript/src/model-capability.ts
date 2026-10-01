@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { GenerateTextInput, GenerateTextResult } from "@osva/contracts";
+import type { GenerateTextInput, GenerateTextResult } from "@osva-ai/contracts";
 
 import { ModelErrorCode, isModelBindingName } from "./constants.js";
 

@@ -1,7 +1,7 @@
 import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
-import { isAllowedRemoteRuntimeEndpoint } from "@osva/contracts";
+import { isAllowedRemoteRuntimeEndpoint } from "@osva-ai/contracts";
 
 export interface ResolvedAddress {
   readonly address: string;

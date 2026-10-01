@@ -10,7 +10,7 @@ import {
   type RuntimeExecutionBootstrapStore,
 } from "@osva/adapters-runtime-http";
 import { TrustedTypeScriptRuntimeAdapter } from "@osva/adapters-runtime-typescript";
-import type { AgentRuntimeType, RuntimeAdapter } from "@osva/contracts";
+import type { AgentRuntimeType, RuntimeAdapter } from "@osva-ai/contracts";
 
 import type { WorkerConfig } from "./config.js";
 

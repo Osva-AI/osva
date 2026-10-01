@@ -1,5 +1,5 @@
-import type { RunAttemptId, RunId } from "@osva/contracts";
-import type { RunAttemptState } from "@osva/contracts";
+import type { RunAttemptId, RunId } from "@osva-ai/contracts";
+import type { RunAttemptState } from "@osva-ai/contracts";
 
 import {
   DomainInvariantError,

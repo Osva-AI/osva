@@ -3,7 +3,7 @@ import type {
   KnowledgeChunkId,
   KnowledgeIndexId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 export interface VectorMatch {
   readonly knowledgeChunkId: KnowledgeChunkId;

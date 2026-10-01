@@ -1,4 +1,4 @@
-import { serveStdio } from "@osva/connector-sdk";
+import { serveStdio } from "@osva-ai/connector-sdk";
 
 import { echoConnector } from "./connector.js";
 

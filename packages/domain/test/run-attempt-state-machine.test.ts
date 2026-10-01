@@ -1,4 +1,4 @@
-import { RUN_ATTEMPT_STATES, type RunAttemptState } from "@osva/contracts";
+import { RUN_ATTEMPT_STATES, type RunAttemptState } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { InvalidRunAttemptTransitionError } from "../src/errors.js";

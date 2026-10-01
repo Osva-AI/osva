@@ -63,7 +63,7 @@ export default tseslint.config(
               message: "packages/domain cannot import apps.",
             },
             {
-              name: "@osva/contracts/schemas",
+              name: "@osva-ai/contracts/schemas",
               message: "packages/domain cannot import runtime Zod schemas.",
             },
             {

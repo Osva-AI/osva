@@ -1,4 +1,4 @@
-import type { JobQueue, RunAttemptId } from "@osva/contracts";
+import type { JobQueue, RunAttemptId } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { JobQueueShutdownError } from "../src/errors.js";

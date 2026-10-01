@@ -13,11 +13,11 @@ const REPO_ROOT = path.resolve(
 );
 
 const PACK_ORDER = [
-  "@osva/contracts",
-  "@osva/runtime-protocol",
-  "@osva/sdk",
-  "@osva/connector-sdk",
-  "@osva/cli",
+  "@osva-ai/contracts",
+  "@osva-ai/runtime-protocol",
+  "@osva-ai/sdk",
+  "@osva-ai/connector-sdk",
+  "@osva-ai/cli",
 ];
 
 function run(command, args, options = {}) {
@@ -51,11 +51,11 @@ function main() {
       "turbo",
       "run",
       "build",
-      "--filter=@osva/contracts",
-      "--filter=@osva/runtime-protocol",
-      "--filter=@osva/sdk",
-      "--filter=@osva/connector-sdk",
-      "--filter=@osva/cli",
+      "--filter=@osva-ai/contracts",
+      "--filter=@osva-ai/runtime-protocol",
+      "--filter=@osva-ai/sdk",
+      "--filter=@osva-ai/connector-sdk",
+      "--filter=@osva-ai/cli",
     ],
     { stdio: "inherit" },
   );
@@ -64,7 +64,7 @@ function main() {
   const tarballs = new Map();
 
   for (const name of PACK_ORDER) {
-    const dir = name.replace("@osva/", "");
+    const dir = name.replace(/^@osva-ai\//, "");
     const stdout = run("pnpm", ["pack", "--pack-destination", packDir], {
       cwd: path.join(REPO_ROOT, "packages", dir),
     });
@@ -112,10 +112,10 @@ function main() {
   run("npm", ["install", "--omit=dev"], { cwd: consumerDir, stdio: "inherit" });
 
   const importCheck = `
-import { OsvaClient } from "@osva/sdk";
-import "@osva/contracts";
-import "@osva/runtime-protocol";
-import "@osva/connector-sdk";
+import { OsvaClient } from "@osva-ai/sdk";
+import "@osva-ai/contracts";
+import "@osva-ai/runtime-protocol";
+import "@osva-ai/connector-sdk";
 if (!(OsvaClient.prototype && typeof OsvaClient === "function")) {
   throw new Error("OsvaClient export missing");
 }
@@ -134,7 +134,7 @@ console.log("npm consumer import smoke ok");
   const cliBin = path.join(
     consumerDir,
     "node_modules",
-    "@osva",
+    "@osva-ai",
     "cli",
     "dist",
     "bin",

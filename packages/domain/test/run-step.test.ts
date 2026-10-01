@@ -1,4 +1,4 @@
-import type { RunAttemptId, RunId } from "@osva/contracts";
+import type { RunAttemptId, RunId } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { DomainInvariantError } from "../src/errors.js";
@@ -45,7 +45,7 @@ describe("RunStep identity", () => {
         bindingName: "echo",
         startedAt: NOW,
         toolVersionId:
-          "tool-version-1" as import("@osva/contracts").ToolVersionId,
+          "tool-version-1" as import("@osva-ai/contracts").ToolVersionId,
       }),
     ).toThrow(DomainInvariantError);
   });

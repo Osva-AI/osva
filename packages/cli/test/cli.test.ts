@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCommand } from "../src/commands/index.js";
 import { loadCliConfig, parseCliArgs } from "../src/config.js";
-import { OsvaClient } from "@osva/sdk";
+import { OsvaClient } from "@osva-ai/sdk";
 
 const TEST_API_KEY = "osva_ak_test.secret";
 

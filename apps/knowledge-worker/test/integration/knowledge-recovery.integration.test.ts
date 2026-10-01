@@ -1,4 +1,4 @@
-import type { KnowledgeChunkId, WorkspaceId } from "@osva/contracts";
+import type { KnowledgeChunkId, WorkspaceId } from "@osva-ai/contracts";
 import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 import { KnowledgeChunk, KnowledgeIndex, Workspace } from "@osva/domain";
 import {

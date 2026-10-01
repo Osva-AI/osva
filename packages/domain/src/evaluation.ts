@@ -4,8 +4,8 @@ import type {
   JsonValue,
   RunAttemptId,
   RunId,
-} from "@osva/contracts";
-import { isEvaluatorType } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { isEvaluatorType } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant } from "./internals.js";

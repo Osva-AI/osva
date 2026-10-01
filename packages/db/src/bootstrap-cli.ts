@@ -2,7 +2,7 @@ import { createDatabase } from "./database.js";
 import { migrateDatabase } from "./migrate.js";
 import { randomUUID } from "node:crypto";
 import { createApiKeyApplication } from "@osva/domain";
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 
 import { PostgresApiKeyRepository } from "./repositories/postgres-api-key-repository.js";
 import { PostgresWorkspaceRepository } from "./repositories/postgres-workspace-repository.js";

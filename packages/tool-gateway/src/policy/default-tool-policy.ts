@@ -1,4 +1,4 @@
-import type { ToolAuthorizationContext, ToolPolicy } from "@osva/contracts";
+import type { ToolAuthorizationContext, ToolPolicy } from "@osva-ai/contracts";
 
 /**
  * Community Alpha default policy: bound ToolVersions that reach the gateway

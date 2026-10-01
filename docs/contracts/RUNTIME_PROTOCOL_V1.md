@@ -97,7 +97,7 @@ implementations of that same lifecycle.
 ## HTTP wire protocol (Runtime Protocol V1)
 
 Remote HTTP execution uses a separate JSON-safe language-neutral contract in
-`@osva/runtime-protocol`. It is not TypeScript-specific and does not carry
+`@osva-ai/runtime-protocol`. It is not TypeScript-specific and does not carry
 provider SDK types, Dates, class instances, or database identifiers beyond
 the opaque execution identity.
 

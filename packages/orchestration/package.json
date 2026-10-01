@@ -17,7 +17,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva/observability": "workspace:*",
     "@osva/runtime-core": "workspace:*"

@@ -1,4 +1,4 @@
-import type { ConnectorId, WorkspaceId } from "@osva/contracts";
+import type { ConnectorId, WorkspaceId } from "@osva-ai/contracts";
 import { Connector } from "@osva/domain";
 
 import type { connectors } from "../schema/connectors.js";

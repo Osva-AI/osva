@@ -6,7 +6,7 @@ import type {
   RunAttemptId,
   RunId,
   ScheduleOccurrenceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   checkDatabaseConnection,
   createDatabase,

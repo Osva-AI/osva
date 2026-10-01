@@ -5,7 +5,7 @@ import type {
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   DuplicateEvaluationSuiteKeyError,

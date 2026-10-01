@@ -56,7 +56,7 @@ import {
 import {
   OSVA_REQUEST_ID_HEADER,
   PUBLIC_API_ERROR_CODES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { sendV1Error } from "./v1-api-error.js";
 
 export type ReadinessCheck = () => Promise<boolean>;

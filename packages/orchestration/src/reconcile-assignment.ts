@@ -1,4 +1,4 @@
-import type { AssignmentId } from "@osva/contracts";
+import type { AssignmentId } from "@osva-ai/contracts";
 import {
   AssignmentNotFoundError,
   isTerminalAssignmentState,

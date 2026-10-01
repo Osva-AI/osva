@@ -4,7 +4,7 @@ import type {
   ModelProfileVersionPricing,
   ModelProvider,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { ModelProfile } from "../model-profile.js";
 import type { ModelProfileVersion } from "../model-profile-version.js";

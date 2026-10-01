@@ -8,7 +8,7 @@ import type {
   WorkflowDefinitionNodeV2,
   WorkflowDefinitionNodeV3,
   WorkflowNodeRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   APPROVAL_REJECTED_ERROR_CODE,
   ApprovalRequest,

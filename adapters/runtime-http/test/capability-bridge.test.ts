@@ -8,7 +8,7 @@ import type {
   RunId,
   ToolVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   MemoryAgentRepository,
   MemoryModelProfileRepository,
@@ -29,7 +29,7 @@ import {
 } from "@osva/domain";
 import { ModelGateway } from "@osva/model-gateway";
 import { createRunStepRecorder } from "@osva/observability";
-import { RUNTIME_CAPABILITY_PATHS } from "@osva/runtime-protocol";
+import { RUNTIME_CAPABILITY_PATHS } from "@osva-ai/runtime-protocol";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
 import { describe, expect, it, vi } from "vitest";
 
@@ -56,7 +56,7 @@ async function seedRunningExecution(options?: {
   readonly workspaceId?: WorkspaceId;
   readonly succeedAttempt?: boolean;
   readonly knowledgeIndexBindings?: Readonly<
-    Record<string, readonly import("@osva/contracts").KnowledgeIndexId[]>
+    Record<string, readonly import("@osva-ai/contracts").KnowledgeIndexId[]>
   >;
 }) {
   const runs = new MemoryRunRepository();
@@ -446,7 +446,8 @@ describe("RuntimeCapabilityBridge", () => {
   });
 
   it("searches knowledge through the capability endpoint using frozen bindings", async () => {
-    const indexId = "ki-frozen" as import("@osva/contracts").KnowledgeIndexId;
+    const indexId =
+      "ki-frozen" as import("@osva-ai/contracts").KnowledgeIndexId;
     const seeded = await seedRunningExecution({
       knowledgeIndexBindings: { company_docs: [indexId] },
     });

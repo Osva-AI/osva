@@ -1,4 +1,4 @@
-import type { ApiKeyId, CommunityEditionRole } from "@osva/contracts";
+import type { ApiKeyId, CommunityEditionRole } from "@osva-ai/contracts";
 import {
   ApiKey,
   type ApiKeyCreateRecord,

@@ -220,7 +220,7 @@ importers:
 
   adapters/artifact-filesystem:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/domain':
@@ -248,7 +248,7 @@ importers:
       '@aws-sdk/lib-storage':
         specifier: 3.888.0
         version: 3.888.0(@aws-sdk/client-s3@3.888.0)
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/domain':
@@ -295,7 +295,7 @@ importers:
 
   adapters/bullmq:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/observability':
@@ -357,7 +357,7 @@ importers:
 
   adapters/knowledge-parser:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/domain':
@@ -391,7 +391,7 @@ importers:
       '@modelcontextprotocol/server':
         specifier: 2.0.0
         version: 2.0.0
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/outbound-network':
@@ -413,7 +413,7 @@ importers:
 
   adapters/memory:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/domain':
@@ -438,7 +438,7 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 0.74.0
         version: 0.74.0(zod@4.6.5)
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/model-gateway':
@@ -460,7 +460,7 @@ importers:
 
   adapters/model-gemini:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/model-gateway':
@@ -482,7 +482,7 @@ importers:
 
   adapters/model-openai:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/model-gateway':
@@ -544,7 +544,7 @@ importers:
       '@osva/adapters-memory':
         specifier: workspace:*
         version: link:../memory
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/domain':
@@ -574,13 +574,13 @@ importers:
       '@osva/adapters-runtime-http':
         specifier: workspace:*
         version: link:../runtime-http
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/runtime-core':
         specifier: workspace:*
         version: link:../../packages/runtime-core
-      '@osva/runtime-protocol':
+      '@osva-ai/runtime-protocol':
         specifier: workspace:*
         version: link:../../packages/runtime-protocol
       dockerode:
@@ -614,7 +614,7 @@ importers:
 
   adapters/runtime-http:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/domain':
@@ -635,7 +635,7 @@ importers:
       '@osva/runtime-core':
         specifier: workspace:*
         version: link:../../packages/runtime-core
-      '@osva/runtime-protocol':
+      '@osva-ai/runtime-protocol':
         specifier: workspace:*
         version: link:../../packages/runtime-protocol
       '@osva/tool-gateway':
@@ -666,7 +666,7 @@ importers:
 
   adapters/runtime-typescript:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
     devDependencies:
@@ -685,7 +685,7 @@ importers:
 
   adapters/vector-pgvector:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/db':
@@ -728,7 +728,7 @@ importers:
       '@osva/adapters-vector-pgvector':
         specifier: workspace:*
         version: link:../../adapters/vector-pgvector
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/db':
@@ -765,13 +765,13 @@ importers:
       '@modelcontextprotocol/server':
         specifier: 2.0.0
         version: 2.0.0
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/observability':
         specifier: workspace:*
         version: link:../../packages/observability
-      '@osva/sdk':
+      '@osva-ai/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
     devDependencies:
@@ -811,7 +811,7 @@ importers:
       '@osva/adapters-opentelemetry':
         specifier: workspace:*
         version: link:../../adapters/opentelemetry
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/db':
@@ -872,7 +872,7 @@ importers:
       '@osva/adapters-vector-pgvector':
         specifier: workspace:*
         version: link:../../adapters/vector-pgvector
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/db':
@@ -951,7 +951,7 @@ importers:
       '@osva/adapters-vector-pgvector':
         specifier: workspace:*
         version: link:../../adapters/vector-pgvector
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/db':
@@ -978,7 +978,7 @@ importers:
       '@osva/runtime-core':
         specifier: workspace:*
         version: link:../../packages/runtime-core
-      '@osva/runtime-protocol':
+      '@osva-ai/runtime-protocol':
         specifier: workspace:*
         version: link:../../packages/runtime-protocol
       '@osva/tool-gateway':
@@ -994,10 +994,10 @@ importers:
       '@osva/adapters-memory':
         specifier: workspace:*
         version: link:../../adapters/memory
-      '@osva/connector-sdk':
+      '@osva-ai/connector-sdk':
         specifier: workspace:*
         version: link:../../packages/connector-sdk
-      '@osva/sdk':
+      '@osva-ai/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
       '@osva/web':
@@ -1024,7 +1024,7 @@ importers:
       '@osva/adapters-opentelemetry':
         specifier: workspace:*
         version: link:../../adapters/opentelemetry
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@osva/db':
@@ -1061,7 +1061,7 @@ importers:
 
   examples/echo-connector:
     dependencies:
-      '@osva/connector-sdk':
+      '@osva-ai/connector-sdk':
         specifier: workspace:*
         version: link:../../packages/connector-sdk
     devDependencies:
@@ -1074,16 +1074,16 @@ importers:
 
   examples/remote-runtime-node:
     dependencies:
-      '@osva/sdk':
+      '@osva-ai/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
 
   packages/cli:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@osva/sdk':
+      '@osva-ai/sdk':
         specifier: workspace:*
         version: link:../sdk
     devDependencies:
@@ -1108,7 +1108,7 @@ importers:
       '@modelcontextprotocol/server':
         specifier: 2.0.0
         version: 2.0.0
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       zod:
@@ -1149,7 +1149,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@osva/domain':
@@ -1180,7 +1180,7 @@ importers:
 
   packages/domain:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       cron-parser:
@@ -1202,7 +1202,7 @@ importers:
 
   packages/embedding-gateway:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@osva/domain':
@@ -1224,7 +1224,7 @@ importers:
 
   packages/memory-gateway:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@osva/domain':
@@ -1249,7 +1249,7 @@ importers:
 
   packages/model-gateway:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@osva/domain':
@@ -1274,7 +1274,7 @@ importers:
 
   packages/observability:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@osva/domain':
@@ -1305,7 +1305,7 @@ importers:
 
   packages/orchestration:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@osva/domain':
@@ -1339,7 +1339,7 @@ importers:
 
   packages/outbound-network:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
     devDependencies:
@@ -1358,7 +1358,7 @@ importers:
 
   packages/runtime-core:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@osva/domain':
@@ -1380,7 +1380,7 @@ importers:
 
   packages/runtime-protocol:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       zod:
@@ -1402,10 +1402,10 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@osva/runtime-protocol':
+      '@osva-ai/runtime-protocol':
         specifier: workspace:*
         version: link:../runtime-protocol
       zod:
@@ -1430,7 +1430,7 @@ importers:
       '@osva/adapters-mcp-client':
         specifier: workspace:*
         version: link:../../adapters/mcp-client
-      '@osva/contracts':
+      '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@osva/domain':

@@ -5,7 +5,7 @@ import type {
   RunState,
   RunStepId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   LifecycleConflictError,

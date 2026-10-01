@@ -2,7 +2,7 @@ import type {
   RunAttemptId,
   RunId,
   ScheduleOccurrenceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import type { ScheduleOccurrence, ScheduleRepository } from "@osva/domain";
 
 import {

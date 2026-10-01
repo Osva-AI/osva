@@ -1,8 +1,8 @@
-import type { ApprovalRequestId } from "@osva/contracts";
+import type { ApprovalRequestId } from "@osva-ai/contracts";
 import {
   approvalRequestResourceSchema,
   decideApprovalRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

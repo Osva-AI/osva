@@ -108,7 +108,7 @@ describe("architecture import restrictions", () => {
     expect(violations).toEqual([]);
   });
 
-  it("keeps @osva/contracts free of Node ambient types and AbortSignal", () => {
+  it("keeps @osva-ai/contracts free of Node ambient types and AbortSignal", () => {
     const contractsRoot = path.join(repoRoot, "packages", "contracts");
     const tsconfig = JSON.parse(
       fs.readFileSync(path.join(contractsRoot, "tsconfig.json"), "utf8"),

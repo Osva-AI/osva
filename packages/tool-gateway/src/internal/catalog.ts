@@ -1,7 +1,7 @@
 import type {
   InternalToolImplementationId,
   ToolEffectClassification,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 export interface InternalToolCatalogEntry {
   readonly id: InternalToolImplementationId;

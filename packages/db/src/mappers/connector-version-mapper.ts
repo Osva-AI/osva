@@ -3,7 +3,7 @@ import type {
   ConnectorKind,
   ConnectorTransport,
   ConnectorVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { ConnectorVersion } from "@osva/domain";
 
 import type { connectorVersions } from "../schema/connector-versions.js";

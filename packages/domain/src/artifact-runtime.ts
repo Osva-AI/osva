@@ -5,8 +5,8 @@ import type {
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
-import { ARTIFACT_REFERENCE_TYPE } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { ARTIFACT_REFERENCE_TYPE } from "@osva-ai/contracts";
 
 import type { Artifact } from "./artifact.js";
 import { ArtifactWorkspaceMismatchError } from "./errors.js";

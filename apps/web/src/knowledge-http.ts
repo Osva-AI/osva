@@ -1,12 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { KnowledgeIndexId, KnowledgeSourceId } from "@osva/contracts";
+import type { KnowledgeIndexId, KnowledgeSourceId } from "@osva-ai/contracts";
 import {
   createKnowledgeIndexRequestSchema,
   createKnowledgeSourceRequestSchema,
   knowledgeRetrieveRequestSchema,
   listKnowledgeSourcesQuerySchema,
   retryKnowledgeIndexRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import {
   DEFAULT_KNOWLEDGE_INDEX_LIST_LIMIT,
   DEFAULT_KNOWLEDGE_SOURCE_LIST_LIMIT,

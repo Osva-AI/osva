@@ -1,5 +1,5 @@
-import type { ModelTextMessage } from "@osva/contracts";
-import { MODEL_ERROR_CODES } from "@osva/contracts";
+import type { ModelTextMessage } from "@osva-ai/contracts";
+import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
   type ModelFinishReason,

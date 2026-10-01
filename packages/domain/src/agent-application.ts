@@ -3,8 +3,8 @@ import type {
   AgentManifestV1,
   AgentVersionId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import { Agent } from "./agent.js";
 import type { AgentVersion } from "./agent-version.js";

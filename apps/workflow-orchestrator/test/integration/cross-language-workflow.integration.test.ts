@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
 import {

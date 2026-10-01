@@ -1,4 +1,4 @@
-import type { McpConnectorExecutionConfig } from "@osva/contracts";
+import type { McpConnectorExecutionConfig } from "@osva-ai/contracts";
 import type { ConnectorVersion } from "./connector-version.js";
 
 export function toMcpConnectorExecutionConfig(

@@ -1,5 +1,5 @@
 {
-  "name": "@osva/contracts",
+  "name": "@osva-ai/contracts",
   "version": "1.0.0",
   "description": "OSVA public contracts and schemas",
   "license": "Apache-2.0",

@@ -10,8 +10,8 @@ import type {
   TeamId,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import { Assignment } from "./assignment.js";
 import {

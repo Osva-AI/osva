@@ -5,7 +5,7 @@ import type {
   RunId,
   WorkflowRunId,
   WorkflowVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   AssignmentNotFoundError,
   DomainInvariantError,

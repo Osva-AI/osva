@@ -1,4 +1,7 @@
-import type { AgentManifestV1, MemoryNamespaceBinding } from "@osva/contracts";
+import type {
+  AgentManifestV1,
+  MemoryNamespaceBinding,
+} from "@osva-ai/contracts";
 
 export function memoryNamespaceBindingsFromManifest(
   manifest: AgentManifestV1,

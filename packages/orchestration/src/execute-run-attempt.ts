@@ -4,8 +4,8 @@ import type {
   ExecutionResult,
   ExecutionSuccess,
   RuntimeAdapter,
-} from "@osva/contracts";
-import type { RunAttemptId, RunState } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import type { RunAttemptId, RunState } from "@osva-ai/contracts";
 import {
   isTerminalRunAttemptState,
   DomainInvariantError,

@@ -2,7 +2,7 @@ import type {
   ExecutionRequest,
   ExecutionResult,
   RuntimeAdapter,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 export type FakeRuntimeHandler = (
   request: ExecutionRequest,

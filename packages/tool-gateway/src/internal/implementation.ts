@@ -1,4 +1,4 @@
-import type { JsonValue } from "@osva/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
 
 import type { Clock } from "./clock.js";
 

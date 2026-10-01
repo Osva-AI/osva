@@ -171,9 +171,9 @@ The worker consumes BullMQ jobs and executes through the trusted TypeScript runt
 
 ```bash
 export OSVA_BASE_URL=http://127.0.0.1:3000
-pnpm --filter @osva/sdk build
+pnpm --filter @osva-ai/sdk build
 node -e "
-  import { OsvaClient } from '@osva/sdk';
+  import { OsvaClient } from '@osva-ai/sdk';
   const client = new OsvaClient({ baseUrl: process.env.OSVA_BASE_URL });
   // client.agents.create(...); client.runs.create(...);
 "

@@ -1,4 +1,4 @@
-import type { GoalId, GoalState, WorkspaceId } from "@osva/contracts";
+import type { GoalId, GoalState, WorkspaceId } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { assertLegalGoalTransition } from "./goal-state-machine.js";

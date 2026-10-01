@@ -1,4 +1,4 @@
-import type { KnowledgeIndexId } from "@osva/contracts";
+import type { KnowledgeIndexId } from "@osva-ai/contracts";
 
 export type KnowledgeIndexQueueHandler = (
   knowledgeIndexId: KnowledgeIndexId,

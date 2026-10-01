@@ -1,4 +1,4 @@
-import { isCanonicalJsonValue } from "@osva/contracts";
+import { isCanonicalJsonValue } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 

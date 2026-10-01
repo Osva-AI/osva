@@ -5,7 +5,7 @@ import {
   runtimeExecuteResponseSchema,
   type RuntimeExecuteRequest,
   type RuntimeExecuteResponse,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import { CONTAINER_PROTOCOL_STDOUT_MAX_BYTES } from "./output-limits.js";
 

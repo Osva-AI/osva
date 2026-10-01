@@ -2,7 +2,7 @@ import type {
   SecretResolver,
   WorkflowEventId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   createArtifactBlobStore,
   loadArtifactStorageConfig,
