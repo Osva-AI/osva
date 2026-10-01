@@ -541,12 +541,12 @@ importers:
         specifier: workspace:*
         version: link:../../packages/observability
     devDependencies:
-      '@osva/adapters-memory':
-        specifier: workspace:*
-        version: link:../memory
       '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@osva/adapters-memory':
+        specifier: workspace:*
+        version: link:../memory
       '@osva/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -571,18 +571,18 @@ importers:
 
   adapters/runtime-container:
     dependencies:
-      '@osva/adapters-runtime-http':
-        specifier: workspace:*
-        version: link:../runtime-http
       '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@osva/runtime-core':
-        specifier: workspace:*
-        version: link:../../packages/runtime-core
       '@osva-ai/runtime-protocol':
         specifier: workspace:*
         version: link:../../packages/runtime-protocol
+      '@osva/adapters-runtime-http':
+        specifier: workspace:*
+        version: link:../runtime-http
+      '@osva/runtime-core':
+        specifier: workspace:*
+        version: link:../../packages/runtime-core
       dockerode:
         specifier: ^4.0.9
         version: 4.0.12
@@ -617,6 +617,9 @@ importers:
       '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@osva-ai/runtime-protocol':
+        specifier: workspace:*
+        version: link:../../packages/runtime-protocol
       '@osva/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -635,9 +638,6 @@ importers:
       '@osva/runtime-core':
         specifier: workspace:*
         version: link:../../packages/runtime-core
-      '@osva-ai/runtime-protocol':
-        specifier: workspace:*
-        version: link:../../packages/runtime-protocol
       '@osva/tool-gateway':
         specifier: workspace:*
         version: link:../../packages/tool-gateway
@@ -710,6 +710,9 @@ importers:
 
   apps/knowledge-worker:
     dependencies:
+      '@osva-ai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@osva/adapters-artifact-filesystem':
         specifier: workspace:*
         version: link:../../adapters/artifact-filesystem
@@ -728,9 +731,6 @@ importers:
       '@osva/adapters-vector-pgvector':
         specifier: workspace:*
         version: link:../../adapters/vector-pgvector
-      '@osva-ai/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@osva/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -768,12 +768,12 @@ importers:
       '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@osva/observability':
-        specifier: workspace:*
-        version: link:../../packages/observability
       '@osva-ai/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      '@osva/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
     devDependencies:
       '@osva/adapters-bullmq':
         specifier: workspace:*
@@ -805,15 +805,15 @@ importers:
 
   apps/scheduler:
     dependencies:
+      '@osva-ai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@osva/adapters-bullmq':
         specifier: workspace:*
         version: link:../../adapters/bullmq
       '@osva/adapters-opentelemetry':
         specifier: workspace:*
         version: link:../../adapters/opentelemetry
-      '@osva-ai/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@osva/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -851,6 +851,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@osva-ai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@osva/adapters-artifact-storage':
         specifier: workspace:*
         version: link:../../adapters/artifact-storage
@@ -872,9 +875,6 @@ importers:
       '@osva/adapters-vector-pgvector':
         specifier: workspace:*
         version: link:../../adapters/vector-pgvector
-      '@osva-ai/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@osva/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -915,6 +915,12 @@ importers:
 
   apps/worker:
     dependencies:
+      '@osva-ai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@osva-ai/runtime-protocol':
+        specifier: workspace:*
+        version: link:../../packages/runtime-protocol
       '@osva/adapters-artifact-storage':
         specifier: workspace:*
         version: link:../../adapters/artifact-storage
@@ -951,9 +957,6 @@ importers:
       '@osva/adapters-vector-pgvector':
         specifier: workspace:*
         version: link:../../adapters/vector-pgvector
-      '@osva-ai/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@osva/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -978,13 +981,16 @@ importers:
       '@osva/runtime-core':
         specifier: workspace:*
         version: link:../../packages/runtime-core
-      '@osva-ai/runtime-protocol':
-        specifier: workspace:*
-        version: link:../../packages/runtime-protocol
       '@osva/tool-gateway':
         specifier: workspace:*
         version: link:../../packages/tool-gateway
     devDependencies:
+      '@osva-ai/connector-sdk':
+        specifier: workspace:*
+        version: link:../../packages/connector-sdk
+      '@osva-ai/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@osva/adapters-artifact-filesystem':
         specifier: workspace:*
         version: link:../../adapters/artifact-filesystem
@@ -994,12 +1000,6 @@ importers:
       '@osva/adapters-memory':
         specifier: workspace:*
         version: link:../../adapters/memory
-      '@osva-ai/connector-sdk':
-        specifier: workspace:*
-        version: link:../../packages/connector-sdk
-      '@osva-ai/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
       '@osva/web':
         specifier: workspace:*
         version: link:../web
@@ -1018,15 +1018,15 @@ importers:
 
   apps/workflow-orchestrator:
     dependencies:
+      '@osva-ai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@osva/adapters-bullmq':
         specifier: workspace:*
         version: link:../../adapters/bullmq
       '@osva/adapters-opentelemetry':
         specifier: workspace:*
         version: link:../../adapters/opentelemetry
-      '@osva-ai/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@osva/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -1052,6 +1052,34 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.10.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.0(@opentelemetry/api@1.9.0)(@types/node@24.13.4)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
+
+  examples/canonical-dependency-adoption:
+    dependencies:
+      '@osva-ai/connector-sdk':
+        specifier: workspace:*
+        version: link:../../packages/connector-sdk
+      '@osva-ai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@osva-ai/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.4
+      ajv:
+        specifier: ^8.17.1
+        version: 8.20.0
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -1427,12 +1455,12 @@ importers:
 
   packages/tool-gateway:
     dependencies:
-      '@osva/adapters-mcp-client':
-        specifier: workspace:*
-        version: link:../../adapters/mcp-client
       '@osva-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@osva/adapters-mcp-client':
+        specifier: workspace:*
+        version: link:../../adapters/mcp-client
       '@osva/domain':
         specifier: workspace:*
         version: link:../domain
@@ -2938,6 +2966,9 @@ packages:
   ajv@6.15.0:
     resolution: {integrity: sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==}
 
+  ajv@8.20.0:
+    resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
+
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
@@ -3271,6 +3302,9 @@ packages:
   fast-levenshtein@2.0.6:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
 
+  fast-uri@3.1.8:
+    resolution: {integrity: sha512-GZMtZUTNRpOVIECoXwLNZS5xUGE+mVNbTB8h/7Rwh2TFWcBQiPzTgyZi05BF9UMZKkLJv8XBRJTlU7zg8+ZfMg==}
+
   fast-xml-parser@5.2.5:
     resolution: {integrity: sha512-pfX9uG9Ki0yekDHx2SiuRIyFdyAr1kMIMitPvb0YBo8SUfKvia7w7FIyd/l6av85pFYRhZscS75MwMnbvY+hcQ==}
     hasBin: true
@@ -3390,6 +3424,9 @@ packages:
 
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
+
+  json-schema-traverse@1.0.0:
+    resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
@@ -3651,6 +3688,10 @@ packages:
 
   require-directory@2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
+    engines: {node: '>=0.10.0'}
+
+  require-from-string@2.0.2:
+    resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
   require-in-the-middle@7.5.2:
@@ -5578,6 +5619,13 @@ snapshots:
       json-schema-traverse: 0.4.1
       uri-js: 4.4.1
 
+  ajv@8.20.0:
+    dependencies:
+      fast-deep-equal: 3.1.3
+      fast-uri: 3.1.8
+      json-schema-traverse: 1.0.0
+      require-from-string: 2.0.2
+
   ansi-regex@5.0.1: {}
 
   ansi-styles@4.3.0:
@@ -5915,6 +5963,8 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
+  fast-uri@3.1.8: {}
+
   fast-xml-parser@5.2.5:
     dependencies:
       strnum: 2.4.2
@@ -6024,6 +6074,8 @@ snapshots:
       ts-algebra: 2.0.0
 
   json-schema-traverse@0.4.1: {}
+
+  json-schema-traverse@1.0.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
@@ -6238,6 +6290,8 @@ snapshots:
       redis-errors: 1.2.0
 
   require-directory@2.1.1: {}
+
+  require-from-string@2.0.2: {}
 
   require-in-the-middle@7.5.2:
     dependencies:

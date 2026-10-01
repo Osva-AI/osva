@@ -1,0 +1,235 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://osva.ai/examples/canonical-dependency-adoption/analysis-output.v1.schema.json",
+  "title": "Canonical dependency adoption analysis output v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "request", "research", "analysis"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1"
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "packageName", "useCase", "constraints"],
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "packageName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "useCase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packageName",
+        "policyEvidence",
+        "externalEvidence",
+        "findings",
+        "warnings"
+      ],
+      "properties": {
+        "packageName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyEvidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "knowledgeChunkId",
+              "knowledgeSourceId",
+              "score",
+              "excerpt"
+            ],
+            "properties": {
+              "knowledgeChunkId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "knowledgeSourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "heading": {
+                "type": "string",
+                "minLength": 1
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "externalEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["npmPackage", "npmDownloads"],
+          "properties": {
+            "npmPackage": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "latestVersion", "maintainersCount"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "latestVersion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "license": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "repositoryUrl": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "modifiedAt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "deprecated": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "maintainersCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            },
+            "npmDownloads": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["period", "downloads", "start", "end"],
+              "properties": {
+                "period": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "downloads": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "start": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "end": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disposition",
+        "confidence",
+        "summary",
+        "criteria",
+        "risks",
+        "openQuestions"
+      ],
+      "properties": {
+        "disposition": {
+          "type": "string",
+          "enum": ["ADOPT", "PILOT", "DO_NOT_ADOPT", "NEEDS_REVIEW"]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW"]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "criteria": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["criterion", "status", "rationale", "evidenceRefs"],
+            "properties": {
+              "criterion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": ["PASS", "REVIEW", "FAIL"]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "openQuestions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

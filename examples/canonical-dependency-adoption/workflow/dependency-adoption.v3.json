@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "3",
+  "nodes": [
+    {
+      "key": "research",
+      "type": "AGENT",
+      "agentVersionId": "<researchAgentVersionId>"
+    },
+    {
+      "key": "analysis",
+      "type": "AGENT",
+      "agentVersionId": "<analysisAgentVersionId>"
+    },
+    {
+      "key": "adoption-approval",
+      "type": "APPROVAL",
+      "title": "Approve dependency adoption analysis",
+      "description": "Review the evidence, recommendation, and risks before report generation."
+    },
+    {
+      "key": "delivery-wait",
+      "type": "WAIT",
+      "wait": {
+        "kind": "EVENT",
+        "source": "canonical-demo",
+        "eventType": "report.delivery_requested",
+        "correlation": {
+          "kind": "INPUT_POINTER",
+          "pointer": "/request/requestId"
+        },
+        "timeoutMs": 900000
+      }
+    },
+    {
+      "key": "report",
+      "type": "AGENT",
+      "agentVersionId": "<reportAgentVersionId>"
+    }
+  ],
+  "edges": [
+    {
+      "from": "research",
+      "to": "analysis"
+    },
+    {
+      "from": "analysis",
+      "to": "adoption-approval"
+    },
+    {
+      "from": "adoption-approval",
+      "to": "delivery-wait"
+    },
+    {
+      "from": "delivery-wait",
+      "to": "report"
+    }
+  ]
+}

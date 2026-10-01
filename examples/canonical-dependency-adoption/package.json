@@ -1,0 +1,24 @@
+{
+  "name": "@osva/example-canonical-dependency-adoption",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.agents.json && tsc -p tsconfig.build.setup.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.build.agents.json --noEmit && tsc -p tsconfig.build.setup.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "setup": "node dist/scripts/setup.js",
+    "mcp:stdio": "node dist/mcp/npm-connector/stdio.js"
+  },
+  "dependencies": {
+    "@osva-ai/connector-sdk": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
+    "@osva-ai/sdk": "workspace:*",
+    "@osva/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "ajv": "^8.17.1",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
