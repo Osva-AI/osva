@@ -16,6 +16,7 @@ import { pollUntilReady, SetupPollError } from "../scripts/lib/poll.js";
 import {
   distAgentsDir,
   stateFilePath,
+  resolvePackageRoot,
   trustedRuntimeBundleDir,
   trustedRuntimeEntrypointPosix,
 } from "../scripts/lib/paths.js";
@@ -105,6 +106,13 @@ describe("canonical setup paths", () => {
     expect(trustedRuntimeBundleDir("C:\\runtime-root")).toBe(
       path.join("C:\\runtime-root", "canonical-dependency-adoption"),
     );
+  });
+
+  it("resolves package root from compiled dist/scripts/lib layout", () => {
+    const distLib = path.join("pkg", "dist", "scripts", "lib");
+    expect(resolvePackageRoot(distLib)).toBe(path.resolve(distLib, "../../.."));
+    const srcLib = path.join("pkg", "scripts", "lib");
+    expect(resolvePackageRoot(srcLib)).toBe(path.resolve(srcLib, "../.."));
   });
 });
 

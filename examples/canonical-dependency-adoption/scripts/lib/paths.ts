@@ -1,9 +1,18 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
+const scriptsLibDir = path.dirname(fileURLToPath(import.meta.url));
 
-export const packageRoot = path.resolve(scriptsDir, "../..");
+/** Compiled setup lives under `dist/scripts/lib`; source lives under `scripts/lib`. */
+export function resolvePackageRoot(scriptsLibDirectory: string): string {
+  const normalized = scriptsLibDirectory.replace(/\\/g, "/");
+  if (normalized.includes("/dist/scripts/lib")) {
+    return path.resolve(scriptsLibDirectory, "../../..");
+  }
+  return path.resolve(scriptsLibDirectory, "../..");
+}
+
+export const packageRoot = resolvePackageRoot(scriptsLibDir);
 
 export const policyDocumentPath = path.join(
   packageRoot,

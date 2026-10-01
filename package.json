@@ -36,7 +36,7 @@
     "dev:workflow-orchestrator": "pnpm --filter @osva/workflow-orchestrator dev",
     "dev:knowledge-worker": "pnpm --filter @osva/knowledge-worker dev",
     "dev:mcp-server": "pnpm --filter @osva/mcp-server dev",
-    "canonical:setup": "pnpm --filter @osva/example-canonical-dependency-adoption setup"
+    "canonical:setup": "pnpm --filter @osva/example-canonical-dependency-adoption run setup"
   },
   "devDependencies": {
     "@types/node": "catalog:",
