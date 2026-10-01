@@ -1,4 +1,4 @@
-import type { ExecutionRequest, RunAttemptId } from "@osva/contracts";
+import type { ExecutionRequest, RunAttemptId } from "@osva-ai/contracts";
 import { MemorySecretResolver } from "@osva/adapters-memory";
 import { describe, expect, it } from "vitest";
 

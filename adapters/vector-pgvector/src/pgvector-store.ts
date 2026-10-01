@@ -1,4 +1,4 @@
-import type { KnowledgeChunkId, KnowledgeIndexId } from "@osva/contracts";
+import type { KnowledgeChunkId, KnowledgeIndexId } from "@osva-ai/contracts";
 import type {
   VectorStore,
   VectorStoreQuery,

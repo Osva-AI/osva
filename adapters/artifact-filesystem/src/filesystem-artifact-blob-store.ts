@@ -5,7 +5,7 @@ import path from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
-import { SHA256_INTEGRITY_PREFIX } from "@osva/contracts";
+import { SHA256_INTEGRITY_PREFIX } from "@osva-ai/contracts";
 import {
   ArtifactBlobUnavailableError,
   ArtifactDigestMismatchError,

@@ -110,7 +110,7 @@ See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
 **Authentication:** all `/v1/*` routes require API keys. Run bootstrap once per environment to mint the initial key.
 
-**Public SDKs (OSVA 1.0.0):** `@osva/contracts`, `@osva/runtime-protocol`, `@osva/sdk`, `@osva/cli`, `@osva/connector-sdk`, and Python `osva-sdk` (registry availability depends on publication).
+**Public SDKs (OSVA 1.0.0):** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`, and Python `osva-sdk` (registry availability depends on publication).
 
 Historical Beta docs: [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) (legacy local dev path).
 
@@ -214,10 +214,10 @@ and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
 
 Public packages at version **1.0.0** (build from this repository, or install from npm/PyPI once published):
 
-- `@osva/contracts`, `@osva/runtime-protocol` — shared types/schemas
-- `@osva/sdk` — TypeScript client (`OsvaClient`) and `@osva/sdk/runtime`
-- `@osva/cli` — `osva` CLI
-- `@osva/connector-sdk` — MCP connector authoring
+- `@osva-ai/contracts`, `@osva-ai/runtime-protocol` — shared types/schemas
+- `@osva-ai/sdk` — TypeScript client (`OsvaClient`) and `@osva-ai/sdk/runtime`
+- `@osva-ai/cli` — `osva` CLI
+- `@osva-ai/connector-sdk` — MCP connector authoring
 - `osva-sdk` — Python (`from osva import OSVAClient`)
 
 See [`docs/engineering/SDK.md`](docs/engineering/SDK.md) and [`docs/release/COMPATIBILITY.md`](docs/release/COMPATIBILITY.md).
@@ -225,7 +225,7 @@ See [`docs/engineering/SDK.md`](docs/engineering/SDK.md) and [`docs/release/COMP
 ```text
 export OSVA_BASE_URL=http://127.0.0.1:3000
 export OSVA_WORKSPACE_ID=ws-dev
-pnpm --filter @osva/cli build
+pnpm --filter @osva-ai/cli build
 node packages/cli/dist/bin/osva.js agents list
 ```
 

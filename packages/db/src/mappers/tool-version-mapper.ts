@@ -4,8 +4,8 @@ import type {
   ToolId,
   ToolType,
   ToolVersionId,
-} from "@osva/contracts";
-import { MCP_TOOL_IMPLEMENTATION } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { MCP_TOOL_IMPLEMENTATION } from "@osva-ai/contracts";
 import { ToolVersion } from "@osva/domain";
 
 import type { toolVersions } from "../schema/tool-versions.js";

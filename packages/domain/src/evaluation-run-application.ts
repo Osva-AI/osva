@@ -1,4 +1,4 @@
-import type { JobQueue } from "@osva/contracts";
+import type { JobQueue } from "@osva-ai/contracts";
 import type {
   AgentVersionId,
   EvaluationCaseId,
@@ -10,8 +10,11 @@ import type {
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS, isCanonicalJsonValue } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import {
+  AUTHORIZATION_ACTIONS,
+  isCanonicalJsonValue,
+} from "@osva-ai/contracts";
 
 import { EffectiveRunBindings } from "./effective-run-bindings.js";
 import {

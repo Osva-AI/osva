@@ -1,4 +1,4 @@
-import type { ModelProfileId, ToolVersionId } from "@osva/contracts";
+import type { ModelProfileId, ToolVersionId } from "@osva-ai/contracts";
 import {
   MemoryAgentRepository,
   MemoryJobQueue,
@@ -470,8 +470,8 @@ describe("CreateRun", () => {
     const agents = new MemoryAgentRepository();
     const runs = new MemoryRunRepository();
     const queue = new MemoryJobQueue();
-    const indexA = "ki-a" as import("@osva/contracts").KnowledgeIndexId;
-    const indexB = "ki-b" as import("@osva/contracts").KnowledgeIndexId;
+    const indexA = "ki-a" as import("@osva-ai/contracts").KnowledgeIndexId;
+    const indexB = "ki-b" as import("@osva-ai/contracts").KnowledgeIndexId;
     await workspaces.save(
       Workspace.create({
         id: workspaceId,

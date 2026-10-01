@@ -1,4 +1,4 @@
-import type { WorkflowRunId } from "@osva/contracts";
+import type { WorkflowRunId } from "@osva-ai/contracts";
 
 export function workflowNodeRunIdempotencyKey(
   workflowRunId: WorkflowRunId,

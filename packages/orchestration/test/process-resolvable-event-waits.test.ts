@@ -2,7 +2,7 @@ import type {
   WorkflowEventId,
   WorkflowNodeRunId,
   WorkflowRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   MemoryWorkflowEventRepository,
   MemoryWorkflowEventWaitResolutionRepository,

@@ -7,7 +7,7 @@ import {
   generateTextInputSchema,
   generateTextResultSchema,
   jsonValueSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import {
   MEMORY_BINDING_NAME_PATTERN,
   MODEL_BINDING_NAME_PATTERN,
@@ -15,11 +15,11 @@ import {
   KNOWLEDGE_BINDING_NAME_PATTERN,
   KNOWLEDGE_MAX_QUERY_LENGTH,
   KNOWLEDGE_MAX_TOP_K,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   knowledgeHitSchema,
   knowledgeRetrieveFilterSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 
 import {
   runtimeExecutionIdSchema,

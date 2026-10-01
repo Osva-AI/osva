@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "@osva/adapters-memory": "workspace:*",
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva/model-gateway": "workspace:*",
     "@osva/tool-gateway": "workspace:*",

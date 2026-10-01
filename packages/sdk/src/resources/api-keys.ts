@@ -3,8 +3,8 @@ import {
   createApiKeyRequestSchema,
   createApiKeyResponseSchema,
   revokeApiKeyResponseSchema,
-} from "@osva/contracts/schemas";
-import type { ApiKeyId } from "@osva/contracts";
+} from "@osva-ai/contracts/schemas";
+import type { ApiKeyId } from "@osva-ai/contracts";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

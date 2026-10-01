@@ -41,7 +41,7 @@ import type {
   KnowledgeIndexState,
   KnowledgeSourceId,
   KnowledgeErrorCode,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 export class DomainError extends Error {
   constructor(message: string) {

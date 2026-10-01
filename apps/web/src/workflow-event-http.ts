@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { WorkflowEventId } from "@osva/contracts";
-import { WORKFLOW_EVENT_HTTP_REQUEST_MAX_BYTES } from "@osva/contracts";
-import { ingestWorkflowEventRequestSchema } from "@osva/contracts/schemas";
+import type { WorkflowEventId } from "@osva-ai/contracts";
+import { WORKFLOW_EVENT_HTTP_REQUEST_MAX_BYTES } from "@osva-ai/contracts";
+import { ingestWorkflowEventRequestSchema } from "@osva-ai/contracts/schemas";
 import type { WorkflowEvent } from "@osva/domain";
 import { CONTROL_PLANE_RESOURCE_KINDS } from "@osva/domain";
 import type { IngestWorkflowEvent } from "@osva/orchestration";

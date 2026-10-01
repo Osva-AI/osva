@@ -1,6 +1,6 @@
 import { text } from "node:stream/consumers";
 
-import type { KnowledgeTextSegmentV1 } from "@osva/contracts";
+import type { KnowledgeTextSegmentV1 } from "@osva-ai/contracts";
 import type { KnowledgeParser, KnowledgeParserParseInput } from "@osva/domain";
 
 const MARKDOWN_MEDIA_TYPES = new Set([

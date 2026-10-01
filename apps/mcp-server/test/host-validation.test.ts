@@ -39,7 +39,7 @@ import type {
   AuthenticatedMcpIdentity,
   McpAuthenticator,
 } from "../src/auth.js";
-import type { ApiKeyId, WorkspaceId } from "@osva/contracts";
+import type { ApiKeyId, WorkspaceId } from "@osva-ai/contracts";
 import type { OsvaClientFactory } from "../src/osva-client.js";
 
 const noopClients: OsvaClientFactory = {

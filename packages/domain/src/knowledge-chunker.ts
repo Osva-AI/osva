@@ -1,5 +1,5 @@
-import type { KnowledgeTextSegmentV1 } from "@osva/contracts";
-import { KNOWLEDGE_MAX_CHUNKS_PER_INDEX } from "@osva/contracts";
+import type { KnowledgeTextSegmentV1 } from "@osva-ai/contracts";
+import { KNOWLEDGE_MAX_CHUNKS_PER_INDEX } from "@osva-ai/contracts";
 
 import { KnowledgeSourceTooLargeError } from "./errors.js";
 

@@ -7,7 +7,7 @@ import {
   RUNTIME_PROTOCOL_VERSION,
   runtimeExecuteRequestSchema,
   runtimeExecuteResponseSchema,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import {
   CapabilityCredential,

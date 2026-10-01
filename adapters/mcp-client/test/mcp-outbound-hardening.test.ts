@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   ConnectorVersionId,
   McpConnectorExecutionConfig,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { createPinnedOutboundFetch } from "@osva/outbound-network";
 
 import { ManagedMcpClient, isMcpAdapterError } from "../src/index.js";

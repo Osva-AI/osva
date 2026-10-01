@@ -4,7 +4,7 @@ import type {
   JsonValue,
   RunAttemptId,
   RunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { Evaluation } from "@osva/domain";
 
 import type { evaluations } from "../schema/evaluations.js";

@@ -1,4 +1,4 @@
-# @osva/contracts
+# @osva-ai/contracts
 
 Public OSVA contract types and Zod schemas consumed by SDKs, runtimes, and integrations.
 

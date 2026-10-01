@@ -1,4 +1,4 @@
-import { ARTIFACT_ERROR_CODES } from "@osva/contracts";
+import { ARTIFACT_ERROR_CODES } from "@osva-ai/contracts";
 import {
   ArtifactBlobUnavailableError,
   ArtifactDigestMismatchError,

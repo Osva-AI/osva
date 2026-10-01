@@ -7,7 +7,7 @@ import type {
   MemoryNamespaceId,
   ToolVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
 import {
   createDatabase,

@@ -10,17 +10,17 @@ import type {
   ExecutionRequest,
   ExecutionResult,
   RuntimeAdapter,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   isCanonicalJsonValue,
   isDigestPinnedOciImageReference,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { toRuntimeExecutionId } from "@osva/runtime-core";
 import {
   RUNTIME_PROTOCOL_ERROR_CODES,
   RUNTIME_PROTOCOL_VERSION,
   type RuntimeExecuteRequest,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import type {
   ContainerEngine,

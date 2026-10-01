@@ -2,7 +2,7 @@ import type {
   AgentId,
   ModelProfileVersionId,
   ToolVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,

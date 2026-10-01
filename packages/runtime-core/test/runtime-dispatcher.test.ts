@@ -6,7 +6,7 @@ import type {
   RunId,
   RuntimeAdapter,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { toRuntimeExecutionId } from "../src/execution-id.js";

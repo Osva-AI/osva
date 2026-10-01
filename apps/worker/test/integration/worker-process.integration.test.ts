@@ -8,7 +8,7 @@ import type {
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { FakeRuntimeAdapter } from "@osva/adapters-memory";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import {

@@ -3,7 +3,7 @@ import type {
   ApprovalRequestId,
   WorkflowNodeRunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { ApprovalRequest, WorkflowNodeRun } from "@osva/domain";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
@@ -138,7 +138,7 @@ describe("ApprovalRequest HTTP API", () => {
 });
 
 async function createPendingWorkflowRun(origin: string): Promise<{
-  readonly id: import("@osva/contracts").WorkflowRunId;
+  readonly id: import("@osva-ai/contracts").WorkflowRunId;
 }> {
   const workflow = await fetchJson(`${origin}/v1/workflows`, {
     method: "POST",
@@ -204,6 +204,6 @@ async function createPendingWorkflowRun(origin: string): Promise<{
     approvalRequests: [],
   });
   return {
-    id: (created.body as { id: import("@osva/contracts").WorkflowRunId }).id,
+    id: (created.body as { id: import("@osva-ai/contracts").WorkflowRunId }).id,
   };
 }

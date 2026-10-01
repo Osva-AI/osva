@@ -1,4 +1,4 @@
-import type { JsonValue } from "@osva/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
 
 /**
  * Structural canonical JSON equality. Object property order does not affect

@@ -4,7 +4,7 @@ import type {
   RunId,
   WorkflowNodeRunId,
   WorkflowRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   FakeRuntimeAdapter,
   MemoryAgentRepository,
@@ -246,7 +246,7 @@ interface TestHarness {
     createRunId(): RunId;
     createRunAttemptId(): RunAttemptId;
     createWorkflowNodeRunId(): WorkflowNodeRunId;
-    createApprovalRequestId(): import("@osva/contracts").ApprovalRequestId;
+    createApprovalRequestId(): import("@osva-ai/contracts").ApprovalRequestId;
   };
 }
 
@@ -342,7 +342,7 @@ async function createHarness(options?: {
       },
       createApprovalRequestId: () => {
         nodeCounter += 1;
-        return `approval-${String(nodeCounter)}` as import("@osva/contracts").ApprovalRequestId;
+        return `approval-${String(nodeCounter)}` as import("@osva-ai/contracts").ApprovalRequestId;
       },
     },
   };

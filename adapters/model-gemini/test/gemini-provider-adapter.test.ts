@@ -1,4 +1,4 @@
-import { MODEL_ERROR_CODES } from "@osva/contracts";
+import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { GeminiProviderAdapter } from "../src/gemini-provider-adapter.js";

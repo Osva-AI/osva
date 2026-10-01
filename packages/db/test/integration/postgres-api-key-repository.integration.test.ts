@@ -1,5 +1,5 @@
-import type { ApiKeyId, WorkspaceId } from "@osva/contracts";
-import { COMMUNITY_EDITION_ROLES } from "@osva/contracts";
+import type { ApiKeyId, WorkspaceId } from "@osva-ai/contracts";
+import { COMMUNITY_EDITION_ROLES } from "@osva-ai/contracts";
 import {
   AuthenticateApiKey,
   CreateApiKey,

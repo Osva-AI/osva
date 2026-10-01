@@ -10,14 +10,14 @@ import type {
   RuntimeAdapter,
   ToolInvokeRequest,
   TrustedTypeScriptRuntime,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import type {
   MemoryAuthorization,
   MemoryDeleteRequest,
   MemoryGetRequest,
   MemoryListRequest,
   MemorySetRequest,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
@@ -26,7 +26,7 @@ import {
   isCanonicalJsonValue,
   isSha256IntegrityDigest,
   sha256IntegrityHex,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   ArtifactCreateIpcSessions,
   handleArtifactCreateEndIpc,
@@ -159,9 +159,9 @@ export interface RuntimeKnowledgeGateway {
     request: {
       readonly query: string;
       readonly topK?: number;
-      readonly filter?: import("@osva/contracts").JsonObject;
+      readonly filter?: import("@osva-ai/contracts").JsonObject;
     },
-  ): Promise<readonly import("@osva/contracts").KnowledgeHitV1[]>;
+  ): Promise<readonly import("@osva-ai/contracts").KnowledgeHitV1[]>;
 }
 
 interface LiveExecution {

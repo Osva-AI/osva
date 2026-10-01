@@ -31,7 +31,7 @@ describe("root db:migrate build ordering", () => {
     expect(migrateScript).not.toContain("pnpm --filter @osva/db build");
     expect(turboConfig.tasks?.build?.dependsOn).toContain("^build");
     expect(dbPackage.dependencies).toMatchObject({
-      "@osva/contracts": "workspace:*",
+      "@osva-ai/contracts": "workspace:*",
       "@osva/domain": "workspace:*",
     });
   });

@@ -3,7 +3,7 @@ import type {
   WorkflowRunId,
   WorkflowRunState,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { WorkflowNodeRun } from "../workflow-node-run.js";
 import type { WorkflowRun } from "../workflow-run.js";

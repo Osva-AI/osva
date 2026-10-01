@@ -2,8 +2,8 @@ import type {
   ApiKeyId,
   CommunityEditionRole,
   WorkspaceId,
-} from "@osva/contracts";
-import { API_KEY_NAME_MAX_LENGTH } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { API_KEY_NAME_MAX_LENGTH } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, requireNonEmptyString } from "./internals.js";

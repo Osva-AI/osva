@@ -1,5 +1,5 @@
-import type { JobQueue } from "@osva/contracts";
-import type { RunAttemptId, RunId } from "@osva/contracts";
+import type { JobQueue } from "@osva-ai/contracts";
+import type { RunAttemptId, RunId } from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   isTerminalRunState,

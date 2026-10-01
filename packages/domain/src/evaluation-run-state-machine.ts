@@ -1,7 +1,7 @@
 import {
   EVALUATION_RUN_STATES,
   type EvaluationRunState,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { InvalidEvaluationRunTransitionError } from "./errors.js";
 

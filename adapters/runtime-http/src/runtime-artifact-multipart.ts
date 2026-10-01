@@ -1,8 +1,8 @@
 import Busboy from "busboy";
 import type { IncomingMessage } from "node:http";
 import { PassThrough, Transform, type Readable } from "node:stream";
-import type { JsonObject } from "@osva/contracts";
-import { createRuntimeArtifactFormFieldsSchema } from "@osva/contracts/schemas";
+import type { JsonObject } from "@osva-ai/contracts";
+import { createRuntimeArtifactFormFieldsSchema } from "@osva-ai/contracts/schemas";
 import { ArtifactPayloadTooLargeError } from "@osva/domain";
 
 export interface ParsedRuntimeArtifactMultipartFields {

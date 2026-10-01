@@ -4,8 +4,8 @@ import type {
   EvaluationCaseResultId,
   EvaluationRunId,
   RunId,
-} from "@osva/contracts";
-import { EVALUATION_CASE_OUTCOMES } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { EVALUATION_CASE_OUTCOMES } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, deepFreeze } from "./internals.js";

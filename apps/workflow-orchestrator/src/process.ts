@@ -7,7 +7,7 @@ import type {
   RunAttemptId,
   RunId,
   WorkflowNodeRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   checkDatabaseConnection,
   createDatabase,

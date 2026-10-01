@@ -3,7 +3,7 @@ import {
   TERMINAL_WORKFLOW_NODE_RUN_STATES,
   type WorkflowNodeRunState,
   type TerminalWorkflowNodeRunState,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { InvalidWorkflowNodeRunTransitionError } from "./errors.js";
 

@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { ToolId, ToolVersionId } from "@osva/contracts";
+import type { ToolId, ToolVersionId } from "@osva-ai/contracts";
 import {
   createToolRequestSchema,
   createToolVersionRequestSchema,
@@ -8,7 +8,7 @@ import {
   toolVersionListResourceSchema,
   toolVersionResourceSchema,
   updateToolRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { Tool, ToolApplication, ToolVersion } from "@osva/domain";
 import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import type { McpPrincipal } from "@osva/contracts";
+import type { McpPrincipal } from "@osva-ai/contracts";
 
 import type { AuthenticatedMcpIdentity } from "./auth.js";
 

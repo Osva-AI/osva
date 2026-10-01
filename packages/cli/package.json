@@ -1,5 +1,5 @@
 {
-  "name": "@osva/cli",
+  "name": "@osva-ai/cli",
   "version": "1.0.0",
   "description": "Official OSVA command-line interface",
   "license": "Apache-2.0",
@@ -27,8 +27,8 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@osva/contracts": "workspace:*",
-    "@osva/sdk": "workspace:*"
+    "@osva-ai/contracts": "workspace:*",
+    "@osva-ai/sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

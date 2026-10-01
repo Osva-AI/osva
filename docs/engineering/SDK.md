@@ -2,8 +2,8 @@
 
 Stage 2.5 adds publish-ready (but not yet published) developer packages:
 
-- `@osva/sdk` — TypeScript/JavaScript control-plane client and Runtime Protocol V1 runtime helpers
-- `@osva/cli` — `osva` CLI built on `@osva/sdk`
+- `@osva-ai/sdk` — TypeScript/JavaScript control-plane client and Runtime Protocol V1 runtime helpers
+- `@osva-ai/cli` — `osva` CLI built on `@osva-ai/sdk`
 - `osva-sdk` — Python package (`import osva`) with the same responsibilities
 
 Packages communicate only with OSVA public HTTP contracts. They do not access PostgreSQL, BullMQ, repositories, or internal application services.
@@ -11,7 +11,7 @@ Packages communicate only with OSVA public HTTP contracts. They do not access Po
 ## Node / TypeScript
 
 ```ts
-import { OsvaClient } from "@osva/sdk";
+import { OsvaClient } from "@osva-ai/sdk";
 
 const client = new OsvaClient({
   baseUrl: "http://127.0.0.1:3000",
@@ -26,10 +26,10 @@ const created = await client.runs.create({
 });
 ```
 
-Runtime helpers live at `@osva/sdk/runtime`:
+Runtime helpers live at `@osva-ai/sdk/runtime`:
 
 ```ts
-import { createNodeHttpServer, createRuntime } from "@osva/sdk/runtime";
+import { createNodeHttpServer, createRuntime } from "@osva-ai/sdk/runtime";
 
 const runtime = createRuntime({
   async execute(input, context) {

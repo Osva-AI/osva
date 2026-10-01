@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { OSVA_DEFAULT_JSON_BODY_MAX_BYTES } from "@osva/contracts";
+import { OSVA_DEFAULT_JSON_BODY_MAX_BYTES } from "@osva-ai/contracts";
 
 export interface ReadJsonBodyOptions {
   readonly maxBytes?: number;

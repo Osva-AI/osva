@@ -19,7 +19,7 @@
     "@osva/adapters-embedding-openai-compatible": "workspace:*",
     "@osva/adapters-knowledge-parser": "workspace:*",
     "@osva/adapters-vector-pgvector": "workspace:*",
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva/embedding-gateway": "workspace:*"

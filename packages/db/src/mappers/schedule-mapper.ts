@@ -4,7 +4,7 @@ import type {
   JsonValue,
   ScheduleId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { Schedule } from "@osva/domain";
 
 import type { schedules } from "../schema/schedules.js";

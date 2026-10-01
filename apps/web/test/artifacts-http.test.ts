@@ -1,4 +1,4 @@
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import http from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 

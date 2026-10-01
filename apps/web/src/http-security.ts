@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
 
-import type { RequestPrincipal } from "@osva/contracts";
+import type { RequestPrincipal } from "@osva-ai/contracts";
 import { AuthenticationRequiredError } from "@osva/domain";
 
 import { parseBearerAuthorization } from "./bearer-authorization.js";

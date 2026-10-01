@@ -1,4 +1,4 @@
-import type { ToolId, ToolVersionId, WorkspaceId } from "@osva/contracts";
+import type { ToolId, ToolVersionId, WorkspaceId } from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   DuplicateToolKeyError,

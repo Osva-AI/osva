@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { ApiKeyId } from "@osva/contracts";
-import { createApiKeyRequestSchema } from "@osva/contracts/schemas";
+import type { ApiKeyId } from "@osva-ai/contracts";
+import { createApiKeyRequestSchema } from "@osva-ai/contracts/schemas";
 import type { ApiKey, ApiKeyApplication } from "@osva/domain";
 import { CONTROL_PLANE_RESOURCE_KINDS } from "@osva/domain";
 

@@ -1,4 +1,4 @@
-import type { WorkflowEventId, WorkspaceId } from "@osva/contracts";
+import type { WorkflowEventId, WorkspaceId } from "@osva-ai/contracts";
 
 import type { WorkflowEvent } from "../workflow-event.js";
 import type { WorkflowWait } from "../workflow-wait.js";

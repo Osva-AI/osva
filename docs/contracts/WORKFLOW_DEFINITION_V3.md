@@ -9,7 +9,7 @@ enabled** (Pass 3.3.17)
 schema version is **3**; do not conflate product naming with the persisted
 `schemaVersion` string.
 
-**Implemented (Pass 3.2.3):** `@osva/contracts` Zod schemas, domain graph
+**Implemented (Pass 3.2.3):** `@osva-ai/contracts` Zod schemas, domain graph
 validation, WorkflowVersion persistence for valid V3 definitions.
 
 **Implemented (Stage 3.3):** durable **WorkflowWait** / **WorkflowEvent**,
@@ -342,7 +342,7 @@ Not valid node types or definition features in v3:
 | Capability | Contract (this doc) | Current repo |
 |------------|---------------------|--------------|
 | `schemaVersion: "3"` persistence | Yes | Yes (validation on append) |
-| `@osva/contracts` Zod for v3 | Yes | Yes |
+| `@osva-ai/contracts` Zod for v3 | Yes | Yes |
 | WAIT node in definition | Yes | Validated only |
 | `CreateWorkflowRun` for V3 | Yes | Yes (Stage 3.3.17) |
 | WAIT node execution | Yes | Yes (PostgreSQL + reconciler) |

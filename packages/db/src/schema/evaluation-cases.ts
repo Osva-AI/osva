@@ -1,6 +1,6 @@
 import { jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
-import type { EvaluatorConfig } from "@osva/contracts";
-import type { JsonValue } from "@osva/contracts";
+import type { EvaluatorConfig } from "@osva-ai/contracts";
+import type { JsonValue } from "@osva-ai/contracts";
 
 import { evaluationSuiteVersions } from "./evaluation-suite-versions.js";
 

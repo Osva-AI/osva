@@ -4,7 +4,7 @@ import type {
   WorkflowDefinitionV1,
   WorkflowDefinitionV2,
   WorkflowDefinitionV3,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { WorkflowDefinitionNotExecutableError } from "../src/errors.js";

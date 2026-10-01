@@ -1,4 +1,4 @@
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import type { Workspace, WorkspaceRepository } from "@osva/domain";
 
 export class MemoryWorkspaceRepository implements WorkspaceRepository {

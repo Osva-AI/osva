@@ -2,7 +2,7 @@ import {
   AUTHORIZATION_ACTIONS,
   COMMUNITY_EDITION_ROLES,
   type RequestPrincipal,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { authorize, rolePermitsAction } from "../src/authorization.js";

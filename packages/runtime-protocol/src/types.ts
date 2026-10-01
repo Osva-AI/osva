@@ -5,7 +5,7 @@ import type {
   GenerateTextResult,
   JsonObject,
   JsonValue,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { RuntimeProtocolVersion } from "./constants.js";
 
@@ -212,7 +212,7 @@ export interface RuntimeKnowledgeSearchSuccess {
   readonly protocolVersion: RuntimeProtocolVersion;
   readonly executionId: string;
   readonly outcome: "SUCCEEDED";
-  readonly hits: readonly import("@osva/contracts").KnowledgeHitV1[];
+  readonly hits: readonly import("@osva-ai/contracts").KnowledgeHitV1[];
 }
 
 export interface RuntimeKnowledgeSearchFailure {

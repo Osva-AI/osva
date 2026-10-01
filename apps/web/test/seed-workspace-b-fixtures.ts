@@ -26,7 +26,7 @@ import type {
   WorkflowNodeRunId,
   WorkflowRunId,
   WorkflowVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   Agent,
   AgentVersion,

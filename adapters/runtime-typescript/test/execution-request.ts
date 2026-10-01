@@ -6,7 +6,7 @@ import type {
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 export const NOW = new Date("2026-01-15T12:00:00.000Z");
 

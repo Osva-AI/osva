@@ -1,4 +1,4 @@
-import type { JobQueueHandler, RunAttemptId } from "@osva/contracts";
+import type { JobQueueHandler, RunAttemptId } from "@osva-ai/contracts";
 import { Queue } from "bullmq";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

@@ -10,7 +10,7 @@ import {
   type S3ClientConfig,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { SHA256_INTEGRITY_PREFIX } from "@osva/contracts";
+import { SHA256_INTEGRITY_PREFIX } from "@osva-ai/contracts";
 import {
   ArtifactBlobUnavailableError,
   ArtifactDigestMismatchError,

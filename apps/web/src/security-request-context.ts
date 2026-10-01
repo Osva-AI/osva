@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 
-import type { RequestPrincipal } from "@osva/contracts";
+import type { RequestPrincipal } from "@osva-ai/contracts";
 import { AuthenticationRequiredError } from "@osva/domain";
 
 export interface SecurityRequestContext {

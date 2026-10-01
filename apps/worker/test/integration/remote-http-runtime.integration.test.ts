@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { ToolVersionId, WorkspaceId } from "@osva/contracts";
+import type { ToolVersionId, WorkspaceId } from "@osva-ai/contracts";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 

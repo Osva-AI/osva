@@ -1,4 +1,4 @@
-import type { McpPrincipal } from "@osva/contracts";
+import type { McpPrincipal } from "@osva-ai/contracts";
 import { McpServer } from "@modelcontextprotocol/server";
 import type { OsvaInstrumentation } from "@osva/observability";
 

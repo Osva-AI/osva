@@ -5,7 +5,7 @@ import type {
   CommunityEditionRole,
   McpPrincipal,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 /** Request-scoped MCP authentication result (not a public contract). */
 export interface AuthenticatedMcpIdentity {

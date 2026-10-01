@@ -12,7 +12,7 @@ import type {
   RunId,
   RunState,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { DomainInvariantError, EffectiveRunBindings, Run } from "@osva/domain";
 
 import type { runs } from "../schema/runs.js";

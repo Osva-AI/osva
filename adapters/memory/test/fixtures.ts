@@ -8,7 +8,7 @@ import type {
   RunId,
   RunStepId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { EffectiveRunBindings } from "@osva/domain";
 
 export const NOW = new Date("2026-01-15T12:00:00.000Z");

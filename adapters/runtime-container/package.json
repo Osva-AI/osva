@@ -18,9 +18,9 @@
   },
   "dependencies": {
     "@osva/adapters-runtime-http": "workspace:*",
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/runtime-core": "workspace:*",
-    "@osva/runtime-protocol": "workspace:*",
+    "@osva-ai/runtime-protocol": "workspace:*",
     "dockerode": "^4.0.9"
   },
   "devDependencies": {

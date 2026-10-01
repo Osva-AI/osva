@@ -1,4 +1,4 @@
-import type { AgentManifestV1 } from "@osva/contracts";
+import type { AgentManifestV1 } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { AgentVersion } from "../src/agent-version.js";

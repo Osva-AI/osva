@@ -1,4 +1,4 @@
-import { COMMUNITY_EDITION_ROLES } from "@osva/contracts";
+import { COMMUNITY_EDITION_ROLES } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
@@ -65,7 +65,7 @@ describe("connector STDIO operator gate and ADMIN configuration", () => {
 
     const { Connector, ConnectorVersion } = await import("@osva/domain");
     const connector = Connector.create({
-      id: "id-1" as import("@osva/contracts").ConnectorId,
+      id: "id-1" as import("@osva-ai/contracts").ConnectorId,
       workspaceId: ctx.workspaceId,
       key: "stored-stdio",
       name: "Stored",
@@ -74,7 +74,7 @@ describe("connector STDIO operator gate and ADMIN configuration", () => {
     });
     await ctx.connectors.saveConnector(connector);
     const version = ConnectorVersion.create({
-      id: "id-2" as import("@osva/contracts").ConnectorVersionId,
+      id: "id-2" as import("@osva-ai/contracts").ConnectorVersionId,
       connectorId: connector.id,
       version: 1,
       kind: "MCP",
@@ -97,7 +97,7 @@ describe("connector STDIO operator gate and ADMIN configuration", () => {
       apiKeys: ctx.apiKeys,
       workspaceId: ctx.workspaceId,
       role: COMMUNITY_EDITION_ROLES.EDITOR,
-      apiKeyId: "ak-stdio-editor" as import("@osva/contracts").ApiKeyId,
+      apiKeyId: "ak-stdio-editor" as import("@osva-ai/contracts").ApiKeyId,
     });
     const editorAuth = authorizationHeader(editor.plaintextToken);
 

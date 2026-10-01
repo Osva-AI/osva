@@ -1,9 +1,9 @@
-import type { KnowledgeSourceId } from "@osva/contracts";
+import type { KnowledgeSourceId } from "@osva-ai/contracts";
 import {
   createKnowledgeSourceRequestSchema,
   knowledgeSourceResourceSchema,
   listKnowledgeSourcesQuerySchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

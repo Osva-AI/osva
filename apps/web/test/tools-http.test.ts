@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
 import { fetchJson, setTestAuthHeaders } from "./http-test-helpers.js";

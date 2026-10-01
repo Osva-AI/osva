@@ -1,5 +1,5 @@
-import type { MemoryErrorCode } from "@osva/contracts";
-import { MEMORY_ERROR_CODES } from "@osva/contracts";
+import type { MemoryErrorCode } from "@osva-ai/contracts";
+import { MEMORY_ERROR_CODES } from "@osva-ai/contracts";
 
 export class MemoryGatewayError extends Error {
   readonly code: MemoryErrorCode;

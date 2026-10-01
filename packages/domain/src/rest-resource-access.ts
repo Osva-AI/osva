@@ -1,4 +1,4 @@
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 
 /**
  * Pass 2 REST invariant: foreign-workspace resources are not found (404), while

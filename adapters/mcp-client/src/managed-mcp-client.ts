@@ -9,11 +9,11 @@ import type {
   McpToolInvokeRequest,
   McpToolInvokeResult,
   SecretResolver,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   isStdioTransportConfig,
   isStreamableHttpTransportConfig,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   OutboundNetworkPolicyError,
   type PinnedOutboundFetch,

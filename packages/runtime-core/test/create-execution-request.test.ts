@@ -5,7 +5,7 @@ import type {
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   AgentVersion,
   DomainInvariantError,
@@ -135,7 +135,7 @@ describe("createExecutionRequest", () => {
   });
 
   it("keeps frozen knowledge bindings when AgentVersion manifest changes later", () => {
-    const indexA = "ki-a" as import("@osva/contracts").KnowledgeIndexId;
+    const indexA = "ki-a" as import("@osva-ai/contracts").KnowledgeIndexId;
     const run = createRun();
     const frozen = createExecutionRequest({
       run: Run.rehydrate({

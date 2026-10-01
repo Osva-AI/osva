@@ -1,4 +1,4 @@
-import type { ExecutionRequest } from "@osva/contracts";
+import type { ExecutionRequest } from "@osva-ai/contracts";
 
 import { deepFreeze } from "./json.js";
 import type { TrustedAgentContext } from "./protocol.js";

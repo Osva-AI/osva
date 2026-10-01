@@ -74,7 +74,7 @@ import {
 } from "./json.js";
 import { resolveRequestId } from "./security-request-context.js";
 import { sendV1Error } from "./v1-api-error.js";
-import { PUBLIC_API_ERROR_CODES } from "@osva/contracts";
+import { PUBLIC_API_ERROR_CODES } from "@osva-ai/contracts";
 import { emitSecurityEvent, SECURITY_EVENT_NAMES } from "@osva/observability";
 
 export function sendHttpError(response: ServerResponse, error: unknown): void {

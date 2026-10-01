@@ -1,4 +1,4 @@
-import type { AgentManifestV1, ToolVersionId } from "@osva/contracts";
+import type { AgentManifestV1, ToolVersionId } from "@osva-ai/contracts";
 
 export function toolVersionBindingsFromManifest(
   manifest: AgentManifestV1,

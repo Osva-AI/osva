@@ -6,7 +6,7 @@ import type {
   RoleId,
   TeamId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { Assignment } from "../assignment.js";
 import type { Goal } from "../goal.js";

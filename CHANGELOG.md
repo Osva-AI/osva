@@ -35,7 +35,7 @@ OSS 1.0 Community Edition baseline. Release implementation and release acceptanc
 
 ### MCP / connectors
 
-- MCP client in ToolGateway, streamable HTTP MCP server process, Host header validation, connector SDK (`@osva/connector-sdk`).
+- MCP client in ToolGateway, streamable HTTP MCP server process, Host header validation, connector SDK (`@osva-ai/connector-sdk`).
 
 ### API / security
 
@@ -43,7 +43,7 @@ OSS 1.0 Community Edition baseline. Release implementation and release acceptanc
 
 ### SDKs / CLI
 
-- Public npm packages: `@osva/contracts`, `@osva/runtime-protocol`, `@osva/sdk`, `@osva/cli`, `@osva/connector-sdk` at **1.0.0**.
+- Public npm packages: `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk` at **1.0.0**.
 - Python `osva-sdk` **1.0.0** with `OSVAClient`.
 
 ### Deployment

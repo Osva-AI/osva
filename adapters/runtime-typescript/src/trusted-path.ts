@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { isRelativeTrustedEntrypoint } from "@osva/contracts";
+import { isRelativeTrustedEntrypoint } from "@osva-ai/contracts";
 
 import { RuntimeErrorCode } from "./constants.js";
 

@@ -1,4 +1,4 @@
-import type { TeamId } from "@osva/contracts";
+import type { TeamId } from "@osva-ai/contracts";
 import {
   addTeamMembershipRequestSchema,
   createTeamRequestSchema,
@@ -6,7 +6,7 @@ import {
   teamMembershipListResourceSchema,
   teamResourceSchema,
   updateTeamRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

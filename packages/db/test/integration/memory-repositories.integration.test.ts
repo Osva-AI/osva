@@ -1,4 +1,4 @@
-import type { MemoryNamespaceId, WorkspaceId } from "@osva/contracts";
+import type { MemoryNamespaceId, WorkspaceId } from "@osva-ai/contracts";
 import {
   DuplicateMemoryNamespaceKeyError,
   MEMORY_RECORD_INITIAL_REVISION,

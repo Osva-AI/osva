@@ -1,4 +1,4 @@
-import type { ExecutionRequest, RuntimeAdapter } from "@osva/contracts";
+import type { ExecutionRequest, RuntimeAdapter } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { FakeRuntimeAdapter } from "../src/fake-runtime-adapter.js";

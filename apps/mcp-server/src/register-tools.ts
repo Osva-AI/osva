@@ -1,10 +1,10 @@
-import { OSVA_MCP_TOOL_NAMES, type McpPrincipal } from "@osva/contracts";
+import { OSVA_MCP_TOOL_NAMES, type McpPrincipal } from "@osva-ai/contracts";
 import {
   osvaMcpAgentRunV1InputSchema,
   osvaMcpRunGetV1InputSchema,
   osvaMcpWorkflowRunGetV1InputSchema,
   osvaMcpWorkflowRunV1InputSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { fromJsonSchema } from "@modelcontextprotocol/server";
 import {
@@ -13,7 +13,7 @@ import {
   resolveInstrumentation,
   type OsvaInstrumentation,
 } from "@osva/observability";
-import { OsvaApiError } from "@osva/sdk";
+import { OsvaApiError } from "@osva-ai/sdk";
 
 import type { OsvaClientFactory } from "./osva-client.js";
 import { invalidInput, McpServerError, notFound } from "./errors.js";
@@ -157,7 +157,8 @@ export function registerOsvaMcpTools(
 
             const created = await client.workflowRuns.create({
               workflowVersionId: parsed.data.workflowVersionId,
-              input: parsed.data.input as import("@osva/contracts").JsonValue,
+              input: parsed.data
+                .input as import("@osva-ai/contracts").JsonValue,
             });
 
             span.setAttributes({

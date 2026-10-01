@@ -1,6 +1,6 @@
 /**
  * Persisted Stage 0 state values. These must stay identical to
- * `RUN_STATES` and `RUN_ATTEMPT_STATES` in `@osva/contracts`.
+ * `RUN_STATES` and `RUN_ATTEMPT_STATES` in `@osva-ai/contracts`.
  *
  * They are duplicated here so Drizzle Kit can load the schema without
  * resolving workspace package exports.

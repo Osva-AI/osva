@@ -2,7 +2,7 @@ import type {
   ExecutionRequest,
   RunAttemptState,
   RunState,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   FakeRuntimeAdapter,
   MemoryAgentRepository,

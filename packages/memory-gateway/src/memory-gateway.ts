@@ -7,8 +7,8 @@ import type {
   MemoryListResult,
   MemoryRecordView,
   MemorySetRequest,
-} from "@osva/contracts";
-import { isCanonicalJsonValue, MEMORY_ERROR_CODES } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { isCanonicalJsonValue, MEMORY_ERROR_CODES } from "@osva-ai/contracts";
 import {
   MemoryNamespaceNotFoundError,
   MemoryRecordConflictError,

@@ -1,4 +1,4 @@
-import type { ModelTextMessage } from "@osva/contracts";
+import type { ModelTextMessage } from "@osva-ai/contracts";
 
 import type { ProviderGenerateTextResult } from "./usage.js";
 

@@ -1,8 +1,8 @@
-import type { KnowledgeIndexId, KnowledgeSourceId } from "@osva/contracts";
+import type { KnowledgeIndexId, KnowledgeSourceId } from "@osva-ai/contracts";
 import {
   createKnowledgeIndexRequestSchema,
   knowledgeIndexResourceSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

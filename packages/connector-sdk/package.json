@@ -1,5 +1,5 @@
 {
-  "name": "@osva/connector-sdk",
+  "name": "@osva-ai/connector-sdk",
   "version": "1.0.0",
   "description": "Build OSVA Connector Profile V1 compatible MCP connectors",
   "license": "Apache-2.0",
@@ -32,7 +32,7 @@
   "dependencies": {
     "@modelcontextprotocol/node": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

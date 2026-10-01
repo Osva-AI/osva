@@ -3,7 +3,7 @@ import {
   TERMINAL_RUN_STATES,
   type RunState,
   type TerminalRunState,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { InvalidRunTransitionError } from "./errors.js";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ApiKeyId, WorkspaceId } from "@osva/contracts";
+import type { ApiKeyId, WorkspaceId } from "@osva-ai/contracts";
 
 import type { AuthenticatedMcpIdentity } from "../src/auth.js";
 import {

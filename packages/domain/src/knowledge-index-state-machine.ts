@@ -1,7 +1,7 @@
 import {
   KNOWLEDGE_INDEX_STATES,
   type KnowledgeIndexState,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { InvalidKnowledgeIndexTransitionError } from "./errors.js";
 

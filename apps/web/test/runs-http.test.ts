@@ -1,4 +1,4 @@
-import type { AgentId, WorkspaceId } from "@osva/contracts";
+import type { AgentId, WorkspaceId } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { encodeRunListCursor } from "../src/run-cursor.js";

@@ -1,4 +1,4 @@
-import type { SecretReference, SecretResolver } from "@osva/contracts";
+import type { SecretReference, SecretResolver } from "@osva-ai/contracts";
 
 import { SecretNotFoundError } from "./errors.js";
 

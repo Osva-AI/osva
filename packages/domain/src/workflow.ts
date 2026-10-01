@@ -1,4 +1,4 @@
-import type { WorkflowId, WorkspaceId } from "@osva/contracts";
+import type { WorkflowId, WorkspaceId } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, requireNonEmptyString } from "./internals.js";

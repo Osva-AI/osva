@@ -3,7 +3,7 @@ import type {
   GenerateTextInput,
   JsonObject,
   JsonValue,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   RUNTIME_CAPABILITY_PATHS,
   RUNTIME_PROTOCOL_ERROR_CODES,
@@ -25,7 +25,7 @@ import {
   runtimeToolInvokeResponseSchema,
   runtimeKnowledgeSearchRequestSchema,
   runtimeKnowledgeSearchResponseSchema,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import { CapabilityCredential } from "./capability-credential.js";
 import { RuntimeCapabilityError } from "./errors.js";

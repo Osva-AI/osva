@@ -4,8 +4,8 @@ import type {
   WorkflowNodeRunId,
   WorkflowRunId,
   WorkspaceId,
-} from "@osva/contracts";
-import { APPROVAL_DECISION_COMMENT_MAX_LENGTH } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { APPROVAL_DECISION_COMMENT_MAX_LENGTH } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, requireBoundedNonEmptyString } from "./internals.js";

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { isCanonicalJsonValue } from "@osva/contracts";
+import { isCanonicalJsonValue } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { sha256IntegrityOf } from "../src/integrity.js";
@@ -659,7 +659,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
       const result = await adapter.execute(
         createTrustedRequest({
           runAttemptId:
-            "run-attempt-fixed" as import("@osva/contracts").RunAttemptId,
+            "run-attempt-fixed" as import("@osva-ai/contracts").RunAttemptId,
           runtime: {
             type: "TRUSTED_TYPESCRIPT",
             entrypoint: "tool-idempotency-agent.ts",

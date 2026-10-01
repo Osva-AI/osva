@@ -1,11 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { MemoryNamespaceId } from "@osva/contracts";
+import type { MemoryNamespaceId } from "@osva-ai/contracts";
 import {
   createMemoryNamespaceRequestSchema,
   memoryNamespaceListResourceSchema,
   memoryNamespaceResourceSchema,
   memoryRecordListResourceSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import {
   DEFAULT_MEMORY_RECORD_LIST_LIMIT,
   MAX_MEMORY_RECORD_LIST_LIMIT,

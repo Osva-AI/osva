@@ -127,7 +127,7 @@ pnpm dev:web
 pnpm dev:worker
 ```
 
-`pnpm db:migrate` runs `turbo run build --filter=@osva/db` so `@osva/contracts`,
+`pnpm db:migrate` runs `turbo run build --filter=@osva/db` so `@osva-ai/contracts`,
 `@osva/domain`, and `@osva/db` are built in dependency order, then applies
 committed SQL from `packages/db/drizzle/` using `OSVA_DATABASE_URL`.
 `drizzle-kit push` is not the normal workflow. Generating new migrations

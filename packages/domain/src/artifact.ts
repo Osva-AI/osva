@@ -1,4 +1,4 @@
-import type { JsonObject } from "@osva/contracts";
+import type { JsonObject } from "@osva-ai/contracts";
 import {
   ARTIFACT_IDEMPOTENCY_KEY_MAX_LENGTH,
   ARTIFACT_MEDIA_TYPE_MAX_LENGTH,
@@ -8,8 +8,8 @@ import {
   type RunAttemptId,
   type RunId,
   type WorkspaceId,
-} from "@osva/contracts";
-import { isSha256IntegrityDigest } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { isSha256IntegrityDigest } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import {

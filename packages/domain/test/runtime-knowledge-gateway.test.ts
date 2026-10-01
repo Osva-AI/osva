@@ -1,4 +1,4 @@
-import type { ExecutionRequest, KnowledgeIndexId } from "@osva/contracts";
+import type { ExecutionRequest, KnowledgeIndexId } from "@osva-ai/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { KnowledgeBindingNotFoundError } from "../src/errors.js";

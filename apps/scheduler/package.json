@@ -15,7 +15,7 @@
   "dependencies": {
     "@osva/adapters-bullmq": "workspace:*",
     "@osva/adapters-opentelemetry": "workspace:*",
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva/orchestration": "workspace:*"

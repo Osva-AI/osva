@@ -1,4 +1,4 @@
-import type { ModelProfileVersionId } from "@osva/contracts";
+import type { ModelProfileVersionId } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { EffectiveRunBindings } from "../src/effective-run-bindings.js";

@@ -8,7 +8,7 @@ import {
   runtimeModelGenerateTextResponseSchema,
   runtimeToolInvokeRequestSchema,
   runtimeToolInvokeResponseSchema,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import { RUNTIME_PROTOCOL_FIXTURES_DIR } from "./fixtures-path.js";
 

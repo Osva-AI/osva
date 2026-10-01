@@ -1,8 +1,8 @@
 import type {
   WorkflowBranchEqualsValue,
   WorkflowDefinitionBranchNodeV2,
-} from "@osva/contracts";
-import { resolveJsonPointer } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { resolveJsonPointer } from "@osva-ai/contracts";
 
 export function selectBranchTarget(
   node: WorkflowDefinitionBranchNodeV2,

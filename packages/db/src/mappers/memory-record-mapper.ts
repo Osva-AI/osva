@@ -1,4 +1,4 @@
-import type { JsonValue, MemoryNamespaceId } from "@osva/contracts";
+import type { JsonValue, MemoryNamespaceId } from "@osva-ai/contracts";
 import { MemoryRecord } from "@osva/domain";
 
 import type { memoryRecords } from "../schema/memory-records.js";

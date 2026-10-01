@@ -4,8 +4,8 @@ import type {
   ToolGateway as ToolGatewayPort,
   ToolInvokeRequest,
   ToolPolicy,
-} from "@osva/contracts";
-import { isCanonicalJsonValue } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { isCanonicalJsonValue } from "@osva-ai/contracts";
 import type { ConnectorRepository, ToolRepository } from "@osva/domain";
 
 import { ToolGatewayError, toolGatewayError } from "./errors.js";
@@ -99,7 +99,7 @@ export class ToolGateway implements ToolGatewayPort {
     }
 
     const catalogEntry = getInternalToolCatalogEntry(
-      version.implementation as import("@osva/contracts").InternalToolImplementationId,
+      version.implementation as import("@osva-ai/contracts").InternalToolImplementationId,
     );
     if (catalogEntry === undefined) {
       throw toolGatewayError(
@@ -109,7 +109,7 @@ export class ToolGateway implements ToolGatewayPort {
     }
 
     const implementation = resolveInternalToolImplementation(
-      version.implementation as import("@osva/contracts").InternalToolImplementationId,
+      version.implementation as import("@osva-ai/contracts").InternalToolImplementationId,
     );
     if (implementation === undefined) {
       throw toolGatewayError(

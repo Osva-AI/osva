@@ -72,7 +72,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** HTTP, BullMQ, provider SDKs, SQL.
 
-**Depends on:** `@osva/contracts`.
+**Depends on:** `@osva-ai/contracts`.
 
 ### packages/orchestration
 
@@ -82,7 +82,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Infrastructure adapters, HTTP routing.
 
-**Depends on:** `@osva/domain`, `@osva/contracts`, `@osva/runtime-core` (execution request).
+**Depends on:** `@osva/domain`, `@osva-ai/contracts`, `@osva/runtime-core` (execution request).
 
 ### packages/db
 
@@ -92,7 +92,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Domain rules, queue semantics.
 
-**Depends on:** `@osva/domain` ports, `@osva/contracts` IDs.
+**Depends on:** `@osva/domain` ports, `@osva-ai/contracts` IDs.
 
 ### packages/model-gateway
 
@@ -102,7 +102,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Provider SDK wiring (adapters), Run lifecycle.
 
-**Depends on:** `@osva/contracts`, `@osva/domain` (ModelProfileRepository), provider adapters via `ModelProviderAdapter` interface.
+**Depends on:** `@osva-ai/contracts`, `@osva/domain` (ModelProfileRepository), provider adapters via `ModelProviderAdapter` interface.
 
 ### packages/tool-gateway
 
@@ -112,7 +112,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** MCP transport (adapter), connector persistence, Run lifecycle.
 
-**Depends on:** `@osva/contracts`, `@osva/domain`, optional `@osva/adapters-mcp-client` at composition root.
+**Depends on:** `@osva-ai/contracts`, `@osva/domain`, optional `@osva/adapters-mcp-client` at composition root.
 
 ### packages/memory-gateway
 
@@ -122,7 +122,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Namespace CRUD API (domain/web), PostgreSQL schema.
 
-**Depends on:** `@osva/contracts`, `@osva/domain` (MemoryNamespaceRepository).
+**Depends on:** `@osva-ai/contracts`, `@osva/domain` (MemoryNamespaceRepository).
 
 ### packages/runtime-core
 
@@ -132,7 +132,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Concrete runtime implementations.
 
-**Depends on:** `@osva/contracts`, `@osva/domain`.
+**Depends on:** `@osva-ai/contracts`, `@osva/domain`.
 
 ### packages/runtime-protocol
 
@@ -142,7 +142,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** HTTP server, gateway logic.
 
-**Depends on:** `@osva/contracts`.
+**Depends on:** `@osva-ai/contracts`.
 
 ### packages/observability
 
@@ -152,11 +152,11 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Run state machines, HTTP observability API.
 
-**Depends on:** Gateways, `@osva/domain`, `@osva/contracts`.
+**Depends on:** Gateways, `@osva/domain`, `@osva-ai/contracts`.
 
 ### packages/sdk
 
-**Purpose:** TypeScript public SDK (`OsvaClient`) and runtime helpers (`@osva/sdk/runtime`).
+**Purpose:** TypeScript public SDK (`OsvaClient`) and runtime helpers (`@osva-ai/sdk/runtime`).
 
 **Owns:** HTTP client resources mirroring `/v1` API, remote runtime handler utilities.
 
@@ -172,7 +172,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Parallel HTTP client implementation.
 
-**Depends on:** `@osva/sdk`.
+**Depends on:** `@osva-ai/sdk`.
 
 ## adapters/
 
@@ -184,7 +184,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** RunAttempt creation, lifecycle transitions.
 
-**Depends on:** `@osva/contracts`.
+**Depends on:** `@osva-ai/contracts`.
 
 ### adapters/runtime-typescript
 
@@ -194,7 +194,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Gateway implementations.
 
-**Depends on:** `@osva/contracts`, `@osva/runtime-protocol`.
+**Depends on:** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`.
 
 ### adapters/runtime-http
 
@@ -204,7 +204,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Run lifecycle, provider credentials passed to remote runtime.
 
-**Depends on:** `@osva/contracts`, `@osva/runtime-protocol`, `@osva/runtime-core`.
+**Depends on:** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva/runtime-core`.
 
 ### adapters/runtime-container
 
@@ -214,7 +214,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Run lifecycle, gateway implementations, Docker network productization.
 
-**Depends on:** `@osva/contracts`, `@osva/runtime-protocol`, `@osva/runtime-core`, `@osva/adapters-runtime-http` (capability token issuance).
+**Depends on:** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva/runtime-core`, `@osva/adapters-runtime-http` (capability token issuance).
 
 ### adapters/model-openai / model-anthropic / model-gemini
 
@@ -234,7 +234,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** ToolGateway policy, ToolVersion snapshots.
 
-**Depends on:** `@osva/contracts` MCP types.
+**Depends on:** `@osva-ai/contracts` MCP types.
 
 ### adapters/opentelemetry
 
@@ -264,7 +264,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Does not own:** Production persistence.
 
-**Depends on:** `@osva/domain`, `@osva/contracts`.
+**Depends on:** `@osva/domain`, `@osva-ai/contracts`.
 
 ## sdks/ and examples/
 

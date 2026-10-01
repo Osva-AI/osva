@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import { BullMqJobQueue, toBullMqJobId } from "@osva/adapters-bullmq";
 import {
   createDatabase,

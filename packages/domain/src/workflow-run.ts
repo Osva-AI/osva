@@ -4,7 +4,7 @@ import type {
   WorkflowRunState,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, copyJsonValue, freezeClone } from "./internals.js";

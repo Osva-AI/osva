@@ -1,4 +1,4 @@
-import type { TelemetryEvent, TelemetrySink } from "@osva/contracts";
+import type { TelemetryEvent, TelemetrySink } from "@osva-ai/contracts";
 
 import { freezeClone } from "./clone.js";
 

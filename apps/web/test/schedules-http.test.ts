@@ -1,4 +1,4 @@
-import type { AgentId, WorkspaceId } from "@osva/contracts";
+import type { AgentId, WorkspaceId } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
@@ -107,7 +107,7 @@ describe("Schedule HTTP API", () => {
     await schedules.materializeDueOccurrences(
       new Date("2026-01-15T12:01:00.000Z"),
       10,
-      () => "occ-1" as import("@osva/contracts").ScheduleOccurrenceId,
+      () => "occ-1" as import("@osva-ai/contracts").ScheduleOccurrenceId,
     );
 
     const listed = await fetchJson(

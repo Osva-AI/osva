@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 
-import type { ArtifactId } from "@osva/contracts";
+import type { ArtifactId } from "@osva-ai/contracts";
 import {
   ArtifactBlobUnavailableError,
   ArtifactDigestMismatchError,

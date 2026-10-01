@@ -4,8 +4,11 @@ import type {
   JsonValue,
   RunAttemptId,
   RunId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS, isCanonicalJsonValue } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import {
+  AUTHORIZATION_ACTIONS,
+  isCanonicalJsonValue,
+} from "@osva-ai/contracts";
 
 import { Evaluation } from "./evaluation.js";
 import {
@@ -184,7 +187,7 @@ export function createEvaluationApplication(
 
 async function loadSucceededAttempt(
   runs: RunRepository,
-  workspaceId: import("@osva/contracts").WorkspaceId,
+  workspaceId: import("@osva-ai/contracts").WorkspaceId,
   runId: RunId,
   runAttemptId: RunAttemptId,
 ) {
@@ -211,7 +214,7 @@ async function loadSucceededAttempt(
 
 async function assertRunAttemptOwnership(
   runs: RunRepository,
-  workspaceId: import("@osva/contracts").WorkspaceId,
+  workspaceId: import("@osva-ai/contracts").WorkspaceId,
   runId: RunId,
   runAttemptId: RunAttemptId,
 ): Promise<void> {

@@ -2,7 +2,7 @@ import type {
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { EvaluationCase } from "./evaluation-case.js";
 import { DomainInvariantError } from "./errors.js";

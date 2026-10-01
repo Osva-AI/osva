@@ -1,4 +1,4 @@
-import type { ExecutionRequest } from "@osva/contracts";
+import type { ExecutionRequest } from "@osva-ai/contracts";
 import {
   FakeRuntimeAdapter,
   MemoryAgentRepository,

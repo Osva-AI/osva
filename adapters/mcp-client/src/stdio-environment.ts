@@ -1,5 +1,5 @@
-import type { SecretResolver, StdioTransportConfig } from "@osva/contracts";
-import { validateStdioTransportEnvironment } from "@osva/contracts";
+import type { SecretResolver, StdioTransportConfig } from "@osva-ai/contracts";
+import { validateStdioTransportEnvironment } from "@osva-ai/contracts";
 
 import { mcpAdapterError } from "./errors.js";
 

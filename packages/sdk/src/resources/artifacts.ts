@@ -1,9 +1,9 @@
-import type { ArtifactId } from "@osva/contracts";
+import type { ArtifactId } from "@osva-ai/contracts";
 import {
   artifactListResourceSchema,
   artifactResourceSchema,
   listArtifactsQuerySchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { DownloadResult, OsvaHttpClient } from "../http-client.js";

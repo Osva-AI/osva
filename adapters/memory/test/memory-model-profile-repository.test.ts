@@ -1,4 +1,4 @@
-import type { ModelProfileId, ModelProfileVersionId } from "@osva/contracts";
+import type { ModelProfileId, ModelProfileVersionId } from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   DuplicateModelProfileKeyError,

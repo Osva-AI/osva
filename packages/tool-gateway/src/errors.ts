@@ -1,5 +1,5 @@
-import type { ToolErrorCode } from "@osva/contracts";
-import { TOOL_ERROR_CODES } from "@osva/contracts";
+import type { ToolErrorCode } from "@osva-ai/contracts";
+import { TOOL_ERROR_CODES } from "@osva-ai/contracts";
 
 export class ToolGatewayError extends Error {
   readonly code: ToolErrorCode;

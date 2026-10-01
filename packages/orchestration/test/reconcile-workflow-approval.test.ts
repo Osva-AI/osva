@@ -6,7 +6,7 @@ import type {
   WorkflowDefinitionV2,
   WorkflowNodeRunId,
   WorkflowRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   FakeRuntimeAdapter,
   MemoryAgentRepository,

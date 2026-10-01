@@ -6,7 +6,7 @@ import {
   RUNTIME_PROTOCOL_MAX_BODY_BYTES,
   RUNTIME_PROTOCOL_VERSION,
   type RuntimeExecuteResponse,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import { RuntimeProtocolError } from "./errors.js";
 import type { RuntimeDefinition, RuntimeHandler } from "./handler.js";

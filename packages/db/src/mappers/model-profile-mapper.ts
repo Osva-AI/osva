@@ -1,4 +1,4 @@
-import type { ModelProfileId, WorkspaceId } from "@osva/contracts";
+import type { ModelProfileId, WorkspaceId } from "@osva-ai/contracts";
 import { ModelProfile } from "@osva/domain";
 
 import type { modelProfiles } from "../schema/model-profiles.js";

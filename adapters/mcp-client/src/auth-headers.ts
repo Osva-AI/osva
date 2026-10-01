@@ -2,7 +2,7 @@ import type {
   ConnectorAuthConfig,
   ConnectorVersionResourceV1,
   SecretResolver,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 export async function resolveConnectorAuthHeaders(
   auth: ConnectorAuthConfig | undefined,

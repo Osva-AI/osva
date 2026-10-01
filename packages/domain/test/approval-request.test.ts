@@ -2,7 +2,7 @@ import type {
   ApprovalRequestId,
   WorkflowNodeRunId,
   WorkflowRunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { ApprovalRequest } from "../src/approval-request.js";

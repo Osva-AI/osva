@@ -1,4 +1,4 @@
-import type { WorkflowEventId } from "@osva/contracts";
+import type { WorkflowEventId } from "@osva-ai/contracts";
 
 import {
   DomainInvariantError,

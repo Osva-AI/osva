@@ -21,7 +21,7 @@ Stage 3.8 is **complete**: OSS 1.0 implementation and release acceptance verifie
 - `OSVA_CONTAINER_ENABLED` defaults to `false` in Helm (Docker Engine container runtime is not a normal Kubernetes assumption).
 - Migrations run as an explicit Job/step; applications do not auto-migrate on startup.
 - Bootstrap remains an explicit operator action.
-- Public npm surface: `@osva/contracts`, `@osva/runtime-protocol`, `@osva/sdk`, `@osva/cli`, `@osva/connector-sdk` at version **1.0.0** aligned via root `VERSION`.
+- Public npm surface: `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk` at version **1.0.0** aligned via root `VERSION`.
 
 ## Acceptance commands
 

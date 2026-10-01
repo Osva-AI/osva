@@ -7,8 +7,8 @@ import {
   Client,
   StreamableHTTPClientTransport,
 } from "@modelcontextprotocol/client";
-import type { WorkspaceId } from "@osva/contracts";
-import { OSVA_MCP_TOOL_NAMES } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
+import { OSVA_MCP_TOOL_NAMES } from "@osva-ai/contracts";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
 import {
   createDatabase,

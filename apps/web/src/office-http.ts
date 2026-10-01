@@ -5,8 +5,8 @@ import type {
   OfficeWorkerId,
   RoleId,
   TeamId,
-} from "@osva/contracts";
-import type { RunAttemptId, RunId, WorkflowRunId } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import type { RunAttemptId, RunId, WorkflowRunId } from "@osva-ai/contracts";
 import {
   addTeamMembershipRequestSchema,
   assignmentListResourceSchema,
@@ -30,7 +30,7 @@ import {
   updateOfficeWorkerRequestSchema,
   updateRoleRequestSchema,
   updateTeamRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type {
   Assignment,
   Goal,

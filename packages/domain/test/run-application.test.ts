@@ -1,4 +1,4 @@
-import type { RunAttemptId, RunId } from "@osva/contracts";
+import type { RunAttemptId, RunId } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -44,7 +44,7 @@ class FakeRunRepository implements RunRepository {
   }
 
   async findRunByWorkspaceAndId(
-    workspaceId: import("@osva/contracts").WorkspaceId,
+    workspaceId: import("@osva-ai/contracts").WorkspaceId,
     id: RunId,
   ): Promise<Run | null> {
     const run = this.runs.get(id);

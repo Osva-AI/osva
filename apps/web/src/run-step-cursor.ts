@@ -1,4 +1,4 @@
-import { runStepListCursorPayloadSchema } from "@osva/contracts/schemas";
+import { runStepListCursorPayloadSchema } from "@osva-ai/contracts/schemas";
 
 export function encodeRunStepListCursor(cursor: {
   readonly startedAt: string;

@@ -7,7 +7,7 @@ import type {
   WorkflowId,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { Agent } from "../src/agent.js";
@@ -441,7 +441,7 @@ class InMemoryWorkflowRepository implements WorkflowRepository {
 
 class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
   private readonly runs = new Map<
-    import("@osva/contracts").WorkflowRunId,
+    import("@osva-ai/contracts").WorkflowRunId,
     import("../src/workflow-run.js").WorkflowRun
   >();
 
@@ -452,14 +452,14 @@ class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
   }
 
   async findWorkflowRunById(
-    id: import("@osva/contracts").WorkflowRunId,
+    id: import("@osva-ai/contracts").WorkflowRunId,
   ): Promise<import("../src/workflow-run.js").WorkflowRun | null> {
     return this.runs.get(id) ?? null;
   }
 
   async findWorkflowRunByWorkspaceAndId(
     workspaceId: WorkspaceId,
-    id: import("@osva/contracts").WorkflowRunId,
+    id: import("@osva-ai/contracts").WorkflowRunId,
   ): Promise<import("../src/workflow-run.js").WorkflowRun | null> {
     const workflowRun = this.runs.get(id);
     return workflowRun?.workspaceId === workspaceId ? workflowRun : null;
@@ -472,7 +472,7 @@ class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
   }
 
   async transitionWorkflowRun(
-    _expectedStatus: import("@osva/contracts").WorkflowRunState,
+    _expectedStatus: import("@osva-ai/contracts").WorkflowRunState,
     next: import("../src/workflow-run.js").WorkflowRun,
   ): Promise<import("../src/workflow-run.js").WorkflowRun> {
     this.runs.set(next.id, next);

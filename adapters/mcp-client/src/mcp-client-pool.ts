@@ -6,7 +6,7 @@ import type {
   McpToolInvokeRequest,
   McpToolInvokeResult,
   SecretResolver,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   createPinnedOutboundFetch,
   type PinnedOutboundFetch,

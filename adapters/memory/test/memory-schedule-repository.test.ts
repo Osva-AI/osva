@@ -1,4 +1,8 @@
-import type { RunId, ScheduleId, ScheduleOccurrenceId } from "@osva/contracts";
+import type {
+  RunId,
+  ScheduleId,
+  ScheduleOccurrenceId,
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   Schedule,

@@ -1,4 +1,4 @@
-# @osva/runtime-protocol
+# @osva-ai/runtime-protocol
 
 Runtime Protocol V1 message types and helpers for OSVA remote runtimes.
 

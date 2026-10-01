@@ -1,4 +1,4 @@
-import type { KnowledgeIndexId, WorkspaceId } from "@osva/contracts";
+import type { KnowledgeIndexId, WorkspaceId } from "@osva-ai/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { KnowledgeIncompatibleIndexesError } from "../src/errors.js";

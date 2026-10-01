@@ -3,7 +3,7 @@ import type {
   WorkflowId,
   WorkflowVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { Workflow } from "../workflow.js";
 import type { WorkflowVersion } from "../workflow-version.js";

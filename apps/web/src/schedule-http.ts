@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { ScheduleId } from "@osva/contracts";
+import type { ScheduleId } from "@osva-ai/contracts";
 import {
   createScheduleRequestSchema,
   listScheduleOccurrencesQuerySchema,
@@ -8,7 +8,7 @@ import {
   scheduleOccurrenceListResourceSchema,
   scheduleResourceSchema,
   updateScheduleRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import {
   DEFAULT_SCHEDULE_LIST_LIMIT,
   DEFAULT_SCHEDULE_OCCURRENCE_LIST_LIMIT,

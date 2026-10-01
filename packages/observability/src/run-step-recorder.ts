@@ -16,14 +16,14 @@ import type {
   MemorySetRequest,
   RunStepId,
   ToolInvokeRequest,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
   TOOL_ERROR_CODES,
-} from "@osva/contracts";
-import type { MemoryGateway } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import type { MemoryGateway } from "@osva-ai/contracts";
 import {
   RunStep,
   estimateModelCostUsdMicros,

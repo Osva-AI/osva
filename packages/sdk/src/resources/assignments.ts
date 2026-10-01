@@ -1,10 +1,10 @@
-import type { AssignmentId } from "@osva/contracts";
+import type { AssignmentId } from "@osva-ai/contracts";
 import {
   assignmentListResourceSchema,
   assignmentResourceSchema,
   createAssignmentRequestSchema,
   updateAssignmentRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

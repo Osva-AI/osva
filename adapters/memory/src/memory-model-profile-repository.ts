@@ -2,7 +2,7 @@ import type {
   ModelProfileId,
   ModelProfileVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   DuplicateModelProfileKeyError,

@@ -1,4 +1,4 @@
-import type { ModelProfileVersionPricing } from "@osva/contracts";
+import type { ModelProfileVersionPricing } from "@osva-ai/contracts";
 
 export interface ModelTokenUsageForCost {
   readonly inputTokens: number;

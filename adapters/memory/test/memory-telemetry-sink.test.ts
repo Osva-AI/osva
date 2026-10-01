@@ -1,4 +1,4 @@
-import type { TelemetryEvent, TelemetrySink } from "@osva/contracts";
+import type { TelemetryEvent, TelemetrySink } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { MemoryTelemetrySink } from "../src/memory-telemetry-sink.js";

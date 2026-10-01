@@ -3,8 +3,8 @@ import type {
   RunId,
   RunStepId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import {
   DomainInvariantError,

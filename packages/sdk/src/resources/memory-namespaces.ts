@@ -1,11 +1,11 @@
-import type { MemoryNamespaceId } from "@osva/contracts";
+import type { MemoryNamespaceId } from "@osva-ai/contracts";
 import {
   createMemoryNamespaceRequestSchema,
   listMemoryRecordsQuerySchema,
   memoryNamespaceListResourceSchema,
   memoryNamespaceResourceSchema,
   memoryRecordListResourceSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
 
 import type { OsvaHttpClient } from "../http-client.js";

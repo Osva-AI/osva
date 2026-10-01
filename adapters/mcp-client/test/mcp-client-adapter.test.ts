@@ -8,7 +8,7 @@ import type {
   McpConnectorExecutionConfig,
   SecretReference,
   SecretResolver,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { createPinnedOutboundFetch } from "@osva/outbound-network";
 
 import { mapMcpFailure } from "../src/error-mapping.js";

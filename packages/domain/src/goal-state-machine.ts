@@ -1,4 +1,4 @@
-import { GOAL_STATES, type GoalState } from "@osva/contracts";
+import { GOAL_STATES, type GoalState } from "@osva-ai/contracts";
 
 import { InvalidGoalTransitionError } from "./errors.js";
 

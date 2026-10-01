@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import {
   WORKFLOW_EVENT_CORRELATION_KEY_MAX_LENGTH,
   WORKFLOW_EVENT_HTTP_REQUEST_MAX_BYTES,
   WORKFLOW_EVENT_IDEMPOTENCY_KEY_MAX_LENGTH,
   WORKFLOW_EVENT_SOURCE_MAX_LENGTH,
   WORKFLOW_EVENT_TYPE_MAX_LENGTH,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
 import {

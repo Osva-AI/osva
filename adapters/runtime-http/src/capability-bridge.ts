@@ -4,14 +4,14 @@ import type {
   MemoryAuthorization,
   RunAttemptId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   ARTIFACT_ERROR_CODES,
   KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
   TOOL_ERROR_CODES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import type {
   AgentRepository,
   RunRepository,
@@ -37,7 +37,7 @@ import {
   runtimeModelGenerateTextRequestSchema,
   runtimeArtifactGetRequestSchema,
   runtimeToolInvokeRequestSchema,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 import { mapArtifactDomainError } from "./artifact-errors.js";
 

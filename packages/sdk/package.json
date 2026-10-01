@@ -1,5 +1,5 @@
 {
-  "name": "@osva/sdk",
+  "name": "@osva-ai/sdk",
   "version": "1.0.0",
   "description": "Official OSVA SDK for TypeScript and JavaScript",
   "license": "Apache-2.0",
@@ -34,8 +34,8 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@osva/contracts": "workspace:*",
-    "@osva/runtime-protocol": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
+    "@osva-ai/runtime-protocol": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

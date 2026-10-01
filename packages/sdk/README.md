@@ -1,4 +1,4 @@
-# @osva/sdk
+# @osva-ai/sdk
 
 Official TypeScript and JavaScript SDK for OSVA.
 
@@ -7,7 +7,7 @@ Requires Node.js 24 or newer.
 ## Installation
 
 ```bash
-npm install @osva/sdk@1.0.0
+npm install @osva-ai/sdk@1.0.0
 ```
 
 ## Usage
@@ -22,7 +22,7 @@ export OSVA_API_KEY=osva_ak_...
 Example:
 
 ```js
-import { OsvaClient } from "@osva/sdk";
+import { OsvaClient } from "@osva-ai/sdk";
 
 const baseUrl = process.env.OSVA_BASE_URL;
 const apiKey = process.env.OSVA_API_KEY;

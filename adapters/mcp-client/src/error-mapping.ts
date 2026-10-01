@@ -1,4 +1,4 @@
-import type { ToolErrorCode } from "@osva/contracts";
+import type { ToolErrorCode } from "@osva-ai/contracts";
 import {
   SdkError,
   SdkErrorCode,

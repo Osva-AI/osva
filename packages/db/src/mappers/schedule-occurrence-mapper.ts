@@ -6,7 +6,7 @@ import type {
   ScheduleId,
   ScheduleOccurrenceId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { ScheduleOccurrence } from "@osva/domain";
 
 import type { scheduleOccurrences } from "../schema/schedule-occurrences.js";

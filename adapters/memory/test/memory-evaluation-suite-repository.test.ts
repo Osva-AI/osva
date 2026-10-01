@@ -2,7 +2,7 @@ import type {
   EvaluationCaseId,
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   DuplicateEvaluationSuiteKeyError,

@@ -2,7 +2,7 @@ import type {
   ExecutionRequest,
   KnowledgeHitV1,
   KnowledgeSearchRequestV1,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { KnowledgeBindingNotFoundError } from "./errors.js";
 import type { KnowledgeRetriever } from "./knowledge-retriever.js";
 

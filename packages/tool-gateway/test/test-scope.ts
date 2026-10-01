@@ -2,8 +2,8 @@ import type {
   ApiKeyId,
   CommunityEditionRole,
   WorkspaceId,
-} from "@osva/contracts";
-import { COMMUNITY_EDITION_ROLES } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { COMMUNITY_EDITION_ROLES } from "@osva-ai/contracts";
 import type { ControlPlaneScope } from "@osva/domain";
 
 export function fakeControlPlaneScope(

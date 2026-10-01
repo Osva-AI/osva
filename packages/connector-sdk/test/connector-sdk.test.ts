@@ -7,7 +7,7 @@ import {
 } from "../src/index.js";
 import { toMcpToolError, toMcpToolResult } from "../src/result.js";
 
-describe("@osva/connector-sdk", () => {
+describe("@osva-ai/connector-sdk", () => {
   it("defines connector metadata and tools", () => {
     const connector = defineConnector({
       key: "echo",

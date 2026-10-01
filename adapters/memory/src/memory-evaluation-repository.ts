@@ -1,4 +1,4 @@
-import type { EvaluationId, RunAttemptId } from "@osva/contracts";
+import type { EvaluationId, RunAttemptId } from "@osva-ai/contracts";
 import { DomainInvariantError, type Evaluation } from "@osva/domain";
 import type { EvaluationRepository } from "@osva/domain";
 

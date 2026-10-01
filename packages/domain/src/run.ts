@@ -4,8 +4,8 @@ import type {
   EvaluationRunId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
-import type { RunState } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import type { RunState } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { EffectiveRunBindings } from "./effective-run-bindings.js";

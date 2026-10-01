@@ -8,7 +8,7 @@ import type {
   RunId,
   RunStepId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { EffectiveRunBindings } from "../src/effective-run-bindings.js";
 

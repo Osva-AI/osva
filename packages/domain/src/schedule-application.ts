@@ -4,8 +4,8 @@ import type {
   JsonValue,
   ScheduleId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import {
   AgentNotFoundError,

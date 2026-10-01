@@ -10,11 +10,11 @@ import type {
   ToolId,
   ToolVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   AUTHORIZATION_ACTIONS,
   MCP_TOOL_IMPLEMENTATION,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { Connector } from "./connector.js";
 import {

@@ -1,4 +1,8 @@
-import type { JsonValue, WorkflowEventId, WorkspaceId } from "@osva/contracts";
+import type {
+  JsonValue,
+  WorkflowEventId,
+  WorkspaceId,
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

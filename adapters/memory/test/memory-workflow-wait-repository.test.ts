@@ -1,4 +1,4 @@
-import type { WorkflowNodeRunId, WorkflowRunId } from "@osva/contracts";
+import type { WorkflowNodeRunId, WorkflowRunId } from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   WorkflowWaitNotFoundError,

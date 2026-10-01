@@ -6,7 +6,7 @@ import type {
   RunStepKind,
   RunStepStatus,
   ToolVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { RunStep } from "@osva/domain";
 
 import type { runSteps } from "../schema/run-steps.js";

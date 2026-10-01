@@ -2,7 +2,7 @@ import type {
   ConnectorId,
   ConnectorVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   ConnectorNotFoundError,
   ConnectorVersion,

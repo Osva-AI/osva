@@ -6,7 +6,7 @@ import {
   RUN_STATES,
   WORKFLOW_NODE_RUN_STATES,
   WORKFLOW_RUN_STATES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -20,19 +20,19 @@ import {
 } from "../src/schema/states.js";
 
 describe("persisted Stage 0 state columns", () => {
-  it("keeps run status CHECK values identical to @osva/contracts", () => {
+  it("keeps run status CHECK values identical to @osva-ai/contracts", () => {
     expect([...PERSISTED_RUN_STATES]).toEqual([...RUN_STATES]);
   });
 
-  it("keeps run attempt status CHECK values identical to @osva/contracts", () => {
+  it("keeps run attempt status CHECK values identical to @osva-ai/contracts", () => {
     expect([...PERSISTED_RUN_ATTEMPT_STATES]).toEqual([...RUN_ATTEMPT_STATES]);
   });
 
-  it("keeps model provider CHECK values identical to @osva/contracts", () => {
+  it("keeps model provider CHECK values identical to @osva-ai/contracts", () => {
     expect([...PERSISTED_MODEL_PROVIDERS]).toEqual([...MODEL_PROVIDERS]);
   });
 
-  it("keeps workflow and approval status CHECK values identical to @osva/contracts", () => {
+  it("keeps workflow and approval status CHECK values identical to @osva-ai/contracts", () => {
     expect([...PERSISTED_WORKFLOW_RUN_STATES]).toEqual([
       ...WORKFLOW_RUN_STATES,
     ]);
@@ -44,7 +44,7 @@ describe("persisted Stage 0 state columns", () => {
     ]);
   });
 
-  it("keeps Community Edition API key role CHECK values identical to @osva/contracts", () => {
+  it("keeps Community Edition API key role CHECK values identical to @osva-ai/contracts", () => {
     expect([...PERSISTED_COMMUNITY_EDITION_ROLES]).toEqual([
       ...Object.values(COMMUNITY_EDITION_ROLES),
     ]);

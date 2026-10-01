@@ -1,4 +1,4 @@
-import type { JsonObject, JsonValue } from "@osva/contracts";
+import type { JsonObject, JsonValue } from "@osva-ai/contracts";
 
 import { KnowledgeInvalidFilterError } from "./errors.js";
 

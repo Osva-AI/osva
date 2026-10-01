@@ -82,14 +82,14 @@ ToolGateway before any MCP network/process invocation.
 - Authentication: environment-configured bearer tokens mapped to a workspace
 - Tools: agent run, run get, workflow run, workflow run get (explicit version IDs)
 - Resources: read-only `osva://v1/...` listings and item views filtered by workspace
-- Implementation path: MCP server → `@osva/sdk` → `apps/web` (no DB/BullMQ in MCP server)
+- Implementation path: MCP server → `@osva-ai/sdk` → `apps/web` (no DB/BullMQ in MCP server)
 
 See `docs/implementation/STAGE-3-6-MCP-SERVER-CONNECTOR-SDK.md`.
 
 ## Connector Profile V1 + TypeScript SDK (Stage 3.6)
 
 - Profile: `docs/contracts/CONNECTOR_PROFILE_V1.md`
-- SDK: `@osva/connector-sdk` (`defineConnector`, `defineTool`, HTTP + stdio serving)
+- SDK: `@osva-ai/connector-sdk` (`defineConnector`, `defineTool`, HTTP + stdio serving)
 - Example: `examples/echo-connector`
 
 stdio transport supports `secretEnvironment` SecretReferences (resolved at process start).

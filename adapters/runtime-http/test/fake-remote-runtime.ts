@@ -4,7 +4,7 @@ import {
   RUNTIME_CAPABILITY_PATHS,
   RUNTIME_PROTOCOL_VERSION,
   type RuntimeExecuteRequest,
-} from "@osva/runtime-protocol";
+} from "@osva-ai/runtime-protocol";
 
 export interface FakeRemoteRuntimeRequest {
   readonly body: RuntimeExecuteRequest;

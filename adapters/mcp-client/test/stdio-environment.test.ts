@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SecretResolver, StdioTransportConfig } from "@osva/contracts";
+import type { SecretResolver, StdioTransportConfig } from "@osva-ai/contracts";
 
 import { resolveStdioProcessEnvironment } from "../src/stdio-environment.js";
 

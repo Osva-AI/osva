@@ -6,7 +6,7 @@ import {
   type CommunityEditionRole,
   type RequestPrincipal,
   type WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { parseApiKeyToken, verifyApiKeySecret } from "./api-key-credential.js";
 import type { ApiKeyRepository } from "./ports/api-key-repository.js";

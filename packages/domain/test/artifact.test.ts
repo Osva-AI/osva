@@ -1,4 +1,4 @@
-import type { ArtifactId, WorkspaceId } from "@osva/contracts";
+import type { ArtifactId, WorkspaceId } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { Artifact } from "../src/artifact.js";

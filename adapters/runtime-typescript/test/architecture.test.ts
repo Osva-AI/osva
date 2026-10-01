@@ -12,7 +12,7 @@ import {
   MODEL_TEXT_CONTENT_MAX_LENGTH as CONTRACT_CONTENT_MAX,
   MODEL_TEXT_MAX_MESSAGES as CONTRACT_MAX_MESSAGES,
   MODEL_TEXT_ROLES as CONTRACT_TEXT_ROLES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import {
   MODEL_BINDING_NAME_PATTERN,
@@ -141,7 +141,7 @@ describe("architecture import restrictions", () => {
     expect(violations).toEqual([]);
   });
 
-  it("keeps the child runner free of runtime @osva/contracts imports", () => {
+  it("keeps the child runner free of runtime @osva-ai/contracts imports", () => {
     const childFiles = [
       "child-runner.ts",
       "child-env.ts",
@@ -159,13 +159,13 @@ describe("architecture import restrictions", () => {
       for (const statement of statements) {
         if (
           statement.startsWith("import type ") ||
-          !statement.includes('from "@osva/contracts')
+          !statement.includes('from "@osva-ai/contracts')
         ) {
           continue;
         }
 
         violations.push(
-          `adapters/runtime-typescript/src/${fileName} runtime-imports @osva/contracts`,
+          `adapters/runtime-typescript/src/${fileName} runtime-imports @osva-ai/contracts`,
         );
       }
     }

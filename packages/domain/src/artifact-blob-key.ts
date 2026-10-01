@@ -1,4 +1,4 @@
-import type { ArtifactId } from "@osva/contracts";
+import type { ArtifactId } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 

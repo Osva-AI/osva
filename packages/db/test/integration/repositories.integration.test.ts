@@ -4,7 +4,7 @@ import type {
   ModelProfileVersionId,
   RunAttemptId,
   RunId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   Agent,
   AgentNotFoundError,

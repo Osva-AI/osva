@@ -6,7 +6,7 @@
 - Bearer-token workspace authentication (environment configuration)
 - MCP tools: `osva_agent_run_v1`, `osva_run_get_v1`, `osva_workflow_run_v1`, `osva_workflow_run_get_v1`
 - MCP resources under `osva://v1/...` with workspace filtering
-- `@osva/connector-sdk` for Connector Profile V1 MCP connectors (HTTP + stdio)
+- `@osva-ai/connector-sdk` for Connector Profile V1 MCP connectors (HTTP + stdio)
 - stdio `secretEnvironment` SecretReference injection for outbound connectors
 - Connector Profile V1 contract doc and echo connector example
 
@@ -15,7 +15,7 @@
 ```text
 External MCP client
   → apps/mcp-server (Streamable HTTP, bearer auth)
-  → @osva/sdk (HTTP)
+  → @osva-ai/sdk (HTTP)
   → apps/web
   → orchestration / workflow orchestrator
   → worker
@@ -31,7 +31,7 @@ Agent runtime
   → immutable ToolVersion
   → immutable ConnectorVersion
   → @osva/adapters-mcp-client
-  → connector (@osva/connector-sdk or any Profile V1 MCP server)
+  → connector (@osva-ai/connector-sdk or any Profile V1 MCP server)
 ```
 
 ## Authentication
@@ -70,8 +70,8 @@ Duplicate keys in `environment` and `secretEnvironment` are rejected. Secret val
 ## Verification
 
 ```bash
-pnpm --filter @osva/contracts test
-pnpm --filter @osva/connector-sdk test
+pnpm --filter @osva-ai/contracts test
+pnpm --filter @osva-ai/connector-sdk test
 pnpm --filter @osva/mcp-server test
 pnpm --filter @osva/adapters-mcp-client test
 pnpm verify:quick

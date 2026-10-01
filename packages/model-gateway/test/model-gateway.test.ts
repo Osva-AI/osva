@@ -2,8 +2,8 @@ import type {
   ModelProfileId,
   ModelProfileVersionId,
   WorkspaceId,
-} from "@osva/contracts";
-import { MODEL_ERROR_CODES } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
 import { MemoryModelProfileRepository } from "@osva/adapters-memory";
 import {
   ModelProfile,

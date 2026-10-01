@@ -2,8 +2,11 @@ import type {
   MemoryAuthorization,
   MemoryNamespaceId,
   WorkspaceId,
-} from "@osva/contracts";
-import { COMMUNITY_EDITION_ROLES, MEMORY_ERROR_CODES } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import {
+  COMMUNITY_EDITION_ROLES,
+  MEMORY_ERROR_CODES,
+} from "@osva-ai/contracts";
 import { MemoryMemoryNamespaceRepository } from "@osva/adapters-memory";
 import {
   Workspace,
@@ -20,7 +23,7 @@ const WORKSPACE_ID = "ws-1" as WorkspaceId;
 function testScope(workspaceId: WorkspaceId): ControlPlaneScope {
   return {
     principal: {
-      subjectId: "ak-test" as import("@osva/contracts").ApiKeyId,
+      subjectId: "ak-test" as import("@osva-ai/contracts").ApiKeyId,
       workspaceId,
       role: COMMUNITY_EDITION_ROLES.ADMIN,
       authenticationMethod: "API_KEY",

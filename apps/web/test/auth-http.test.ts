@@ -1,9 +1,9 @@
-import type { ApiKeyId, WorkspaceId } from "@osva/contracts";
+import type { ApiKeyId, WorkspaceId } from "@osva-ai/contracts";
 import {
   COMMUNITY_EDITION_ROLES,
   OSVA_REQUEST_ID_HEADER,
   PUBLIC_API_ERROR_CODES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   AuthenticateApiKey,
   CreateApiKey,

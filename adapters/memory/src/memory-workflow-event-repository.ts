@@ -1,4 +1,4 @@
-import type { WorkflowEventId, WorkspaceId } from "@osva/contracts";
+import type { WorkflowEventId, WorkspaceId } from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   assertWorkflowEventEquivalentRetry,

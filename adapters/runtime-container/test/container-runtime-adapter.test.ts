@@ -1,6 +1,6 @@
 import { RuntimeExecutionBootstrapStore } from "@osva/adapters-runtime-http";
-import type { ExecutionRequest, RunAttemptId } from "@osva/contracts";
-import { RUNTIME_PROTOCOL_ERROR_CODES } from "@osva/runtime-protocol";
+import type { ExecutionRequest, RunAttemptId } from "@osva-ai/contracts";
+import { RUNTIME_PROTOCOL_ERROR_CODES } from "@osva-ai/runtime-protocol";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { describe, expect, it } from "vitest";
 

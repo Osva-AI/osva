@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AgentId, AgentVersionId } from "@osva/contracts";
+import type { AgentId, AgentVersionId } from "@osva-ai/contracts";
 import {
   agentListResourceSchema,
   agentResourceSchema,
@@ -8,7 +8,7 @@ import {
   createAgentRequestSchema,
   createAgentVersionRequestSchema,
   updateAgentRequestSchema,
-} from "@osva/contracts/schemas";
+} from "@osva-ai/contracts/schemas";
 import {
   CONTROL_PLANE_RESOURCE_KINDS,
   type Agent,

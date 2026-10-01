@@ -1,4 +1,4 @@
-import type { WorkflowNodeRunId } from "@osva/contracts";
+import type { WorkflowNodeRunId } from "@osva-ai/contracts";
 import {
   WorkflowWaitNotFoundError,
   isTerminalWorkflowRunState,

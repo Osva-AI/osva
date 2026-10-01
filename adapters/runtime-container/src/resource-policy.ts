@@ -1,4 +1,4 @@
-import type { ContainerRuntimeResources } from "@osva/contracts";
+import type { ContainerRuntimeResources } from "@osva-ai/contracts";
 
 export const CONTAINER_RESOURCE_EXCEEDS_MAX = "CONTAINER_RESOURCE_EXCEEDS_MAX";
 

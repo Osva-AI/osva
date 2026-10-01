@@ -3,12 +3,12 @@ import type {
   ModelProfileVersionId,
   ModelProfileVersionPricing,
   ModelProvider,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   isModelPricingCurrency,
   isModelProvider,
   MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import {

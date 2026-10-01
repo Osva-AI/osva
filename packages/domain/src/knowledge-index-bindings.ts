@@ -1,4 +1,4 @@
-import type { AgentManifestV1, KnowledgeIndexId } from "@osva/contracts";
+import type { AgentManifestV1, KnowledgeIndexId } from "@osva-ai/contracts";
 
 export function knowledgeIndexBindingsFromManifest(
   manifest: AgentManifestV1,

@@ -1,12 +1,12 @@
-import type { CommunityEditionRole, WorkspaceId } from "@osva/contracts";
-import { COMMUNITY_EDITION_ROLES } from "@osva/contracts";
+import type { CommunityEditionRole, WorkspaceId } from "@osva-ai/contracts";
+import { COMMUNITY_EDITION_ROLES } from "@osva-ai/contracts";
 import type { ApiKeyRepository } from "@osva/domain";
 import {
   ApiKey as ApiKeyEntity,
   AuthenticateApiKey,
   generateApiKeySecretMaterial,
 } from "@osva/domain";
-import type { ApiKeyId } from "@osva/contracts";
+import type { ApiKeyId } from "@osva-ai/contracts";
 
 import type { WebSecurityServices } from "./http-security.js";
 import { createWebSecurityServices } from "./web-security-services.js";

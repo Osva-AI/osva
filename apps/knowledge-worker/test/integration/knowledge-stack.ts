@@ -9,11 +9,11 @@ import {
 } from "@osva/adapters-artifact-storage";
 import { OsvaKnowledgeParserRegistry } from "@osva/adapters-knowledge-parser";
 import { PgVectorStore } from "@osva/adapters-vector-pgvector";
-import type { WorkspaceId } from "@osva/contracts";
+import type { WorkspaceId } from "@osva-ai/contracts";
 import {
   KNOWLEDGE_MAX_EXTRACTED_BYTES,
   KNOWLEDGE_MAX_SOURCE_BYTES,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import type { Database } from "@osva/db";
 import {
   PostgresArtifactRepository,

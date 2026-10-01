@@ -18,7 +18,7 @@ export type RuntimeErrorCode =
 
 /**
  * Child-safe copies of Stage 1 model IPC bounds. The child runner cannot
- * import `@osva/contracts` under the Node permission model. Keep these
+ * import `@osva-ai/contracts` under the Node permission model. Keep these
  * identical to `packages/contracts/src/model-gateway.ts`.
  */
 export const MODEL_BINDING_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;

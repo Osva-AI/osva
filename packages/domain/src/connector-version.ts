@@ -5,14 +5,14 @@ import type {
   ConnectorTransport,
   ConnectorTransportConfig,
   ConnectorVersionId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   isConnectorKind,
   isConnectorTransport,
   isStdioTransportConfig,
   isStreamableHttpTransportConfig,
   validateStdioTransportEnvironment,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import {

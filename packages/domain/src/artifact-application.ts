@@ -5,8 +5,8 @@ import type {
   RunAttemptId,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
-import { AUTHORIZATION_ACTIONS } from "@osva/contracts";
+} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import { Artifact } from "./artifact.js";
 import {

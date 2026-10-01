@@ -1,4 +1,4 @@
-import type { WorkflowNodeRunId } from "@osva/contracts";
+import type { WorkflowNodeRunId } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import { armWorkflowWait, WorkflowNodeRun } from "@osva/domain";
 

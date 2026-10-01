@@ -23,7 +23,7 @@
     "migrations:status": "node dist/migrations-status-cli.js"
   },
   "dependencies": {
-    "@osva/contracts": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
     "@osva/domain": "workspace:*",
     "drizzle-orm": "0.45.2",
     "postgres": "3.4.9"

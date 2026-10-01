@@ -8,7 +8,7 @@ import {
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
-import type { ModelProfileVersionPricing } from "@osva/contracts";
+import type { ModelProfileVersionPricing } from "@osva-ai/contracts";
 
 import { modelProfiles } from "./model-profiles.js";
 import { sqlTextInList } from "./sql.js";

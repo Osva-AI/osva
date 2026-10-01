@@ -6,7 +6,7 @@ import type {
   ConnectorTransportConfig,
   ConnectorVersionId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { Connector } from "../connector.js";
 import type { ConnectorVersion } from "../connector-version.js";

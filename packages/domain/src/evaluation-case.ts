@@ -3,7 +3,7 @@ import type {
   EvaluationSuiteVersionId,
   EvaluatorConfig,
   JsonValue,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { copyInstant, deepFreeze, requireNonEmptyString } from "./internals.js";

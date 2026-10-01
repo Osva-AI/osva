@@ -1,8 +1,8 @@
-import { ARTIFACT_REFERENCE_TYPE } from "@osva/contracts";
+import { ARTIFACT_REFERENCE_TYPE } from "@osva-ai/contracts";
 import type {
   KnowledgeIndexResourceV1,
   KnowledgeSourceResourceV1,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import type { KnowledgeIndex } from "./knowledge-index.js";
 import type { KnowledgeSource } from "./knowledge-source.js";

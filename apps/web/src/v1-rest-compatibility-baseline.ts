@@ -1,7 +1,7 @@
 import {
   AUTHORIZATION_ACTIONS,
   type AuthorizationAction,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 
 import {
   V1_ROUTE_INVENTORY,

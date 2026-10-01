@@ -11,7 +11,7 @@ import type {
   JsonValue,
   RunId,
   WorkspaceId,
-} from "@osva/contracts";
+} from "@osva-ai/contracts";
 import {
   EvaluationCase,
   EvaluationCaseResult,

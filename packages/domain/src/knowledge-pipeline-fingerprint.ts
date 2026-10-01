@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { KnowledgeDistanceMetric } from "@osva/contracts";
+import type { KnowledgeDistanceMetric } from "@osva-ai/contracts";
 
 export interface ResolvedKnowledgePipelineConfig {
   readonly parserKey: string;
