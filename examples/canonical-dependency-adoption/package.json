@@ -7,6 +7,10 @@
     "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.build.agents.json --noEmit && tsc -p tsconfig.build.setup.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "setup": "node dist/scripts/setup.js",
+    "run": "node dist/scripts/run.js",
+    "status": "node dist/scripts/status.js",
+    "approve": "node dist/scripts/approve.js",
+    "emit-delivery-event": "node dist/scripts/emit-delivery-event.js",
     "mcp:stdio": "node dist/mcp/npm-connector/stdio.js"
   },
   "dependencies": {

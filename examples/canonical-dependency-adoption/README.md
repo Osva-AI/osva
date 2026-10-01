@@ -10,8 +10,8 @@ OSS 1.0 reference workflow built only from existing OSVA platform capabilities: 
 | M2 npm MCP connector | Complete |
 | M3 Trusted TS agents | Complete |
 | M4 setup / bootstrap | Complete |
-| M5 operator / run scripts | Not implemented |
-| M6 full integration | Not implemented |
+| M5 operator / run scripts | Complete |
+| M6 deterministic E2E | Not implemented |
 
 ## Agent responsibilities
 
@@ -23,19 +23,19 @@ OSS 1.0 reference workflow built only from existing OSVA platform capabilities: 
 
 Research gathers policy and npm evidence and synthesizes findings/warnings only (no adoption decision). Analysis evaluates evidence against ExampleCo policy. Report renders approved analysis to Markdown and stores one OSVA Artifact.
 
-Bootstrap via `pnpm canonical:setup` registers model, policy knowledge, MCP tools, AgentVersions, and a WorkflowVersion. The full demo is **not runnable end-to-end yet** (M5 operator scripts are not implemented).
+Bootstrap via `pnpm run canonical:setup` registers model, policy knowledge, MCP tools, AgentVersions, and a WorkflowVersion. M5 operator commands create and inspect live WorkflowRuns against that stack. A deterministic full E2E harness is M6 (not implemented yet).
 
-## What this demonstrates (target end state)
+## What this demonstrates
 
-| Capability | Now | Later |
-| --- | --- | --- |
-| Workflow V3 (AGENT → APPROVAL → WAIT → AGENT) | Reference JSON + tests | Live WorkflowVersion registration |
-| Research / Analysis / Report agents | Trusted TS entrypoints + setup registration | Live runs via M5 scripts |
-| Policy RAG | Bundled policy + KnowledgeIndex via setup | Live runs via M5 scripts |
-| npm MCP connector | Read-only stdio connector + setup import | Live runs via M5 scripts |
-| Human approval | Graph node defined | Approval API / UI flow |
-| EVENT wait + delivery resume | Graph node defined | WorkflowEvent emission |
-| Markdown artifact | Report agent creates via runtime capability | Live workflow run |
+| Capability | Status |
+| --- | --- |
+| Workflow V3 (AGENT → APPROVAL → WAIT → AGENT) | Live WorkflowVersion via setup |
+| Research / Analysis / Report agents | Trusted TS entrypoints + live runs |
+| Policy RAG | KnowledgeIndex via setup + live agent runs |
+| npm MCP connector | stdio connector + live tool execution on worker |
+| Human approval | Approval API via `canonical:approve` |
+| EVENT wait + delivery resume | WorkflowEvent via `canonical:emit-delivery-event` |
+| Markdown artifact | Report agent + artifact API |
 
 ## Workflow
 
@@ -122,9 +122,9 @@ If Research or Analysis dropped `request`, wait correlation and reporting would 
 - **PostgreSQL** is durable authority for workflow and run lifecycle.
 - **BullMQ / Valkey** is transport only.
 
-## Local setup state (future)
+## Local setup state
 
-`examples/canonical-dependency-adoption/.osva/` is reserved for local convenience metadata (for example `.osva/canonical-state.json`). It is **not** execution authority—PostgreSQL remains canonical.
+`examples/canonical-dependency-adoption/.osva/canonical-state.json` stores convenience metadata (for example the pinned `workflowVersionId`). It is **not** execution authority—PostgreSQL remains canonical. Operator commands verify the referenced WorkflowVersion still exists before creating a WorkflowRun.
 
 ## Setup (M4)
 
@@ -132,7 +132,7 @@ From the repository root (after OSVA web/worker/knowledge-worker are running):
 
 ```powershell
 pnpm --filter @osva/example-canonical-dependency-adoption build
-pnpm canonical:setup
+pnpm run canonical:setup
 ```
 
 ### Setup script environment
@@ -166,9 +166,105 @@ Local convenience state is written to `.osva/canonical-state.json` (gitignored).
 - Changed agent bytes or MCP entrypoint path creates new ConnectorVersion / AgentVersion / WorkflowVersion rows on the next setup run.
 - Setup never deletes durable OSVA resources on failure.
 
-## Planned developer UX (M5, not implemented yet)
+## Operator workflow (M5)
 
-Future root commands: `canonical:run`, `canonical:status`, `canonical:approve`, `canonical:emit-delivery-event`.
+Build once, then use root commands from the repository root:
+
+```powershell
+pnpm --filter @osva/example-canonical-dependency-adoption build
+```
+
+### Environment (operator commands)
+
+| Variable | Required |
+| --- | --- |
+| `OSVA_BASE_URL` | yes |
+| `OSVA_API_KEY` | yes |
+| `OSVA_WORKSPACE_ID` | yes |
+
+Operator commands read `.osva/canonical-state.json` for the WorkflowVersion id created by setup. They do **not** recreate setup infrastructure.
+
+### Runtime prerequisites (live WorkflowRun execution)
+
+Unlike setup alone, executing the workflow requires:
+
+- **web**, **worker**, **workflow-orchestrator**, **PostgreSQL**, and **Valkey**
+- KnowledgeIndex from setup still **READY** (Research/Analysis RAG)
+- `OSVA_MCP_STDIO_CONNECTORS_ENABLED=true` on the **worker** (MCP tools)
+- Worker configured with the same `OSVA_TRUSTED_RUNTIME_ROOT`, model provider credentials, and compatible artifact storage as setup
+
+### Start a review
+
+```powershell
+pnpm canonical:run --package zod --use-case "Runtime validation for TypeScript backend services"
+```
+
+Optional repeated constraints:
+
+```powershell
+pnpm canonical:run `
+  --package zod `
+  --use-case "Runtime validation for TypeScript backend services" `
+  --constraint "Must be suitable for production" `
+  --constraint "Prefer permissive licensing"
+```
+
+`canonical:run` creates the WorkflowRun and returns immediately (no polling).
+
+### Inspect status
+
+```powershell
+pnpm canonical:status <workflowRunId>
+```
+
+Status is a **view** over persisted OSVA API data (WorkflowRun, node runs, approvals, child Runs). It does not invent lifecycle state client-side.
+
+### Approve or reject
+
+```powershell
+pnpm canonical:approve <workflowRunId> --comment "Proceed with the report."
+pnpm canonical:approve <workflowRunId> --reject --comment "License risk is unresolved."
+```
+
+The decision persists through the ApprovalRequest API; the workflow orchestrator reconciles asynchronously afterward.
+
+### Emit delivery signal
+
+```powershell
+pnpm canonical:emit-delivery-event <requestId>
+```
+
+Optional convenience when the workflow run id is easier to copy:
+
+```powershell
+pnpm canonical:emit-delivery-event --workflow-run <workflowRunId>
+```
+
+WorkflowEvents are durable. OSVA accepts an event **before** the delivery WAIT node arms; once the workflow reaches that WAIT, an eligible early event can satisfy it. Example order:
+
+```text
+canonical:run
+canonical:emit-delivery-event <requestId>
+…
+canonical:approve <workflowRunId>
+```
+
+### Inspect final state
+
+```powershell
+pnpm canonical:status <workflowRunId>
+```
+
+M5 live acceptance on a real stack is performed separately after implementation; M6 adds deterministic automated E2E coverage.
+
+Compiled operator entrypoints:
+
+```text
+dist/scripts/run.js
+dist/scripts/status.js
+dist/scripts/approve.js
+dist/scripts/emit-delivery-event.js
+```
 
 ## Package layout
 
@@ -178,7 +274,7 @@ workflow/      Reference dependency-adoption.v3.json
 knowledge/     Example company policy for RAG
 agents/src/    Trusted TypeScript agents
 mcp/           npm MCP connector (stdio)
-scripts/       canonical setup (`setup.ts` + helpers)
+scripts/       setup + M5 operator commands (`setup.ts`, `run.ts`, …)
 test/          Contract, workflow, connector, and agent tests
 ```
 
