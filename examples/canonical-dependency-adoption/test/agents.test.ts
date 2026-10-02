@@ -250,34 +250,148 @@ describe("Analysis agent", () => {
   }
 
   it("rejects invalid disposition and confidence", async () => {
+    const invalidDispositionModel = createModelsMock(() => ({
+      text: analysisModelJson("MAYBE"),
+    }));
     await expect(
       runAnalysis(
         createAnalysisContext({
           input: validResearchOutput,
-          generateText: createModelsMock(() => ({
-            text: analysisModelJson("MAYBE"),
-          })),
+          generateText: invalidDispositionModel,
         }),
       ),
     ).rejects.toThrow(/disposition/i);
+    expect(invalidDispositionModel).toHaveBeenCalledTimes(2);
+
+    const invalidConfidenceModel = createModelsMock(() => ({
+      text: JSON.stringify({
+        disposition: "PILOT",
+        confidence: "VERY_HIGH",
+        summary: "x",
+        criteria: [],
+        risks: [],
+        openQuestions: [],
+      }),
+    }));
+    await expect(
+      runAnalysis(
+        createAnalysisContext({
+          input: validResearchOutput,
+          generateText: invalidConfidenceModel,
+        }),
+      ),
+    ).rejects.toThrow(/confidence/i);
+    expect(invalidConfidenceModel).toHaveBeenCalledTimes(2);
+  });
+
+  it("repairs one malformed response missing confidence", async () => {
+    const knowledgeSearch = createKnowledgeMock([]);
+    const generateText = createModelsMock((_binding, request) => {
+      const userContent =
+        request.messages.find((message) => message.role === "user")?.content ??
+        "";
+      if (userContent.includes("Your previous response did not satisfy")) {
+        return {
+          text: analysisModelJson("PILOT"),
+        };
+      }
+      return {
+        text: JSON.stringify({
+          disposition: "PILOT",
+          summary: "Reasonable candidate.",
+          criteria: [],
+          risks: [],
+          openQuestions: [],
+        }),
+      };
+    });
+
+    const output = await runAnalysis(
+      createAnalysisContext({
+        input: validResearchOutput,
+        knowledgeSearch,
+        generateText,
+      }),
+    );
+
+    expect(generateText).toHaveBeenCalledTimes(2);
+    expect(knowledgeSearch).toHaveBeenCalledTimes(1);
+    expect(output.request).toBe(validResearchOutput.request);
+    expect(output.research).toBe(validResearchOutput.research);
+    expect(output.analysis.confidence).toBe("HIGH");
+    assertValid(validateAnalysisOutput, output, "analysis output");
+  });
+
+  it("repairs wrapped analysis object via bounded repair", async () => {
+    const generateText = createModelsMock((_binding, request) => {
+      const userContent =
+        request.messages.find((message) => message.role === "user")?.content ??
+        "";
+      if (userContent.includes("Your previous response did not satisfy")) {
+        return { text: analysisModelJson("PILOT") };
+      }
+      return {
+        text: JSON.stringify({
+          analysis: {
+            disposition: "PILOT",
+            confidence: "MEDIUM",
+            summary: "Wrapped candidate.",
+            criteria: [],
+            risks: [],
+            openQuestions: [],
+          },
+        }),
+      };
+    });
+
+    const output = await runAnalysis(
+      createAnalysisContext({
+        input: validResearchOutput,
+        generateText,
+      }),
+    );
+
+    expect(generateText).toHaveBeenCalledTimes(2);
+    expect(output.analysis.disposition).toBe("PILOT");
+    expect(output.analysis.confidence).toBe("HIGH");
+  });
+
+  it("fails after two invalid model responses without defaulting confidence", async () => {
+    const generateText = createModelsMock(() => ({
+      text: JSON.stringify({
+        disposition: "PILOT",
+        summary: "Still missing confidence.",
+        criteria: [],
+        risks: [],
+        openQuestions: [],
+      }),
+    }));
 
     await expect(
       runAnalysis(
         createAnalysisContext({
           input: validResearchOutput,
-          generateText: createModelsMock(() => ({
-            text: JSON.stringify({
-              disposition: "PILOT",
-              confidence: "VERY_HIGH",
-              summary: "x",
-              criteria: [],
-              risks: [],
-              openQuestions: [],
-            }),
-          })),
+          generateText,
         }),
       ),
-    ).rejects.toThrow(/confidence/i);
+    ).rejects.toMatchObject({ name: "CanonicalAgentError" });
+
+    expect(generateText).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses a single model call when the first response is valid", async () => {
+    const generateText = createModelsMock(() => ({
+      text: analysisModelJson("ADOPT"),
+    }));
+
+    await runAnalysis(
+      createAnalysisContext({
+        input: validResearchOutput,
+        generateText,
+      }),
+    );
+
+    expect(generateText).toHaveBeenCalledTimes(1);
   });
 
   it("keeps /request/requestId resolvable on output", async () => {

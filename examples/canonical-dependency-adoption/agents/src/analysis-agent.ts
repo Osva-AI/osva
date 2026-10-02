@@ -8,14 +8,18 @@ import type {
   AnalysisAgentContext,
   TrustedKnowledgeHit,
 } from "./shared/context.js";
+import { CanonicalAgentError } from "./shared/errors.js";
 import {
   buildAnalysisMessages,
   buildAnalysisPolicySearchQuery,
+  buildAnalysisRepairMessages,
 } from "./shared/prompts.js";
 import {
   parseAnalysisRecommendation,
   parseResearchOutputV1,
 } from "./shared/validate.js";
+
+const MAX_ANALYSIS_MODEL_CALLS = 2;
 
 function mapPolicyEvidence(hits: readonly TrustedKnowledgeHit[]) {
   return hits.map((hit) => ({
@@ -27,6 +31,61 @@ function mapPolicyEvidence(hits: readonly TrustedKnowledgeHit[]) {
       : {}),
     excerpt: hit.text,
   }));
+}
+
+function tryParseAnalysisModelText(text: string):
+  | {
+      readonly ok: true;
+      readonly analysis: ReturnType<typeof parseAnalysisRecommendation>;
+    }
+  | {
+      readonly ok: false;
+      readonly error: CanonicalAgentError;
+    } {
+  try {
+    return {
+      ok: true,
+      analysis: parseAnalysisRecommendation(text),
+    };
+  } catch (error) {
+    if (error instanceof CanonicalAgentError) {
+      return { ok: false, error };
+    }
+    throw error;
+  }
+}
+
+async function generateAnalysisRecommendation(
+  context: AnalysisAgentContext,
+  initialMessages: ReturnType<typeof buildAnalysisMessages>,
+): Promise<ReturnType<typeof parseAnalysisRecommendation>> {
+  const firstResult = await context.models.generateText(MODEL_BINDING_PRIMARY, {
+    messages: initialMessages,
+    maxOutputTokens: 2_048,
+  });
+
+  const firstParsed = tryParseAnalysisModelText(firstResult.text);
+  if (firstParsed.ok) {
+    return firstParsed.analysis;
+  }
+
+  const repairResult = await context.models.generateText(
+    MODEL_BINDING_PRIMARY,
+    {
+      messages: buildAnalysisRepairMessages({
+        validationError: firstParsed.error.message,
+        previousResponse: firstResult.text,
+      }),
+      maxOutputTokens: 2_048,
+    },
+  );
+
+  const repairedParsed = tryParseAnalysisModelText(repairResult.text);
+  if (repairedParsed.ok) {
+    return repairedParsed.analysis;
+  }
+
+  throw repairedParsed.error;
 }
 
 export async function run(
@@ -52,16 +111,14 @@ export async function run(
     { topK: 5 },
   );
 
-  const modelResult = await context.models.generateText(MODEL_BINDING_PRIMARY, {
-    messages: buildAnalysisMessages({
+  const analysis = await generateAnalysisRecommendation(
+    context,
+    buildAnalysisMessages({
       request,
       researchJson: JSON.stringify({ request, research }, null, 2),
       policyEvidence: mapPolicyEvidence(policyHits),
     }),
-    maxOutputTokens: 2_048,
-  });
-
-  const analysis = parseAnalysisRecommendation(modelResult.text);
+  );
 
   return {
     schemaVersion: EXAMPLE_SCHEMA_VERSION,
@@ -70,3 +127,5 @@ export async function run(
     analysis,
   };
 }
+
+export { MAX_ANALYSIS_MODEL_CALLS };
