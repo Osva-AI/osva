@@ -11,7 +11,7 @@ OSS 1.0 reference workflow built only from existing OSVA platform capabilities: 
 | M3 Trusted TS agents | Complete |
 | M4 setup / bootstrap | Complete |
 | M5 operator / run scripts | Complete |
-| M6 deterministic E2E | Not implemented |
+| M6 deterministic E2E | Complete |
 
 ## Agent responsibilities
 
@@ -23,7 +23,34 @@ OSS 1.0 reference workflow built only from existing OSVA platform capabilities: 
 
 Research gathers policy and npm evidence and synthesizes findings/warnings only (no adoption decision). Analysis evaluates evidence against ExampleCo policy. Report renders approved analysis to Markdown and stores one OSVA Artifact.
 
-Bootstrap via `pnpm run canonical:setup` registers model, policy knowledge, MCP tools, AgentVersions, and a WorkflowVersion. M5 operator commands create and inspect live WorkflowRuns against that stack. A deterministic full E2E harness is M6 (not implemented yet).
+Bootstrap via `pnpm run canonical:setup` registers model, policy knowledge, MCP tools, AgentVersions, and a WorkflowVersion. M5 operator commands create and inspect live WorkflowRuns against that stack. M6 adds a deterministic integration suite that exercises the same architecture without OpenAI credits or public npm access.
+
+## Deterministic integration tests (M6)
+
+From the repository root (after `pnpm install` and building this package):
+
+```bash
+pnpm --filter @osva/example-canonical-dependency-adoption run build
+pnpm --filter @osva/example-canonical-dependency-adoption run test:integration
+```
+
+Or:
+
+```bash
+pnpm run canonical:test:integration
+```
+
+Requirements:
+
+- Docker Desktop (or `OSVA_TEST_DATABASE_URL` plus `OSVA_TEST_VALKEY_URL`) for PostgreSQL with pgvector and Valkey
+- No `OPENAI_API_KEY`, no public internet, and no pre-existing `.osva/canonical-state.json`
+
+The suite starts in-process web, worker, and workflow-orchestrator processes, uses a local scripted OpenAI-compatible model server and deterministic npm MCP stdio connector fixtures, and keeps PostgreSQL workflow persistence, ToolGateway, ModelGateway, RAG indexing, and artifact storage on real OSVA paths.
+
+Known product gaps documented by the suite (not failures):
+
+- `AgentVersion.execution.maxAttempts` is not enforced as automatic logical RunAttempt retry today
+- Runtime artifact idempotency keys are scoped to a single RunAttempt, not the business request id
 
 ## What this demonstrates
 

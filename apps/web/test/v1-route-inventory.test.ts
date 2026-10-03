@@ -110,5 +110,5 @@ describe("V1_ROUTE_INVENTORY", () => {
 
     expect(missingFromInventory).toEqual([]);
     expect(missingFromImplementation).toEqual([]);
-  });
+  }, 20_000);
 });

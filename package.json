@@ -40,7 +40,8 @@
     "canonical:run": "pnpm --filter @osva/example-canonical-dependency-adoption run run",
     "canonical:status": "pnpm --filter @osva/example-canonical-dependency-adoption run status",
     "canonical:approve": "pnpm --filter @osva/example-canonical-dependency-adoption run approve",
-    "canonical:emit-delivery-event": "pnpm --filter @osva/example-canonical-dependency-adoption run emit-delivery-event"
+    "canonical:emit-delivery-event": "pnpm --filter @osva/example-canonical-dependency-adoption run emit-delivery-event",
+    "canonical:test:integration": "pnpm --filter @osva/example-canonical-dependency-adoption run test:integration"
   },
   "devDependencies": {
     "@types/node": "catalog:",

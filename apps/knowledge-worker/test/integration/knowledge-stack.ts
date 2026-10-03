@@ -95,6 +95,8 @@ export async function createKnowledgeIntegrationStack(
 
   const noopQueue: KnowledgeIndexQueue = {
     enqueue: async () => undefined,
+    start: async () => undefined,
+    stop: async () => undefined,
   };
   const embeddingDefaults =
     options?.embeddingDefaults ?? TEST_EMBEDDING_DEFAULTS;

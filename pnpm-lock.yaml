@@ -1074,6 +1074,24 @@ importers:
         specifier: workspace:*
         version: link:../../packages/domain
     devDependencies:
+      '@osva/adapters-bullmq':
+        specifier: workspace:*
+        version: link:../../adapters/bullmq
+      '@osva/adapters-runtime-typescript':
+        specifier: workspace:*
+        version: link:../../adapters/runtime-typescript
+      '@osva/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@osva/web':
+        specifier: workspace:*
+        version: link:../../apps/web
+      '@osva/worker':
+        specifier: workspace:*
+        version: link:../../apps/worker
+      '@osva/workflow-orchestrator':
+        specifier: workspace:*
+        version: link:../../apps/workflow-orchestrator
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4

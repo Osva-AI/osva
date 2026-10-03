@@ -5,7 +5,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.agents.json && tsc -p tsconfig.build.setup.json",
     "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.build.agents.json --noEmit && tsc -p tsconfig.build.setup.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "typecheck:integration": "tsc -p tsconfig.integration.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "setup": "node dist/scripts/setup.js",
     "run": "node dist/scripts/run.js",
     "status": "node dist/scripts/status.js",
@@ -20,6 +22,12 @@
     "@osva/domain": "workspace:*"
   },
   "devDependencies": {
+    "@osva/adapters-bullmq": "workspace:*",
+    "@osva/adapters-runtime-typescript": "workspace:*",
+    "@osva/db": "workspace:*",
+    "@osva/web": "workspace:*",
+    "@osva/worker": "workspace:*",
+    "@osva/workflow-orchestrator": "workspace:*",
     "@types/node": "catalog:",
     "ajv": "^8.17.1",
     "typescript": "catalog:",

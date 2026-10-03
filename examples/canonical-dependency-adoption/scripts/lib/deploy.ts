@@ -50,6 +50,7 @@ export interface DeployedTrustedRuntime {
 
 export async function deployTrustedRuntimeAndMcp(
   trustedRuntimeRoot: string,
+  options?: { readonly mcpStdioEntry?: string },
 ): Promise<DeployedTrustedRuntime> {
   await assertBuildArtifactsExist();
 
@@ -73,7 +74,7 @@ export async function deployTrustedRuntimeAndMcp(
     researchIntegrity: await sha256IntegrityOfFile(researchFile),
     analysisIntegrity: await sha256IntegrityOfFile(analysisFile),
     reportIntegrity: await sha256IntegrityOfFile(reportFile),
-    mcpStdioEntry: path.resolve(distMcpStdioEntry),
+    mcpStdioEntry: path.resolve(options?.mcpStdioEntry ?? distMcpStdioEntry),
   };
 }
 

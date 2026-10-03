@@ -58,6 +58,14 @@ export const distMcpStdioEntry = path.join(
   "stdio.js",
 );
 
+export const distMcpStdioDeterministicEntry = path.join(
+  packageRoot,
+  "dist",
+  "mcp",
+  "npm-connector",
+  "stdio-deterministic.js",
+);
+
 export const trustedRuntimeBundleDirName = "canonical-dependency-adoption";
 
 export function trustedRuntimeBundleDir(trustedRuntimeRoot: string): string {
@@ -79,5 +87,6 @@ export function requiredAgentBuildArtifacts(): readonly string[] {
     path.join(distAgentsDir, "report-agent.js"),
     path.join(distAgentsDir, "shared"),
     distMcpStdioEntry,
+    distMcpStdioDeterministicEntry,
   ];
 }

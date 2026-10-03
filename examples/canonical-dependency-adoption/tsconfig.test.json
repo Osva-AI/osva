@@ -9,5 +9,6 @@
     "test/**/*.ts",
     "mcp/npm-connector/src/**/*.ts",
     "scripts/lib/**/*.ts"
-  ]
+  ],
+  "exclude": ["test/integration/**"]
 }
