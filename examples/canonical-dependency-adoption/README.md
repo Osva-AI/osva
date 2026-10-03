@@ -12,6 +12,17 @@ OSS 1.0 reference workflow built only from existing OSVA platform capabilities: 
 | M4 setup / bootstrap | Complete |
 | M5 operator / run scripts | Complete |
 | M6 deterministic E2E | Complete |
+| M7 demo UI (read model + local server) | In progress (M7.1–M7.3) |
+
+## Browser demo (M7)
+
+With OSVA running, canonical setup applied, and operator env configured (`OSVA_BASE_URL`, `OSVA_API_KEY`, `OSVA_WORKSPACE_ID`):
+
+```bash
+pnpm run canonical:demo
+```
+
+Open the printed URL (default `http://127.0.0.1:4173`). The browser talks only to the local demo server; the server calls public OSVA REST APIs. Optional port: `CANONICAL_DEMO_PORT`.
 
 ## Agent responsibilities
 

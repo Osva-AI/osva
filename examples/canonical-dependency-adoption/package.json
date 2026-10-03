@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.agents.json && tsc -p tsconfig.build.setup.json",
+    "demo": "node dist/demo/server.js",
     "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.build.agents.json --noEmit && tsc -p tsconfig.build.setup.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "typecheck:integration": "tsc -p tsconfig.integration.json --noEmit",
     "test": "vitest run --config vitest.config.ts",

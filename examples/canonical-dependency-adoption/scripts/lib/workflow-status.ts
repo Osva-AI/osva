@@ -278,7 +278,7 @@ export async function summarizeRunAttempts(
   return `${attempts.length} (latest ${latest.status})`;
 }
 
-async function resolveAgentOutput(
+export async function resolveAgentOutput(
   api: OperatorApi,
   nodeRun: WorkflowNodeRunResource,
 ): Promise<unknown> {

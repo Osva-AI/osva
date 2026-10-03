@@ -6,42 +6,11 @@ import {
 } from "./lib/operator-env.js";
 import { OperatorApi } from "./lib/operator-client.js";
 import { printFailure } from "./lib/output.js";
+import { approvalTitlesFromDefinition } from "./lib/workflow-definition.js";
 import {
   buildWorkflowStatusView,
   renderWorkflowStatusLines,
 } from "./lib/workflow-status.js";
-
-function approvalTitlesFromDefinition(
-  definition: unknown,
-): Map<string, string> {
-  const titles = new Map<string, string>();
-  if (
-    definition === null ||
-    typeof definition !== "object" ||
-    Array.isArray(definition)
-  ) {
-    return titles;
-  }
-  const nodes = (definition as Record<string, unknown>).nodes;
-  if (!Array.isArray(nodes)) {
-    return titles;
-  }
-  for (const node of nodes) {
-    if (node === null || typeof node !== "object" || Array.isArray(node)) {
-      continue;
-    }
-    const key = (node as Record<string, unknown>).key;
-    const title = (node as Record<string, unknown>).title;
-    if (
-      typeof key === "string" &&
-      typeof title === "string" &&
-      title.length > 0
-    ) {
-      titles.set(key, title);
-    }
-  }
-  return titles;
-}
 
 async function main(): Promise<void> {
   let cli;

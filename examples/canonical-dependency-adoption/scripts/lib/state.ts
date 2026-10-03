@@ -109,7 +109,17 @@ export function parseCanonicalState(raw: string): CanonicalStateV1 {
     );
   }
 
-  return record as unknown as CanonicalStateV1;
+  const workspaceId = record.workspaceId;
+  if (typeof workspaceId !== "string" || workspaceId.trim().length === 0) {
+    throw new SetupStateError(
+      "Malformed canonical-state.json: workspaceId must be a non-empty string.",
+    );
+  }
+
+  return {
+    ...(record as unknown as CanonicalStateV1),
+    workspaceId: workspaceId.trim().replace(/^\uFEFF/, ""),
+  };
 }
 
 export async function writeCanonicalState(

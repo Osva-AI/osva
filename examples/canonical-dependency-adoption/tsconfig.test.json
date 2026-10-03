@@ -3,10 +3,15 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": ".",
-    "types": ["node"]
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true
   },
   "include": [
     "test/**/*.ts",
+    "demo/**/*.ts",
+    "demo/public/approval-comment.js",
+    "demo/public/node-detail-lifecycle.js",
     "mcp/npm-connector/src/**/*.ts",
     "scripts/lib/**/*.ts"
   ],

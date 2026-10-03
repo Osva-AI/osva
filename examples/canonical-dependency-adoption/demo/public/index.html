@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OSVA — Canonical Dependency Adoption Review</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow">OSVA</p>
+        <h1>Canonical Dependency Adoption Review</h1>
+        <p class="lede">
+          A live walkthrough of persisted workflow state, child Runs,
+          RunAttempts, and gateway-mediated steps — served through the public
+          OSVA API.
+        </p>
+      </header>
+
+      <section id="setup-banner" class="banner hidden" role="status"></section>
+
+      <section class="panel" id="start-panel">
+        <h2>Start a review</h2>
+        <form id="start-form">
+          <label>
+            npm package name
+            <input name="packageName" type="text" required value="zod" />
+          </label>
+          <label>
+            use case
+            <textarea name="useCase" rows="3" required>
+Runtime validation for public API request bodies in a tier-1 service.</textarea>
+          </label>
+          <fieldset>
+            <legend>constraints (optional)</legend>
+            <div id="constraints-list">
+              <div class="constraint-row">
+                <input
+                  type="text"
+                  name="constraint"
+                  value="Must use a permissive license approved for SaaS distribution."
+                />
+              </div>
+            </div>
+            <button type="button" id="add-constraint" class="ghost">
+              Add constraint
+            </button>
+          </fieldset>
+          <button type="submit" class="primary" id="start-button">
+            Start review
+          </button>
+        </form>
+      </section>
+
+      <section class="panel hidden" id="workflow-panel">
+        <div class="summary-grid" id="workflow-summary"></div>
+        <div class="layout">
+          <nav
+            class="pipeline"
+            id="pipeline"
+            aria-label="Workflow pipeline"
+          ></nav>
+          <article class="detail" id="node-detail">
+            <p class="muted">
+              Select a workflow node to inspect persisted state.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>
+          Browser → local demo server → OSVA REST API → PostgreSQL (authority).
+          No API keys in the browser.
+        </p>
+      </footer>
+    </div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
