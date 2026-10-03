@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "test/integration/**/*.ts",
+    "test/integration/shims/**/*.d.ts",
+    "vitest.integration.config.ts",
+    "mcp/npm-connector/src/deterministic-npm-fetch.ts",
+    "mcp/npm-connector/src/stdio-deterministic.ts",
+    "scripts/lib/**/*.ts"
+  ]
+}

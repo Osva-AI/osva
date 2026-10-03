@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "mcp/npm-connector/src",
+    "outDir": "dist/mcp/npm-connector",
+    "types": ["node"]
+  },
+  "include": ["mcp/npm-connector/src/**/*.ts"],
+  "references": [{ "path": "../../packages/connector-sdk" }]
+}
