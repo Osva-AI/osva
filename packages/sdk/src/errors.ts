@@ -6,12 +6,14 @@ export interface OsvaApiErrorBody {
 export class OsvaApiError extends Error {
   readonly status: number;
   readonly body: OsvaApiErrorBody;
+  readonly requestId?: string;
 
-  constructor(status: number, body: OsvaApiErrorBody) {
+  constructor(status: number, body: OsvaApiErrorBody, requestId?: string) {
     super(formatApiErrorMessage(status, body));
     this.name = "OsvaApiError";
     this.status = status;
     this.body = body;
+    this.requestId = requestId;
   }
 }
 

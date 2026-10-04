@@ -16,6 +16,20 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 **Key files:** `src/process.ts`, `src/http.ts`, `src/run-http.ts`, `src/workflow-http.ts`, `src/artifact-http.ts`, `src/office-http.ts`.
 
+### apps/console
+
+**Purpose:** Browser-based OSVA operator console (M8+). Serves the product UI and a narrow same-origin `/api/v1/*` BFF that calls the public control plane with a server-held API key.
+
+**Owns:** Console HTTP server, React product shell, read-only Runs UX (M8.1).
+
+**Does not own:** Control-plane business logic, PostgreSQL access, agent/workflow execution.
+
+**Depends on:** `@osva-ai/sdk`, `@osva-ai/contracts` (types/schemas only via SDK). Never `@osva/db`.
+
+**Key files:** `src/server/server.ts`, `src/server/routes/api.ts`, `src/client/app.tsx`.
+
+See also: `docs/engineering/CONSOLE.md`.
+
 ### apps/worker
 
 **Purpose:** ExecutionWorker — BullMQ consumer and runtime/gateway composition root.

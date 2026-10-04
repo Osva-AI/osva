@@ -835,6 +835,28 @@ export default tseslint.config(
     },
   },
   {
+    files: ["apps/console/**/*.ts", "apps/console/**/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message: "apps/console cannot access PostgreSQL directly.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/console/test/integration/**/*.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
+  {
     files: ["apps/worker/src/**/*.ts"],
     rules: {
       "no-restricted-imports": [

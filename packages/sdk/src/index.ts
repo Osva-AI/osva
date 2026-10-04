@@ -4,4 +4,8 @@ export {
   OsvaTransportError,
   type OsvaApiErrorBody,
 } from "./errors.js";
-export { OsvaHttpClient, type OsvaHttpClientOptions } from "./http-client.js";
+export {
+  OsvaHttpClient,
+  type OsvaHttpClientOptions,
+  type OsvaHttpResponse,
+} from "./http-client.js";

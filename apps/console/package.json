@@ -1,0 +1,41 @@
+{
+  "name": "@osva/console",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "dev": "pnpm exec tsc -p tsconfig.server.json && node scripts/dev.mjs",
+    "start": "node dist/server/main.js",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@osva-ai/contracts": "workspace:*",
+    "@osva-ai/sdk": "workspace:*",
+    "@tanstack/react-query": "^5.90.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.1"
+  },
+  "devDependencies": {
+    "@osva/adapters-bullmq": "workspace:*",
+    "@osva/db": "workspace:*",
+    "@osva/web": "workspace:*",
+    "@osva/worker": "workspace:*",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "catalog:",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
+    "eslint": "catalog:",
+    "jsdom": "^26.1.0",
+    "typescript": "catalog:",
+    "vite": "^7.1.5",
+    "vitest": "catalog:"
+  }
+}

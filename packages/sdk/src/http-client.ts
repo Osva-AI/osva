@@ -1,4 +1,11 @@
+import { OSVA_REQUEST_ID_HEADER } from "@osva-ai/contracts";
+
 import { OsvaApiError, OsvaTransportError } from "./errors.js";
+
+export interface OsvaHttpResponse<T> {
+  readonly data: T;
+  readonly requestId?: string;
+}
 
 export interface OsvaHttpClientOptions {
   readonly baseUrl: string;
@@ -55,6 +62,13 @@ export class OsvaHttpClient {
   }
 
   async request<T>(options: RequestOptions): Promise<T> {
+    const result = await this.requestWithMeta<T>(options);
+    return result.data;
+  }
+
+  async requestWithMeta<T>(
+    options: RequestOptions,
+  ): Promise<OsvaHttpResponse<T>> {
     const url = buildUrl(this.baseUrl, options.path, options.query);
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -98,11 +112,17 @@ export class OsvaHttpClient {
       });
     }
 
+    const requestId = resolveOsvaRequestId(response.headers, body);
+
     if (!response.ok) {
-      throw new OsvaApiError(response.status, normalizeErrorBody(body));
+      throw new OsvaApiError(
+        response.status,
+        normalizeErrorBody(body),
+        requestId,
+      );
     }
 
-    return body as T;
+    return { data: body as T, requestId };
   }
 
   async uploadMultipart<T>(options: UploadMultipartOptions): Promise<T> {
@@ -143,7 +163,11 @@ export class OsvaHttpClient {
     }
 
     if (!response.ok) {
-      throw new OsvaApiError(response.status, normalizeErrorBody(body));
+      throw new OsvaApiError(
+        response.status,
+        normalizeErrorBody(body),
+        resolveOsvaRequestId(response.headers, body),
+      );
     }
 
     return body as T;
@@ -181,9 +205,17 @@ export class OsvaHttpClient {
       try {
         body = await response.json();
       } catch {
-        throw new OsvaApiError(response.status, { status: "error" });
+        throw new OsvaApiError(
+          response.status,
+          { status: "error" },
+          resolveOsvaRequestId(response.headers),
+        );
       }
-      throw new OsvaApiError(response.status, normalizeErrorBody(body));
+      throw new OsvaApiError(
+        response.status,
+        normalizeErrorBody(body),
+        resolveOsvaRequestId(response.headers, body),
+      );
     }
 
     return {
@@ -238,4 +270,24 @@ function isAbortError(error: unknown): boolean {
     error instanceof Error &&
     (error.name === "AbortError" || error.name === "TimeoutError")
   );
+}
+
+function resolveOsvaRequestId(
+  headers: Headers,
+  body?: unknown,
+): string | undefined {
+  const headerValue = headers.get(OSVA_REQUEST_ID_HEADER)?.trim();
+  if (headerValue !== undefined && headerValue.length > 0) {
+    return headerValue;
+  }
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    "requestId" in body &&
+    typeof (body as { requestId?: unknown }).requestId === "string"
+  ) {
+    const requestId = (body as { requestId: string }).requestId.trim();
+    return requestId.length > 0 ? requestId : undefined;
+  }
+  return undefined;
 }
