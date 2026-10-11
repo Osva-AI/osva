@@ -15,6 +15,7 @@ import { KnowledgeSourcesResource } from "./resources/knowledge-sources.js";
 import { RunObservabilityResource } from "./resources/run-observability.js";
 import { RunsResource } from "./resources/runs.js";
 import { SchedulesResource } from "./resources/schedules.js";
+import { WorkflowEventsResource } from "./resources/workflow-events.js";
 import { WorkflowRunsResource } from "./resources/workflow-runs.js";
 import { WorkflowsResource } from "./resources/workflows.js";
 import { OfficeWorkersResource } from "./resources/office-workers.js";
@@ -33,6 +34,7 @@ export class OsvaClient {
   readonly runObservability: RunObservabilityResource;
   readonly workflows: WorkflowsResource;
   readonly workflowRuns: WorkflowRunsResource;
+  readonly workflowEvents: WorkflowEventsResource;
   readonly approvals: ApprovalsResource;
   readonly schedules: SchedulesResource;
   readonly memoryNamespaces: MemoryNamespacesResource;
@@ -59,6 +61,7 @@ export class OsvaClient {
     this.runObservability = new RunObservabilityResource(this.http);
     this.workflows = new WorkflowsResource(this.http);
     this.workflowRuns = new WorkflowRunsResource(this.http);
+    this.workflowEvents = new WorkflowEventsResource(this.http);
     this.approvals = new ApprovalsResource(this.http);
     this.schedules = new SchedulesResource(this.http);
     this.memoryNamespaces = new MemoryNamespacesResource(this.http);

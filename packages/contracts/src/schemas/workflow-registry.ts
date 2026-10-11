@@ -121,6 +121,19 @@ export const approvalRequestResourceSchema = z.strictObject({
   updatedAt: utcIso8601TimestampSchema,
 });
 
+export const workflowRunSummaryResourceSchema = z.strictObject({
+  id: workflowRunIdSchema,
+  workspaceId: workspaceIdSchema,
+  workflowId: workflowIdSchema,
+  workflowVersionId: workflowVersionIdSchema,
+  status: workflowRunStateSchema,
+  error: workflowRunErrorResourceSchema.optional(),
+  startedAt: utcIso8601TimestampSchema.optional(),
+  completedAt: utcIso8601TimestampSchema.optional(),
+  createdAt: utcIso8601TimestampSchema,
+  updatedAt: utcIso8601TimestampSchema,
+});
+
 export const workflowRunResourceSchema = z.strictObject({
   id: workflowRunIdSchema,
   workspaceId: workspaceIdSchema,
@@ -136,6 +149,27 @@ export const workflowRunResourceSchema = z.strictObject({
   updatedAt: utcIso8601TimestampSchema,
   nodeRuns: z.array(workflowNodeRunResourceSchema),
   approvalRequests: z.array(approvalRequestResourceSchema),
+});
+
+export const workflowRunListResourceSchema = z.strictObject({
+  workflowRuns: z.array(workflowRunSummaryResourceSchema),
+  nextCursor: z.string().min(1).optional(),
+});
+
+export const workflowRunListCursorPayloadSchema = z.strictObject({
+  createdAt: utcIso8601TimestampSchema,
+  id: workflowRunIdSchema,
+});
+
+export const listWorkflowRunsQuerySchema = z.strictObject({
+  limit: z
+    .string()
+    .regex(/^[1-9]\d*$/, "limit must be a positive integer")
+    .optional(),
+  cursor: z.string().min(1).optional(),
+  workflowId: workflowIdSchema.optional(),
+  workflowVersionId: workflowVersionIdSchema.optional(),
+  status: workflowRunStateSchema.optional(),
 });
 
 export const decideApprovalRequestSchema = z.strictObject({

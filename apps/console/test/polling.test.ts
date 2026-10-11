@@ -5,6 +5,8 @@ import {
   isAttemptTerminal,
   isRunLive,
   isRunTerminal,
+  isWorkflowRunLive,
+  isWorkflowRunTerminal,
 } from "../src/client/lib/statuses";
 
 describe("polling status helpers", () => {
@@ -19,5 +21,13 @@ describe("polling status helpers", () => {
     expect(isAttemptLive("RUNNING")).toBe(true);
     expect(isAttemptTerminal("FAILED")).toBe(true);
     expect(isAttemptLive("SUCCEEDED")).toBe(false);
+  });
+
+  it("treats active workflow run states as live", () => {
+    expect(isWorkflowRunLive("PENDING")).toBe(true);
+    expect(isWorkflowRunLive("RUNNING")).toBe(true);
+    expect(isWorkflowRunLive("WAITING")).toBe(true);
+    expect(isWorkflowRunTerminal("SUCCEEDED")).toBe(true);
+    expect(isWorkflowRunLive("SUCCEEDED")).toBe(false);
   });
 });

@@ -1,10 +1,19 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import type { RunAttemptId, RunId, RunStepId } from "@osva-ai/contracts";
+import type {
+  ApprovalRequestId,
+  RunAttemptId,
+  RunId,
+  RunStepId,
+  WorkflowId,
+  WorkflowRunId,
+  WorkflowVersionId,
+} from "@osva-ai/contracts";
 
 import { ConsoleConfigurationError } from "../config.js";
 import { mapOsvaError, sendJson } from "../console-http.js";
 import type { ConsoleOsvaClient } from "../osva-client.js";
+import { readJsonBody } from "../read-json-body.js";
 import type { ResponseSecurityOptions } from "../response-security.js";
 import { upstreamRequestIdHeaders } from "../upstream-response.js";
 
@@ -25,16 +34,6 @@ export async function handleConsoleApiRequest(
   }
 
   const method = request.method ?? "GET";
-  if (method !== "GET") {
-    sendJson(
-      response,
-      405,
-      { error: "Method not allowed." },
-      { Allow: "GET" },
-      deps.security,
-    );
-    return true;
-  }
 
   if (deps.client === undefined) {
     sendJson(
@@ -52,6 +51,60 @@ export async function handleConsoleApiRequest(
   }
 
   try {
+    if (method === "POST") {
+      const approvalDecisionMatch = pathname.match(
+        /^\/api\/v1\/approval-requests\/([^/]+)\/decision$/,
+      );
+      if (approvalDecisionMatch !== null) {
+        const body = await readJsonBody(request);
+        const decided = await deps.client.decideApprovalRequest(
+          approvalDecisionMatch[1] as ApprovalRequestId,
+          body,
+        );
+        sendJson(
+          response,
+          200,
+          decided.data,
+          upstreamRequestIdHeaders(decided.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/workflow-events") {
+        const body = await readJsonBody(request);
+        const ingested = await deps.client.ingestWorkflowEvent(body);
+        sendJson(
+          response,
+          201,
+          ingested.data,
+          upstreamRequestIdHeaders(ingested.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      sendJson(
+        response,
+        405,
+        { error: "Method not allowed." },
+        { Allow: "GET, POST" },
+        deps.security,
+      );
+      return true;
+    }
+
+    if (method !== "GET") {
+      sendJson(
+        response,
+        405,
+        { error: "Method not allowed." },
+        { Allow: "GET, POST" },
+        deps.security,
+      );
+      return true;
+    }
+
     if (pathname === "/api/v1/auth/context") {
       const context = await deps.client.getAuthContext();
       sendJson(
@@ -180,6 +233,120 @@ export async function handleConsoleApiRequest(
         200,
         usage.data,
         upstreamRequestIdHeaders(usage.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/workflows") {
+      const listed = await deps.client.listWorkflows();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const workflowMatch = pathname.match(/^\/api\/v1\/workflows\/([^/]+)$/);
+    if (workflowMatch !== null) {
+      const workflow = await deps.client.getWorkflow(
+        workflowMatch[1] as WorkflowId,
+      );
+      sendJson(
+        response,
+        200,
+        workflow.data,
+        upstreamRequestIdHeaders(workflow.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const workflowVersionsMatch = pathname.match(
+      /^\/api\/v1\/workflows\/([^/]+)\/versions$/,
+    );
+    if (workflowVersionsMatch !== null) {
+      const versions = await deps.client.listWorkflowVersions(
+        workflowVersionsMatch[1] as WorkflowId,
+      );
+      sendJson(
+        response,
+        200,
+        versions.data,
+        upstreamRequestIdHeaders(versions.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const workflowVersionMatch = pathname.match(
+      /^\/api\/v1\/workflows\/([^/]+)\/versions\/([^/]+)$/,
+    );
+    if (workflowVersionMatch !== null) {
+      const version = await deps.client.getWorkflowVersion(
+        workflowVersionMatch[1] as WorkflowId,
+        workflowVersionMatch[2] as WorkflowVersionId,
+      );
+      sendJson(
+        response,
+        200,
+        version.data,
+        upstreamRequestIdHeaders(version.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/workflow-runs") {
+      const listed = await deps.client.listWorkflowRuns({
+        workflowId: searchParams.get("workflowId") ?? undefined,
+        workflowVersionId: searchParams.get("workflowVersionId") ?? undefined,
+        status: searchParams.get("status") ?? undefined,
+        limit: parseOptionalInt(searchParams.get("limit")),
+        cursor: searchParams.get("cursor") ?? undefined,
+      });
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const workflowRunMatch = pathname.match(
+      /^\/api\/v1\/workflow-runs\/([^/]+)$/,
+    );
+    if (workflowRunMatch !== null) {
+      const workflowRun = await deps.client.getWorkflowRun(
+        workflowRunMatch[1] as WorkflowRunId,
+      );
+      sendJson(
+        response,
+        200,
+        workflowRun.data,
+        upstreamRequestIdHeaders(workflowRun.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const approvalMatch = pathname.match(
+      /^\/api\/v1\/approval-requests\/([^/]+)$/,
+    );
+    if (approvalMatch !== null) {
+      const approval = await deps.client.getApprovalRequest(
+        approvalMatch[1] as ApprovalRequestId,
+      );
+      sendJson(
+        response,
+        200,
+        approval.data,
+        upstreamRequestIdHeaders(approval.requestId),
         deps.security,
       );
       return true;

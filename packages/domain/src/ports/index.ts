@@ -61,7 +61,16 @@ export type {
   AppendWorkflowVersionInput,
   WorkflowRepository,
 } from "./workflow-repository.js";
-export type { WorkflowRunRepository } from "./workflow-run-repository.js";
+export type {
+  ListWorkflowRunsQuery,
+  ListWorkflowRunsResult,
+  WorkflowRunListCursor,
+  WorkflowRunRepository,
+} from "./workflow-run-repository.js";
+export {
+  DEFAULT_WORKFLOW_RUN_LIST_LIMIT,
+  MAX_WORKFLOW_RUN_LIST_LIMIT,
+} from "./workflow-run-repository.js";
 export type { ApprovalRequestRepository } from "./approval-request-repository.js";
 export type {
   WorkflowEventWaitMatchQuery,

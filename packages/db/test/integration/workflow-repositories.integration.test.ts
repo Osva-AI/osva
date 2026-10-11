@@ -226,6 +226,195 @@ describe("PostgreSQL workflow repositories", () => {
     expect(active.map((run) => run.id)).toEqual([workflowRun.id]);
   });
 
+  it("lists WorkflowRuns with workspace isolation, filters, and cursor pagination", async () => {
+    const ids = createIds("workflow-run-list");
+    const otherIds = createIds("workflow-run-list-other");
+    await workspaces.save(
+      Workspace.create({
+        id: ids.workspaceId,
+        name: "Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await workspaces.save(
+      Workspace.create({
+        id: otherIds.workspaceId,
+        name: "Other Workspace",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: ids.agentId,
+        workspaceId: ids.workspaceId,
+        key: "example-agent",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: ids.agentVersionId,
+        agentId: ids.agentId,
+        version: 1,
+        manifest: createManifest(),
+        createdAt: NOW,
+      }),
+    );
+    const workflow = Workflow.create({
+      id: "workflow-1" as WorkflowId,
+      workspaceId: ids.workspaceId,
+      key: "research-report",
+      name: "Research Report",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await workflows.saveWorkflow(workflow);
+    const version = await workflows.appendWorkflowVersion({
+      id: "workflow-version-1" as WorkflowVersionId,
+      workflowId: workflow.id,
+      definition: {
+        schemaVersion: "1",
+        nodes: [
+          {
+            key: "research",
+            type: "AGENT",
+            agentVersionId: ids.agentVersionId as AgentVersionId,
+          },
+        ],
+        edges: [],
+      },
+      createdAt: NOW,
+    });
+    const versionTwo = await workflows.appendWorkflowVersion({
+      id: "workflow-version-2" as WorkflowVersionId,
+      workflowId: workflow.id,
+      definition: {
+        schemaVersion: "1",
+        nodes: [
+          {
+            key: "research",
+            type: "AGENT",
+            agentVersionId: ids.agentVersionId as AgentVersionId,
+          },
+        ],
+        edges: [],
+      },
+      createdAt: new Date(NOW.getTime() + 1_000),
+    });
+    await agents.saveAgent(
+      Agent.create({
+        id: otherIds.agentId,
+        workspaceId: otherIds.workspaceId,
+        key: "example-agent",
+        name: "Example Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: otherIds.agentVersionId,
+        agentId: otherIds.agentId,
+        version: 1,
+        manifest: createManifest(),
+        createdAt: NOW,
+      }),
+    );
+    const otherWorkflow = Workflow.create({
+      id: "workflow-other" as WorkflowId,
+      workspaceId: otherIds.workspaceId,
+      key: "research-report",
+      name: "Research Report",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await workflows.saveWorkflow(otherWorkflow);
+    const otherVersion = await workflows.appendWorkflowVersion({
+      id: "workflow-version-other" as WorkflowVersionId,
+      workflowId: otherWorkflow.id,
+      definition: {
+        schemaVersion: "1",
+        nodes: [
+          {
+            key: "research",
+            type: "AGENT",
+            agentVersionId: otherIds.agentVersionId as AgentVersionId,
+          },
+        ],
+        edges: [],
+      },
+      createdAt: NOW,
+    });
+    const runOne = WorkflowRun.create({
+      id: "workflow-run-1" as never,
+      workspaceId: ids.workspaceId,
+      workflowId: workflow.id,
+      workflowVersionId: version.id,
+      input: { n: 1 },
+      createdAt: new Date(NOW.getTime() + 2_000),
+    });
+    const runTwo = WorkflowRun.create({
+      id: "workflow-run-2" as never,
+      workspaceId: ids.workspaceId,
+      workflowId: workflow.id,
+      workflowVersionId: versionTwo.id,
+      input: { n: 2 },
+      createdAt: new Date(NOW.getTime() + 3_000),
+    });
+    const otherRun = WorkflowRun.create({
+      id: "workflow-run-other" as never,
+      workspaceId: otherIds.workspaceId,
+      workflowId: otherWorkflow.id,
+      workflowVersionId: otherVersion.id,
+      input: { n: 3 },
+      createdAt: new Date(NOW.getTime() + 4_000),
+    });
+    await workflowRuns.saveWorkflowRun(runOne);
+    await workflowRuns.saveWorkflowRun(runTwo);
+    await workflowRuns.saveWorkflowRun(otherRun);
+
+    const listed = await workflowRuns.listWorkflowRuns({
+      workspaceId: ids.workspaceId,
+      limit: 10,
+    });
+    expect(listed.workflowRuns.map((run) => run.id)).toEqual([
+      runTwo.id,
+      runOne.id,
+    ]);
+
+    const byVersion = await workflowRuns.listWorkflowRuns({
+      workspaceId: ids.workspaceId,
+      limit: 10,
+      workflowVersionId: versionTwo.id,
+    });
+    expect(byVersion.workflowRuns.map((run) => run.id)).toEqual([runTwo.id]);
+
+    const byStatus = await workflowRuns.listWorkflowRuns({
+      workspaceId: ids.workspaceId,
+      limit: 10,
+      status: "PENDING",
+    });
+    expect(byStatus.workflowRuns).toHaveLength(2);
+
+    const pageOne = await workflowRuns.listWorkflowRuns({
+      workspaceId: ids.workspaceId,
+      limit: 1,
+    });
+    expect(pageOne.workflowRuns.map((run) => run.id)).toEqual([runTwo.id]);
+    expect(pageOne.nextCursor).toEqual({
+      createdAt: runTwo.createdAt,
+      id: runTwo.id,
+    });
+
+    const pageTwo = await workflowRuns.listWorkflowRuns({
+      workspaceId: ids.workspaceId,
+      limit: 1,
+      cursor: pageOne.nextCursor,
+    });
+    expect(pageTwo.workflowRuns.map((run) => run.id)).toEqual([runOne.id]);
+    expect(pageTwo.nextCursor).toBeUndefined();
+  });
+
   it("persists SKIPPED WorkflowNodeRuns and BRANCH selectedTargetKey", async () => {
     const ids = createIds("dag");
     await workspaces.save(

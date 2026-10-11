@@ -51,6 +51,23 @@ function createMockClient(
       },
     }),
     listArtifacts: async () => ({ data: { items: [] } }),
+    listWorkflows: async () => ({ data: { workflows: [] } }),
+    getWorkflow: async () => {
+      throw new Error("not implemented");
+    },
+    listWorkflowVersions: async () => ({ data: { versions: [] } }),
+    getWorkflowVersion: async () => {
+      throw new Error("not implemented");
+    },
+    listWorkflowRuns: async () => ({ data: { workflowRuns: [] } }),
+    getWorkflowRun: async () => {
+      throw new Error("not implemented");
+    },
+    getApprovalRequest: async () => {
+      throw new Error("not implemented");
+    },
+    decideApprovalRequest: async () => ({ data: {} }),
+    ingestWorkflowEvent: async () => ({ data: {}, requestId: "req-event" }),
     ...overrides,
   };
 }
@@ -143,6 +160,40 @@ describe("console server API", () => {
       `http://127.0.0.1:${address.port}/api/v1/unsupported-resource`,
     );
     expect(response.status).toBe(404);
+  });
+
+  it("accepts POST on explicit mutation routes", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        ingestWorkflowEvent: async () => ({
+          data: { id: "we-1" },
+          requestId: "req-event-1",
+        }),
+      }),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/workflow-events`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "demo",
+          eventType: "ready",
+          correlationKey: "corr",
+          idempotencyKey: "idem-1",
+          payload: {},
+        }),
+      },
+    );
+    expect(response.status).toBe(201);
+    expect(response.headers.get("x-osva-request-id")).toBe("req-event-1");
   });
 
   it("rejects non-GET methods on console API routes", async () => {

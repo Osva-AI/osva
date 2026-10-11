@@ -185,6 +185,14 @@ describe("REST two-workspace security matrix", () => {
           { headers: harness.authA },
         ),
       );
+      const workflowRuns = await fetchV1(`${harness.origin}/v1/workflow-runs`, {
+        headers: harness.authA,
+      });
+      expect(workflowRuns.status).toBe(200);
+      expect(
+        (workflowRuns.body as { workflowRuns: unknown[] }).workflowRuns,
+      ).toHaveLength(0);
+
       expectNotFound(
         await fetchV1(`${harness.origin}/v1/workflow-runs/${b.workflowRunId}`, {
           headers: harness.authA,

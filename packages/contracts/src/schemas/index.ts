@@ -209,8 +209,12 @@ export {
   workflowNodeRunStateSchema,
   workflowResourceSchema,
   workflowRunErrorResourceSchema,
+  listWorkflowRunsQuerySchema,
+  workflowRunListCursorPayloadSchema,
+  workflowRunListResourceSchema,
   workflowRunResourceSchema,
   workflowRunStateSchema,
+  workflowRunSummaryResourceSchema,
   workflowVersionListResourceSchema,
   workflowVersionResourceSchema,
 } from "./workflow-registry.js";

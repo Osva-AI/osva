@@ -59,3 +59,53 @@ export function isRunTerminal(status: string): boolean {
 export function isAttemptTerminal(status: string): boolean {
   return ATTEMPT_TERMINAL.has(status);
 }
+
+const WORKFLOW_RUN_ACTIVE = new Set(["PENDING", "RUNNING", "WAITING"]);
+const WORKFLOW_RUN_TERMINAL = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
+
+export function workflowRunStatusCategory(
+  status: string,
+): StatusVisualCategory {
+  if (WORKFLOW_RUN_ACTIVE.has(status)) {
+    return status === "RUNNING" ? "active" : "neutral";
+  }
+  if (status === "SUCCEEDED") {
+    return "success";
+  }
+  if (status === "FAILED") {
+    return "error";
+  }
+  if (status === "CANCELLED") {
+    return "inactive";
+  }
+  return "neutral";
+}
+
+export function workflowNodeRunStatusCategory(
+  status: string,
+): StatusVisualCategory {
+  if (status === "RUNNING") {
+    return "active";
+  }
+  if (status === "WAITING" || status === "PENDING") {
+    return "neutral";
+  }
+  if (status === "SUCCEEDED") {
+    return "success";
+  }
+  if (status === "FAILED") {
+    return "error";
+  }
+  if (status === "SKIPPED" || status === "CANCELLED") {
+    return "inactive";
+  }
+  return "neutral";
+}
+
+export function isWorkflowRunLive(status: string): boolean {
+  return WORKFLOW_RUN_ACTIVE.has(status);
+}
+
+export function isWorkflowRunTerminal(status: string): boolean {
+  return WORKFLOW_RUN_TERMINAL.has(status);
+}

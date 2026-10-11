@@ -397,6 +397,7 @@ async function handleRequestWithContext(
     response,
     method,
     path,
+    url.searchParams,
     workflows,
   );
   if (handledWorkflows) {

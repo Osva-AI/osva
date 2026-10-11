@@ -1,4 +1,12 @@
-import type { RunAttemptId, RunId, RunStepId } from "@osva-ai/contracts";
+import type {
+  ApprovalRequestId,
+  RunAttemptId,
+  RunId,
+  RunStepId,
+  WorkflowId,
+  WorkflowRunId,
+  WorkflowVersionId,
+} from "@osva-ai/contracts";
 import { OsvaHttpClient } from "@osva-ai/sdk";
 
 import type { ConsoleConfig } from "./config.js";
@@ -40,6 +48,35 @@ export interface ConsoleOsvaClient {
     readonly limit?: string;
     readonly cursor?: string;
   }): Promise<ConsoleUpstreamResponse<unknown>>;
+  listWorkflows(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getWorkflow(
+    workflowId: WorkflowId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listWorkflowVersions(
+    workflowId: WorkflowId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getWorkflowVersion(
+    workflowId: WorkflowId,
+    workflowVersionId: WorkflowVersionId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listWorkflowRuns(params: {
+    readonly workflowId?: string;
+    readonly workflowVersionId?: string;
+    readonly status?: string;
+    readonly limit?: number;
+    readonly cursor?: string;
+  }): Promise<ConsoleUpstreamResponse<unknown>>;
+  getWorkflowRun(
+    workflowRunId: WorkflowRunId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getApprovalRequest(
+    approvalRequestId: ApprovalRequestId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  decideApprovalRequest(
+    approvalRequestId: ApprovalRequestId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  ingestWorkflowEvent(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
 }
 
 export function createConsoleOsvaClient(
@@ -125,6 +162,60 @@ export function createConsoleOsvaClient(
           limit: query.limit,
           cursor: query.cursor,
         },
+      }),
+    listWorkflows: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/workflows",
+      }),
+    getWorkflow: (workflowId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/workflows/${encodeURIComponent(workflowId)}`,
+      }),
+    listWorkflowVersions: (workflowId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/workflows/${encodeURIComponent(workflowId)}/versions`,
+      }),
+    getWorkflowVersion: (workflowId, workflowVersionId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/workflows/${encodeURIComponent(workflowId)}/versions/${encodeURIComponent(workflowVersionId)}`,
+      }),
+    listWorkflowRuns: (params) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/workflow-runs",
+        query: {
+          workflowId: params.workflowId,
+          workflowVersionId: params.workflowVersionId,
+          status: params.status,
+          limit: params.limit === undefined ? undefined : String(params.limit),
+          cursor: params.cursor,
+        },
+      }),
+    getWorkflowRun: (workflowRunId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/workflow-runs/${encodeURIComponent(workflowRunId)}`,
+      }),
+    getApprovalRequest: (approvalRequestId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/approval-requests/${encodeURIComponent(approvalRequestId)}`,
+      }),
+    decideApprovalRequest: (approvalRequestId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/approval-requests/${encodeURIComponent(approvalRequestId)}/decision`,
+        body,
+      }),
+    ingestWorkflowEvent: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/workflow-events",
+        body,
       }),
   };
 }

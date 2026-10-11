@@ -70,6 +70,18 @@ describe("console production SPA routing", () => {
     expect(asset.status).toBe(200);
     expect(await asset.text()).toContain("console.log");
 
+    const workflowDetail = await fetch(`${origin}/workflows/wf-1`);
+    expect(workflowDetail.status).toBe(200);
+    expect(await workflowDetail.text()).toContain('id="root"');
+
+    const workflowVersion = await fetch(
+      `${origin}/workflows/wf-1/versions/wv-1`,
+    );
+    expect(workflowVersion.status).toBe(200);
+
+    const workflowRunDetail = await fetch(`${origin}/workflow-runs/wr-1`);
+    expect(workflowRunDetail.status).toBe(200);
+
     const apiRoute = await fetch(`${origin}/api/v1/auth/context`);
     expect(apiRoute.status).toBe(503);
     expect(await apiRoute.text()).not.toContain('id="root"');

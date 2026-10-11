@@ -471,6 +471,17 @@ class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
     return [...this.runs.values()];
   }
 
+  async listWorkflowRuns(
+    query: import("../src/ports/workflow-run-repository.js").ListWorkflowRunsQuery,
+  ): Promise<
+    import("../src/ports/workflow-run-repository.js").ListWorkflowRunsResult
+  > {
+    const workflowRuns = [...this.runs.values()].filter(
+      (run) => run.workspaceId === query.workspaceId,
+    );
+    return { workflowRuns };
+  }
+
   async transitionWorkflowRun(
     _expectedStatus: import("@osva-ai/contracts").WorkflowRunState,
     next: import("../src/workflow-run.js").WorkflowRun,

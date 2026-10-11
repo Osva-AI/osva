@@ -63,7 +63,7 @@ export function tryLoadConsoleConfig(
 
 export function defaultClientDistDir(): string {
   const serverDir = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(serverDir, "../../client");
+  return path.resolve(serverDir, "../client");
 }
 
 function readOptional(value: string | undefined): string | undefined {

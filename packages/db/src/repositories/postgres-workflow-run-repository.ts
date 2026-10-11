@@ -13,9 +13,11 @@ import {
   assertLegalWorkflowRunTransition,
   type WorkflowNodeRun,
   type WorkflowRun,
+  type ListWorkflowRunsQuery,
+  type ListWorkflowRunsResult,
   type WorkflowRunRepository,
 } from "@osva/domain";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, or, type SQL } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import {
@@ -79,6 +81,58 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
       .limit(limit);
 
     return rows.map(workflowRunFromRow);
+  }
+
+  async listWorkflowRuns(
+    query: ListWorkflowRunsQuery,
+  ): Promise<ListWorkflowRunsResult> {
+    const conditions: SQL[] = [eq(workflowRuns.workspaceId, query.workspaceId)];
+
+    if (query.workflowId !== undefined) {
+      conditions.push(eq(workflowRuns.workflowId, query.workflowId));
+    }
+
+    if (query.workflowVersionId !== undefined) {
+      conditions.push(
+        eq(workflowRuns.workflowVersionId, query.workflowVersionId),
+      );
+    }
+
+    if (query.status !== undefined) {
+      conditions.push(eq(workflowRuns.status, query.status));
+    }
+
+    if (query.cursor !== undefined) {
+      const cursorCondition = or(
+        lt(workflowRuns.createdAt, query.cursor.createdAt),
+        and(
+          eq(workflowRuns.createdAt, query.cursor.createdAt),
+          lt(workflowRuns.id, query.cursor.id),
+        ),
+      );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
+    }
+
+    const rows = await this.database.db
+      .select()
+      .from(workflowRuns)
+      .where(and(...conditions))
+      .orderBy(desc(workflowRuns.createdAt), desc(workflowRuns.id))
+      .limit(query.limit + 1);
+
+    const hasMore = rows.length > query.limit;
+    const page = hasMore ? rows.slice(0, query.limit) : rows;
+    const last = page[page.length - 1];
+
+    return {
+      workflowRuns: page.map(workflowRunFromRow),
+      nextCursor:
+        hasMore && last !== undefined
+          ? { createdAt: last.createdAt, id: last.id as WorkflowRunId }
+          : undefined,
+    };
   }
 
   async transitionWorkflowRun(

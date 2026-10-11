@@ -13,7 +13,10 @@ import {
   assertLegalWorkflowRunTransition,
   isTerminalWorkflowRunState,
   type WorkflowNodeRun,
+  type ListWorkflowRunsQuery,
+  type ListWorkflowRunsResult,
   type WorkflowRun,
+  type WorkflowRunListCursor,
   type WorkflowRunRepository,
 } from "@osva/domain";
 
@@ -52,6 +55,57 @@ export class MemoryWorkflowRunRepository implements WorkflowRunRepository {
       .filter((run) => !isTerminalWorkflowRunState(run.status))
       .sort(compareWorkflowRuns)
       .slice(0, limit);
+  }
+
+  async listWorkflowRuns(
+    query: ListWorkflowRunsQuery,
+  ): Promise<ListWorkflowRunsResult> {
+    const filtered = [...this.workflowRuns.values()].filter((run) => {
+      if (run.workspaceId !== query.workspaceId) {
+        return false;
+      }
+
+      if (
+        query.workflowId !== undefined &&
+        run.workflowId !== query.workflowId
+      ) {
+        return false;
+      }
+
+      if (
+        query.workflowVersionId !== undefined &&
+        run.workflowVersionId !== query.workflowVersionId
+      ) {
+        return false;
+      }
+
+      if (query.status !== undefined && run.status !== query.status) {
+        return false;
+      }
+
+      if (
+        query.cursor !== undefined &&
+        !isBeforeWorkflowRunListCursor(run, query.cursor)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    filtered.sort(compareWorkflowRunsCreatedAtIdDesc);
+
+    const page = filtered.slice(0, query.limit);
+    const hasMore = filtered.length > query.limit;
+    const last = page[page.length - 1];
+
+    return {
+      workflowRuns: page,
+      nextCursor:
+        hasMore && last !== undefined
+          ? { createdAt: last.createdAt, id: last.id }
+          : undefined,
+    };
   }
 
   async transitionWorkflowRun(
@@ -193,4 +247,37 @@ function compareWorkflowRuns(left: WorkflowRun, right: WorkflowRun): number {
   }
 
   return 0;
+}
+
+function compareWorkflowRunsCreatedAtIdDesc(
+  left: WorkflowRun,
+  right: WorkflowRun,
+): number {
+  const createdDelta = right.createdAt.getTime() - left.createdAt.getTime();
+  if (createdDelta !== 0) {
+    return createdDelta;
+  }
+
+  if (right.id < left.id) {
+    return -1;
+  }
+
+  if (right.id > left.id) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function isBeforeWorkflowRunListCursor(
+  run: WorkflowRun,
+  cursor: WorkflowRunListCursor,
+): boolean {
+  if (run.createdAt.getTime() < cursor.createdAt.getTime()) {
+    return true;
+  }
+
+  return (
+    run.createdAt.getTime() === cursor.createdAt.getTime() && run.id < cursor.id
+  );
 }

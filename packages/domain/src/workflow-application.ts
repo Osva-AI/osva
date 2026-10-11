@@ -39,7 +39,12 @@ import {
 import type { AgentRepository } from "./ports/agent-repository.js";
 import type { ApprovalRequestRepository } from "./ports/approval-request-repository.js";
 import type { WorkflowRepository } from "./ports/workflow-repository.js";
-import type { WorkflowRunRepository } from "./ports/workflow-run-repository.js";
+import type {
+  ListWorkflowRunsQuery,
+  ListWorkflowRunsResult,
+  WorkflowRunRepository,
+} from "./ports/workflow-run-repository.js";
+import { MAX_WORKFLOW_RUN_LIST_LIMIT } from "./ports/workflow-run-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 import { Workflow } from "./workflow.js";
 import {
@@ -320,6 +325,27 @@ export class CreateWorkflowRun {
   }
 }
 
+export class ListWorkflowRuns {
+  constructor(private readonly deps: WorkflowApplicationDependencies) {}
+
+  async execute(
+    scope: ControlPlaneScope,
+    query: Omit<ListWorkflowRunsQuery, "workspaceId">,
+  ): Promise<ListWorkflowRunsResult> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      WORKFLOW_RUN_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    assertWorkflowRunListLimit(query.limit);
+    return this.deps.workflowRuns.listWorkflowRuns({
+      ...query,
+      workspaceId,
+    });
+  }
+}
+
 export class GetWorkflowRun {
   constructor(private readonly deps: WorkflowApplicationDependencies) {}
 
@@ -457,6 +483,7 @@ export interface WorkflowApplication {
   readonly getWorkflowVersion: GetWorkflowVersion;
   readonly listWorkflowVersions: ListWorkflowVersions;
   readonly createWorkflowRun: CreateWorkflowRun;
+  readonly listWorkflowRuns: ListWorkflowRuns;
   readonly getWorkflowRun: GetWorkflowRun;
   readonly getApprovalRequest: GetApprovalRequest;
   readonly decideApprovalRequest: DecideApprovalRequest;
@@ -473,10 +500,23 @@ export function createWorkflowApplication(
     getWorkflowVersion: new GetWorkflowVersion(deps),
     listWorkflowVersions: new ListWorkflowVersions(deps),
     createWorkflowRun: new CreateWorkflowRun(deps),
+    listWorkflowRuns: new ListWorkflowRuns(deps),
     getWorkflowRun: new GetWorkflowRun(deps),
     getApprovalRequest: new GetApprovalRequest(deps),
     decideApprovalRequest: new DecideApprovalRequest(deps),
   };
+}
+
+function assertWorkflowRunListLimit(limit: number): void {
+  if (
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > MAX_WORKFLOW_RUN_LIST_LIMIT
+  ) {
+    throw new DomainInvariantError(
+      `WorkflowRun list limit must be an integer between 1 and ${String(MAX_WORKFLOW_RUN_LIST_LIMIT)}.`,
+    );
+  }
 }
 
 async function assertAgentVersionBindings(

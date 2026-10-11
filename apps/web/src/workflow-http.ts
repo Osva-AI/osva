@@ -10,9 +10,12 @@ import {
   createWorkflowRunRequestSchema,
   createWorkflowVersionRequestSchema,
   decideApprovalRequestSchema,
+  listWorkflowRunsQuerySchema,
   workflowListResourceSchema,
   workflowResourceSchema,
+  workflowRunListResourceSchema,
   workflowRunResourceSchema,
+  workflowRunSummaryResourceSchema,
   workflowVersionListResourceSchema,
   workflowVersionResourceSchema,
   approvalRequestResourceSchema,
@@ -26,15 +29,24 @@ import type {
   WorkflowRunView,
   WorkflowVersion,
 } from "@osva/domain";
+import {
+  DEFAULT_WORKFLOW_RUN_LIST_LIMIT,
+  MAX_WORKFLOW_RUN_LIST_LIMIT,
+} from "@osva/domain";
 import { requireControlPlaneScope } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
+import {
+  decodeWorkflowRunListCursor,
+  encodeWorkflowRunListCursor,
+} from "./workflow-run-cursor.js";
 
 export async function handleWorkflowRequest(
   request: IncomingMessage,
   response: ServerResponse,
   method: string,
   path: string,
+  searchParams: URLSearchParams,
   workflows: WorkflowApplication,
 ): Promise<boolean> {
   const route = matchWorkflowRoute(path);
@@ -43,7 +55,14 @@ export async function handleWorkflowRequest(
   }
 
   try {
-    await dispatchWorkflowRoute(request, response, method, route, workflows);
+    await dispatchWorkflowRoute(
+      request,
+      response,
+      method,
+      route,
+      searchParams,
+      workflows,
+    );
   } catch (error) {
     sendHttpError(response, error);
   }
@@ -76,6 +95,7 @@ async function dispatchWorkflowRoute(
   response: ServerResponse,
   method: string,
   route: WorkflowRoute,
+  searchParams: URLSearchParams,
   workflows: WorkflowApplication,
 ): Promise<void> {
   const scope = requireControlPlaneScope();
@@ -177,6 +197,11 @@ async function dispatchWorkflowRoute(
   }
 
   if (route.kind === "runs") {
+    if (method === "GET") {
+      await handleListWorkflowRuns(response, searchParams, workflows);
+      return;
+    }
+
     if (method === "POST") {
       const parsed = createWorkflowRunRequestSchema.safeParse(
         await readJsonBody(request),
@@ -206,7 +231,7 @@ async function dispatchWorkflowRoute(
       response,
       405,
       { status: "method_not_allowed" },
-      { allow: "POST" },
+      { allow: "GET, POST" },
     );
     return;
   }
@@ -418,19 +443,102 @@ function toWorkflowRunResource(view: WorkflowRunView) {
 
 function toWorkflowRunFields(workflowRun: WorkflowRun) {
   return {
+    ...toWorkflowRunSummaryFields(workflowRun),
+    input: workflowRun.input,
+    output: workflowRun.output,
+  };
+}
+
+function toWorkflowRunSummaryFields(workflowRun: WorkflowRun) {
+  return {
     id: workflowRun.id,
     workspaceId: workflowRun.workspaceId,
     workflowId: workflowRun.workflowId,
     workflowVersionId: workflowRun.workflowVersionId,
     status: workflowRun.status,
-    input: workflowRun.input,
-    output: workflowRun.output,
     error: workflowRun.error,
     startedAt: workflowRun.startedAt?.toISOString(),
     completedAt: workflowRun.completedAt?.toISOString(),
     createdAt: workflowRun.createdAt.toISOString(),
     updatedAt: workflowRun.updatedAt.toISOString(),
   };
+}
+
+async function handleListWorkflowRuns(
+  response: ServerResponse,
+  searchParams: URLSearchParams,
+  workflows: WorkflowApplication,
+): Promise<void> {
+  const scope = requireControlPlaneScope();
+  const parsed = listWorkflowRunsQuerySchema.safeParse(
+    Object.fromEntries(searchParams.entries()),
+  );
+  if (!parsed.success) {
+    sendJson(response, 400, { status: "invalid_request" });
+    return;
+  }
+
+  let limit = DEFAULT_WORKFLOW_RUN_LIST_LIMIT;
+  if (parsed.data.limit !== undefined) {
+    limit = Number(parsed.data.limit);
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > MAX_WORKFLOW_RUN_LIST_LIMIT
+    ) {
+      sendJson(response, 400, { status: "invalid_request" });
+      return;
+    }
+  }
+
+  let cursor: { createdAt: Date; id: WorkflowRunId } | undefined;
+  if (parsed.data.cursor !== undefined) {
+    const decoded = decodeWorkflowRunListCursor(parsed.data.cursor);
+    if (decoded === null) {
+      sendJson(response, 400, { status: "invalid_request" });
+      return;
+    }
+
+    cursor = {
+      createdAt: new Date(decoded.createdAt),
+      id: decoded.id as WorkflowRunId,
+    };
+  }
+
+  const page = await workflows.listWorkflowRuns.execute(scope, {
+    limit,
+    cursor,
+    workflowId: parsed.data.workflowId,
+    workflowVersionId: parsed.data.workflowVersionId,
+    status: parsed.data.status,
+  });
+
+  sendJson(
+    response,
+    200,
+    toWorkflowRunListResource(page.workflowRuns, page.nextCursor),
+  );
+}
+
+function toWorkflowRunListResource(
+  page: readonly WorkflowRun[],
+  nextCursor:
+    { readonly createdAt: Date; readonly id: WorkflowRunId } | undefined,
+) {
+  return workflowRunListResourceSchema.parse({
+    workflowRuns: page.map((workflowRun) =>
+      workflowRunSummaryResourceSchema.parse(
+        toWorkflowRunSummaryFields(workflowRun),
+      ),
+    ),
+    nextCursor:
+      nextCursor === undefined
+        ? undefined
+        : encodeWorkflowRunListCursor({
+            createdAt: nextCursor.createdAt.toISOString(),
+            id: nextCursor.id,
+          }),
+  });
 }
 
 function toWorkflowNodeRunFields(nodeRun: WorkflowNodeRun) {
@@ -480,6 +588,7 @@ export const V1_HTTP_ROUTES = [
     method: "GET",
     path: "/v1/workflows/:workflowId/versions/:workflowVersionId",
   },
+  { method: "GET", path: "/v1/workflow-runs" },
   { method: "POST", path: "/v1/workflow-runs" },
   { method: "GET", path: "/v1/workflow-runs/:workflowRunId" },
   { method: "GET", path: "/v1/approval-requests/:approvalRequestId" },
