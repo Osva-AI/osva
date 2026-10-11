@@ -38,6 +38,43 @@ export async function gitLines(args) {
     .filter((line) => line.length > 0);
 }
 
+function normalizeRepoRelative(relative) {
+  return relative.split(path.sep).join("/");
+}
+
+/** @param {readonly string[][]} groups */
+export function mergeChangedPathGroups(...groups) {
+  const unique = new Set();
+  for (const group of groups) {
+    for (const relative of group) {
+      unique.add(normalizeRepoRelative(relative));
+    }
+  }
+  return [...unique].sort();
+}
+
+/**
+ * All changed paths from git (staged, unstaged, untracked, deleted).
+ * Used for workspace package selection; includes paths that no longer exist on disk.
+ */
+export async function changedPathsIncludingDeleted() {
+  const [unstaged, staged, untracked, deletedUnstaged, deletedStaged] =
+    await Promise.all([
+      gitLines(["diff", "--name-only", "--diff-filter=ACMR"]),
+      gitLines(["diff", "--name-only", "--cached", "--diff-filter=ACMR"]),
+      gitLines(["ls-files", "--others", "--exclude-standard"]),
+      gitLines(["diff", "--name-only", "--diff-filter=D"]),
+      gitLines(["diff", "--name-only", "--cached", "--diff-filter=D"]),
+    ]);
+  return mergeChangedPathGroups(
+    unstaged,
+    staged,
+    untracked,
+    deletedUnstaged,
+    deletedStaged,
+  );
+}
+
 export async function changedFiles() {
   const [unstaged, staged, untracked] = await Promise.all([
     gitLines(["diff", "--name-only", "--diff-filter=ACMR"]),
@@ -51,7 +88,7 @@ export async function changedFiles() {
     try {
       const stat = await fs.stat(absolute);
       if (stat.isFile()) {
-        existing.push(relative.split(path.sep).join("/"));
+        existing.push(normalizeRepoRelative(relative));
       }
     } catch {
       // deleted between listing and stat

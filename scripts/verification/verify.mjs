@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   affectedPackages,
   changedFiles,
+  changedPathsIncludingDeleted,
   hasPrettierCrlfBaseline,
   loadWorkspacePackages,
   prettierSupportedChangedFiles,
@@ -32,6 +33,8 @@ function printUsage() {
 Modes:
   doctor      Environment diagnostics
   quick       Format changed files, then cached lint/typecheck/unit tests
+  changed     Check changed files, then cached lint/typecheck/test/build for affected packages
+  docker      Fail if Docker CLI, Compose, or engine is unavailable
   ci          Current GitHub verify job (fail-fast, non-mutating)
   python      Current GitHub python-sdk job
   ci:clean    Clean generated outputs, then verify:ci and verify:python
@@ -161,16 +164,28 @@ async function formatCi(env) {
   });
 }
 
-async function quickTurboArgs(files) {
+async function changedTurboArgs(files) {
   const packages = await loadWorkspacePackages();
   const affected = affectedPackages(files, packages);
   if (affected.global) {
-    return [];
+    return { turboArgs: [], scope: "global" };
   }
   if (affected.names.length === 0) {
-    return null;
+    return { turboArgs: null, scope: "none" };
   }
-  return affected.names.flatMap((name) => ["--filter", name]);
+  return {
+    turboArgs: affected.names.flatMap((name) => ["--filter", name]),
+    scope: "packages",
+    names: affected.names,
+  };
+}
+
+function harnessPathsChanged(files) {
+  return files.some(
+    (file) =>
+      file === "scripts/verification" ||
+      file.startsWith("scripts/verification/"),
+  );
 }
 
 async function gitDiffCheck() {
@@ -264,7 +279,9 @@ async function quick(env) {
   const started = Date.now();
   const files = await changedFiles();
   const formatMs = await formatChanged(env, true);
-  const turboArgs = await quickTurboArgs(files);
+  const { turboArgs } = await changedTurboArgs(
+    await changedPathsIncludingDeleted(),
+  );
   let lintMs = 0;
   let typecheckMs = 0;
   let testMs = 0;
@@ -312,6 +329,109 @@ async function quick(env) {
   printPhaseResult("TOTAL", "PASS", Date.now() - started);
   console.log("");
   console.log("verify:quick PASS");
+}
+
+async function changed(env) {
+  const started = Date.now();
+  const paths = await changedPathsIncludingDeleted();
+  if (paths.length === 0) {
+    console.log("No changed files detected.");
+    const gitMs = await gitDiffCheck();
+    printPhaseResult("FORMAT", "SKIP", 0);
+    printPhaseResult("LINT", "SKIP", 0);
+    printPhaseResult("TYPECHECK", "SKIP", 0);
+    printPhaseResult("TEST", "SKIP", 0);
+    printPhaseResult("BUILD", "SKIP", 0);
+    printPhaseResult("GITDIFF", "PASS", gitMs);
+    printPhaseResult("TOTAL", "PASS", Date.now() - started);
+    console.log("");
+    console.log("verify:changed PASS");
+    return;
+  }
+
+  const formatMs = await formatChanged(env, false);
+  const { turboArgs, scope, names } = await changedTurboArgs(paths);
+  let lintMs = 0;
+  let typecheckMs = 0;
+  let testMs = 0;
+  let buildMs = 0;
+  const envVars = await pnpmEnv(env);
+
+  if (turboArgs === null) {
+    console.log("");
+    console.log(
+      "No workspace packages changed; skipping Turbo lint/typecheck/test/build.",
+    );
+    if (harnessPathsChanged(paths)) {
+      testMs = await runHarnessTests();
+    }
+  } else {
+    if (scope === "global") {
+      console.log("");
+      console.log(
+        "Root workspace configuration changed; running full cached Turbo lint/typecheck/test/build.",
+      );
+    } else if (names?.length) {
+      console.log("");
+      console.log(`Affected packages: ${names.join(", ")}`);
+    }
+    lintMs = await runPhase(
+      "LINT",
+      pnpmSpec(env),
+      ["exec", "turbo", "run", "lint", ...turboArgs],
+      { env: envVars },
+    );
+    typecheckMs = await runPhase(
+      "TYPECHECK",
+      pnpmSpec(env),
+      ["exec", "turbo", "run", "typecheck", ...turboArgs],
+      { env: envVars },
+    );
+    testMs = await runPhase(
+      "TEST",
+      pnpmSpec(env),
+      ["exec", "turbo", "run", "test", ...turboArgs],
+      { env: envVars },
+    );
+    if (harnessPathsChanged(paths)) {
+      testMs += await runHarnessTests();
+    }
+    buildMs = await runPhase(
+      "BUILD",
+      pnpmSpec(env),
+      ["exec", "turbo", "run", "build", ...turboArgs],
+      { env: envVars },
+    );
+  }
+
+  const gitMs = await gitDiffCheck();
+  console.log("");
+  printPhaseResult("FORMAT", "PASS", formatMs);
+  printPhaseResult("LINT", turboArgs === null ? "SKIP" : "PASS", lintMs);
+  printPhaseResult(
+    "TYPECHECK",
+    turboArgs === null ? "SKIP" : "PASS",
+    typecheckMs,
+  );
+  printPhaseResult("TEST", testMs > 0 ? "PASS" : "SKIP", testMs);
+  printPhaseResult("BUILD", turboArgs === null ? "SKIP" : "PASS", buildMs);
+  printPhaseResult("GITDIFF", "PASS", gitMs);
+  printPhaseResult("TOTAL", "PASS", Date.now() - started);
+  console.log("");
+  console.log("verify:changed PASS");
+}
+
+async function dockerPreflight(env) {
+  const failures = requireModePrereqs("docker", env);
+  if (failures.length > 0) {
+    printDoctor(env);
+    console.log("");
+    for (const failure of failures) {
+      console.log(`FAIL  ${failure}`);
+    }
+    process.exit(1);
+  }
+  console.log("verify:docker PASS");
 }
 
 async function ci(env) {
@@ -522,6 +642,12 @@ switch (mode) {
     break;
   case "quick":
     await quick(env);
+    break;
+  case "changed":
+    await changed(env);
+    break;
+  case "docker":
+    await dockerPreflight(env);
     break;
   case "ci":
     await ci(env);

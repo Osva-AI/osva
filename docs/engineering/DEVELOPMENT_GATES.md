@@ -30,6 +30,8 @@ passes or a concrete environmental limitation is explicitly reported.
 | --- | --- | --- |
 | `pnpm verify:doctor` | Anytime | Prints Node, pnpm, Turbo, Python, Git, and Docker diagnostics. Does not install software. |
 | `pnpm verify:quick` | Inner loop | Formats **changed** Prettier files only, then cached lint, typecheck, and unit tests. No full build, integration, Python package build, or clean. |
+| `pnpm verify:changed` | Pre-review (local) | Prettier **check** on changed files, cached lint/typecheck/test/**build** for affected workspace packages (or full cached tasks when root config changes), then `git diff --check`. Non-mutating. |
+| `pnpm verify:docker` | Before `infra:up` | Fails with actionable diagnostics when Docker CLI, Compose, or the engine is unavailable. |
 | `pnpm verify:ci` | Same as GitHub `verify` | Fail-fast: format check, lint, typecheck, unit tests, **then** build, integration (including Python SDK runtime E2E), `git diff --check`. Non-mutating. |
 | `pnpm verify:python` | Same as GitHub `python-sdk` | From `sdks/python`: Ruff format/check, mypy, pytest, `python -m build`, then clean generated Python artifacts. |
 | `pnpm verify:ci:clean` | Before review | Environment check, safe generated-artifact clean, `pnpm install --frozen-lockfile`, Python SDK deps, `verify:ci`, `verify:python`, final clean, `git diff --check`, `git status`. |
@@ -114,9 +116,13 @@ It does not install another Python version. CI remains authoritative for 3.11.
 
 ## Docker / Compose
 
-Docker is optional for `verify:quick` and `verify:ci`. Absence does not fail
-those commands. Integration tests start their own PostgreSQL/Valkey
-containers when Docker is available.
+Docker is optional for `verify:quick`, `verify:changed`, and `verify:ci`.
+Absence does not fail those commands. Integration tests start their own
+PostgreSQL/Valkey containers when Docker is available.
+
+`pnpm verify:docker` (also run by `pnpm infra:up`) requires Docker CLI,
+Compose, and a running engine. `verify:doctor` reports CLI vs engine status
+separately.
 
 `compose-smoke` stays a separate GitHub job. It is not part of `verify:ci`.
 

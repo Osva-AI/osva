@@ -24,8 +24,11 @@ export function createConsoleServer(
 ): http.Server {
   const config = options.config ?? tryLoadConsoleConfig();
   const client =
-    options.client ??
-    (config === undefined ? undefined : createConsoleOsvaClient(config));
+    "client" in options
+      ? options.client
+      : config === undefined
+        ? undefined
+        : createConsoleOsvaClient(config);
   const security =
     config === undefined
       ? {}
