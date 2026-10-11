@@ -166,8 +166,7 @@ export function WorkflowCreatePage() {
         <div>
           <h1 className="page-title">Create workflow</h1>
           <p className="page-subtitle">
-            Register a workflow and publish an immutable V3 definition (linear
-            AGENT chain).
+            Register a workflow and publish an immutable V3 graph definition.
           </p>
         </div>
         <Link className="button" to="/workflows">

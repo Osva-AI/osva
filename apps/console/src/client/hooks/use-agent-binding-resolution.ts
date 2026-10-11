@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { consoleFetch } from "../lib/console-api";
 import { resolveAgentBindingsFromCatalog } from "../lib/workflow-builder-agent-bindings";
-import {
-  listAgentNodesInOrder,
-  type WorkflowBuilderDraft,
-} from "../lib/workflow-builder-linear";
+import type { WorkflowBuilderDraft } from "../lib/workflow-builder-draft";
+import { listAgentNodesInDraft } from "../lib/workflow-builder-graph";
 import type { AgentVersionListResource } from "./use-agents";
 import { useAgentsListQuery } from "./use-agents";
 
@@ -27,7 +25,7 @@ export function useAgentBindingResolution(
   const [isResolving, setIsResolving] = useState(false);
 
   const boundNodes = useMemo(() => {
-    return listAgentNodesInOrder(draft).filter(
+    return listAgentNodesInDraft(draft).filter(
       (node) => node.agentVersionId.trim().length > 0,
     );
   }, [draft]);

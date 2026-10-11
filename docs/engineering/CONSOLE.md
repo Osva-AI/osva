@@ -67,14 +67,15 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 - Workflow run list and detail
 - Approval decisions and workflow event ingestion (role-gated)
 
-### Workflow creation (M8.3.1)
+### Workflow creation (M8.3.1 + M8.3.2)
 
 **Route:** `/workflows/new` (linked from the Workflows list).
 
 **Capabilities:**
 
 - Create a workflow registry row (`key`, `name`, optional `description`)
-- Build a **Workflow Definition V3** draft using a **linear AGENT-only** editor (add, remove, reorder steps)
+- Build a **Workflow Definition V3** draft on an **interactive graph canvas** (all V3 node types: AGENT, BRANCH, PARALLEL, JOIN, APPROVAL, WAIT)
+- Connect nodes with edges, drag to arrange layout, and configure nodes in the **inspector** or **accessible node list**
 - Discover workspace agents and bind **immutable AgentVersion** ids on each AGENT node
 - Publish the draft as a new immutable `WorkflowVersion` via the control plane
 
@@ -82,7 +83,8 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 - The executable draft is a canonical `WorkflowDefinitionV3` (`nodes` + `edges`) in client state
 - Canvas layout (`layoutByNodeKey`) is kept separate and is **not** sent to the API
-- Node keys remain stable when steps are reordered (edges are rebuilt)
+- Node keys are stable sequence-based ids (for example `agent-step-1`, `branch-2`)
+- Workspace-scoped `sessionStorage` recovery (M8.3.1) with explicit restore; partial publish retry retains `workflowId`
 
 **Publish behavior:**
 
@@ -92,14 +94,14 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 **Validation:**
 
-- Client-side Zod shape checks and basic field validation for faster feedback
-- DAG rules and agent-version binding remain **authoritative** on the control plane; upstream errors and request IDs are shown as returned
+- Client-side Zod shape checks, AGENT version binding checks, and **domain DAG validation** (`@osva/domain`) before publish
+- Invalid intermediate graphs remain editable; publish is blocked until the definition is valid
+- Control plane validation remains authoritative; upstream errors and request IDs are shown as returned
 
-**Limitations (M8.3.1 authoring):**
+**Limitations:**
 
-- No editable graph canvas on `/workflows/new` (form/list editor only); published V3 versions have a **read-only** graph on the version page (M8.3.2-1)
-- AGENT nodes in a single linear chain only (no BRANCH, PARALLEL, JOIN, APPROVAL, or WAIT authoring UI)
 - No agent creation, workflow run launch, or settings from this flow
+- No execution overlays on the editor or published-version graph
 - Requires **EDITOR** or **ADMIN** role (WRITE) on the workspace API key
 
 ### Not yet in console

@@ -10,8 +10,11 @@ export interface WorkflowNodeLayout {
   readonly y: number;
 }
 
+export type WorkflowGraphInteraction = "readonly" | "editable";
+
 export interface DefinitionToFlowOptions {
   readonly layoutByNodeKey?: Readonly<Record<string, WorkflowNodeLayout>>;
+  readonly interaction?: WorkflowGraphInteraction;
 }
 
 export interface WorkflowGraphNodeData extends Record<string, unknown> {
@@ -146,6 +149,7 @@ export function definitionToFlow(
   options: DefinitionToFlowOptions = {},
 ): WorkflowDefinitionFlowModel {
   const layout = resolveLayout(definition, options.layoutByNodeKey);
+  const editable = options.interaction === "editable";
 
   const nodes: Node<WorkflowGraphNodeData>[] = definition.nodes.map((node) => {
     const position = layout[node.key] ?? { x: ORIGIN_X, y: ORIGIN_Y };
@@ -158,9 +162,9 @@ export function definitionToFlow(
         nodeType: node.type,
         label: workflowGraphNodeLabel(node),
       },
-      draggable: false,
+      draggable: editable,
       selectable: true,
-      connectable: false,
+      connectable: editable,
       focusable: true,
     };
   });
@@ -177,8 +181,9 @@ export function definitionToFlow(
       id: `edge:${edge.from}->${edge.to}`,
       source: edge.from,
       target: edge.to,
-      selectable: false,
+      selectable: editable,
       focusable: true,
+      deletable: editable,
     }));
 
   return { nodes, edges };

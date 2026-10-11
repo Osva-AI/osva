@@ -30,6 +30,8 @@ import {
   WorkflowDefinitionNotExecutableError,
 } from "./errors.js";
 
+export { InvalidWorkflowDefinitionError } from "./errors.js";
+
 type DagWorkflowDefinition = WorkflowDefinitionV2 | WorkflowDefinitionV3;
 type DagWorkflowNode = WorkflowDefinitionNodeV2 | WorkflowDefinitionNodeV3;
 

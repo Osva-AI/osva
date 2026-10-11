@@ -1,27 +1,11 @@
-import {
-  Background,
-  BackgroundVariant,
-  Handle,
-  Position,
-  ReactFlow,
-  type Node,
-  type NodeProps,
-  type NodeTypes,
-} from "@xyflow/react";
+import { Background, BackgroundVariant, ReactFlow } from "@xyflow/react";
 import { useMemo } from "react";
 
-import {
-  WORKFLOW_GRAPH_NODE_TYPE,
-  definitionToFlow,
-  type WorkflowGraphNodeData,
-} from "../../lib/workflow-definition-graph-adapter";
+import { definitionToFlow } from "../../lib/workflow-definition-graph-adapter";
 import type { WorkflowDefinitionView } from "../../lib/workflow-definition";
+import { workflowGraphNodeTypes } from "./workflow-graph-node";
 
 import "@xyflow/react/dist/style.css";
-
-const nodeTypes: NodeTypes = {
-  [WORKFLOW_GRAPH_NODE_TYPE]: WorkflowGraphNode,
-};
 
 export interface WorkflowGraphViewProps {
   readonly definition: WorkflowDefinitionView;
@@ -29,7 +13,7 @@ export interface WorkflowGraphViewProps {
 
 export function WorkflowGraphView({ definition }: WorkflowGraphViewProps) {
   const { nodes, edges } = useMemo(
-    () => definitionToFlow(definition),
+    () => definitionToFlow(definition, { interaction: "readonly" }),
     [definition],
   );
 
@@ -42,7 +26,7 @@ export function WorkflowGraphView({ definition }: WorkflowGraphViewProps) {
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        nodeTypes={nodeTypes}
+        nodeTypes={workflowGraphNodeTypes}
         nodesDraggable={false}
         nodesConnectable={false}
         nodesFocusable
@@ -65,37 +49,6 @@ export function WorkflowGraphView({ definition }: WorkflowGraphViewProps) {
           color="var(--border)"
         />
       </ReactFlow>
-    </div>
-  );
-}
-
-type WorkflowGraphFlowNode = Node<
-  WorkflowGraphNodeData,
-  typeof WORKFLOW_GRAPH_NODE_TYPE
->;
-
-function WorkflowGraphNode({ data }: NodeProps<WorkflowGraphFlowNode>) {
-  const nodeTypeClass = data.nodeType.toLowerCase().replace(/[^a-z0-9-]/g, "");
-  return (
-    <div
-      className={`workflow-graph-node workflow-graph-node--${nodeTypeClass}`}
-      aria-label={`${data.nodeType} node ${data.nodeKey}`}
-    >
-      <Handle
-        type="target"
-        position={Position.Left}
-        isConnectable={false}
-        aria-hidden
-      />
-      <div className="workflow-graph-node__type">{data.nodeType}</div>
-      <div className="workflow-graph-node__key mono">{data.nodeKey}</div>
-      <div className="workflow-graph-node__label mono">{data.label}</div>
-      <Handle
-        type="source"
-        position={Position.Right}
-        isConnectable={false}
-        aria-hidden
-      />
     </div>
   );
 }

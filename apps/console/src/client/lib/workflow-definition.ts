@@ -15,6 +15,15 @@ export interface WorkflowDefinitionView {
   readonly edges: readonly WorkflowDefinitionEdge[];
 }
 
+/** View-model adapter for strict V3 definitions from contracts. */
+export function asWorkflowDefinitionView(definition: {
+  readonly schemaVersion: string;
+  readonly nodes: readonly object[];
+  readonly edges: readonly WorkflowDefinitionEdge[];
+}): WorkflowDefinitionView {
+  return definition as WorkflowDefinitionView;
+}
+
 export function orderWorkflowNodeKeys(
   definition: WorkflowDefinitionView,
 ): string[] {

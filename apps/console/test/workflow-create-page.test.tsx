@@ -13,6 +13,12 @@ import {
 } from "../src/client/lib/workflow-builder-linear";
 import { writeStoredWorkflowBuilderDraft } from "../src/client/lib/workflow-builder-storage";
 
+vi.mock("../src/client/components/workflow/workflow-builder-canvas", () => ({
+  WorkflowBuilderCanvas: () => (
+    <div data-testid="workflow-builder-canvas-mock" />
+  ),
+}));
+
 function renderCreatePage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -123,7 +129,7 @@ describe("Workflow create page", () => {
 
     await user.type(screen.getByLabelText("Key"), "demo-wf");
     await user.type(screen.getByLabelText("Name"), "Demo WF");
-    await user.click(screen.getByRole("button", { name: "Add step" }));
+    await user.click(screen.getByRole("button", { name: "Add AGENT" }));
     await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
     await waitFor(() => {
       expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
@@ -235,7 +241,7 @@ describe("Workflow create page", () => {
 
     await user.type(screen.getByLabelText("Key"), "partial");
     await user.type(screen.getByLabelText("Name"), "Partial");
-    await user.click(screen.getByRole("button", { name: "Add step" }));
+    await user.click(screen.getByRole("button", { name: "Add AGENT" }));
     await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
     await waitFor(() => {
       expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
@@ -329,6 +335,10 @@ describe("Workflow create page", () => {
       screen.getByRole("button", { name: "Restore saved draft" }),
     );
 
+    await user.click(
+      screen.getByRole("button", { name: /agent-step-1 · AGENT/i }),
+    );
+
     await waitFor(() => {
       const agentSelect = screen.getByLabelText("Agent") as HTMLSelectElement;
       expect(agentSelect.value).toBe("agent-1");
@@ -402,6 +412,10 @@ describe("Workflow create page", () => {
     });
     await user.click(
       screen.getByRole("button", { name: "Restore saved draft" }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /agent-step-1 · AGENT/i }),
     );
 
     await waitFor(() => {
