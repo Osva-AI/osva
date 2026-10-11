@@ -51,7 +51,21 @@ function createMockClient(
       },
     }),
     listArtifacts: async () => ({ data: { items: [] } }),
+    listAgents: async () => ({
+      data: { agents: [] },
+      requestId: "req-agents-list",
+    }),
+    listAgentVersions: async () => ({
+      data: { versions: [] },
+      requestId: "req-agent-versions",
+    }),
     listWorkflows: async () => ({ data: { workflows: [] } }),
+    createWorkflow: async () => {
+      throw new Error("not implemented");
+    },
+    appendWorkflowVersion: async () => {
+      throw new Error("not implemented");
+    },
     getWorkflow: async () => {
       throw new Error("not implemented");
     },
@@ -194,6 +208,97 @@ describe("console server API", () => {
     );
     expect(response.status).toBe(201);
     expect(response.headers.get("x-osva-request-id")).toBe("req-event-1");
+  });
+
+  it("forwards workflow creation and version append POST routes", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        createWorkflow: async () => ({
+          data: {
+            id: "wf-new",
+            workspaceId: "workspace-1",
+            key: "demo",
+            name: "Demo",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+          requestId: "req-wf-create",
+        }),
+        appendWorkflowVersion: async () => ({
+          data: {
+            id: "wv-1",
+            workflowId: "wf-new",
+            workspaceId: "workspace-1",
+            version: 1,
+            definition: { schemaVersion: "3", nodes: [], edges: [] },
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+          requestId: "req-wf-version",
+        }),
+      }),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+
+    const createResponse = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/workflows`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key: "demo", name: "Demo" }),
+      },
+    );
+    expect(createResponse.status).toBe(201);
+    expect(createResponse.headers.get("x-osva-request-id")).toBe(
+      "req-wf-create",
+    );
+
+    const versionResponse = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/workflows/wf-new/versions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          definition: { schemaVersion: "3", nodes: [], edges: [] },
+        }),
+      },
+    );
+    expect(versionResponse.status).toBe(201);
+    expect(versionResponse.headers.get("x-osva-request-id")).toBe(
+      "req-wf-version",
+    );
+  });
+
+  it("forwards agent discovery GET routes", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient(),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+
+    const agentsResponse = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/agents`,
+    );
+    expect(agentsResponse.status).toBe(200);
+    expect(agentsResponse.headers.get("x-osva-request-id")).toBe(
+      "req-agents-list",
+    );
+
+    const versionsResponse = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/agents/agent-1/versions`,
+    );
+    expect(versionsResponse.status).toBe(200);
+    expect(versionsResponse.headers.get("x-osva-request-id")).toBe(
+      "req-agent-versions",
+    );
   });
 
   it("rejects non-GET methods on console API routes", async () => {

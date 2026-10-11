@@ -65,6 +65,7 @@ describe("Workflows UI", () => {
       expect(screen.getByText("Demo Workflow")).toBeTruthy();
     });
     expect(screen.getByRole("link", { name: "wf-1" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Create workflow" })).toBeTruthy();
   });
 
   it("opens workflow detail with versions and recent runs", async () => {

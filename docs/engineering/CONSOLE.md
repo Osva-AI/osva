@@ -36,19 +36,65 @@ Open the Vite dev URL (default `http://127.0.0.1:5173`). API calls are proxied t
 ## Security model
 
 - API key stays on the console server process.
-- Console API routes are an explicit allowlist (runs, attempts, steps, usage, artifacts metadata, auth context).
-- No generic HTTP proxy.
+- Console API routes are an explicit allowlist (no generic HTTP proxy).
 - Responses are checked so the configured key cannot leak in JSON payloads.
+- Workflow builder drafts may be stored in **workspace-scoped `sessionStorage`** for authoring recovery only. Drafts never contain API keys or other secrets.
 
-## M8.1 supported surfaces
+## Supported surfaces
 
-Read-only Runs experience:
+### Runs (read)
 
-- Runs list with `status`, `agentId`, `agentVersionId`, and cursor pagination
-- Run detail (bindings, input, attempts)
-- RunAttempt detail (output, error)
-- RunStep activity (MODEL / TOOL / MEMORY / KNOWLEDGE metadata)
-- Attempt usage and artifact metadata
+- Runs list with filters and cursor pagination
+- Run detail, attempts, steps, usage, artifact metadata
 - Polling while runs/attempts are active
 
-Workflows, agents, settings, mutations, and artifact preview/download are out of scope for M8.1.
+### Workflows (read)
+
+- Workflow registry list and detail
+- Immutable workflow version definitions (V1/V2/V3)
+- Recent workflow runs per workflow
+
+### Workflow runs (read + operator actions)
+
+- Workflow run list and detail
+- Approval decisions and workflow event ingestion (role-gated)
+
+### Workflow creation (M8.3.1)
+
+**Route:** `/workflows/new` (linked from the Workflows list).
+
+**Capabilities:**
+
+- Create a workflow registry row (`key`, `name`, optional `description`)
+- Build a **Workflow Definition V3** draft using a **linear AGENT-only** editor (add, remove, reorder steps)
+- Discover workspace agents and bind **immutable AgentVersion** ids on each AGENT node
+- Publish the draft as a new immutable `WorkflowVersion` via the control plane
+
+**Draft model:**
+
+- The executable draft is a canonical `WorkflowDefinitionV3` (`nodes` + `edges`) in client state
+- Canvas layout (`layoutByNodeKey`) is kept separate and is **not** sent to the API
+- Node keys remain stable when steps are reordered (edges are rebuilt)
+
+**Publish behavior:**
+
+- Registry creation and version publication are separate API calls
+- If registry creation succeeds but version publication fails, the UI retains `workflowId`, shows partial-success messaging, and allows **retry publish** without creating a duplicate workflow
+- Successful publish clears the workspace draft from `sessionStorage` and navigates to the new version page
+
+**Validation:**
+
+- Client-side Zod shape checks and basic field validation for faster feedback
+- DAG rules and agent-version binding remain **authoritative** on the control plane; upstream errors and request IDs are shown as returned
+
+**Limitations (M8.3.1):**
+
+- No visual graph canvas (form/list editor only)
+- AGENT nodes in a single linear chain only (no BRANCH, PARALLEL, JOIN, APPROVAL, or WAIT authoring UI)
+- No agent creation, workflow run launch, or settings from this flow
+- Requires **EDITOR** or **ADMIN** role (WRITE) on the workspace API key
+
+### Not yet in console
+
+- Full Agents product surface (Agents nav remains disabled; agents are listed only inside workflow creation)
+- Artifact preview/download, knowledge, tools, models, settings
