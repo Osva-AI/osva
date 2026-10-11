@@ -1,9 +1,11 @@
 import type { WorkflowDefinitionV3 } from "@osva-ai/contracts";
 import { workflowDefinitionSchema } from "@osva-ai/contracts/schemas";
+
 import {
-  InvalidWorkflowDefinitionError,
-  assertWorkflowDefinition,
-} from "@osva/domain/workflow-definition";
+  analyzeWorkflowBuilderDraft,
+  applyCanonicalPublishGate,
+  type WorkflowBuilderValidationReport,
+} from "./workflow-builder-validation";
 
 export interface WorkflowNodeLayout {
   readonly x: number;
@@ -85,11 +87,13 @@ export function assertNoLayoutInDefinition(
 export interface ClientDefinitionValidation {
   readonly ok: true;
   readonly definition: WorkflowDefinitionV3;
+  readonly report: WorkflowBuilderValidationReport;
 }
 
 export interface ClientDefinitionValidationError {
   readonly ok: false;
   readonly message: string;
+  readonly report: WorkflowBuilderValidationReport;
 }
 
 export function validateRegistryFields(
@@ -107,49 +111,24 @@ export function validateRegistryFields(
 export function validateDraftForPublish(
   draft: WorkflowBuilderDraft,
 ): ClientDefinitionValidation | ClientDefinitionValidationError {
-  const registryError = validateRegistryFields(draft.registry);
-  if (registryError !== undefined) {
-    return { ok: false, message: registryError };
-  }
-
-  if (draft.definition.nodes.length === 0) {
-    return { ok: false, message: "Add at least one workflow node." };
-  }
-
-  for (const node of draft.definition.nodes) {
-    if (node.type === "AGENT" && node.agentVersionId.trim().length === 0) {
-      return {
-        ok: false,
-        message: `Select an agent version for node ${node.key}.`,
-      };
-    }
+  const guidance = analyzeWorkflowBuilderDraft(draft);
+  const report = applyCanonicalPublishGate(draft, guidance);
+  if (report.errorCount > 0) {
+    return {
+      ok: false,
+      message: report.issues[0]?.message ?? "Workflow definition is invalid.",
+      report,
+    };
   }
 
   const definition = definitionForPublish(draft);
-  assertNoLayoutInDefinition(definition);
-  const parsed = workflowDefinitionSchema.safeParse(definition);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      message:
-        "Workflow definition shape is invalid. Check node configuration.",
-    };
-  }
-  if (parsed.data.schemaVersion !== "3") {
+  const parsed = workflowDefinitionSchema.parse(definition);
+  if (parsed.schemaVersion !== "3") {
     return {
       ok: false,
       message: "Workflow builder requires schema version 3.",
+      report,
     };
   }
-
-  try {
-    assertWorkflowDefinition(parsed.data);
-  } catch (error) {
-    if (error instanceof InvalidWorkflowDefinitionError) {
-      return { ok: false, message: error.message };
-    }
-    throw error;
-  }
-
-  return { ok: true, definition: parsed.data };
+  return { ok: true, definition: parsed, report };
 }

@@ -15,12 +15,14 @@ export type WorkflowGraphInteraction = "readonly" | "editable";
 export interface DefinitionToFlowOptions {
   readonly layoutByNodeKey?: Readonly<Record<string, WorkflowNodeLayout>>;
   readonly interaction?: WorkflowGraphInteraction;
+  readonly errorNodeKeys?: ReadonlySet<string>;
 }
 
 export interface WorkflowGraphNodeData extends Record<string, unknown> {
   readonly nodeKey: string;
   readonly nodeType: string;
   readonly label: string;
+  readonly hasError?: boolean;
 }
 
 export const WORKFLOW_GRAPH_NODE_TYPE = "workflowDefinition" as const;
@@ -161,6 +163,7 @@ export function definitionToFlow(
         nodeKey: node.key,
         nodeType: node.type,
         label: workflowGraphNodeLabel(node),
+        hasError: options.errorNodeKeys?.has(node.key) === true,
       },
       draggable: editable,
       selectable: true,

@@ -88,15 +88,18 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 **Publish behavior:**
 
+- A **publish review** step shows key, name, node/edge counts, node types, agent bindings, and validation before confirmation
 - Registry creation and version publication are separate API calls
 - If registry creation succeeds but version publication fails, the UI retains `workflowId`, shows partial-success messaging, and allows **retry publish** without creating a duplicate workflow
 - Successful publish clears the workspace draft from `sessionStorage` and navigates to the new version page
+- Published versions are never rewritten
 
-**Validation:**
+**Validation (M8.3.3):**
 
-- Client-side Zod shape checks, AGENT version binding checks, and **domain DAG validation** (`@osva/domain`) before publish
-- Invalid intermediate graphs remain editable; publish is blocked until the definition is valid
-- Control plane validation remains authoritative; upstream errors and request IDs are shown as returned
+- Live structured report (graph, node, and edge issues) with focus actions and inspector details
+- Client-side Zod shape checks and **domain DAG validation** (`@osva/domain`) remain the canonical publish gate
+- Invalid intermediate graphs remain editable; publish confirmation is disabled until the definition is valid
+- Control plane errors are shown separately from client validation and include request IDs
 
 **Limitations:**
 

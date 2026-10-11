@@ -30,6 +30,7 @@ export interface WorkflowBuilderCanvasProps {
   readonly disabled: boolean;
   readonly selectedNodeKey: string | undefined;
   readonly onSelectNodeKey: (nodeKey: string | undefined) => void;
+  readonly errorNodeKeys?: ReadonlySet<string>;
 }
 
 export function WorkflowBuilderCanvas(props: WorkflowBuilderCanvasProps) {
@@ -46,14 +47,16 @@ function WorkflowBuilderCanvasInner({
   disabled,
   selectedNodeKey,
   onSelectNodeKey,
+  errorNodeKeys,
 }: WorkflowBuilderCanvasProps) {
   const { nodes, edges } = useMemo(
     () =>
       definitionToFlow(asWorkflowDefinitionView(draft.definition), {
         layoutByNodeKey: draft.layoutByNodeKey,
         interaction: disabled ? "readonly" : "editable",
+        errorNodeKeys,
       }),
-    [draft, disabled],
+    [draft, disabled, errorNodeKeys],
   );
 
   const nodesWithSelection = useMemo(

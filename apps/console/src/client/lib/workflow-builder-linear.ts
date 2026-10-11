@@ -21,6 +21,10 @@ export {
   validateDraftForPublish,
   validateRegistryFields,
 } from "./workflow-builder-draft";
+export {
+  analyzeWorkflowBuilderDraft,
+  applyCanonicalPublishGate,
+} from "./workflow-builder-validation";
 
 import {
   addWorkflowNode,

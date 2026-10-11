@@ -497,6 +497,43 @@ a:hover {
   margin: 0;
 }
 
+.workflow-graph-node--error {
+  border-color: var(--danger);
+}
+
+.workflow-validation-count {
+  color: var(--danger);
+  margin: 0 0 var(--space-3);
+}
+
+.workflow-validation-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.workflow-validation-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  background: var(--bg);
+}
+
+.workflow-validation-item__severity {
+  display: inline-block;
+  margin-right: var(--space-2);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: var(--danger);
+}
+
+.workflow-inspector-errors {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--danger);
+  font-size: 0.86rem;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;

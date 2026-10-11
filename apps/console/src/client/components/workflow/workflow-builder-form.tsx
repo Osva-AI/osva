@@ -15,9 +15,15 @@ import {
   orderWorkflowNodeKeys,
 } from "../../lib/workflow-definition";
 import {
+  analyzeWorkflowBuilderDraft,
+  errorNodeKeys,
+  issuesForNode,
+} from "../../lib/workflow-builder-validation";
+import {
   WorkflowNodeInspector,
   WorkflowNodePalette,
 } from "./workflow-node-inspector";
+import { WorkflowValidationPanel } from "./workflow-validation-panel";
 
 const WorkflowBuilderCanvasLazy = lazy(async () => {
   const module = await import("./workflow-builder-canvas");
@@ -59,6 +65,22 @@ export function WorkflowBuilderForm({
   const orderedKeys = useMemo(
     () => orderWorkflowNodeKeys(asWorkflowDefinitionView(draft.definition)),
     [draft.definition],
+  );
+
+  const validationReport = useMemo(
+    () => analyzeWorkflowBuilderDraft(draft),
+    [draft],
+  );
+  const invalidNodeKeys = useMemo(
+    () => errorNodeKeys(validationReport),
+    [validationReport],
+  );
+  const selectedNodeIssues = useMemo(
+    () =>
+      selectedNodeKey === undefined
+        ? []
+        : issuesForNode(validationReport, selectedNodeKey),
+    [selectedNodeKey, validationReport],
   );
 
   function addNode(type: WorkflowV3NodeType) {
@@ -146,9 +168,15 @@ export function WorkflowBuilderForm({
             disabled={disabled}
             selectedNodeKey={selectedNodeKey}
             onSelectNodeKey={setSelectedNodeKey}
+            errorNodeKeys={invalidNodeKeys}
           />
         </Suspense>
       </section>
+
+      <WorkflowValidationPanel
+        report={validationReport}
+        onFocusNode={setSelectedNodeKey}
+      />
 
       <section className="panel">
         <h2 className="section-title">Node inspector</h2>
@@ -161,6 +189,7 @@ export function WorkflowBuilderForm({
           unavailableVersionByNodeKey={
             bindingResolution.unavailableVersionByNodeKey
           }
+          nodeIssues={selectedNodeIssues}
           onManualAgentIdChange={(nodeKey, agentId) => {
             setManualAgentIdByNodeKey((current) => ({
               ...current,

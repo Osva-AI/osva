@@ -12,6 +12,7 @@ import {
   type AgentVersionResource,
 } from "../../hooks/use-agents";
 import type { WorkflowBuilderDraft } from "../../lib/workflow-builder-draft";
+import type { WorkflowBuilderValidationIssue } from "../../lib/workflow-builder-validation";
 import {
   outgoingTargets,
   removeWorkflowNode,
@@ -27,6 +28,7 @@ interface WorkflowNodeInspectorProps {
   readonly agentIdByNodeKey: Readonly<Record<string, string>>;
   readonly unavailableVersionByNodeKey: Readonly<Record<string, boolean>>;
   readonly onManualAgentIdChange: (nodeKey: string, agentId: string) => void;
+  readonly nodeIssues?: readonly WorkflowBuilderValidationIssue[];
 }
 
 export function WorkflowNodeInspector({
@@ -37,6 +39,7 @@ export function WorkflowNodeInspector({
   agentIdByNodeKey,
   unavailableVersionByNodeKey,
   onManualAgentIdChange,
+  nodeIssues = [],
 }: WorkflowNodeInspectorProps) {
   if (nodeKey === undefined) {
     return (
@@ -69,6 +72,16 @@ export function WorkflowNodeInspector({
           Remove node
         </button>
       </div>
+      {nodeIssues.length > 0 ? (
+        <ul
+          className="workflow-inspector-errors"
+          data-testid="workflow-inspector-errors"
+        >
+          {nodeIssues.map((item) => (
+            <li key={item.id}>{item.message}</li>
+          ))}
+        </ul>
+      ) : null}
       {node.type === "AGENT" ? (
         <AgentNodeInspector
           node={node}

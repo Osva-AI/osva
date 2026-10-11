@@ -15,10 +15,11 @@ export function WorkflowGraphNode({
   selected,
 }: NodeProps<WorkflowGraphFlowNode>) {
   const nodeTypeClass = data.nodeType.toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const errorClass = data.hasError === true ? " workflow-graph-node--error" : "";
   return (
     <div
-      className={`workflow-graph-node workflow-graph-node--${nodeTypeClass}${selected ? " workflow-graph-node--selected" : ""}`}
-      aria-label={`${data.nodeType} node ${data.nodeKey}`}
+      className={`workflow-graph-node workflow-graph-node--${nodeTypeClass}${selected ? " workflow-graph-node--selected" : ""}${errorClass}`}
+      aria-label={`${data.nodeType} node ${data.nodeKey}${data.hasError === true ? " (has errors)" : ""}`}
     >
       <Handle type="target" position={Position.Left} />
       <div className="workflow-graph-node__type">{data.nodeType}</div>
