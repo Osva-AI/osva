@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type {
+  AgentId,
   ApprovalRequestId,
   RunAttemptId,
   RunId,
@@ -79,6 +80,38 @@ export async function handleConsoleApiRequest(
           201,
           ingested.data,
           upstreamRequestIdHeaders(ingested.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/workflows") {
+        const body = await readJsonBody(request);
+        const created = await deps.client.createWorkflow(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const workflowVersionPostMatch = pathname.match(
+        /^\/api\/v1\/workflows\/([^/]+)\/versions$/,
+      );
+      if (workflowVersionPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await deps.client.appendWorkflowVersion(
+          workflowVersionPostMatch[1] as WorkflowId,
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
           deps.security,
         );
         return true;
@@ -233,6 +266,35 @@ export async function handleConsoleApiRequest(
         200,
         usage.data,
         upstreamRequestIdHeaders(usage.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/agents") {
+      const listed = await deps.client.listAgents();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const agentVersionsMatch = pathname.match(
+      /^\/api\/v1\/agents\/([^/]+)\/versions$/,
+    );
+    if (agentVersionsMatch !== null) {
+      const versions = await deps.client.listAgentVersions(
+        agentVersionsMatch[1] as AgentId,
+      );
+      sendJson(
+        response,
+        200,
+        versions.data,
+        upstreamRequestIdHeaders(versions.requestId),
         deps.security,
       );
       return true;

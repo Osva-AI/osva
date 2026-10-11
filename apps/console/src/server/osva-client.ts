@@ -1,4 +1,5 @@
 import type {
+  AgentId,
   ApprovalRequestId,
   RunAttemptId,
   RunId,
@@ -48,9 +49,18 @@ export interface ConsoleOsvaClient {
     readonly limit?: string;
     readonly cursor?: string;
   }): Promise<ConsoleUpstreamResponse<unknown>>;
+  listAgents(): Promise<ConsoleUpstreamResponse<unknown>>;
+  listAgentVersions(
+    agentId: AgentId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
   listWorkflows(): Promise<ConsoleUpstreamResponse<unknown>>;
+  createWorkflow(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   getWorkflow(
     workflowId: WorkflowId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  appendWorkflowVersion(
+    workflowId: WorkflowId,
+    body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
   listWorkflowVersions(
     workflowId: WorkflowId,
@@ -163,15 +173,37 @@ export function createConsoleOsvaClient(
           cursor: query.cursor,
         },
       }),
+    listAgents: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/agents",
+      }),
+    listAgentVersions: (agentId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/agents/${encodeURIComponent(agentId)}/versions`,
+      }),
     listWorkflows: () =>
       http.requestWithMeta({
         method: "GET",
         path: "/v1/workflows",
       }),
+    createWorkflow: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/workflows",
+        body,
+      }),
     getWorkflow: (workflowId) =>
       http.requestWithMeta({
         method: "GET",
         path: `/v1/workflows/${encodeURIComponent(workflowId)}`,
+      }),
+    appendWorkflowVersion: (workflowId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/workflows/${encodeURIComponent(workflowId)}/versions`,
+        body,
       }),
     listWorkflowVersions: (workflowId) =>
       http.requestWithMeta({

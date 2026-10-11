@@ -18,14 +18,19 @@ export function WorkflowsPage() {
             Workflow registry definitions in the authenticated workspace.
           </p>
         </div>
-        <button
-          type="button"
-          className="button"
-          onClick={() => void workflowsQuery.refetch()}
-          disabled={workflowsQuery.isFetching}
-        >
-          Refresh
-        </button>
+        <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
+          <Link className="button primary" to="/workflows/new">
+            Create workflow
+          </Link>
+          <button
+            type="button"
+            className="button"
+            onClick={() => void workflowsQuery.refetch()}
+            disabled={workflowsQuery.isFetching}
+          >
+            Refresh
+          </button>
+        </div>
       </header>
 
       {workflowsQuery.isLoading ? (
