@@ -79,10 +79,7 @@ export function runCommand(command, args, options = {}) {
     if (timeoutMs !== undefined && timeoutMs > 0) {
       timer = setTimeout(() => {
         child.kill();
-        finish(
-          124,
-          `Command timed out after ${String(timeoutMs)}ms.`,
-        );
+        finish(124, `Command timed out after ${String(timeoutMs)}ms.`);
       }, timeoutMs);
     }
     if (stdio === "pipe") {
