@@ -4,6 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  dockerReadinessFailures,
+  probeDockerEngine,
+} from "./docker-preflight.mjs";
+
 export const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -34,11 +39,12 @@ const REQUIRED_NODE_MAJOR = 24;
 /**
  * @param {string} command
  * @param {readonly string[]} args
- * @param {{ cwd?: string, env?: NodeJS.ProcessEnv, stdio?: "inherit" | "pipe" }} [options]
+ * @param {{ cwd?: string, env?: NodeJS.ProcessEnv, stdio?: "inherit" | "pipe", timeoutMs?: number }} [options]
  * @returns {Promise<CommandResult>}
  */
 export function runCommand(command, args, options = {}) {
   const stdio = options.stdio ?? "inherit";
+  const timeoutMs = options.timeoutMs;
   const useShell =
     process.platform === "win32" &&
     (/\.(cmd|bat)$/i.test(command) ||
@@ -53,6 +59,32 @@ export function runCommand(command, args, options = {}) {
     });
     let stdout = "";
     let stderr = "";
+    let settled = false;
+    /** @type {NodeJS.Timeout | undefined} */
+    let timer;
+    const finish = (code, extraStderr = "") => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+      resolve({
+        code,
+        stdout,
+        stderr: extraStderr ? `${stderr}${extraStderr}`.trim() : stderr,
+      });
+    };
+    if (timeoutMs !== undefined && timeoutMs > 0) {
+      timer = setTimeout(() => {
+        child.kill();
+        finish(
+          124,
+          `Command timed out after ${String(timeoutMs)}ms.`,
+        );
+      }, timeoutMs);
+    }
     if (stdio === "pipe") {
       child.stdout?.on("data", (chunk) => {
         stdout += chunk.toString("utf8");
@@ -66,14 +98,13 @@ export function runCommand(command, args, options = {}) {
       if (stdio === "inherit") {
         console.error(message);
       }
-      resolve({
-        code: error && "code" in error && error.code === "ENOENT" ? 127 : 1,
-        stdout,
-        stderr: stderr || message,
-      });
+      finish(
+        error && "code" in error && error.code === "ENOENT" ? 127 : 1,
+        message,
+      );
     });
     child.on("close", (code) => {
-      resolve({ code: code ?? 1, stdout, stderr });
+      finish(code ?? 1);
     });
   });
 }
@@ -163,13 +194,26 @@ async function resolveDocker() {
     const compose = await runSpec(spec, ["compose", "version"], {
       stdio: "pipe",
     });
+    const composeOk =
+      compose.code === 0
+        ? compose.stdout.trim().split(/\r?\n/)[0]?.trim()
+        : undefined;
+    const engineProbe = await probeDockerEngine(spec, runSpec);
     return {
       version,
-      compose: compose.code === 0 ? compose.stdout.trim() : undefined,
+      compose: composeOk,
       source: candidate,
+      engine: engineProbe.engine,
+      engineHint: engineProbe.engineHint,
     };
   }
-  return { version: undefined, compose: undefined, source: undefined };
+  return {
+    version: undefined,
+    compose: undefined,
+    source: undefined,
+    engine: /** @type {const} */ ("cli-unavailable"),
+    engineHint: undefined,
+  };
 }
 
 async function resolvePnpm(expectedVersion) {
@@ -496,6 +540,8 @@ export async function loadEnvironment() {
       version: docker.version,
       compose: docker.compose,
       source: docker.source,
+      engine: docker.engine,
+      engineHint: docker.engineHint,
     },
     corepackVersion,
     ci: Boolean(process.env.GITHUB_ACTIONS) || process.env.CI === "true",
@@ -574,16 +620,21 @@ export function printDoctor(env) {
       "INFO",
     ],
     [
-      "Docker",
+      "Docker CLI",
       env.docker.version
         ? `${env.docker.version}${env.docker.source && env.docker.source !== "docker" ? ` via ${env.docker.source}` : ""}`
-        : "not found (informational)",
+        : "not found",
       env.docker.version ? "OK" : "INFO",
     ],
     [
       "Docker Compose",
-      env.docker.compose ?? "not found (informational)",
+      env.docker.compose ?? "not found",
       env.docker.compose ? "OK" : "INFO",
+    ],
+    [
+      "Docker engine",
+      dockerEngineDoctorLine(env.docker),
+      dockerEngineDoctorStatus(env.docker),
     ],
   ];
   const labelWidth = Math.max(...lines.map(([label]) => label.length));
@@ -641,12 +692,52 @@ export function printDoctor(env) {
     console.log(`CI Python: ${CI_PYTHON}`);
   }
 
-  if (!env.docker.version) {
+  if (env.docker.engine === "cli-unavailable") {
     console.log("");
     console.log(
-      "Docker is absent. Local unit/typecheck verification still runs; compose-smoke remains a GitHub CI job.",
+      "Docker CLI is absent. Local unit/typecheck verification still runs; compose-smoke remains a GitHub CI job.",
     );
+  } else if (env.docker.engine === "engine-unavailable") {
+    console.log("");
+    console.log(
+      "Docker CLI is installed but the engine is not running. `pnpm infra:up` and compose-smoke require a running engine.",
+    );
+    if (env.docker.engineHint) {
+      console.log(`  ${env.docker.engineHint}`);
+    }
   }
+}
+
+/** @param {{ version?: string, compose?: string, engine?: string, engineHint?: string }} docker */
+function dockerEngineDoctorLine(docker) {
+  if (docker.engine === "engine-ready") {
+    return docker.engineHint ?? "running";
+  }
+  if (docker.engine === "engine-unavailable") {
+    return docker.engineHint ?? "not running";
+  }
+  if (docker.version) {
+    return "unknown (docker info not run)";
+  }
+  return "n/a";
+}
+
+/** @param {{ version?: string, engine?: string }} docker */
+function dockerEngineDoctorStatus(docker) {
+  if (docker.engine === "engine-ready") {
+    return "OK";
+  }
+  if (docker.engine === "engine-unavailable") {
+    return "FAIL";
+  }
+  if (docker.version) {
+    return "WARN";
+  }
+  return "INFO";
+}
+
+export function dockerPreflightFailures(env) {
+  return dockerReadinessFailures(env.docker ?? {});
 }
 
 export function doctorFailures(env) {
@@ -667,7 +758,12 @@ export function doctorFailures(env) {
 
 export function requireModePrereqs(mode, env) {
   const failures = doctorFailures(env);
-  if (mode === "quick" || mode === "ci" || mode === "ci:clean") {
+  if (
+    mode === "quick" ||
+    mode === "changed" ||
+    mode === "ci" ||
+    mode === "ci:clean"
+  ) {
     if (!env.turbo.present) {
       failures.push(
         "Turbo is required. Run pnpm install from the repository root.",
@@ -693,6 +789,9 @@ export function requireModePrereqs(mode, env) {
         `Python SDK verification tools missing (${env.pythonDevImports.missing.join(", ")}). Install with: python -m pip install -e "./sdks/python[dev]"`,
       );
     }
+  }
+  if (mode === "docker") {
+    failures.push(...dockerPreflightFailures(env));
   }
   return failures;
 }
