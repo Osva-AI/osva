@@ -56,7 +56,25 @@ function createMockClient(
       requestId: "req-agents-list",
     }),
     listAgentVersions: async () => ({
-      data: { versions: [] },
+      data: {
+        versions: [
+          {
+            id: "av-research",
+            agentId: "agent-1",
+            version: 1,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            manifest: {
+              input: {
+                schema: {
+                  type: "object",
+                  required: ["schemaVersion"],
+                  properties: { schemaVersion: { const: "1" } },
+                },
+              },
+            },
+          },
+        ],
+      },
       requestId: "req-agent-versions",
     }),
     listWorkflows: async () => ({ data: { workflows: [] } }),
@@ -391,6 +409,18 @@ describe("console server API", () => {
     expect(versionsResponse.headers.get("x-osva-request-id")).toBe(
       "req-agent-versions",
     );
+    const versionsBody = (await versionsResponse.json()) as {
+      versions: Array<{
+        id: string;
+        manifest?: { input?: { schema?: unknown } };
+      }>;
+    };
+    expect(versionsBody.versions[0]?.id).toBe("av-research");
+    expect(versionsBody.versions[0]?.manifest?.input?.schema).toEqual({
+      type: "object",
+      required: ["schemaVersion"],
+      properties: { schemaVersion: { const: "1" } },
+    });
   });
 
   it("rejects non-GET methods on console API routes", async () => {

@@ -1,5 +1,11 @@
 import type { WorkflowNodeRunResource } from "../hooks/use-workflow-runs";
-import type { WorkflowDefinitionNode } from "./workflow-definition";
+import {
+  incomingNodeKeys,
+  outgoingNodeKeys,
+  workflowEdgeId,
+  type WorkflowDefinitionNode,
+  type WorkflowDefinitionView,
+} from "./workflow-definition";
 
 export const WORKFLOW_NODE_EXECUTION_STATUSES = [
   "PENDING",
@@ -107,4 +113,106 @@ export function describeWorkflowWaitReason(
   }
 
   return `Waiting at ${node.key} (${node.type}).`;
+}
+
+export const WORKFLOW_SUSPENDED_COPY =
+  "The workflow is suspended. Workers are not kept alive for this wait.";
+
+export function describeWorkflowSuspension(
+  node: WorkflowDefinitionNode,
+  nodeRun: WorkflowNodeRunResource | undefined,
+): string | undefined {
+  const reason = describeWorkflowWaitReason(node, nodeRun);
+  if (reason === undefined) {
+    return undefined;
+  }
+  return `${reason} ${WORKFLOW_SUSPENDED_COPY}`;
+}
+
+export type WorkflowEdgeExecutionAppearance =
+  "selected" | "inactive" | "skipped";
+
+export interface PersistedNeighborStatus {
+  readonly key: string;
+  readonly status: string | undefined;
+}
+
+/**
+ * Edge appearance is taken only from persisted BRANCH.selectedTargetKey and
+ * persisted SKIPPED target records. Topology never implies a selected path.
+ */
+export function edgeAppearanceById(
+  definition: WorkflowDefinitionView,
+  nodeRuns: readonly WorkflowNodeRunResource[],
+): Readonly<Record<string, WorkflowEdgeExecutionAppearance>> {
+  const latest = selectLatestNodeRunByKey(nodeRuns);
+  const appearances: Record<string, WorkflowEdgeExecutionAppearance> = {};
+
+  for (const edge of definition.edges) {
+    const id = workflowEdgeId(edge.from, edge.to);
+    const source = definition.nodes.find((node) => node.key === edge.from);
+    const sourceRun = latest.get(edge.from);
+    const targetRun = latest.get(edge.to);
+    const selectedTarget = sourceRun?.selectedTargetKey?.trim() ?? "";
+
+    if (source?.type === "BRANCH" && selectedTarget.length > 0) {
+      appearances[id] = selectedTarget === edge.to ? "selected" : "inactive";
+    }
+
+    if (targetRun?.status === "SKIPPED" && appearances[id] !== "selected") {
+      appearances[id] = "skipped";
+    }
+  }
+
+  return appearances;
+}
+
+export function persistedNeighborStatuses(
+  keys: readonly string[],
+  latest: ReadonlyMap<string, WorkflowNodeRunResource>,
+): readonly PersistedNeighborStatus[] {
+  return keys.map((key) => ({
+    key,
+    status: latest.get(key)?.status,
+  }));
+}
+
+export function joinPredecessorStatuses(
+  definition: WorkflowDefinitionView,
+  nodeKey: string,
+  nodeRuns: readonly WorkflowNodeRunResource[],
+): readonly PersistedNeighborStatus[] {
+  return persistedNeighborStatuses(
+    incomingNodeKeys(definition, nodeKey),
+    selectLatestNodeRunByKey(nodeRuns),
+  );
+}
+
+export function parallelChildStatuses(
+  definition: WorkflowDefinitionView,
+  nodeKey: string,
+  nodeRuns: readonly WorkflowNodeRunResource[],
+): readonly PersistedNeighborStatus[] {
+  return persistedNeighborStatuses(
+    outgoingNodeKeys(definition, nodeKey),
+    selectLatestNodeRunByKey(nodeRuns),
+  );
+}
+
+export function branchOutgoingStatuses(
+  definition: WorkflowDefinitionView,
+  nodeKey: string,
+  nodeRuns: readonly WorkflowNodeRunResource[],
+): {
+  readonly selectedTargetKey: string | undefined;
+  readonly neighbors: readonly PersistedNeighborStatus[];
+} {
+  const latest = selectLatestNodeRunByKey(nodeRuns);
+  return {
+    selectedTargetKey: latest.get(nodeKey)?.selectedTargetKey,
+    neighbors: persistedNeighborStatuses(
+      outgoingNodeKeys(definition, nodeKey),
+      latest,
+    ),
+  };
 }

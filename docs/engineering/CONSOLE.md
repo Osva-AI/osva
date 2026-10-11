@@ -101,15 +101,23 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 - Invalid intermediate graphs remain editable; publish confirmation is disabled until the definition is valid
 - Control plane errors are shown separately from client validation and include request IDs
 
-**Execution (M8.3.4):**
+**Execution (M8.3.4 + M8.4.1):**
 
 - Published WorkflowVersion pages expose **Run workflow**: JSON input, client-side syntax check, explicit confirm, then `POST /api/v1/workflow-runs` (BFF → `POST /v1/workflow-runs`)
+- The launch form resolves the published definition's single root node. If that root is an AGENT, it loads `manifest.input.schema` from the existing `/api/v1/agents/:agentId/versions` catalog and displays that contract. Valid JSON is not presented as executable input.
+- Empty-object schemas remain valid (`{}`). Non-AGENT roots, multiple roots, and missing/unavailable schemas are explained without inventing a contract. Safe examples are prefilled only from JSON Schema `const`/`default` values — required business fields are never fabricated.
 - The BFF never exposes OSVA API credentials; control-plane EXECUTE + workspace isolation remain authoritative
 - Successful create navigates to the returned WorkflowRun
 - WorkflowRun detail overlays persisted `WorkflowNodeRun.status` on the read-only V3 graph, keyed by `workflowNodeKey`
-- Multiple records for one key use the latest `sequence` / `updatedAt`; earlier attempts are listed, not inferred as success or failure
+- Multiple records for one key use the latest `sequence` / `updatedAt`; earlier WorkflowNodeRun records are listed as historical node records, not RunAttempts or automatic retries
+- Definition nodes without a WorkflowNodeRun are shown as **NO RECORD**, not PENDING or SUCCEEDED
+- BRANCH edges use persisted `selectedTargetKey` (selected vs inactive). SKIPPED targets use persisted SKIPPED records. Topology never implies a selected path
+- PARALLEL children and JOIN predecessors are listed from persisted neighbor records only
+- WAITING approval/wait copy states that the workflow is suspended and workers are not kept alive
 - Selecting a node reuses the existing execution card (approval decision, event emit, child Run link)
+- WorkflowRun detail shows Waiting + Execution (graph) before Input/Output so persisted execution state is the primary surface
 - Active runs continue to poll via TanStack Query (`ACTIVE_RUN_POLL_MS`); terminal runs do not
+- Product demo sequence: `docs/product/CONSOLE_WORKFLOW_DEMO.md`
 
 **Limitations:**
 

@@ -23,7 +23,8 @@ import { formatTimestamp } from "../lib/formatting";
 import { workflowRunStatusCategory } from "../lib/statuses";
 import { ConsoleApiError } from "../lib/console-api";
 import {
-  describeWorkflowWaitReason,
+  describeWorkflowSuspension,
+  edgeAppearanceById,
   executionStatusByNodeKey,
   nodeRunsForKey,
   selectLatestNodeRunByKey,
@@ -66,6 +67,8 @@ export function WorkflowRunDetailPage() {
   const nodeRuns = runQuery.data?.nodeRuns ?? [];
   const nodeRunByKey = selectLatestNodeRunByKey(nodeRuns);
   const overlayStatuses = executionStatusByNodeKey(nodeRuns);
+  const overlayEdges =
+    definition === undefined ? {} : edgeAppearanceById(definition, nodeRuns);
   const approvalByNodeRunId = new Map(
     (runQuery.data?.approvalRequests ?? []).map((request) => [
       request.workflowNodeRunId,
@@ -83,7 +86,7 @@ export function WorkflowRunDetailPage() {
           if (node === undefined) {
             return [];
           }
-          const reason = describeWorkflowWaitReason(
+          const reason = describeWorkflowSuspension(
             node,
             nodeRunByKey.get(key),
           );
@@ -189,21 +192,6 @@ export function WorkflowRunDetailPage() {
             ) : null}
           </section>
 
-          <section className="grid-two">
-            <div className="panel">
-              <h2 className="panel-title">Input</h2>
-              <JsonView value={runQuery.data.input} />
-            </div>
-            <div className="panel">
-              <h2 className="panel-title">Output</h2>
-              {runQuery.data.output !== undefined ? (
-                <JsonView value={runQuery.data.output} />
-              ) : (
-                <p className="muted">No output yet.</p>
-              )}
-            </div>
-          </section>
-
           {waitingReasons.length > 0 ? (
             <section className="panel" aria-labelledby="workflow-wait-title">
               <h2 className="panel-title" id="workflow-wait-title">
@@ -246,6 +234,7 @@ export function WorkflowRunDetailPage() {
                 <WorkflowRunGraphPanel
                   definition={definition}
                   executionStatusByNodeKey={overlayStatuses}
+                  edgeAppearanceById={overlayEdges}
                   selectedNodeKey={selectedNodeKey}
                   onNodeSelect={setSelectedNodeKey}
                 />
@@ -280,6 +269,7 @@ export function WorkflowRunDetailPage() {
                         node={node}
                         nodeRun={nodeRun}
                         relatedNodeRuns={nodeRunsForKey(nodeRuns, node.key)}
+                        nodeRuns={nodeRuns}
                         approvalRequest={approvalRequest}
                         workflowRunId={workflowRunId}
                         workflowInput={runQuery.data.input}
@@ -292,6 +282,21 @@ export function WorkflowRunDetailPage() {
               </>
             ) : null}
           </section>
+
+          <section className="grid-two">
+            <div className="panel">
+              <h2 className="panel-title">Input</h2>
+              <JsonView value={runQuery.data.input} />
+            </div>
+            <div className="panel">
+              <h2 className="panel-title">Output</h2>
+              {runQuery.data.output !== undefined ? (
+                <JsonView value={runQuery.data.output} />
+              ) : (
+                <p className="muted">No output yet.</p>
+              )}
+            </div>
+          </section>
         </>
       ) : null}
     </>
@@ -301,11 +306,15 @@ export function WorkflowRunDetailPage() {
 function WorkflowRunGraphPanel({
   definition,
   executionStatusByNodeKey: statuses,
+  edgeAppearanceById: edgeAppearances,
   selectedNodeKey,
   onNodeSelect,
 }: {
   readonly definition: WorkflowDefinitionView;
   readonly executionStatusByNodeKey: Readonly<Record<string, string>>;
+  readonly edgeAppearanceById: Readonly<
+    Record<string, "selected" | "inactive" | "skipped">
+  >;
   readonly selectedNodeKey: string | undefined;
   readonly onNodeSelect: (nodeKey: string | undefined) => void;
 }) {
@@ -323,6 +332,7 @@ function WorkflowRunGraphPanel({
       <WorkflowGraphViewLazy
         definition={definition}
         executionStatusByNodeKey={statuses}
+        edgeAppearanceById={edgeAppearances}
         selectedNodeKey={selectedNodeKey}
         onNodeSelect={onNodeSelect}
       />
@@ -378,6 +388,7 @@ function WorkflowRunNodeInspector({
         node={node}
         nodeRun={nodeRun}
         relatedNodeRuns={nodeRunsForKey(nodeRuns, node.key)}
+        nodeRuns={nodeRuns}
         approvalRequest={approvalRequest}
         workflowRunId={workflowRunId}
         workflowInput={workflowInput}

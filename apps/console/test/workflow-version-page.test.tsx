@@ -39,6 +39,32 @@ function stubVersionPageFetches(definition: unknown) {
           role: "ADMIN",
         });
       }
+      if (url === "/api/v1/agents") {
+        return Response.json({
+          agents: [
+            {
+              id: "agent-1",
+              workspaceId: "ws-1",
+              key: "research",
+              name: "Research",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/agents/agent-1/versions")) {
+        return Response.json({
+          versions: [
+            {
+              id: "av-1",
+              agentId: "agent-1",
+              version: 1,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              manifest: { input: { schema: { type: "object" } } },
+            },
+          ],
+        });
+      }
       if (url.includes("/versions/")) {
         return Response.json({
           id: "wv-1",

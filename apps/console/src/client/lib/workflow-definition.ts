@@ -87,6 +87,20 @@ export function incomingNodeKeys(
     .sort((left, right) => left.localeCompare(right));
 }
 
+export function outgoingNodeKeys(
+  definition: WorkflowDefinitionView,
+  nodeKey: string,
+): string[] {
+  return definition.edges
+    .filter((edge) => edge.from === nodeKey)
+    .map((edge) => edge.to)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+export function workflowEdgeId(from: string, to: string): string {
+  return `edge:${from}->${to}`;
+}
+
 export function resolveJsonPointerValue(
   pointer: string,
   document: unknown,

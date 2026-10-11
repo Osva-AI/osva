@@ -2,6 +2,7 @@ import type { Edge, Node } from "@xyflow/react";
 
 import {
   orderWorkflowNodeKeys,
+  workflowEdgeId,
   type WorkflowDefinitionView,
 } from "./workflow-definition";
 
@@ -17,6 +18,7 @@ export interface DefinitionToFlowOptions {
   readonly interaction?: WorkflowGraphInteraction;
   readonly errorNodeKeys?: ReadonlySet<string>;
   readonly executionStatusByNodeKey?: Readonly<Record<string, string>>;
+  readonly edgeAppearanceById?: Readonly<Record<string, string>>;
 }
 
 export interface WorkflowGraphNodeData extends Record<string, unknown> {
@@ -185,14 +187,25 @@ export function definitionToFlow(
       }
       return left.to.localeCompare(right.to);
     })
-    .map((edge) => ({
-      id: `edge:${edge.from}->${edge.to}`,
-      source: edge.from,
-      target: edge.to,
-      selectable: editable,
-      focusable: true,
-      deletable: editable,
-    }));
+    .map((edge) => {
+      const id = workflowEdgeId(edge.from, edge.to);
+      const appearance = options.edgeAppearanceById?.[id];
+      return {
+        id,
+        source: edge.from,
+        target: edge.to,
+        selectable: editable,
+        focusable: true,
+        deletable: editable,
+        ...(appearance !== undefined
+          ? {
+              className: `workflow-graph-edge--${appearance}`,
+              data: { appearance },
+              ariaLabel: `${edge.from} to ${edge.to} (${appearance})`,
+            }
+          : {}),
+      };
+    });
 
   return { nodes, edges };
 }

@@ -134,4 +134,40 @@ describe("workflow definition graph adapter", () => {
     expect(byId["step-c"]?.hasError).toBe(false);
     expect(byId["step-c"]?.executionStatus).toBe("FAILED");
   });
+
+  it("applies persisted edge appearances without inventing a selected path", () => {
+    const undecided = definitionToFlow(branchDefinition, {
+      executionStatusByNodeKey: { route: "RUNNING" },
+    });
+    expect(undecided.edges.every((edge) => edge.className === undefined)).toBe(
+      true,
+    );
+
+    const decided = definitionToFlow(branchDefinition, {
+      executionStatusByNodeKey: {
+        route: "SUCCEEDED",
+        "ok-path": "RUNNING",
+        "retry-path": "SKIPPED",
+        "fallback-path": "SKIPPED",
+      },
+      edgeAppearanceById: {
+        "edge:route->ok-path": "selected",
+        "edge:route->retry-path": "skipped",
+        "edge:route->fallback-path": "inactive",
+      },
+    });
+    const byId = Object.fromEntries(
+      decided.edges.map((edge) => [edge.id, edge]),
+    );
+    expect(byId["edge:route->ok-path"]?.className).toBe(
+      "workflow-graph-edge--selected",
+    );
+    expect(byId["edge:route->retry-path"]?.className).toBe(
+      "workflow-graph-edge--skipped",
+    );
+    expect(byId["edge:route->fallback-path"]?.className).toBe(
+      "workflow-graph-edge--inactive",
+    );
+    expect(byId["edge:start->route"]?.className).toBeUndefined();
+  });
 });

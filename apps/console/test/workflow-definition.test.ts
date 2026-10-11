@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  incomingNodeKeys,
   orderWorkflowNodeKeys,
+  outgoingNodeKeys,
   resolveJsonPointerValue,
+  workflowEdgeId,
 } from "../src/client/lib/workflow-definition";
 
 describe("workflow definition helpers", () => {
@@ -26,5 +29,23 @@ describe("workflow definition helpers", () => {
     expect(resolveJsonPointerValue("/invoiceId", { invoiceId: "inv-1" })).toBe(
       "inv-1",
     );
+  });
+
+  it("lists incoming and outgoing neighbors without inventing edges", () => {
+    const definition = {
+      schemaVersion: "3",
+      nodes: [
+        { key: "fork", type: "PARALLEL" },
+        { key: "left", type: "AGENT", agentVersionId: "av-1" },
+        { key: "right", type: "AGENT", agentVersionId: "av-1" },
+      ],
+      edges: [
+        { from: "fork", to: "left" },
+        { from: "fork", to: "right" },
+      ],
+    };
+    expect(outgoingNodeKeys(definition, "fork")).toEqual(["left", "right"]);
+    expect(incomingNodeKeys(definition, "left")).toEqual(["fork"]);
+    expect(workflowEdgeId("fork", "left")).toBe("edge:fork->left");
   });
 });
