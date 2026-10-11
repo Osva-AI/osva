@@ -12,6 +12,12 @@ import {
   incomingNodeKeys,
   resolveJsonPointerValue,
 } from "../../lib/workflow-definition";
+import {
+  WORKFLOW_SUSPENDED_COPY,
+  branchOutgoingStatuses,
+  joinPredecessorStatuses,
+  parallelChildStatuses,
+} from "../../lib/workflow-node-run-overlay";
 import { formatTimestamp, formatDurationMs } from "../../lib/formatting";
 import { workflowNodeRunStatusCategory } from "../../lib/statuses";
 import { JsonView } from "../json-view/json-view";
@@ -24,6 +30,7 @@ interface WorkflowNodeExecutionCardProps {
   readonly node: WorkflowDefinitionNode;
   readonly nodeRun: WorkflowNodeRunResource | undefined;
   readonly relatedNodeRuns?: readonly WorkflowNodeRunResource[];
+  readonly nodeRuns?: readonly WorkflowNodeRunResource[];
   readonly approvalRequest: ApprovalRequestResource | undefined;
   readonly workflowRunId: string;
   readonly workflowInput: unknown;
@@ -36,14 +43,16 @@ export function WorkflowNodeExecutionCard({
   node,
   nodeRun,
   relatedNodeRuns = [],
+  nodeRuns = [],
   approvalRequest,
   workflowRunId,
   workflowInput,
   canExecute,
   showConnector,
 }: WorkflowNodeExecutionCardProps) {
-  const status = nodeRun?.status ?? "PENDING";
   const incoming = incomingNodeKeys(definition, node.key);
+  const hasRecord = nodeRun !== undefined;
+  const status = hasRecord ? nodeRun.status : "NO RECORD";
 
   return (
     <article className="execution-node">
@@ -63,21 +72,28 @@ export function WorkflowNodeExecutionCard({
           </div>
           <StatusChip
             status={status}
-            category={workflowNodeRunStatusCategory(status)}
+            category={
+              hasRecord
+                ? workflowNodeRunStatusCategory(nodeRun.status)
+                : "inactive"
+            }
           />
         </header>
 
         {nodeRun === undefined ? (
-          <p className="muted">No WorkflowNodeRun record yet.</p>
+          <p className="muted">
+            No WorkflowNodeRun record yet. This definition node is not treated
+            as pending or executed.
+          </p>
         ) : null}
         {relatedNodeRuns.length > 1 ? (
           <div>
             <p className="muted">
-              Showing latest of {relatedNodeRuns.length} records for this node
-              key. Status is taken from the latest sequence, not inferred from
-              earlier attempts.
+              Showing latest of {relatedNodeRuns.length} historical
+              WorkflowNodeRun records for this node key. These are persisted
+              node records, not RunAttempts, and do not imply automatic retry.
             </p>
-            <ul className="workflow-node-run-attempts">
+            <ul className="workflow-node-run-history">
               {relatedNodeRuns.map((record) => (
                 <li key={record.id} className="mono">
                   {record.id} · seq {record.sequence} · {record.status}
@@ -142,8 +158,33 @@ export function WorkflowNodeExecutionCard({
             <Link className="mono" to={`/runs/${nodeRun.childRunId}`}>
               Open child Run {nodeRun.childRunId}
             </Link>
+            <span className="muted">
+              {" "}
+              RunAttempts are listed on that Run, from persisted attempt
+              records.
+            </span>
           </p>
         ) : null}
+        {node.type === "AGENT" &&
+        nodeRun !== undefined &&
+        nodeRun.childRunId === undefined ? (
+          <p className="muted">
+            No child Run is linked on this WorkflowNodeRun.
+          </p>
+        ) : null}
+        {node.type !== "AGENT" && nodeRun?.childRunId !== undefined ? (
+          <p className="muted">
+            This {node.type} node unexpectedly has a child Run id. Only AGENT
+            nodes create Runs.
+          </p>
+        ) : null}
+
+        <TopologyExecutionSummary
+          definition={definition}
+          node={node}
+          nodeRun={nodeRun}
+          nodeRuns={nodeRuns}
+        />
 
         {node.type === "APPROVAL" ? (
           <WorkflowApprovalActions
@@ -152,6 +193,10 @@ export function WorkflowNodeExecutionCard({
             workflowRunId={workflowRunId}
             canExecute={canExecute}
           />
+        ) : null}
+
+        {node.type === "WAIT" && nodeRun?.status === "WAITING" ? (
+          <p className="muted">{WORKFLOW_SUSPENDED_COPY}</p>
         ) : null}
 
         {node.type === "WAIT" &&
@@ -192,6 +237,102 @@ interface EventWaitConfig {
     readonly pointer?: string;
   };
   readonly timeoutMs?: number;
+}
+
+function TopologyExecutionSummary({
+  definition,
+  node,
+  nodeRun,
+  nodeRuns,
+}: {
+  readonly definition: WorkflowDefinitionView;
+  readonly node: WorkflowDefinitionNode;
+  readonly nodeRun: WorkflowNodeRunResource | undefined;
+  readonly nodeRuns: readonly WorkflowNodeRunResource[];
+}) {
+  if (node.type === "BRANCH") {
+    const { selectedTargetKey, neighbors } = branchOutgoingStatuses(
+      definition,
+      node.key,
+      nodeRuns,
+    );
+    return (
+      <div>
+        {nodeRun !== undefined &&
+        (selectedTargetKey === undefined ||
+          selectedTargetKey.trim().length === 0) ? (
+          <p className="muted">
+            No persisted branch decision (`selectedTargetKey`). Outgoing paths
+            are not inferred from graph topology.
+          </p>
+        ) : null}
+        {selectedTargetKey !== undefined &&
+        selectedTargetKey.trim().length > 0 ? (
+          <p className="muted">
+            Persisted selected path:{" "}
+            <span className="mono">{selectedTargetKey}</span>
+          </p>
+        ) : null}
+        <NeighborStatusList
+          title="Outgoing paths (persisted)"
+          neighbors={neighbors}
+        />
+      </div>
+    );
+  }
+
+  if (node.type === "PARALLEL") {
+    return (
+      <NeighborStatusList
+        title="Fan-out children (persisted independently)"
+        neighbors={parallelChildStatuses(definition, node.key, nodeRuns)}
+      />
+    );
+  }
+
+  if (node.type === "JOIN") {
+    return (
+      <div>
+        <p className="muted">
+          JOIN uses persisted predecessor records only. A skipped predecessor
+          does not mean this JOIN failed.
+        </p>
+        <NeighborStatusList
+          title="Predecessors (persisted)"
+          neighbors={joinPredecessorStatuses(definition, node.key, nodeRuns)}
+        />
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function NeighborStatusList({
+  title,
+  neighbors,
+}: {
+  readonly title: string;
+  readonly neighbors: ReadonlyArray<{
+    readonly key: string;
+    readonly status: string | undefined;
+  }>;
+}) {
+  if (neighbors.length === 0) {
+    return null;
+  }
+  return (
+    <div>
+      <p className="muted">{title}</p>
+      <ul className="workflow-node-run-history">
+        {neighbors.map((neighbor) => (
+          <li key={neighbor.key} className="mono">
+            {neighbor.key} · {neighbor.status ?? "no record"}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function isEventWaitNode(node: WorkflowDefinitionNode): boolean {

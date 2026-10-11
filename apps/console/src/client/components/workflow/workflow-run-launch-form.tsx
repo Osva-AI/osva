@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useCreateWorkflowRunMutation } from "../../hooks/use-workflow-runs";
+import { useRootAgentInputContract } from "../../hooks/use-root-agent-input-contract";
 import { ConsoleApiError } from "../../lib/console-api";
-import { parseWorkflowRunInputJson } from "../../lib/workflow-run-input";
+import type { WorkflowDefinitionView } from "../../lib/workflow-definition";
+import { trySafeExampleFromJsonSchema } from "../../lib/workflow-root-input-contract";
+import {
+  describeWorkflowRunInputSyntax,
+  parseWorkflowRunInputJson,
+} from "../../lib/workflow-run-input";
+import { JsonView } from "../json-view/json-view";
 
 export interface WorkflowRunLaunchFormProps {
   readonly workflowId: string;
@@ -12,6 +19,7 @@ export interface WorkflowRunLaunchFormProps {
   readonly workflowVersionId: string;
   readonly versionNumber: number;
   readonly canExecute: boolean;
+  readonly definition?: WorkflowDefinitionView;
 }
 
 export function WorkflowRunLaunchForm({
@@ -21,15 +29,30 @@ export function WorkflowRunLaunchForm({
   workflowVersionId,
   versionNumber,
   canExecute,
+  definition,
 }: WorkflowRunLaunchFormProps) {
   const navigate = useNavigate();
   const mutation = useCreateWorkflowRunMutation();
+  const contract = useRootAgentInputContract(definition);
   const [inputText, setInputText] = useState("{}");
+  const [inputTouched, setInputTouched] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [feedback, setFeedback] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
 
+  useEffect(() => {
+    if (inputTouched || contract.status !== "available") {
+      return;
+    }
+    const example = trySafeExampleFromJsonSchema(contract.schema);
+    if (example === undefined) {
+      return;
+    }
+    setInputText(JSON.stringify(example, null, 2));
+  }, [contract, inputTouched]);
+
   const parsed = parseWorkflowRunInputJson(inputText);
+  const syntax = describeWorkflowRunInputSyntax(parsed, contract);
   const canSubmit = canExecute && parsed.ok && !mutation.isPending;
 
   async function startRun() {
@@ -89,6 +112,8 @@ export function WorkflowRunLaunchForm({
         </div>
       </dl>
 
+      <RootAgentInputContractPanel contract={contract} />
+
       {!canExecute ? (
         <p className="muted">
           Starting a run requires an OPERATOR, EDITOR, or ADMIN role.
@@ -103,6 +128,7 @@ export function WorkflowRunLaunchForm({
           value={inputText}
           onChange={(event) => {
             setInputText(event.target.value);
+            setInputTouched(true);
             setConfirming(false);
             setFeedback(undefined);
           }}
@@ -110,13 +136,12 @@ export function WorkflowRunLaunchForm({
           disabled={!canExecute || mutation.isPending}
         />
       </div>
-      {!parsed.ok ? (
-        <p className="error-inline" role="alert">
-          {parsed.message}
-        </p>
-      ) : (
-        <p className="muted">JSON syntax is valid.</p>
-      )}
+      <p
+        className={syntax.kind === "error" ? "error-inline" : "muted"}
+        role={syntax.kind === "error" ? "alert" : undefined}
+      >
+        {syntax.message}
+      </p>
 
       {confirming ? (
         <div className="operator-actions">
@@ -172,4 +197,99 @@ export function WorkflowRunLaunchForm({
       ) : null}
     </section>
   );
+}
+
+function RootAgentInputContractPanel({
+  contract,
+}: {
+  readonly contract: ReturnType<typeof useRootAgentInputContract>;
+}) {
+  return (
+    <div className="stack" aria-labelledby="workflow-run-input-contract-title">
+      <h3 className="panel-title" id="workflow-run-input-contract-title">
+        First-agent input contract
+      </h3>
+      <RootAgentInputContractBody contract={contract} />
+    </div>
+  );
+}
+
+function RootAgentInputContractBody({
+  contract,
+}: {
+  readonly contract: ReturnType<typeof useRootAgentInputContract>;
+}) {
+  switch (contract.status) {
+    case "available":
+      return (
+        <>
+          <p className="muted">
+            Root AGENT node <span className="mono">{contract.nodeKey}</span>{" "}
+            binds AgentVersion{" "}
+            <span className="mono">{contract.agentVersionId}</span>. The Console
+            checks JSON syntax only; the first child agent validates this
+            payload at execution time.
+          </p>
+          <JsonView label="Input schema" value={contract.schema} />
+        </>
+      );
+    case "schema_unavailable":
+      return (
+        <p className="muted">
+          Root AGENT node <span className="mono">{contract.nodeKey}</span> binds
+          AgentVersion <span className="mono">{contract.agentVersionId}</span>,
+          but its input schema is unavailable. Valid JSON may still be rejected
+          at execution.
+        </p>
+      );
+    case "catalog_unavailable":
+      return (
+        <p className="muted">
+          Agent version metadata could not be loaded. Valid JSON may still be
+          rejected at execution.
+        </p>
+      );
+    case "non_agent_root":
+      return (
+        <p className="muted">
+          Root node <span className="mono">{contract.nodeKey}</span> is{" "}
+          <span className="mono">{contract.nodeType}</span>. No agent input
+          contract is shown for non-AGENT roots.
+        </p>
+      );
+    case "multiple_roots":
+      return (
+        <p className="muted">
+          Multiple root nodes (
+          {contract.nodeKeys.map((key) => (
+            <span key={key} className="mono">
+              {key}{" "}
+            </span>
+          ))}
+          ). V3 requires a single entry node, so no single agent input contract
+          is shown.
+        </p>
+      );
+    case "missing_binding":
+      return (
+        <p className="muted">
+          Root AGENT node <span className="mono">{contract.nodeKey}</span> has
+          no bound AgentVersion.
+        </p>
+      );
+    case "loading":
+      return <p className="muted">Loading the first agent's input contract…</p>;
+    case "no_root":
+      return (
+        <p className="muted">
+          This definition has no root node, so no agent input contract is shown.
+        </p>
+      );
+    default:
+      return (
+        <p className="muted">
+          No published root-agent input contract is available for this version.
+        </p>
+      );
+  }
 }

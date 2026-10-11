@@ -6,6 +6,7 @@
 - `product/PRODUCT_PRINCIPLES.md`
 - `product/PRODUCT_CAPABILITY_MAP.md`
 - `product/USER_JOURNEYS.md`
+- `product/CONSOLE_WORKFLOW_DEMO.md`
 - `product/GLOSSARY.md`
 - `product/AI_OFFICE_VISION.md`
 
@@ -48,6 +49,7 @@
 - `engineering/NON_FUNCTIONAL_REQUIREMENTS.md`
 - `engineering/TESTING_STRATEGY.md`
 - `engineering/DEVELOPMENT_GATES.md`
+- `engineering/CONSOLE.md`
 - `engineering/REPOSITORY_STRUCTURE.md`
 - `engineering/SDK.md`
 - `engineering/OSS_LICENSE_STRATEGY.md`

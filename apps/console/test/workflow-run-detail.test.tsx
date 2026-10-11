@@ -9,6 +9,7 @@ import { WorkflowRunDetailPage } from "../src/client/routes/workflow-run-detail-
 vi.mock("../src/client/components/workflow/workflow-graph-view", () => ({
   WorkflowGraphView: (props: {
     readonly executionStatusByNodeKey?: Readonly<Record<string, string>>;
+    readonly edgeAppearanceById?: Readonly<Record<string, string>>;
     readonly onNodeSelect?: (nodeKey: string | undefined) => void;
   }) => (
     <div data-testid="workflow-graph-view-mock">
@@ -21,6 +22,11 @@ vi.mock("../src/client/components/workflow/workflow-graph-view", () => ({
           >
             overlay {key} {status}
           </button>
+        ),
+      )}
+      {Object.entries(props.edgeAppearanceById ?? {}).map(
+        ([edgeId, appearance]) => (
+          <div key={edgeId}>{`edge ${edgeId} ${appearance}`}</div>
         ),
       )}
     </div>
@@ -199,6 +205,12 @@ describe("WorkflowRunDetailPage", () => {
     await waitFor(() => {
       expect(screen.getAllByText("Review output").length).toBeGreaterThan(0);
     });
+    const executionHeading = screen.getByRole("heading", { name: "Execution" });
+    const inputHeading = screen.getByRole("heading", { name: "Input" });
+    expect(
+      executionHeading.compareDocumentPosition(inputHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(
       screen.getByRole("link", { name: /run-child-1/ }).getAttribute("href"),
     ).toBe("/runs/run-child-1");
@@ -313,7 +325,7 @@ describe("WorkflowRunDetailPage", () => {
     ).toBeTruthy();
   });
 
-  it("overlays the latest node-run status and inspects retries without inventing success", async () => {
+  it("overlays the latest node-run status and lists historical node records without inventing success", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo) => {
       const url = String(input);
       if (url.includes("/api/v1/auth/context")) {
@@ -386,12 +398,261 @@ describe("WorkflowRunDetailPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workflow-run-node-inspector")).toBeTruthy();
     });
-    expect(screen.getAllByText(/Showing latest of 2 records/).length).toBe(2);
+    expect(screen.getAllByText(/Showing latest of 2 historical/).length).toBe(
+      2,
+    );
+    expect(screen.getAllByText(/not RunAttempts/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/earlier attempts/i)).toBeNull();
     expect(screen.getAllByText(/wn-old · seq 1 · FAILED/).length).toBe(2);
     expect(
       screen
         .getAllByRole("link", { name: /run-child-2/ })[0]
         ?.getAttribute("href"),
     ).toBe("/runs/run-child-2");
+  });
+
+  it("shows Analysis consuming Research's persisted output", async () => {
+    const researchOutput = {
+      schemaVersion: "1",
+      request: { packageName: "zod", requestId: "m8-4-handoff-001" },
+      evidence: { latestVersion: "3.24.1" },
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "ADMIN",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: {
+            schemaVersion: "3",
+            nodes: [
+              { key: "research", type: "AGENT", agentVersionId: "av-research" },
+              { key: "analysis", type: "AGENT", agentVersionId: "av-analysis" },
+            ],
+            edges: [{ from: "research", to: "analysis" }],
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "SUCCEEDED",
+          input: {
+            schemaVersion: "1",
+            request: { packageName: "zod", requestId: "m8-4-handoff-001" },
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:02.000Z",
+          nodeRuns: [
+            {
+              id: "wn-research",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "research",
+              sequence: 1,
+              status: "SUCCEEDED",
+              input: {
+                schemaVersion: "1",
+                request: { packageName: "zod", requestId: "m8-4-handoff-001" },
+              },
+              output: researchOutput,
+              childRunId: "run-research",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+            {
+              id: "wn-analysis",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "analysis",
+              sequence: 2,
+              status: "SUCCEEDED",
+              input: researchOutput,
+              output: { disposition: "PILOT" },
+              childRunId: "run-analysis",
+              createdAt: "2026-01-01T00:00:01.000Z",
+              updatedAt: "2026-01-01T00:00:02.000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      return Response.json({ error: "not found" }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderDetail();
+    await waitFor(() => {
+      expect(screen.getByText("overlay research SUCCEEDED")).toBeTruthy();
+    });
+    expect(screen.getByText("overlay analysis SUCCEEDED")).toBeTruthy();
+
+    await userEvent.click(screen.getByText("overlay analysis SUCCEEDED"));
+    await waitFor(() => {
+      expect(screen.getByTestId("workflow-run-node-inspector")).toBeTruthy();
+    });
+    expect(screen.getAllByText(/3\.24\.1/).length).toBeGreaterThan(1);
+    expect(
+      screen.getAllByRole("link", { name: /run-analysis/ }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("link", { name: /run-research/ }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("updates overlay after a polling refresh without synthesizing success", async () => {
+    let generation = 0;
+    const fetchMock = vi.fn(async (input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "OPERATOR",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: {
+            schemaVersion: "3",
+            nodes: [{ key: "agent", type: "AGENT", agentVersionId: "av-1" }],
+            edges: [],
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        generation += 1;
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: generation === 1 ? "RUNNING" : "FAILED",
+          input: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:0" + String(generation) + ".000Z",
+          nodeRuns: [
+            {
+              id: "wn-1",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "agent",
+              sequence: 1,
+              status: generation === 1 ? "RUNNING" : "FAILED",
+              input: {},
+              childRunId: "run-child-1",
+              error:
+                generation === 1
+                  ? undefined
+                  : { code: "CHILD_RUN_FAILED", message: "agent failed" },
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:0" + String(generation) + ".000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      return Response.json({ error: "not found" }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderDetail();
+    await waitFor(() => {
+      expect(screen.getByText("overlay agent RUNNING")).toBeTruthy();
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => {
+      expect(screen.getByText("overlay agent FAILED")).toBeTruthy();
+    });
+    expect(screen.queryByText("overlay agent RUNNING")).toBeNull();
+    expect(screen.getByText(/CHILD_RUN_FAILED/)).toBeTruthy();
+  });
+
+  it("keeps viewer authorization read-only for approvals", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/api/v1/auth/context")) {
+          return Response.json({
+            subjectId: "sub-1",
+            workspaceId: "ws-1",
+            role: "VIEWER",
+          });
+        }
+        if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+          return Response.json({
+            id: "wv-1",
+            workflowId: "wf-1",
+            workspaceId: "ws-1",
+            version: 1,
+            definition,
+            createdAt: "2026-01-01T00:00:00.000Z",
+          });
+        }
+        if (url.includes("/api/v1/workflow-runs/wr-1")) {
+          return Response.json({
+            id: "wr-1",
+            workspaceId: "ws-1",
+            workflowId: "wf-1",
+            workflowVersionId: "wv-1",
+            status: "WAITING",
+            input: {},
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:01.000Z",
+            nodeRuns: [
+              {
+                id: "wn-2",
+                workspaceId: "ws-1",
+                workflowRunId: "wr-1",
+                workflowNodeKey: "approval",
+                sequence: 2,
+                status: "WAITING",
+                input: {},
+                createdAt: "2026-01-01T00:00:00.000Z",
+                updatedAt: "2026-01-01T00:00:01.000Z",
+              },
+            ],
+            approvalRequests: [
+              {
+                id: "ar-1",
+                workspaceId: "ws-1",
+                workflowRunId: "wr-1",
+                workflowNodeRunId: "wn-2",
+                status: "PENDING",
+                createdAt: "2026-01-01T00:00:00.000Z",
+                updatedAt: "2026-01-01T00:00:01.000Z",
+              },
+            ],
+          });
+        }
+        return Response.json({ error: "not found" }, { status: 404 });
+      }),
+    );
+
+    renderDetail();
+    await waitFor(() => {
+      expect(screen.getByText("ar-1")).toBeTruthy();
+    });
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(screen.getByText(/cannot submit approval decisions/)).toBeTruthy();
   });
 });

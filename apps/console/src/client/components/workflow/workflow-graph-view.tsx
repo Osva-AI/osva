@@ -11,6 +11,7 @@ export interface WorkflowGraphViewProps {
   readonly definition: WorkflowDefinitionView;
   readonly errorNodeKeys?: ReadonlySet<string>;
   readonly executionStatusByNodeKey?: Readonly<Record<string, string>>;
+  readonly edgeAppearanceById?: Readonly<Record<string, string>>;
   readonly selectedNodeKey?: string;
   readonly onNodeSelect?: (nodeKey: string | undefined) => void;
 }
@@ -19,6 +20,7 @@ export function WorkflowGraphView({
   definition,
   errorNodeKeys,
   executionStatusByNodeKey,
+  edgeAppearanceById,
   selectedNodeKey,
   onNodeSelect,
 }: WorkflowGraphViewProps) {
@@ -29,8 +31,9 @@ export function WorkflowGraphView({
         interaction: "readonly",
         errorNodeKeys,
         executionStatusByNodeKey,
+        edgeAppearanceById,
       }),
-    [definition, errorNodeKeys, executionStatusByNodeKey],
+    [definition, edgeAppearanceById, errorNodeKeys, executionStatusByNodeKey],
   );
 
   const nodesWithSelection = useMemo(

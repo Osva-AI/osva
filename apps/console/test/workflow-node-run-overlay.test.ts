@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import type { WorkflowNodeRunResource } from "../src/client/hooks/use-workflow-runs";
 import {
+  WORKFLOW_SUSPENDED_COPY,
+  branchOutgoingStatuses,
+  describeWorkflowSuspension,
   describeWorkflowWaitReason,
+  edgeAppearanceById,
   executionStatusByNodeKey,
+  joinPredecessorStatuses,
   nodeRunsForKey,
+  parallelChildStatuses,
   selectLatestNodeRunByKey,
 } from "../src/client/lib/workflow-node-run-overlay";
+import type { WorkflowDefinitionView } from "../src/client/lib/workflow-definition";
 import { workflowRunRefetchInterval } from "../src/client/hooks/use-workflow-runs";
 import { ACTIVE_RUN_POLL_MS } from "../src/client/lib/query-client";
 
@@ -121,6 +128,179 @@ describe("workflow node run overlay mapping", () => {
         }),
       ),
     ).toBeUndefined();
+  });
+
+  it("describes suspension without implying a live worker", () => {
+    const reason = describeWorkflowSuspension(
+      {
+        key: "delay",
+        type: "WAIT",
+        wait: { kind: "DURATION", durationMs: 5000 },
+      },
+      nodeRun({
+        id: "wn-wait",
+        workflowNodeKey: "delay",
+        status: "WAITING",
+      }),
+    );
+    expect(reason).toMatch(/duration of 5000 ms/);
+    expect(reason).toContain(WORKFLOW_SUSPENDED_COPY);
+  });
+
+  it("styles BRANCH edges from persisted selectedTargetKey only", () => {
+    const definition: WorkflowDefinitionView = {
+      schemaVersion: "3",
+      nodes: [
+        { key: "route", type: "BRANCH", selector: "/x", defaultTo: "b" },
+        { key: "a", type: "AGENT", agentVersionId: "av-1" },
+        { key: "b", type: "AGENT", agentVersionId: "av-1" },
+      ],
+      edges: [
+        { from: "route", to: "a" },
+        { from: "route", to: "b" },
+      ],
+    };
+
+    expect(edgeAppearanceById(definition, [])).toEqual({});
+    expect(
+      edgeAppearanceById(definition, [
+        nodeRun({
+          id: "wn-route",
+          workflowNodeKey: "route",
+          status: "SUCCEEDED",
+        }),
+      ]),
+    ).toEqual({});
+
+    const decided = edgeAppearanceById(definition, [
+      nodeRun({
+        id: "wn-route",
+        workflowNodeKey: "route",
+        status: "SUCCEEDED",
+        selectedTargetKey: "a",
+      }),
+      nodeRun({
+        id: "wn-b",
+        workflowNodeKey: "b",
+        status: "SKIPPED",
+      }),
+    ]);
+    expect(decided["edge:route->a"]).toBe("selected");
+    expect(decided["edge:route->b"]).toBe("skipped");
+    expect(decided["edge:route->a"]).not.toBe("failed");
+  });
+
+  it("does not mark an unselected BRANCH path as FAILED", () => {
+    const definition: WorkflowDefinitionView = {
+      schemaVersion: "3",
+      nodes: [
+        { key: "route", type: "BRANCH", selector: "/x", defaultTo: "b" },
+        { key: "a", type: "AGENT", agentVersionId: "av-1" },
+        { key: "b", type: "AGENT", agentVersionId: "av-1" },
+      ],
+      edges: [
+        { from: "route", to: "a" },
+        { from: "route", to: "b" },
+      ],
+    };
+    const appearances = edgeAppearanceById(definition, [
+      nodeRun({
+        id: "wn-route",
+        workflowNodeKey: "route",
+        status: "SUCCEEDED",
+        selectedTargetKey: "a",
+      }),
+      nodeRun({
+        id: "wn-a",
+        workflowNodeKey: "a",
+        status: "FAILED",
+      }),
+    ]);
+    expect(appearances["edge:route->b"]).toBe("inactive");
+    expect(Object.values(appearances)).not.toContain("failed");
+  });
+
+  it("lists PARALLEL children independently including partial completion", () => {
+    const definition: WorkflowDefinitionView = {
+      schemaVersion: "3",
+      nodes: [
+        { key: "fork", type: "PARALLEL" },
+        { key: "left", type: "AGENT", agentVersionId: "av-1" },
+        { key: "right", type: "AGENT", agentVersionId: "av-1" },
+        { key: "join", type: "JOIN" },
+      ],
+      edges: [
+        { from: "fork", to: "left" },
+        { from: "fork", to: "right" },
+        { from: "left", to: "join" },
+        { from: "right", to: "join" },
+      ],
+    };
+    const records = [
+      nodeRun({
+        id: "wn-left",
+        workflowNodeKey: "left",
+        status: "SUCCEEDED",
+      }),
+      nodeRun({
+        id: "wn-right",
+        workflowNodeKey: "right",
+        status: "RUNNING",
+      }),
+    ];
+    expect(parallelChildStatuses(definition, "fork", records)).toEqual([
+      { key: "left", status: "SUCCEEDED" },
+      { key: "right", status: "RUNNING" },
+    ]);
+  });
+
+  it("lists JOIN predecessors without inventing failure for skipped paths", () => {
+    const definition: WorkflowDefinitionView = {
+      schemaVersion: "3",
+      nodes: [
+        { key: "left", type: "AGENT", agentVersionId: "av-1" },
+        { key: "right", type: "AGENT", agentVersionId: "av-1" },
+        { key: "join", type: "JOIN" },
+      ],
+      edges: [
+        { from: "left", to: "join" },
+        { from: "right", to: "join" },
+      ],
+    };
+    expect(
+      joinPredecessorStatuses(definition, "join", [
+        nodeRun({
+          id: "wn-left",
+          workflowNodeKey: "left",
+          status: "SKIPPED",
+        }),
+      ]),
+    ).toEqual([
+      { key: "left", status: "SKIPPED" },
+      { key: "right", status: undefined },
+    ]);
+  });
+
+  it("exposes BRANCH outgoing neighbors without inferring a missing decision", () => {
+    const definition: WorkflowDefinitionView = {
+      schemaVersion: "3",
+      nodes: [
+        { key: "route", type: "BRANCH", selector: "/x", defaultTo: "b" },
+        { key: "a", type: "AGENT", agentVersionId: "av-1" },
+        { key: "b", type: "AGENT", agentVersionId: "av-1" },
+      ],
+      edges: [
+        { from: "route", to: "a" },
+        { from: "route", to: "b" },
+      ],
+    };
+    expect(branchOutgoingStatuses(definition, "route", [])).toEqual({
+      selectedTargetKey: undefined,
+      neighbors: [
+        { key: "a", status: undefined },
+        { key: "b", status: undefined },
+      ],
+    });
   });
 
   it("polls only live workflow run statuses", () => {

@@ -117,6 +117,7 @@ export function WorkflowVersionPage() {
             workflowVersionId={versionQuery.data.id}
             versionNumber={versionQuery.data.version}
             canExecute={canExecute}
+            definition={versionQuery.data.definition}
           />
 
           <section
