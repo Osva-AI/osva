@@ -118,4 +118,20 @@ describe("workflow definition graph adapter", () => {
     const second = definitionToFlow(parallelJoinDefinition);
     expect(first).toEqual(second);
   });
+
+  it("keeps authoring errors and execution statuses independent", () => {
+    const flow = definitionToFlow(linearDefinition, {
+      errorNodeKeys: new Set(["step-a"]),
+      executionStatusByNodeKey: { "step-b": "RUNNING", "step-c": "FAILED" },
+    });
+    const byId = Object.fromEntries(
+      flow.nodes.map((node) => [node.id, node.data]),
+    );
+    expect(byId["step-a"]?.hasError).toBe(true);
+    expect(byId["step-a"]?.executionStatus).toBeUndefined();
+    expect(byId["step-b"]?.hasError).toBe(false);
+    expect(byId["step-b"]?.executionStatus).toBe("RUNNING");
+    expect(byId["step-c"]?.hasError).toBe(false);
+    expect(byId["step-c"]?.executionStatus).toBe("FAILED");
+  });
 });

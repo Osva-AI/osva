@@ -101,11 +101,22 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 - Invalid intermediate graphs remain editable; publish confirmation is disabled until the definition is valid
 - Control plane errors are shown separately from client validation and include request IDs
 
+**Execution (M8.3.4):**
+
+- Published WorkflowVersion pages expose **Run workflow**: JSON input, client-side syntax check, explicit confirm, then `POST /api/v1/workflow-runs` (BFF → `POST /v1/workflow-runs`)
+- The BFF never exposes OSVA API credentials; control-plane EXECUTE + workspace isolation remain authoritative
+- Successful create navigates to the returned WorkflowRun
+- WorkflowRun detail overlays persisted `WorkflowNodeRun.status` on the read-only V3 graph, keyed by `workflowNodeKey`
+- Multiple records for one key use the latest `sequence` / `updatedAt`; earlier attempts are listed, not inferred as success or failure
+- Selecting a node reuses the existing execution card (approval decision, event emit, child Run link)
+- Active runs continue to poll via TanStack Query (`ACTIVE_RUN_POLL_MS`); terminal runs do not
+
 **Limitations:**
 
-- No agent creation, workflow run launch, or settings from this flow
-- No execution overlays on the editor or published-version graph
-- Requires **EDITOR** or **ADMIN** role (WRITE) on the workspace API key
+- No agent creation or settings from the builder flow
+- Execution overlay is run-detail only; the editor and published-version graph stay authoring/read-only
+- `WorkflowNodeRun` has `childRunId` but no `runAttemptId` or artifact URLs; attempt and artifact inspection stay on Run Detail
+- Requires **EDITOR** or **ADMIN** role (WRITE) to publish; **OPERATOR**, **EDITOR**, or **ADMIN** (EXECUTE) to start runs and decide waits
 
 ### Not yet in console
 

@@ -17,15 +17,28 @@ export function WorkflowGraphNode({
   const nodeTypeClass = data.nodeType.toLowerCase().replace(/[^a-z0-9-]/g, "");
   const errorClass =
     data.hasError === true ? " workflow-graph-node--error" : "";
+  const executionClass =
+    data.executionStatus !== undefined
+      ? ` workflow-graph-node--exec-${data.executionStatus.toLowerCase()}`
+      : "";
+  const executionLabel =
+    data.executionStatus !== undefined
+      ? ` (execution ${data.executionStatus})`
+      : "";
   return (
     <div
-      className={`workflow-graph-node workflow-graph-node--${nodeTypeClass}${selected ? " workflow-graph-node--selected" : ""}${errorClass}`}
-      aria-label={`${data.nodeType} node ${data.nodeKey}${data.hasError === true ? " (has errors)" : ""}`}
+      className={`workflow-graph-node workflow-graph-node--${nodeTypeClass}${selected ? " workflow-graph-node--selected" : ""}${errorClass}${executionClass}`}
+      aria-label={`${data.nodeType} node ${data.nodeKey}${data.hasError === true ? " (has errors)" : ""}${executionLabel}`}
     >
       <Handle type="target" position={Position.Left} />
       <div className="workflow-graph-node__type">{data.nodeType}</div>
       <div className="workflow-graph-node__key mono">{data.nodeKey}</div>
       <div className="workflow-graph-node__label mono">{data.label}</div>
+      {data.executionStatus !== undefined ? (
+        <div className="workflow-graph-node__exec mono">
+          {data.executionStatus}
+        </div>
+      ) : null}
       <Handle type="source" position={Position.Right} />
     </div>
   );

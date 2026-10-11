@@ -27,6 +27,43 @@ function renderVersionPage() {
   );
 }
 
+function stubVersionPageFetches(definition: unknown) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "ADMIN",
+        });
+      }
+      if (url.includes("/versions/")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1")) {
+        return Response.json({
+          id: "wf-1",
+          workspaceId: "ws-1",
+          key: "demo",
+          name: "Demo",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      return Response.json({ error: "not found" }, { status: 404 });
+    }),
+  );
+}
+
 describe("Workflow version page", () => {
   afterEach(() => {
     cleanup();
@@ -34,26 +71,14 @@ describe("Workflow version page", () => {
   });
 
   it("renders graph section with accessible fallbacks for V3 definitions", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        Response.json({
-          id: "wv-1",
-          workflowId: "wf-1",
-          workspaceId: "ws-1",
-          version: 1,
-          definition: {
-            schemaVersion: "3",
-            nodes: [
-              { key: "a", type: "AGENT", agentVersionId: "av-1" },
-              { key: "b", type: "AGENT", agentVersionId: "av-2" },
-            ],
-            edges: [{ from: "a", to: "b" }],
-          },
-          createdAt: "2026-01-01T00:00:00.000Z",
-        }),
-      ),
-    );
+    stubVersionPageFetches({
+      schemaVersion: "3",
+      nodes: [
+        { key: "a", type: "AGENT", agentVersionId: "av-1" },
+        { key: "b", type: "AGENT", agentVersionId: "av-2" },
+      ],
+      edges: [{ from: "a", to: "b" }],
+    });
 
     renderVersionPage();
 
@@ -69,26 +94,16 @@ describe("Workflow version page", () => {
     expect(screen.getByText("Definition (structured)")).toBeTruthy();
     expect(screen.getByText("Definition (JSON)")).toBeTruthy();
     expect(screen.getByText(/a · AGENT/)).toBeTruthy();
+    expect(screen.getByText("Run workflow")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Start run" })).toBeTruthy();
   });
 
   it("skips graph for non-V3 definitions but keeps structured list", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        Response.json({
-          id: "wv-2",
-          workflowId: "wf-1",
-          workspaceId: "ws-1",
-          version: 2,
-          definition: {
-            schemaVersion: "2",
-            nodes: [{ key: "a", type: "AGENT", agentVersionId: "av-1" }],
-            edges: [],
-          },
-          createdAt: "2026-01-01T00:00:00.000Z",
-        }),
-      ),
-    );
+    stubVersionPageFetches({
+      schemaVersion: "2",
+      nodes: [{ key: "a", type: "AGENT", agentVersionId: "av-1" }],
+      edges: [],
+    });
 
     renderVersionPage();
 

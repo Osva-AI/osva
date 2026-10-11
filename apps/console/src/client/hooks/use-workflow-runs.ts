@@ -98,6 +98,14 @@ export function useWorkflowRunsListQuery(filters: ListWorkflowRunsFilters) {
   });
 }
 
+export function workflowRunRefetchInterval(
+  status: string | undefined,
+): number | false {
+  return status !== undefined && isWorkflowRunLive(status)
+    ? ACTIVE_RUN_POLL_MS
+    : false;
+}
+
 export function useWorkflowRunQuery(workflowRunId: string | undefined) {
   return useQuery({
     queryKey: ["workflow-runs", workflowRunId],
@@ -106,11 +114,32 @@ export function useWorkflowRunQuery(workflowRunId: string | undefined) {
       consoleFetch<WorkflowRunResource>(
         `/api/v1/workflow-runs/${workflowRunId}`,
       ),
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status !== undefined && isWorkflowRunLive(status)
-        ? ACTIVE_RUN_POLL_MS
-        : false;
+    refetchInterval: (query) =>
+      workflowRunRefetchInterval(query.state.data?.status),
+  });
+}
+
+export interface CreateWorkflowRunInput {
+  readonly workflowVersionId: string;
+  readonly input: unknown;
+}
+
+export function useCreateWorkflowRunMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateWorkflowRunInput) =>
+      consoleFetch<WorkflowRunResource>("/api/v1/workflow-runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workflowVersionId: input.workflowVersionId,
+          input: input.input,
+        }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["workflow-runs", "list"],
+      });
     },
   });
 }

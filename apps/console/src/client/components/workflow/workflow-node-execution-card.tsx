@@ -23,6 +23,7 @@ interface WorkflowNodeExecutionCardProps {
   readonly definition: WorkflowDefinitionView;
   readonly node: WorkflowDefinitionNode;
   readonly nodeRun: WorkflowNodeRunResource | undefined;
+  readonly relatedNodeRuns?: readonly WorkflowNodeRunResource[];
   readonly approvalRequest: ApprovalRequestResource | undefined;
   readonly workflowRunId: string;
   readonly workflowInput: unknown;
@@ -34,6 +35,7 @@ export function WorkflowNodeExecutionCard({
   definition,
   node,
   nodeRun,
+  relatedNodeRuns = [],
   approvalRequest,
   workflowRunId,
   workflowInput,
@@ -65,7 +67,33 @@ export function WorkflowNodeExecutionCard({
           />
         </header>
 
+        {nodeRun === undefined ? (
+          <p className="muted">No WorkflowNodeRun record yet.</p>
+        ) : null}
+        {relatedNodeRuns.length > 1 ? (
+          <div>
+            <p className="muted">
+              Showing latest of {relatedNodeRuns.length} records for this node
+              key. Status is taken from the latest sequence, not inferred from
+              earlier attempts.
+            </p>
+            <ul className="workflow-node-run-attempts">
+              {relatedNodeRuns.map((record) => (
+                <li key={record.id} className="mono">
+                  {record.id} · seq {record.sequence} · {record.status}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <dl className="meta-grid">
+          {nodeRun !== undefined ? (
+            <>
+              <dt>WorkflowNodeRun ID</dt>
+              <dd className="mono">{nodeRun.id}</dd>
+            </>
+          ) : null}
           {nodeRun?.sequence !== undefined ? (
             <>
               <dt>Sequence</dt>

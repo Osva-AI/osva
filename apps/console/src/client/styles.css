@@ -501,6 +501,56 @@ a:hover {
   border-color: var(--danger);
 }
 
+.workflow-graph-node__exec {
+  margin-top: var(--space-1);
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.workflow-graph-node--exec-pending {
+  border-left-width: 4px;
+  border-left-color: var(--neutral);
+}
+
+.workflow-graph-node--exec-running {
+  border-left-width: 4px;
+  border-left-color: var(--accent);
+}
+
+.workflow-graph-node--exec-waiting {
+  border-left-width: 4px;
+  border-left-color: var(--warning);
+}
+
+.workflow-graph-node--exec-succeeded {
+  border-left-width: 4px;
+  border-left-color: var(--success);
+}
+
+.workflow-graph-node--exec-failed {
+  border-left-width: 4px;
+  border-left-color: var(--danger);
+}
+
+.workflow-graph-node--exec-skipped,
+.workflow-graph-node--exec-cancelled {
+  border-left-width: 4px;
+  border-left-color: var(--neutral);
+  opacity: 0.78;
+}
+
+.workflow-node-run-attempts {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  font-size: 0.78rem;
+}
+
+.workflow-node-run-attempts li {
+  margin-top: var(--space-1);
+}
+
 .workflow-validation-count {
   color: var(--danger);
   margin: 0 0 var(--space-3);

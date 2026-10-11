@@ -9,12 +9,37 @@ import "@xyflow/react/dist/style.css";
 
 export interface WorkflowGraphViewProps {
   readonly definition: WorkflowDefinitionView;
+  readonly errorNodeKeys?: ReadonlySet<string>;
+  readonly executionStatusByNodeKey?: Readonly<Record<string, string>>;
+  readonly selectedNodeKey?: string;
+  readonly onNodeSelect?: (nodeKey: string | undefined) => void;
 }
 
-export function WorkflowGraphView({ definition }: WorkflowGraphViewProps) {
+export function WorkflowGraphView({
+  definition,
+  errorNodeKeys,
+  executionStatusByNodeKey,
+  selectedNodeKey,
+  onNodeSelect,
+}: WorkflowGraphViewProps) {
+  const inspectable = onNodeSelect !== undefined;
   const { nodes, edges } = useMemo(
-    () => definitionToFlow(definition, { interaction: "readonly" }),
-    [definition],
+    () =>
+      definitionToFlow(definition, {
+        interaction: "readonly",
+        errorNodeKeys,
+        executionStatusByNodeKey,
+      }),
+    [definition, errorNodeKeys, executionStatusByNodeKey],
+  );
+
+  const nodesWithSelection = useMemo(
+    () =>
+      nodes.map((node) => ({
+        ...node,
+        selected: node.id === selectedNodeKey,
+      })),
+    [nodes, selectedNodeKey],
   );
 
   return (
@@ -24,16 +49,20 @@ export function WorkflowGraphView({ definition }: WorkflowGraphViewProps) {
       aria-label="Workflow definition graph (read-only)"
     >
       <ReactFlow
-        nodes={nodes}
+        nodes={nodesWithSelection}
         edges={edges}
         nodeTypes={workflowGraphNodeTypes}
         nodesDraggable={false}
         nodesConnectable={false}
         nodesFocusable
         edgesFocusable
-        elementsSelectable={false}
+        elementsSelectable={inspectable}
         connectOnClick={false}
         deleteKeyCode={null}
+        onNodeClick={
+          inspectable ? (_event, node) => onNodeSelect(node.id) : undefined
+        }
+        onPaneClick={inspectable ? () => onNodeSelect(undefined) : undefined}
         panOnDrag
         zoomOnScroll
         zoomOnPinch

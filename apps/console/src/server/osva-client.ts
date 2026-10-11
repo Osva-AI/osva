@@ -79,6 +79,7 @@ export interface ConsoleOsvaClient {
   getWorkflowRun(
     workflowRunId: WorkflowRunId,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createWorkflowRun(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   getApprovalRequest(
     approvalRequestId: ApprovalRequestId,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
@@ -231,6 +232,12 @@ export function createConsoleOsvaClient(
       http.requestWithMeta({
         method: "GET",
         path: `/v1/workflow-runs/${encodeURIComponent(workflowRunId)}`,
+      }),
+    createWorkflowRun: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/workflow-runs",
+        body,
       }),
     getApprovalRequest: (approvalRequestId) =>
       http.requestWithMeta({

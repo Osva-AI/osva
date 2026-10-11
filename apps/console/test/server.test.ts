@@ -77,6 +77,9 @@ function createMockClient(
     getWorkflowRun: async () => {
       throw new Error("not implemented");
     },
+    createWorkflowRun: async () => {
+      throw new Error("not implemented");
+    },
     getApprovalRequest: async () => {
       throw new Error("not implemented");
     },
@@ -271,6 +274,95 @@ describe("console server API", () => {
     expect(versionResponse.headers.get("x-osva-request-id")).toBe(
       "req-wf-version",
     );
+  });
+
+  it("forwards WorkflowRun creation POST and preserves the request id", async () => {
+    let forwardedBody: unknown;
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        createWorkflowRun: async (body) => {
+          forwardedBody = body;
+          return {
+            data: {
+              id: "wr-1",
+              workspaceId: "workspace-1",
+              workflowId: "wf-1",
+              workflowVersionId: "wv-1",
+              status: "PENDING",
+              input: { ok: true },
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+              nodeRuns: [],
+              approvalRequests: [],
+            },
+            requestId: "req-wr-create",
+          };
+        },
+      }),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/workflow-runs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workflowVersionId: "wv-1",
+          input: { ok: true },
+        }),
+      },
+    );
+    const body = (await response.json()) as { id?: string };
+    expect(response.status).toBe(201);
+    expect(response.headers.get("x-osva-request-id")).toBe("req-wr-create");
+    expect(body.id).toBe("wr-1");
+    expect(forwardedBody).toEqual({
+      workflowVersionId: "wv-1",
+      input: { ok: true },
+    });
+  });
+
+  it("propagates control-plane authorization failures for WorkflowRun create", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        createWorkflowRun: async () => {
+          const { OsvaApiError } = await import("@osva-ai/sdk");
+          throw new OsvaApiError(
+            403,
+            { status: "permission_denied" },
+            "req-wr-forbidden",
+          );
+        },
+      }),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/workflow-runs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workflowVersionId: "wv-1",
+          input: {},
+        }),
+      },
+    );
+    const body = (await response.json()) as { requestId?: string };
+    expect(response.status).toBe(403);
+    expect(response.headers.get("x-osva-request-id")).toBe("req-wr-forbidden");
+    expect(body.requestId).toBe("req-wr-forbidden");
   });
 
   it("forwards agent discovery GET routes", async () => {

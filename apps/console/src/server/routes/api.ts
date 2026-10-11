@@ -117,6 +117,19 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/workflow-runs") {
+        const body = await readJsonBody(request);
+        const created = await deps.client.createWorkflowRun(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       sendJson(
         response,
         405,
