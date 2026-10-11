@@ -13,6 +13,12 @@ import {
 } from "../src/client/lib/workflow-builder-linear";
 import { writeStoredWorkflowBuilderDraft } from "../src/client/lib/workflow-builder-storage";
 
+vi.mock("../src/client/components/workflow/workflow-builder-canvas", () => ({
+  WorkflowBuilderCanvas: () => (
+    <div data-testid="workflow-builder-canvas-mock" />
+  ),
+}));
+
 function renderCreatePage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -123,7 +129,7 @@ describe("Workflow create page", () => {
 
     await user.type(screen.getByLabelText("Key"), "demo-wf");
     await user.type(screen.getByLabelText("Name"), "Demo WF");
-    await user.click(screen.getByRole("button", { name: "Add step" }));
+    await user.click(screen.getByRole("button", { name: "Add AGENT" }));
     await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
     await waitFor(() => {
       expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
@@ -134,9 +140,11 @@ describe("Workflow create page", () => {
     );
     await user.click(
       screen.getByRole("button", {
-        name: "Create workflow and publish version",
+        name: "Review and publish",
       }),
     );
+    expect(screen.getByTestId("workflow-publish-review")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Confirm publish" }));
 
     await waitFor(() => {
       expect(screen.getByText("Published version")).toBeTruthy();
@@ -235,7 +243,7 @@ describe("Workflow create page", () => {
 
     await user.type(screen.getByLabelText("Key"), "partial");
     await user.type(screen.getByLabelText("Name"), "Partial");
-    await user.click(screen.getByRole("button", { name: "Add step" }));
+    await user.click(screen.getByRole("button", { name: "Add AGENT" }));
     await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
     await waitFor(() => {
       expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
@@ -246,18 +254,20 @@ describe("Workflow create page", () => {
     );
     await user.click(
       screen.getByRole("button", {
-        name: "Create workflow and publish version",
+        name: "Review and publish",
       }),
     );
+    await user.click(screen.getByRole("button", { name: "Confirm publish" }));
 
     await waitFor(() => {
       expect(screen.getByText(/Request ID: req-fail-1/)).toBeTruthy();
     });
     expect(createCalls).toBe(1);
     expect(versionCalls).toBe(1);
+    expect(screen.getByTestId("workflow-publish-upstream-error")).toBeTruthy();
 
     await user.click(
-      screen.getByRole("button", { name: "Retry publish version" }),
+      screen.getByRole("button", { name: "Confirm retry publish" }),
     );
     await waitFor(() => {
       expect(screen.getByText("Published version")).toBeTruthy();
@@ -327,6 +337,10 @@ describe("Workflow create page", () => {
     });
     await user.click(
       screen.getByRole("button", { name: "Restore saved draft" }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /agent-step-1 · AGENT/i }),
     );
 
     await waitFor(() => {
@@ -404,6 +418,10 @@ describe("Workflow create page", () => {
       screen.getByRole("button", { name: "Restore saved draft" }),
     );
 
+    await user.click(
+      screen.getByRole("button", { name: /agent-step-1 · AGENT/i }),
+    );
+
     await waitFor(() => {
       expect(screen.getByText(/not visible in this workspace/i)).toBeTruthy();
     });
@@ -413,5 +431,94 @@ describe("Workflow create page", () => {
     ) as HTMLSelectElement;
     expect(versionSelect.value).toBe("av-missing");
     expect(versionSelect.disabled).toBe(true);
+  });
+
+  it("selects a node from the validation panel and keeps review blocked until valid", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("/api/v1/auth/context")) {
+          return Response.json({
+            subjectId: "sub-1",
+            workspaceId: "ws-1",
+            role: "ADMIN",
+          });
+        }
+        if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
+          return Response.json({
+            agents: [
+              {
+                id: "agent-1",
+                workspaceId: "ws-1",
+                key: "demo",
+                name: "Demo Agent",
+                createdAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+          });
+        }
+        if (url.includes("/api/v1/agents/agent-1/versions")) {
+          return Response.json({
+            versions: [
+              {
+                id: "av-1",
+                agentId: "agent-1",
+                version: 1,
+                createdAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+          });
+        }
+        return Response.json({}, { status: 404 });
+      }),
+    );
+
+    renderCreatePage();
+    await waitFor(() => {
+      expect(screen.getByLabelText("Key")).toBeTruthy();
+    });
+    await user.type(screen.getByLabelText("Key"), "demo-wf");
+    await user.type(screen.getByLabelText("Name"), "Demo WF");
+    await user.click(screen.getByRole("button", { name: "Add AGENT" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workflow-validation-panel")).toBeTruthy();
+    });
+    expect(
+      screen.getByTestId("workflow-validation-summary").textContent,
+    ).toMatch(/error/);
+
+    await user.click(
+      screen.getByRole("button", { name: "Focus agent-step-1" }),
+    );
+    expect(screen.getByTestId("workflow-inspector-errors")).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", { name: "Review and publish" }),
+    );
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Confirm publish",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Back to editor" }));
+    await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
+    });
+    await user.selectOptions(
+      screen.getByLabelText("Agent version (immutable)"),
+      "av-1",
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("workflow-validation-summary").textContent,
+      ).toMatch(/No blocking errors/);
+    });
   });
 });

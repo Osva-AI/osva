@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./workflow-definition": {
+      "types": "./dist/workflow-definition.d.ts",
+      "import": "./dist/workflow-definition.js"
     }
   },
   "scripts": {

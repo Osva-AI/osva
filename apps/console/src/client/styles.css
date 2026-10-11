@@ -482,6 +482,108 @@ a:hover {
   border-color: color-mix(in srgb, var(--neutral) 55%, var(--border));
 }
 
+.workflow-graph-node--selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.workflow-graph-view--editable {
+  margin-top: var(--space-3);
+}
+
+.workflow-node-accessible-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.workflow-graph-node--error {
+  border-color: var(--danger);
+}
+
+.workflow-graph-node__exec {
+  margin-top: var(--space-1);
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.workflow-graph-node--exec-pending {
+  border-left-width: 4px;
+  border-left-color: var(--neutral);
+}
+
+.workflow-graph-node--exec-running {
+  border-left-width: 4px;
+  border-left-color: var(--accent);
+}
+
+.workflow-graph-node--exec-waiting {
+  border-left-width: 4px;
+  border-left-color: var(--warning);
+}
+
+.workflow-graph-node--exec-succeeded {
+  border-left-width: 4px;
+  border-left-color: var(--success);
+}
+
+.workflow-graph-node--exec-failed {
+  border-left-width: 4px;
+  border-left-color: var(--danger);
+}
+
+.workflow-graph-node--exec-skipped,
+.workflow-graph-node--exec-cancelled {
+  border-left-width: 4px;
+  border-left-color: var(--neutral);
+  opacity: 0.78;
+}
+
+.workflow-node-run-attempts {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  font-size: 0.78rem;
+}
+
+.workflow-node-run-attempts li {
+  margin-top: var(--space-1);
+}
+
+.workflow-validation-count {
+  color: var(--danger);
+  margin: 0 0 var(--space-3);
+}
+
+.workflow-validation-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.workflow-validation-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  background: var(--bg);
+}
+
+.workflow-validation-item__severity {
+  display: inline-block;
+  margin-right: var(--space-2);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: var(--danger);
+}
+
+.workflow-inspector-errors {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--danger);
+  font-size: 0.86rem;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;

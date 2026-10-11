@@ -1,22 +1,34 @@
-import type { AgentVersionId } from "@osva-ai/contracts";
-import { useEffect, useMemo, useState } from "react";
+import type { WorkflowV3NodeType } from "@osva-ai/contracts";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import { useAgentBindingResolution } from "../../hooks/use-agent-binding-resolution";
+import { LoadingBlock } from "../loading/loading-block";
+import type { WorkflowBuilderDraft } from "../../lib/workflow-builder-draft";
+import { updateRegistry } from "../../lib/workflow-builder-draft";
 import {
-  useAgentVersionsQuery,
-  useAgentsListQuery,
-  type AgentResource,
-  type AgentVersionResource,
-} from "../../hooks/use-agents";
-import type { WorkflowBuilderDraft } from "../../lib/workflow-builder-linear";
-import {
-  addAgentNode,
-  listAgentNodesInOrder,
-  moveAgentNode,
-  removeAgentNode,
+  addWorkflowNode,
   setAgentNodeVersion,
-  updateRegistry,
-} from "../../lib/workflow-builder-linear";
+} from "../../lib/workflow-builder-graph";
+import type { AgentVersionId } from "@osva-ai/contracts";
+import {
+  asWorkflowDefinitionView,
+  orderWorkflowNodeKeys,
+} from "../../lib/workflow-definition";
+import {
+  analyzeWorkflowBuilderDraft,
+  errorNodeKeys,
+  issuesForNode,
+} from "../../lib/workflow-builder-validation";
+import {
+  WorkflowNodeInspector,
+  WorkflowNodePalette,
+} from "./workflow-node-inspector";
+import { WorkflowValidationPanel } from "./workflow-validation-panel";
+
+const WorkflowBuilderCanvasLazy = lazy(async () => {
+  const module = await import("./workflow-builder-canvas");
+  return { default: module.WorkflowBuilderCanvas };
+});
 
 interface WorkflowBuilderFormProps {
   readonly draft: WorkflowBuilderDraft;
@@ -31,17 +43,16 @@ export function WorkflowBuilderForm({
   registryLocked,
   disabled,
 }: WorkflowBuilderFormProps) {
-  const agentsQuery = useAgentsListQuery();
   const bindingResolution = useAgentBindingResolution(draft);
+  const [selectedNodeKey, setSelectedNodeKey] = useState<string | undefined>();
   const [manualAgentIdByNodeKey, setManualAgentIdByNodeKey] = useState<
     Record<string, string>
   >({});
 
   useEffect(() => {
     setManualAgentIdByNodeKey({});
+    setSelectedNodeKey(undefined);
   }, [draft.draftId]);
-
-  const orderedNodes = useMemo(() => listAgentNodesInOrder(draft), [draft]);
 
   const agentIdByNodeKey = useMemo(
     () => ({
@@ -50,6 +61,36 @@ export function WorkflowBuilderForm({
     }),
     [bindingResolution.agentIdByNodeKey, manualAgentIdByNodeKey],
   );
+
+  const orderedKeys = useMemo(
+    () => orderWorkflowNodeKeys(asWorkflowDefinitionView(draft.definition)),
+    [draft.definition],
+  );
+
+  const validationReport = useMemo(
+    () => analyzeWorkflowBuilderDraft(draft),
+    [draft],
+  );
+  const invalidNodeKeys = useMemo(
+    () => errorNodeKeys(validationReport),
+    [validationReport],
+  );
+  const selectedNodeIssues = useMemo(
+    () =>
+      selectedNodeKey === undefined
+        ? []
+        : issuesForNode(validationReport, selectedNodeKey),
+    [selectedNodeKey, validationReport],
+  );
+
+  function addNode(type: WorkflowV3NodeType) {
+    const next = addWorkflowNode(draft, type);
+    onDraftChange(next);
+    const created = next.definition.nodes[next.definition.nodes.length - 1];
+    if (created !== undefined) {
+      setSelectedNodeKey(created.key);
+    }
+  }
 
   return (
     <div className="stack">
@@ -110,207 +151,88 @@ export function WorkflowBuilderForm({
       </section>
 
       <section className="panel">
-        <div className="page-header" style={{ marginBottom: 12 }}>
-          <h2 className="section-title">AGENT steps (linear)</h2>
-          <button
-            type="button"
-            className="button"
+        <h2 className="section-title">Workflow graph</h2>
+        <p className="muted workflow-graph-intro">
+          Drag nodes to arrange layout (saved in your draft only). Connect
+          handles to add edges; select an edge and press Delete to remove. Use
+          the inspector or node list for configuration without the canvas.
+        </p>
+        <WorkflowNodePalette disabled={disabled} onAddNode={addNode} />
+        {bindingResolution.isResolving ? (
+          <p className="muted">Loading agent version bindings…</p>
+        ) : null}
+        <Suspense fallback={<LoadingBlock label="Loading graph editor…" />}>
+          <WorkflowBuilderCanvasLazy
+            draft={draft}
+            onDraftChange={onDraftChange}
             disabled={disabled}
-            onClick={() => onDraftChange(addAgentNode(draft))}
-          >
-            Add step
-          </button>
-        </div>
-        {agentsQuery.isLoading || bindingResolution.isResolving ? (
-          <p className="muted">Loading agents and version bindings…</p>
-        ) : null}
-        {agentsQuery.isError ? (
-          <p className="muted">Failed to load agents.</p>
-        ) : null}
-        {orderedNodes.length === 0 ? (
-          <p className="muted">
-            Add at least one AGENT step. Node keys stay stable when you reorder
-            steps.
-          </p>
-        ) : null}
-        <div className="stack">
-          {orderedNodes.map((node, index) => (
-            <AgentStepRow
-              key={node.key}
-              nodeKey={node.key}
-              agentVersionId={node.agentVersionId}
-              agents={agentsQuery.data?.agents ?? []}
-              selectedAgentId={agentIdByNodeKey[node.key]}
-              versionUnavailable={
-                bindingResolution.unavailableVersionByNodeKey[node.key] === true
-              }
-              onAgentIdChange={(agentId) => {
-                setManualAgentIdByNodeKey((current) => ({
-                  ...current,
-                  [node.key]: agentId,
-                }));
-                onDraftChange(
-                  setAgentNodeVersion(draft, node.key, "" as AgentVersionId),
-                );
-              }}
-              index={index}
-              stepCount={orderedNodes.length}
-              disabled={disabled}
-              onVersionChange={(agentVersionId) =>
-                onDraftChange(
-                  setAgentNodeVersion(draft, node.key, agentVersionId),
-                )
-              }
-              onMoveUp={() =>
-                onDraftChange(moveAgentNode(draft, index, index - 1))
-              }
-              onMoveDown={() =>
-                onDraftChange(moveAgentNode(draft, index, index + 1))
-              }
-              onRemove={() => {
-                onDraftChange(removeAgentNode(draft, node.key));
-                setManualAgentIdByNodeKey((current) => {
-                  const next = { ...current };
-                  delete next[node.key];
-                  return next;
-                });
-              }}
-            />
-          ))}
-        </div>
+            selectedNodeKey={selectedNodeKey}
+            onSelectNodeKey={setSelectedNodeKey}
+            errorNodeKeys={invalidNodeKeys}
+          />
+        </Suspense>
       </section>
-    </div>
-  );
-}
 
-interface AgentStepRowProps {
-  readonly nodeKey: string;
-  readonly agentVersionId: string;
-  readonly agents: readonly AgentResource[];
-  readonly selectedAgentId: string | undefined;
-  readonly versionUnavailable: boolean;
-  readonly onAgentIdChange: (agentId: string) => void;
-  readonly index: number;
-  readonly stepCount: number;
-  readonly disabled: boolean;
-  readonly onVersionChange: (agentVersionId: AgentVersionId) => void;
-  readonly onMoveUp: () => void;
-  readonly onMoveDown: () => void;
-  readonly onRemove: () => void;
-}
+      <WorkflowValidationPanel
+        report={validationReport}
+        onFocusNode={setSelectedNodeKey}
+      />
 
-function AgentStepRow({
-  nodeKey,
-  agentVersionId,
-  agents,
-  selectedAgentId,
-  versionUnavailable,
-  onAgentIdChange,
-  index,
-  stepCount,
-  disabled,
-  onVersionChange,
-  onMoveUp,
-  onMoveDown,
-  onRemove,
-}: AgentStepRowProps) {
-  const versionsQuery = useAgentVersionsQuery(selectedAgentId);
-  const versions = versionsQuery.data?.versions ?? [];
-  const boundVersionListed = versions.some(
-    (version) => version.id === agentVersionId,
-  );
-  const showUnavailableBinding =
-    versionUnavailable ||
-    (agentVersionId.trim().length > 0 &&
-      selectedAgentId !== undefined &&
-      !versionsQuery.isLoading &&
-      !boundVersionListed);
+      <section className="panel">
+        <h2 className="section-title">Node inspector</h2>
+        <WorkflowNodeInspector
+          draft={draft}
+          nodeKey={selectedNodeKey}
+          onDraftChange={onDraftChange}
+          disabled={disabled}
+          agentIdByNodeKey={agentIdByNodeKey}
+          unavailableVersionByNodeKey={
+            bindingResolution.unavailableVersionByNodeKey
+          }
+          nodeIssues={selectedNodeIssues}
+          onManualAgentIdChange={(nodeKey, agentId) => {
+            setManualAgentIdByNodeKey((current) => ({
+              ...current,
+              [nodeKey]: agentId,
+            }));
+            onDraftChange(
+              setAgentNodeVersion(draft, nodeKey, "" as AgentVersionId),
+            );
+          }}
+        />
+      </section>
 
-  return (
-    <div className="panel" style={{ padding: 12 }}>
-      <div className="page-header" style={{ marginBottom: 8 }}>
-        <strong className="mono">{nodeKey}</strong>
-        <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
-          <button
-            type="button"
-            className="button"
-            disabled={disabled || index === 0}
-            onClick={onMoveUp}
-          >
-            Up
-          </button>
-          <button
-            type="button"
-            className="button"
-            disabled={disabled || index >= stepCount - 1}
-            onClick={onMoveDown}
-          >
-            Down
-          </button>
-          <button
-            type="button"
-            className="button"
-            disabled={disabled}
-            onClick={onRemove}
-          >
-            Remove
-          </button>
-        </div>
-      </div>
-      <div className="stack">
-        <div className="field">
-          <label htmlFor={`agent-${nodeKey}`}>Agent</label>
-          <select
-            id={`agent-${nodeKey}`}
-            value={selectedAgentId ?? ""}
-            disabled={disabled}
-            onChange={(event) => onAgentIdChange(event.target.value)}
-          >
-            <option value="">Select agent…</option>
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name} ({agent.key})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor={`version-${nodeKey}`}>
-            Agent version (immutable)
-          </label>
-          <select
-            id={`version-${nodeKey}`}
-            value={agentVersionId}
-            disabled={
-              disabled ||
-              selectedAgentId === undefined ||
-              showUnavailableBinding
-            }
-            onChange={(event) =>
-              onVersionChange(event.target.value as AgentVersionId)
-            }
-          >
-            <option value="">Select version…</option>
-            {versions.map((version: AgentVersionResource) => (
-              <option key={version.id} value={version.id}>
-                v{version.version} — {version.id}
-              </option>
-            ))}
-            {showUnavailableBinding && agentVersionId.trim().length > 0 ? (
-              <option value={agentVersionId}>
-                {agentVersionId} (unavailable in workspace)
-              </option>
-            ) : null}
-          </select>
-          {showUnavailableBinding ? (
-            <p className="muted" style={{ fontSize: 12 }}>
-              Bound version <span className="mono">{agentVersionId}</span> is
-              not visible in this workspace. The binding is preserved; pick
-              another agent and version to replace it.
-            </p>
-          ) : null}
-        </div>
-      </div>
+      <section className="panel">
+        <h2 className="section-title">Nodes (accessible list)</h2>
+        {orderedKeys.length === 0 ? (
+          <p className="muted">Add nodes using the palette above.</p>
+        ) : (
+          <ul className="stack workflow-node-accessible-list">
+            {orderedKeys.map((key) => {
+              const node = draft.definition.nodes.find(
+                (candidate) => candidate.key === key,
+              );
+              if (node === undefined) {
+                return null;
+              }
+              return (
+                <li key={key}>
+                  <button
+                    type="button"
+                    className={`button${selectedNodeKey === key ? " primary" : ""}`}
+                    disabled={disabled}
+                    onClick={() => setSelectedNodeKey(key)}
+                  >
+                    <span className="mono">
+                      {node.key} · {node.type}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

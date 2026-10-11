@@ -716,6 +716,9 @@ importers:
       '@osva-ai/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@tanstack/react-query':
         specifier: ^5.90.2
         version: 5.104.1(react@19.3.0)

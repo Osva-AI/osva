@@ -42,4 +42,27 @@ describe("WorkflowGraphView", () => {
     expect(capturedReactFlowProps?.deleteKeyCode).toBe(null);
     expect(capturedReactFlowProps?.elementsSelectable).toBe(false);
   });
+
+  it("allows inspection selection without enabling graph edits", () => {
+    const onNodeSelect = vi.fn();
+    render(
+      <WorkflowGraphView
+        definition={{
+          schemaVersion: "3",
+          nodes: [{ key: "a", type: "AGENT", agentVersionId: "av-1" }],
+          edges: [],
+        }}
+        executionStatusByNodeKey={{ a: "WAITING" }}
+        selectedNodeKey="a"
+        onNodeSelect={onNodeSelect}
+      />,
+    );
+
+    expect(capturedReactFlowProps?.nodesDraggable).toBe(false);
+    expect(capturedReactFlowProps?.nodesConnectable).toBe(false);
+    expect(capturedReactFlowProps?.connectOnClick).toBe(false);
+    expect(capturedReactFlowProps?.deleteKeyCode).toBe(null);
+    expect(capturedReactFlowProps?.elementsSelectable).toBe(true);
+    expect(capturedReactFlowProps?.onNodeClick).toEqual(expect.any(Function));
+  });
 });

@@ -1,3 +1,4 @@
+import { lazy, Suspense, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { WorkflowNodeExecutionCard } from "../components/workflow/workflow-node-execution-card";
@@ -8,12 +9,30 @@ import { LoadingBlock } from "../components/loading/loading-block";
 import { StatusChip } from "../components/status/status-chip";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import { useWorkflowVersionQuery } from "../hooks/use-workflows";
-import { useWorkflowRunQuery } from "../hooks/use-workflow-runs";
-import { orderWorkflowNodeKeys } from "../lib/workflow-definition";
+import {
+  useWorkflowRunQuery,
+  type ApprovalRequestResource,
+  type WorkflowNodeRunResource,
+} from "../hooks/use-workflow-runs";
+import {
+  orderWorkflowNodeKeys,
+  type WorkflowDefinitionView,
+} from "../lib/workflow-definition";
 import { roleCanExecuteControlPlaneActions } from "../lib/permissions";
 import { formatTimestamp } from "../lib/formatting";
 import { workflowRunStatusCategory } from "../lib/statuses";
 import { ConsoleApiError } from "../lib/console-api";
+import {
+  describeWorkflowWaitReason,
+  executionStatusByNodeKey,
+  nodeRunsForKey,
+  selectLatestNodeRunByKey,
+} from "../lib/workflow-node-run-overlay";
+
+const WorkflowGraphViewLazy = lazy(async () => {
+  const module = await import("../components/workflow/workflow-graph-view");
+  return { default: module.WorkflowGraphView };
+});
 
 export function WorkflowRunDetailPage() {
   const { workflowRunId } = useParams<{ workflowRunId: string }>();
@@ -29,6 +48,7 @@ export function WorkflowRunDetailPage() {
     runQuery.error instanceof ConsoleApiError &&
     runQuery.error.status === 404;
 
+  const [selectedNodeKey, setSelectedNodeKey] = useState<string | undefined>();
   const canExecute =
     authQuery.data !== undefined &&
     roleCanExecuteControlPlaneActions(authQuery.data.role);
@@ -43,12 +63,9 @@ export function WorkflowRunDetailPage() {
   }
 
   const definition = versionQuery.data?.definition;
-  const nodeRunByKey = new Map(
-    (runQuery.data?.nodeRuns ?? []).map((nodeRun) => [
-      nodeRun.workflowNodeKey,
-      nodeRun,
-    ]),
-  );
+  const nodeRuns = runQuery.data?.nodeRuns ?? [];
+  const nodeRunByKey = selectLatestNodeRunByKey(nodeRuns);
+  const overlayStatuses = executionStatusByNodeKey(nodeRuns);
   const approvalByNodeRunId = new Map(
     (runQuery.data?.approvalRequests ?? []).map((request) => [
       request.workflowNodeRunId,
@@ -58,6 +75,20 @@ export function WorkflowRunDetailPage() {
 
   const orderedKeys =
     definition === undefined ? [] : orderWorkflowNodeKeys(definition);
+  const waitingReasons =
+    definition === undefined || runQuery.data?.status !== "WAITING"
+      ? []
+      : orderedKeys.flatMap((key) => {
+          const node = definition.nodes.find((entry) => entry.key === key);
+          if (node === undefined) {
+            return [];
+          }
+          const reason = describeWorkflowWaitReason(
+            node,
+            nodeRunByKey.get(key),
+          );
+          return reason === undefined ? [] : [{ key, reason }];
+        });
 
   return (
     <>
@@ -173,6 +204,32 @@ export function WorkflowRunDetailPage() {
             </div>
           </section>
 
+          {waitingReasons.length > 0 ? (
+            <section className="panel" aria-labelledby="workflow-wait-title">
+              <h2 className="panel-title" id="workflow-wait-title">
+                Waiting
+              </h2>
+              <p className="muted">
+                Resumed status appears only after the control plane confirms it.
+                Approval and event actions below do not invent a local resume.
+              </p>
+              <ul>
+                {waitingReasons.map((entry) => (
+                  <li key={entry.key}>
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => setSelectedNodeKey(entry.key)}
+                    >
+                      Focus {entry.key}
+                    </button>{" "}
+                    {entry.reason}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           <section className="panel">
             <h2 className="panel-title">Execution</h2>
             {versionQuery.isLoading ? (
@@ -185,38 +242,148 @@ export function WorkflowRunDetailPage() {
               />
             ) : null}
             {definition !== undefined ? (
-              <div className="stack">
-                {orderedKeys.map((key, index) => {
-                  const node = definition.nodes.find(
-                    (entry) => entry.key === key,
-                  );
-                  if (node === undefined) {
-                    return null;
-                  }
-                  const nodeRun = nodeRunByKey.get(node.key);
-                  const approvalRequest =
-                    nodeRun === undefined
-                      ? undefined
-                      : approvalByNodeRunId.get(nodeRun.id);
-                  return (
-                    <WorkflowNodeExecutionCard
-                      key={node.key}
-                      definition={definition}
-                      node={node}
-                      nodeRun={nodeRun}
-                      approvalRequest={approvalRequest}
-                      workflowRunId={workflowRunId}
-                      workflowInput={runQuery.data.input}
-                      canExecute={canExecute}
-                      showConnector={index > 0}
-                    />
-                  );
-                })}
-              </div>
+              <>
+                <WorkflowRunGraphPanel
+                  definition={definition}
+                  executionStatusByNodeKey={overlayStatuses}
+                  selectedNodeKey={selectedNodeKey}
+                  onNodeSelect={setSelectedNodeKey}
+                />
+                <WorkflowRunNodeInspector
+                  definition={definition}
+                  selectedNodeKey={selectedNodeKey}
+                  nodeRuns={nodeRuns}
+                  nodeRunByKey={nodeRunByKey}
+                  approvalByNodeRunId={approvalByNodeRunId}
+                  workflowRunId={workflowRunId}
+                  workflowInput={runQuery.data.input}
+                  canExecute={canExecute}
+                />
+                <h3 className="section-title">Node list</h3>
+                <div className="stack">
+                  {orderedKeys.map((key, index) => {
+                    const node = definition.nodes.find(
+                      (entry) => entry.key === key,
+                    );
+                    if (node === undefined) {
+                      return null;
+                    }
+                    const nodeRun = nodeRunByKey.get(node.key);
+                    const approvalRequest =
+                      nodeRun === undefined
+                        ? undefined
+                        : approvalByNodeRunId.get(nodeRun.id);
+                    return (
+                      <WorkflowNodeExecutionCard
+                        key={node.key}
+                        definition={definition}
+                        node={node}
+                        nodeRun={nodeRun}
+                        relatedNodeRuns={nodeRunsForKey(nodeRuns, node.key)}
+                        approvalRequest={approvalRequest}
+                        workflowRunId={workflowRunId}
+                        workflowInput={runQuery.data.input}
+                        canExecute={canExecute}
+                        showConnector={index > 0}
+                      />
+                    );
+                  })}
+                </div>
+              </>
             ) : null}
           </section>
         </>
       ) : null}
     </>
+  );
+}
+
+function WorkflowRunGraphPanel({
+  definition,
+  executionStatusByNodeKey: statuses,
+  selectedNodeKey,
+  onNodeSelect,
+}: {
+  readonly definition: WorkflowDefinitionView;
+  readonly executionStatusByNodeKey: Readonly<Record<string, string>>;
+  readonly selectedNodeKey: string | undefined;
+  readonly onNodeSelect: (nodeKey: string | undefined) => void;
+}) {
+  if (definition.schemaVersion !== "3") {
+    return (
+      <p className="muted">
+        Execution graph overlay is available for workflow definition schema
+        version 3 only.
+      </p>
+    );
+  }
+
+  return (
+    <Suspense fallback={<LoadingBlock label="Loading execution graph…" />}>
+      <WorkflowGraphViewLazy
+        definition={definition}
+        executionStatusByNodeKey={statuses}
+        selectedNodeKey={selectedNodeKey}
+        onNodeSelect={onNodeSelect}
+      />
+    </Suspense>
+  );
+}
+
+function WorkflowRunNodeInspector({
+  definition,
+  selectedNodeKey,
+  nodeRuns,
+  nodeRunByKey,
+  approvalByNodeRunId,
+  workflowRunId,
+  workflowInput,
+  canExecute,
+}: {
+  readonly definition: WorkflowDefinitionView;
+  readonly selectedNodeKey: string | undefined;
+  readonly nodeRuns: readonly WorkflowNodeRunResource[];
+  readonly nodeRunByKey: ReadonlyMap<string, WorkflowNodeRunResource>;
+  readonly approvalByNodeRunId: ReadonlyMap<string, ApprovalRequestResource>;
+  readonly workflowRunId: string;
+  readonly workflowInput: unknown;
+  readonly canExecute: boolean;
+}) {
+  if (selectedNodeKey === undefined) {
+    return (
+      <p className="muted">
+        Select a node on the graph to inspect its persisted execution record.
+      </p>
+    );
+  }
+
+  const node = definition.nodes.find((entry) => entry.key === selectedNodeKey);
+  if (node === undefined) {
+    return (
+      <p className="muted">
+        Selected node {selectedNodeKey} is not in this WorkflowVersion.
+      </p>
+    );
+  }
+
+  const nodeRun = nodeRunByKey.get(node.key);
+  const approvalRequest =
+    nodeRun === undefined ? undefined : approvalByNodeRunId.get(nodeRun.id);
+
+  return (
+    <div data-testid="workflow-run-node-inspector">
+      <h3 className="section-title">Selected node</h3>
+      <WorkflowNodeExecutionCard
+        definition={definition}
+        node={node}
+        nodeRun={nodeRun}
+        relatedNodeRuns={nodeRunsForKey(nodeRuns, node.key)}
+        approvalRequest={approvalRequest}
+        workflowRunId={workflowRunId}
+        workflowInput={workflowInput}
+        canExecute={canExecute}
+        showConnector={false}
+      />
+    </div>
   );
 }

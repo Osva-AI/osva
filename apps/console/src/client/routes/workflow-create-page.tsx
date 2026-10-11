@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { WorkflowBuilderForm } from "../components/workflow/workflow-builder-form";
+import { WorkflowPublishReview } from "../components/workflow/workflow-publish-review";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
@@ -35,6 +36,7 @@ export function WorkflowCreatePage() {
   const [feedback, setFeedback] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
   const [partialPublishFailure, setPartialPublishFailure] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const appendVersionMutation = useAppendWorkflowVersionMutation();
 
@@ -86,6 +88,7 @@ export function WorkflowCreatePage() {
     setStoredDraftOffer(undefined);
     setFeedback(undefined);
     setPartialPublishFailure(false);
+    setReviewOpen(false);
   }
 
   function discardStoredDraft() {
@@ -94,6 +97,15 @@ export function WorkflowCreatePage() {
     }
     clearStoredWorkflowBuilderDraft(authQuery.data.workspaceId);
     setStoredDraftOffer(undefined);
+  }
+
+  function openReview() {
+    if (draft === undefined) {
+      return;
+    }
+    setFeedback(undefined);
+    setErrorRequestId(undefined);
+    setReviewOpen(true);
   }
 
   async function publish() {
@@ -106,7 +118,7 @@ export function WorkflowCreatePage() {
 
     const validation = validateDraftForPublish(draft);
     if (!validation.ok) {
-      setFeedback(validation.message);
+      setReviewOpen(true);
       return;
     }
 
@@ -166,8 +178,7 @@ export function WorkflowCreatePage() {
         <div>
           <h1 className="page-title">Create workflow</h1>
           <p className="page-subtitle">
-            Register a workflow and publish an immutable V3 definition (linear
-            AGENT chain).
+            Register a workflow and publish an immutable V3 graph definition.
           </p>
         </div>
         <Link className="button" to="/workflows">
@@ -228,22 +239,39 @@ export function WorkflowCreatePage() {
         disabled={!canWrite || publishing}
       />
 
-      <section className="panel">
-        <button
-          type="button"
-          className="button primary"
-          disabled={!canWrite || publishing}
-          onClick={() => void publish()}
-        >
-          {draft.createdWorkflowId !== undefined
-            ? "Retry publish version"
-            : "Create workflow and publish version"}
-        </button>
-        {feedback !== undefined ? <p>{feedback}</p> : null}
-        {errorRequestId !== undefined ? (
-          <p className="mono">Request ID: {errorRequestId}</p>
-        ) : null}
-      </section>
+      {reviewOpen ? (
+        <WorkflowPublishReview
+          draft={draft}
+          report={validateDraftForPublish(draft).report}
+          publishing={publishing}
+          retry={draft.createdWorkflowId !== undefined}
+          onCancel={() => setReviewOpen(false)}
+          onConfirm={() => void publish()}
+        />
+      ) : (
+        <section className="panel">
+          <button
+            type="button"
+            className="button primary"
+            disabled={!canWrite || publishing}
+            onClick={openReview}
+          >
+            {draft.createdWorkflowId !== undefined
+              ? "Review and retry publish"
+              : "Review and publish"}
+          </button>
+        </section>
+      )}
+      {feedback !== undefined ? (
+        <section className="panel">
+          <p data-testid="workflow-publish-upstream-error">
+            Publication failed on the control plane. {feedback}
+          </p>
+          {errorRequestId !== undefined ? (
+            <p className="mono">Request ID: {errorRequestId}</p>
+          ) : null}
+        </section>
+      ) : null}
     </>
   );
 }

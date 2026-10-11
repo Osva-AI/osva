@@ -5,10 +5,16 @@ import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { JsonView } from "../components/json-view/json-view";
 import { LoadingBlock } from "../components/loading/loading-block";
-import { useWorkflowVersionQuery } from "../hooks/use-workflows";
+import { WorkflowRunLaunchForm } from "../components/workflow/workflow-run-launch-form";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
+import {
+  useWorkflowQuery,
+  useWorkflowVersionQuery,
+} from "../hooks/use-workflows";
 import { orderWorkflowNodeKeys } from "../lib/workflow-definition";
 import { formatTimestamp } from "../lib/formatting";
 import { ConsoleApiError } from "../lib/console-api";
+import { roleCanExecuteControlPlaneActions } from "../lib/permissions";
 import type { WorkflowDefinitionView } from "../lib/workflow-definition";
 
 const WorkflowGraphViewLazy = lazy(async () => {
@@ -23,6 +29,11 @@ export function WorkflowVersionPage() {
   }>();
 
   const versionQuery = useWorkflowVersionQuery(workflowId, workflowVersionId);
+  const workflowQuery = useWorkflowQuery(workflowId);
+  const authQuery = useAuthContextQuery();
+  const canExecute =
+    authQuery.data !== undefined &&
+    roleCanExecuteControlPlaneActions(authQuery.data.role);
 
   const notFound =
     versionQuery.isError &&
@@ -98,6 +109,15 @@ export function WorkflowVersionPage() {
               </div>
             </dl>
           </section>
+
+          <WorkflowRunLaunchForm
+            workflowId={versionQuery.data.workflowId}
+            workflowKey={workflowQuery.data?.key}
+            workflowName={workflowQuery.data?.name}
+            workflowVersionId={versionQuery.data.id}
+            versionNumber={versionQuery.data.version}
+            canExecute={canExecute}
+          />
 
           <section
             className="panel"

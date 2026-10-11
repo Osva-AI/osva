@@ -10,14 +10,21 @@ export interface WorkflowNodeLayout {
   readonly y: number;
 }
 
+export type WorkflowGraphInteraction = "readonly" | "editable";
+
 export interface DefinitionToFlowOptions {
   readonly layoutByNodeKey?: Readonly<Record<string, WorkflowNodeLayout>>;
+  readonly interaction?: WorkflowGraphInteraction;
+  readonly errorNodeKeys?: ReadonlySet<string>;
+  readonly executionStatusByNodeKey?: Readonly<Record<string, string>>;
 }
 
 export interface WorkflowGraphNodeData extends Record<string, unknown> {
   readonly nodeKey: string;
   readonly nodeType: string;
   readonly label: string;
+  readonly hasError?: boolean;
+  readonly executionStatus?: string;
 }
 
 export const WORKFLOW_GRAPH_NODE_TYPE = "workflowDefinition" as const;
@@ -146,6 +153,7 @@ export function definitionToFlow(
   options: DefinitionToFlowOptions = {},
 ): WorkflowDefinitionFlowModel {
   const layout = resolveLayout(definition, options.layoutByNodeKey);
+  const editable = options.interaction === "editable";
 
   const nodes: Node<WorkflowGraphNodeData>[] = definition.nodes.map((node) => {
     const position = layout[node.key] ?? { x: ORIGIN_X, y: ORIGIN_Y };
@@ -157,10 +165,14 @@ export function definitionToFlow(
         nodeKey: node.key,
         nodeType: node.type,
         label: workflowGraphNodeLabel(node),
+        hasError: options.errorNodeKeys?.has(node.key) === true,
+        ...(options.executionStatusByNodeKey?.[node.key] !== undefined
+          ? { executionStatus: options.executionStatusByNodeKey[node.key] }
+          : {}),
       },
-      draggable: false,
+      draggable: editable,
       selectable: true,
-      connectable: false,
+      connectable: editable,
       focusable: true,
     };
   });
@@ -177,8 +189,9 @@ export function definitionToFlow(
       id: `edge:${edge.from}->${edge.to}`,
       source: edge.from,
       target: edge.to,
-      selectable: false,
+      selectable: editable,
       focusable: true,
+      deletable: editable,
     }));
 
   return { nodes, edges };

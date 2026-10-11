@@ -67,14 +67,15 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 - Workflow run list and detail
 - Approval decisions and workflow event ingestion (role-gated)
 
-### Workflow creation (M8.3.1)
+### Workflow creation (M8.3.1 + M8.3.2)
 
 **Route:** `/workflows/new` (linked from the Workflows list).
 
 **Capabilities:**
 
 - Create a workflow registry row (`key`, `name`, optional `description`)
-- Build a **Workflow Definition V3** draft using a **linear AGENT-only** editor (add, remove, reorder steps)
+- Build a **Workflow Definition V3** draft on an **interactive graph canvas** (all V3 node types: AGENT, BRANCH, PARALLEL, JOIN, APPROVAL, WAIT)
+- Connect nodes with edges, drag to arrange layout, and configure nodes in the **inspector** or **accessible node list**
 - Discover workspace agents and bind **immutable AgentVersion** ids on each AGENT node
 - Publish the draft as a new immutable `WorkflowVersion` via the control plane
 
@@ -82,25 +83,40 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 - The executable draft is a canonical `WorkflowDefinitionV3` (`nodes` + `edges`) in client state
 - Canvas layout (`layoutByNodeKey`) is kept separate and is **not** sent to the API
-- Node keys remain stable when steps are reordered (edges are rebuilt)
+- Node keys are stable sequence-based ids (for example `agent-step-1`, `branch-2`)
+- Workspace-scoped `sessionStorage` recovery (M8.3.1) with explicit restore; partial publish retry retains `workflowId`
 
 **Publish behavior:**
 
+- A **publish review** step shows key, name, node/edge counts, node types, agent bindings, and validation before confirmation
 - Registry creation and version publication are separate API calls
 - If registry creation succeeds but version publication fails, the UI retains `workflowId`, shows partial-success messaging, and allows **retry publish** without creating a duplicate workflow
 - Successful publish clears the workspace draft from `sessionStorage` and navigates to the new version page
+- Published versions are never rewritten
 
-**Validation:**
+**Validation (M8.3.3):**
 
-- Client-side Zod shape checks and basic field validation for faster feedback
-- DAG rules and agent-version binding remain **authoritative** on the control plane; upstream errors and request IDs are shown as returned
+- Live structured report (graph, node, and edge issues) with focus actions and inspector details
+- Client-side Zod shape checks and **domain DAG validation** (`@osva/domain`) remain the canonical publish gate
+- Invalid intermediate graphs remain editable; publish confirmation is disabled until the definition is valid
+- Control plane errors are shown separately from client validation and include request IDs
 
-**Limitations (M8.3.1 authoring):**
+**Execution (M8.3.4):**
 
-- No editable graph canvas on `/workflows/new` (form/list editor only); published V3 versions have a **read-only** graph on the version page (M8.3.2-1)
-- AGENT nodes in a single linear chain only (no BRANCH, PARALLEL, JOIN, APPROVAL, or WAIT authoring UI)
-- No agent creation, workflow run launch, or settings from this flow
-- Requires **EDITOR** or **ADMIN** role (WRITE) on the workspace API key
+- Published WorkflowVersion pages expose **Run workflow**: JSON input, client-side syntax check, explicit confirm, then `POST /api/v1/workflow-runs` (BFF → `POST /v1/workflow-runs`)
+- The BFF never exposes OSVA API credentials; control-plane EXECUTE + workspace isolation remain authoritative
+- Successful create navigates to the returned WorkflowRun
+- WorkflowRun detail overlays persisted `WorkflowNodeRun.status` on the read-only V3 graph, keyed by `workflowNodeKey`
+- Multiple records for one key use the latest `sequence` / `updatedAt`; earlier attempts are listed, not inferred as success or failure
+- Selecting a node reuses the existing execution card (approval decision, event emit, child Run link)
+- Active runs continue to poll via TanStack Query (`ACTIVE_RUN_POLL_MS`); terminal runs do not
+
+**Limitations:**
+
+- No agent creation or settings from the builder flow
+- Execution overlay is run-detail only; the editor and published-version graph stay authoring/read-only
+- `WorkflowNodeRun` has `childRunId` but no `runAttemptId` or artifact URLs; attempt and artifact inspection stay on Run Detail
+- Requires **EDITOR** or **ADMIN** role (WRITE) to publish; **OPERATOR**, **EDITOR**, or **ADMIN** (EXECUTE) to start runs and decide waits
 
 ### Not yet in console
 
