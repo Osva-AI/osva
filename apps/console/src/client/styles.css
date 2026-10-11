@@ -406,6 +406,82 @@ a:hover {
   border-color: var(--accent);
 }
 
+.workflow-graph-intro {
+  font-size: 0.86rem;
+  margin: 0 0 var(--space-3);
+}
+
+.workflow-graph-view {
+  height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.workflow-graph-view .react-flow {
+  background: var(--bg);
+}
+
+.workflow-graph-view .react-flow__edge-path {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.workflow-graph-node {
+  min-width: 148px;
+  max-width: 200px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 60%, transparent);
+  font-size: 0.78rem;
+}
+
+.workflow-graph-node__type {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.workflow-graph-node__key {
+  margin-top: var(--space-1);
+  font-size: 0.75rem;
+}
+
+.workflow-graph-node__label {
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-graph-node--agent {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.workflow-graph-node--branch {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+}
+
+.workflow-graph-node--parallel,
+.workflow-graph-node--join {
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+}
+
+.workflow-graph-node--approval {
+  border-color: color-mix(in srgb, var(--warning) 35%, var(--border));
+}
+
+.workflow-graph-node--wait {
+  border-color: color-mix(in srgb, var(--neutral) 55%, var(--border));
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;

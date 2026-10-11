@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { EmptyState } from "../components/empty-state/empty-state";
@@ -8,6 +9,12 @@ import { useWorkflowVersionQuery } from "../hooks/use-workflows";
 import { orderWorkflowNodeKeys } from "../lib/workflow-definition";
 import { formatTimestamp } from "../lib/formatting";
 import { ConsoleApiError } from "../lib/console-api";
+import type { WorkflowDefinitionView } from "../lib/workflow-definition";
+
+const WorkflowGraphViewLazy = lazy(async () => {
+  const module = await import("../components/workflow/workflow-graph-view");
+  return { default: module.WorkflowGraphView };
+});
 
 export function WorkflowVersionPage() {
   const { workflowId, workflowVersionId } = useParams<{
@@ -92,6 +99,22 @@ export function WorkflowVersionPage() {
             </dl>
           </section>
 
+          <section
+            className="panel"
+            aria-labelledby="workflow-version-graph-title"
+          >
+            <h2 className="panel-title" id="workflow-version-graph-title">
+              Definition (graph)
+            </h2>
+            <p className="muted workflow-graph-intro">
+              Read-only visualization. For screen readers and text search, use
+              the structured list and JSON sections below.
+            </p>
+            <WorkflowVersionGraphPanel
+              definition={versionQuery.data.definition}
+            />
+          </section>
+
           <section className="panel">
             <h2 className="panel-title">Definition (structured)</h2>
             <div className="stack">
@@ -118,6 +141,26 @@ export function WorkflowVersionPage() {
         </>
       ) : null}
     </>
+  );
+}
+
+function WorkflowVersionGraphPanel({
+  definition,
+}: {
+  readonly definition: WorkflowDefinitionView;
+}) {
+  if (definition.schemaVersion !== "3") {
+    return (
+      <p className="muted">
+        Graph view is available for workflow definition schema version 3 only.
+      </p>
+    );
+  }
+
+  return (
+    <Suspense fallback={<LoadingBlock label="Loading graph view…" />}>
+      <WorkflowGraphViewLazy definition={definition} />
+    </Suspense>
   );
 }
 

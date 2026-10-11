@@ -54,6 +54,14 @@ Open the Vite dev URL (default `http://127.0.0.1:5173`). API calls are proxied t
 - Immutable workflow version definitions (V1/V2/V3)
 - Recent workflow runs per workflow
 
+**Workflow version detail** (`/workflows/:workflowId/versions/:workflowVersionId`):
+
+- **Definition (graph)** — read-only visualization for **schema version 3** only. The graph is rendered with `@xyflow/react` (pan/zoom; no editing). Graph code is **lazy-loaded** so the main console bundle does not include React Flow until a V3 version page opens the graph section.
+- **Definition (structured)** — topologically ordered node list with per-type summaries (accessible alternative to the canvas).
+- **Definition (JSON)** — full immutable definition payload as returned by the API.
+
+V1 and V2 versions omit the graph section (message only) and still show the structured list and JSON.
+
 ### Workflow runs (read + operator actions)
 
 - Workflow run list and detail
@@ -87,9 +95,9 @@ Open the Vite dev URL (default `http://127.0.0.1:5173`). API calls are proxied t
 - Client-side Zod shape checks and basic field validation for faster feedback
 - DAG rules and agent-version binding remain **authoritative** on the control plane; upstream errors and request IDs are shown as returned
 
-**Limitations (M8.3.1):**
+**Limitations (M8.3.1 authoring):**
 
-- No visual graph canvas (form/list editor only)
+- No editable graph canvas on `/workflows/new` (form/list editor only); published V3 versions have a **read-only** graph on the version page (M8.3.2-1)
 - AGENT nodes in a single linear chain only (no BRANCH, PARALLEL, JOIN, APPROVAL, or WAIT authoring UI)
 - No agent creation, workflow run launch, or settings from this flow
 - Requires **EDITOR** or **ADMIN** role (WRITE) on the workspace API key
