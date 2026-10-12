@@ -33,7 +33,7 @@ OSVA_CONSOLE_API_KEY=<workspace-api-key> pnpm dev:console
 
 Open the Vite URL printed by `dev:console` (default `http://localhost:5173`). API calls proxy to the console BFF.
 
-If only a production console build is running, rebuild first so M8.4 source is served:
+If only a production console build is running, rebuild first so M8.5 source is served:
 
 ```bash
 pnpm --filter @osva/console build
@@ -59,7 +59,7 @@ research → analysis → adoption-approval → delivery-wait → report
 | 5. Observe agent runs | WorkflowRun **Execution** graph | Persisted node statuses. AGENT cards link to child Runs. RunAttempts appear only on child Run detail. |
 | 6. Human approval | When `adoption-approval` is WAITING | Banner: workflow is suspended; workers are not kept alive. Approve/Reject use the persisted ApprovalRequest id. VIEWER keys cannot mutate. |
 | 7. Event wait | When `delivery-wait` is WAITING | Emit the configured source/event/correlation. Resume appears only after the control plane confirms it. Re-ingest does not create a second wait node. |
-| 8. Results | Terminal WorkflowRun + Report child Run | Workflow output and Report artifacts are inspected on the child Run. Console does not yet preview artifact bytes. |
+| 8. Results | Terminal WorkflowRun + Report child Run | Workflow output is on the WorkflowRun. Related artifacts lists the Report Markdown file. Preview shows escaped text. Download saves the original attachment. |
 
 ### Canonical launch input
 
@@ -78,6 +78,20 @@ Use the contract shown on the published version page (do not send `{}` if `schem
 ```
 
 `pnpm run canonical:run` / `canonical:approve` / `canonical:emit-delivery-event` remain valid operator fallbacks if you need to drive the same WorkflowRun from the CLI.
+
+## Artifact inspection (M8.5)
+
+After the Report AGENT succeeds:
+
+1. Open the WorkflowRun Detail page.
+2. Find the **report** node in Execution. It links to the producing child Run.
+3. In **Related artifacts**, confirm the Markdown review file (name is typically `dependency-adoption-review-<package>-<requestId>.md`, not a generic `report.md`).
+4. Click **Preview** only when you want content. Markdown is shown as escaped text inside `<pre>` — it is not rendered as HTML. Preview is refused for HTML, SVG, XML, JavaScript, PDF, and other non-allowlisted types, and for files larger than **512 KiB**.
+5. Click **Download** to save the original bytes through the same-origin Console BFF (`/api/v1/artifacts/:artifactId/content`). The response is `Content-Disposition: attachment` with `X-Content-Type-Options: nosniff`.
+6. Open the producing child Run. The same artifact appears with digest, producer Run/RunAttempt, and optional metadata. Attempts stay on this page.
+7. Artifact bytes remain readable after the worker/container that produced them has exited. Persistence is OSVA artifact storage, not the runtime process.
+
+Do not paste API keys into the browser. The Console server holds `OSVA_CONSOLE_API_KEY`.
 
 ## Optional topology fixtures
 
@@ -102,6 +116,6 @@ Do not mark unselected BRANCH paths as FAILED. Missing WorkflowNodeRun records m
 ## Known limitations
 
 - Console is bound to one workspace API key. VIEWER vs OPERATOR must be demonstrated with a second key or accepted from unit coverage.
-- Artifact preview/download is not in the Console; inspect artifact metadata on the Report child Run.
+- WorkflowRun Detail lists artifacts produced by AGENT child Runs. It does not provide a workspace-wide Artifact Explorer.
 - Automatic RunAttempt retry is not a product feature. Multiple WorkflowNodeRun rows for one key are historical node records, not retries.
 - The M7 `canonical:demo` UI (port 4173) is a separate read-model example. Use this Console demo for product evaluation.

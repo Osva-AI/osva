@@ -81,5 +81,8 @@ function humanizeApiError(error: OsvaApiError): string {
   if (error.status === 404) {
     return "Resource not found.";
   }
+  if (error.status === 503) {
+    return "Requested resource is unavailable.";
+  }
   return `OSVA API error (${error.status}).`;
 }

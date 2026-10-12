@@ -602,6 +602,66 @@ a:hover {
   font-size: 0.86rem;
 }
 
+.artifact-table-wrap {
+  overflow-x: auto;
+}
+
+.artifact-name {
+  word-break: break-word;
+}
+
+.artifact-digest {
+  display: inline-block;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.artifact-actions {
+  flex-wrap: wrap;
+}
+
+.artifact-row-selected {
+  background: var(--bg-subtle);
+}
+
+.artifact-preview-panel {
+  margin-top: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.artifact-preview-body {
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: var(--space-3);
+}
+
+.artifact-preview-body pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+a.button {
+  display: inline-block;
+  text-decoration: none;
+}
+
+a.button:hover {
+  text-decoration: none;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;

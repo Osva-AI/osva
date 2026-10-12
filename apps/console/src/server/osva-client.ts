@@ -1,6 +1,7 @@
 import type {
   AgentId,
   ApprovalRequestId,
+  ArtifactId,
   RunAttemptId,
   RunId,
   RunStepId,
@@ -12,6 +13,13 @@ import { OsvaHttpClient } from "@osva-ai/sdk";
 
 import type { ConsoleConfig } from "./config.js";
 import type { ConsoleUpstreamResponse } from "./upstream-response.js";
+
+export interface ConsoleArtifactContent {
+  readonly status: number;
+  readonly headers: Headers;
+  readonly body: ReadableStream<Uint8Array> | null;
+  readonly requestId?: string;
+}
 
 export interface ConsoleOsvaClient {
   getAuthContext(): Promise<
@@ -49,6 +57,18 @@ export interface ConsoleOsvaClient {
     readonly limit?: string;
     readonly cursor?: string;
   }): Promise<ConsoleUpstreamResponse<unknown>>;
+  getArtifact(
+    artifactId: ArtifactId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  /**
+   * Streams artifact bytes from the control plane.
+   *
+   * Uses `OsvaHttpClient.download()`, which returns the upstream body stream
+   * without buffering. The SDK default 30s timeout applies only to waiting
+   * for response headers, then is cleared. Transfer idle time is enforced
+   * by the Console stream helper (`ARTIFACT_CONTENT_IDLE_TIMEOUT_MS`).
+   */
+  downloadArtifact(artifactId: ArtifactId): Promise<ConsoleArtifactContent>;
   listAgents(): Promise<ConsoleUpstreamResponse<unknown>>;
   listAgentVersions(
     agentId: AgentId,
@@ -174,6 +194,26 @@ export function createConsoleOsvaClient(
           cursor: query.cursor,
         },
       }),
+    getArtifact: (artifactId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/artifacts/${encodeURIComponent(artifactId)}`,
+      }),
+    downloadArtifact: async (artifactId) => {
+      const downloaded = await http.download({
+        path: `/v1/artifacts/${encodeURIComponent(artifactId)}/content`,
+      });
+      const requestId = downloaded.headers.get("x-osva-request-id")?.trim();
+      return {
+        status: downloaded.status,
+        headers: downloaded.headers,
+        body: downloaded.body,
+        requestId:
+          requestId === undefined || requestId.length === 0
+            ? undefined
+            : requestId,
+      };
+    },
     listAgents: () =>
       http.requestWithMeta({
         method: "GET",

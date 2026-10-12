@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { RunArtifactsSection } from "../components/artifact/run-artifacts-section";
 import { WorkflowNodeExecutionCard } from "../components/workflow/workflow-node-execution-card";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
@@ -8,6 +9,7 @@ import { JsonView } from "../components/json-view/json-view";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { StatusChip } from "../components/status/status-chip";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
+import { useWorkflowRunArtifactsQuery } from "../hooks/use-workflow-run-artifacts";
 import { useWorkflowVersionQuery } from "../hooks/use-workflows";
 import {
   useWorkflowRunQuery,
@@ -20,7 +22,7 @@ import {
 } from "../lib/workflow-definition";
 import { roleCanExecuteControlPlaneActions } from "../lib/permissions";
 import { formatTimestamp } from "../lib/formatting";
-import { workflowRunStatusCategory } from "../lib/statuses";
+import { isWorkflowRunLive, workflowRunStatusCategory } from "../lib/statuses";
 import { ConsoleApiError } from "../lib/console-api";
 import {
   describeWorkflowSuspension,
@@ -53,6 +55,14 @@ export function WorkflowRunDetailPage() {
   const canExecute =
     authQuery.data !== undefined &&
     roleCanExecuteControlPlaneActions(authQuery.data.role);
+  const artifactsQuery = useWorkflowRunArtifactsQuery({
+    workflowRunId,
+    definition: versionQuery.data?.definition,
+    nodeRuns: runQuery.data?.nodeRuns,
+    workflowOutput: runQuery.data?.output,
+    live:
+      runQuery.data !== undefined && isWorkflowRunLive(runQuery.data.status),
+  });
 
   if (workflowRunId === undefined) {
     return (
@@ -107,7 +117,10 @@ export function WorkflowRunDetailPage() {
           <button
             type="button"
             className="button"
-            onClick={() => void runQuery.refetch()}
+            onClick={() => {
+              void runQuery.refetch();
+              void artifactsQuery.refetch();
+            }}
             disabled={runQuery.isFetching}
           >
             Refresh
@@ -282,6 +295,17 @@ export function WorkflowRunDetailPage() {
               </>
             ) : null}
           </section>
+
+          <RunArtifactsSection
+            artifacts={artifactsQuery.data?.items}
+            associations={artifactsQuery.data?.associations}
+            isLoading={versionQuery.isLoading || artifactsQuery.isLoading}
+            isError={artifactsQuery.isError || versionQuery.isError}
+            error={artifactsQuery.error ?? versionQuery.error}
+            live={isWorkflowRunLive(runQuery.data.status)}
+            truncated={artifactsQuery.data?.truncated}
+            failures={artifactsQuery.data?.failures}
+          />
 
           <section className="grid-two">
             <div className="panel">

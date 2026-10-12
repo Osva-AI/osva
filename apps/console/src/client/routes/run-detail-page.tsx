@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 
+import { RunArtifactsSection } from "../components/artifact/run-artifacts-section";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { JsonView } from "../components/json-view/json-view";
@@ -14,7 +15,6 @@ import {
   useRunUsageQuery,
 } from "../hooks/use-runs";
 import {
-  formatBytes,
   formatDurationMs,
   formatTimestamp,
   formatUsdMicros,
@@ -376,51 +376,19 @@ export function RunDetailPage() {
             )}
           </section>
 
-          <section className="panel">
-            <h2 className="panel-title">Related artifacts</h2>
-            {artifactsQuery.isLoading ? (
-              <LoadingBlock label="Loading artifacts…" />
-            ) : null}
-            {artifactsQuery.isError ? (
-              <ErrorState
-                title="Failed to load artifacts"
-                error={artifactsQuery.error}
-              />
-            ) : null}
-            {artifactsQuery.data?.items.length === 0 ? (
-              <EmptyState title="No artifacts produced." />
-            ) : null}
-            {artifactsQuery.data !== undefined &&
-            artifactsQuery.data.items.length > 0 ? (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Media type</th>
-                    <th>Size</th>
-                    <th>Digest</th>
-                    <th>Created</th>
-                    <th>Producer</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {artifactsQuery.data.items.map((artifact) => (
-                    <tr key={artifact.id}>
-                      <td>{artifact.name}</td>
-                      <td className="mono">{artifact.mediaType}</td>
-                      <td>{formatBytes(artifact.sizeBytes)}</td>
-                      <td className="mono">{artifact.digest}</td>
-                      <td>{formatTimestamp(artifact.createdAt)}</td>
-                      <td className="mono">
-                        {artifact.producer?.runId ?? "—"} /{" "}
-                        {artifact.producer?.runAttemptId ?? "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : null}
-          </section>
+          <RunArtifactsSection
+            artifacts={artifactsQuery.data?.items}
+            isLoading={artifactsQuery.isLoading}
+            isError={artifactsQuery.isError}
+            error={artifactsQuery.error}
+            live={
+              selectedAttemptMeta?.status === "PENDING" ||
+              selectedAttemptMeta?.status === "RUNNING" ||
+              run.status === "PENDING" ||
+              run.status === "QUEUED" ||
+              run.status === "RUNNING"
+            }
+          />
         </>
       ) : null}
     </>

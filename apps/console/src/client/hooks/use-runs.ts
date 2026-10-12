@@ -79,6 +79,7 @@ export interface ArtifactResource {
   readonly sizeBytes: number;
   readonly digest: string;
   readonly createdAt: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
   readonly producer?: {
     readonly runId: string;
     readonly runAttemptId: string;

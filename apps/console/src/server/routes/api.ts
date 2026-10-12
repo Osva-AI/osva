@@ -11,6 +11,12 @@ import type {
   WorkflowVersionId,
 } from "@osva-ai/contracts";
 
+import {
+  buildArtifactDownloadHeaders,
+  filenameFromContentDisposition,
+  parseConsoleArtifactId,
+  pipeArtifactBodyToResponse,
+} from "../artifact-download.js";
 import { ConsoleConfigurationError } from "../config.js";
 import { mapOsvaError, sendJson } from "../console-http.js";
 import type { ConsoleOsvaClient } from "../osva-client.js";
@@ -452,6 +458,87 @@ export async function handleConsoleApiRequest(
       return true;
     }
 
+    const artifactContentMatch = pathname.match(
+      /^\/api\/v1\/artifacts\/([^/]+)\/content$/,
+    );
+    if (artifactContentMatch !== null) {
+      const artifactId = parseConsoleArtifactId(artifactContentMatch[1] ?? "");
+      if (artifactId === undefined) {
+        sendJson(
+          response,
+          400,
+          { error: "Invalid artifact id.", code: "invalid_request" },
+          {},
+          deps.security,
+        );
+        return true;
+      }
+
+      const downloaded = await deps.client.downloadArtifact(artifactId);
+      if (downloaded.body === null) {
+        sendJson(
+          response,
+          503,
+          {
+            error: "Requested resource is unavailable.",
+            code: "unavailable",
+            requestId: downloaded.requestId,
+          },
+          upstreamRequestIdHeaders(downloaded.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const headers = buildArtifactDownloadHeaders({
+        mediaType: headerValue(downloaded.headers, "content-type"),
+        contentLength: headerValue(downloaded.headers, "content-length"),
+        digest: headerValue(downloaded.headers, "digest"),
+        filename: filenameFromContentDisposition(
+          headerValue(downloaded.headers, "content-disposition"),
+        ),
+        requestId: downloaded.requestId,
+      });
+      response.writeHead(200, headers);
+      try {
+        await pipeArtifactBodyToResponse({
+          body: downloaded.body,
+          request,
+          response,
+        });
+      } catch {
+        if (!response.writableEnded) {
+          response.destroy();
+        }
+      }
+      return true;
+    }
+
+    const artifactMatch = pathname.match(/^\/api\/v1\/artifacts\/([^/]+)$/);
+    if (artifactMatch !== null) {
+      const artifactId = parseConsoleArtifactId(artifactMatch[1] ?? "");
+      if (artifactId === undefined) {
+        sendJson(
+          response,
+          400,
+          { error: "Invalid artifact id.", code: "invalid_request" },
+          {},
+          deps.security,
+        );
+        return true;
+      }
+
+      const artifact = await deps.client.getArtifact(artifactId);
+      sendJson(
+        response,
+        200,
+        artifact.data,
+        upstreamRequestIdHeaders(artifact.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
     sendJson(
       response,
       404,
@@ -489,4 +576,12 @@ function parseOptionalInt(value: string | null): number | undefined {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function headerValue(headers: Headers, name: string): string | undefined {
+  const value = headers.get(name);
+  if (value === null || value.trim().length === 0) {
+    return undefined;
+  }
+  return value;
 }

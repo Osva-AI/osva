@@ -51,3 +51,47 @@ export async function consoleFetch<T>(
 
   return body as T;
 }
+
+export interface ConsoleDownloadResult {
+  readonly status: number;
+  readonly headers: Headers;
+  readonly body: ReadableStream<Uint8Array> | null;
+}
+
+/**
+ * Binary download helper. Do not use `consoleFetch` for artifact bytes —
+ * that helper always parses JSON.
+ */
+export async function consoleDownload(
+  path: string,
+  init?: RequestInit,
+): Promise<ConsoleDownloadResult> {
+  const response = await fetch(path, init);
+
+  if (!response.ok) {
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new ConsoleApiError(response.status, {
+        error: "Console returned a non-JSON error response.",
+      });
+    }
+
+    const parsed =
+      typeof body === "object" && body !== null
+        ? (body as ConsoleApiErrorBody)
+        : { error: "Request failed." };
+    const headerRequestId = response.headers.get("x-osva-request-id")?.trim();
+    throw new ConsoleApiError(response.status, {
+      ...parsed,
+      requestId: parsed.requestId ?? headerRequestId,
+    });
+  }
+
+  return {
+    status: response.status,
+    headers: response.headers,
+    body: response.body,
+  };
+}
