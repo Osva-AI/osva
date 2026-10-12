@@ -266,6 +266,7 @@ describe("RuntimeCapabilityBridge", () => {
     if (attempt === null) {
       throw new Error("expected running attempt");
     }
+    seeded.runs.clock = { now: () => NOW };
     seeded.runs.replaceRunAttempt(
       attempt.withExecutionLease({
         owner: "worker-1",
@@ -293,6 +294,88 @@ describe("RuntimeCapabilityBridge", () => {
         runAttemptId,
       );
       expect(response.status).toBe(403);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("uses store time rather than the capability-bridge process clock for lease expiry", async () => {
+    const seeded = await seedRunningExecution();
+    const attempt = await seeded.runs.findRunAttemptById(runAttemptId);
+    if (attempt === null) {
+      throw new Error("expected running attempt");
+    }
+    seeded.runs.clock = { now: () => new Date(EVEN_LATER.getTime() + 1) };
+    seeded.runs.replaceRunAttempt(
+      attempt.withExecutionLease({
+        owner: "worker-1",
+        generation: 1,
+        expiresAt: EVEN_LATER,
+      }),
+    );
+    const bridge = new RuntimeCapabilityBridge({
+      secret: SECRET,
+      runs: seeded.runs,
+      agents: seeded.agents,
+      clock: { now: () => NOW },
+      createScopedModelGateway: () => undefined,
+      createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
+    });
+    const server = await startRuntimeCapabilityServer({
+      handler: bridge.handle,
+    });
+    try {
+      const response = await invokeModel(
+        server.origin,
+        tokenFor(runAttemptId),
+        runAttemptId,
+      );
+      expect(response.status).toBe(403);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("allows a currently leased RUNNING attempt", async () => {
+    const seeded = await seedRunningExecution();
+    const attempt = await seeded.runs.findRunAttemptById(runAttemptId);
+    if (attempt === null) {
+      throw new Error("expected running attempt");
+    }
+    seeded.runs.clock = { now: () => NOW };
+    seeded.runs.replaceRunAttempt(
+      attempt.withExecutionLease({
+        owner: "worker-1",
+        generation: 1,
+        expiresAt: EVEN_LATER,
+      }),
+    );
+    const bridge = new RuntimeCapabilityBridge({
+      secret: SECRET,
+      runs: seeded.runs,
+      agents: seeded.agents,
+      clock: { now: () => NOW },
+      createScopedModelGateway: () => ({
+        async generateText() {
+          return { text: "ok" };
+        },
+      }),
+      createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
+    });
+    const server = await startRuntimeCapabilityServer({
+      handler: bridge.handle,
+    });
+    try {
+      const response = await invokeModel(
+        server.origin,
+        tokenFor(runAttemptId),
+        runAttemptId,
+      );
+      expect(response.status).toBe(200);
     } finally {
       await server.close();
     }

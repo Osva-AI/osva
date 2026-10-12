@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Helm omits PostgreSQL/Valkey URLs from ConfigMaps when `existingSecret` is set. `secretEnv` now renders an optional extra Secret.
 - Process `/health` and `/ready` probes for worker, scheduler, workflow-orchestrator, and knowledge-worker.
 - Optional authenticated Valkey in production Compose; local `docker-compose.yml` remains no-auth.
-- Console rejects public binds unless `OSVA_CONSOLE_ALLOW_PUBLIC_BIND=true`. Console remains off Compose/Helm.
+- Community Console binds loopback only (`127.0.0.0/8`, `::1`, `localhost`). `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` is deprecated and does not enable public or LAN binding, authentication, or access control. Console remains off Compose/Helm.
 
 ## [1.0.0] - 2026-09-22
 

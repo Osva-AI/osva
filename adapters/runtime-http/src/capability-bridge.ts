@@ -181,9 +181,9 @@ export class RuntimeCapabilityBridge {
     });
   }
 
-  private handleExecutionBootstrap(
+  private async handleExecutionBootstrap(
     request: RuntimeCapabilityHttpRequest,
-  ): RuntimeCapabilityHttpResponse {
+  ): Promise<RuntimeCapabilityHttpResponse> {
     if (request.method !== "GET") {
       return jsonStatus(405, { status: "method_not_allowed" });
     }
@@ -205,6 +205,15 @@ export class RuntimeCapabilityBridge {
 
     if (claims.executionId !== executionId) {
       return forbidden("Bootstrap credential does not match this execution.");
+    }
+
+    const attempt = await this.runs.findCapabilityEligibleRunAttemptById(
+      executionId as RunAttemptId,
+    );
+    if (attempt === null) {
+      return forbidden(
+        "Bootstrap credential is outside its execution boundary.",
+      );
     }
 
     const pending = this.executionBootstrap.consume(
@@ -749,21 +758,10 @@ export class RuntimeCapabilityBridge {
       };
     }
 
-    const attempt = await this.runs.findRunAttemptById(
+    const attempt = await this.runs.findCapabilityEligibleRunAttemptById(
       claimedExecutionId as RunAttemptId,
     );
-    if (attempt === null || attempt.status !== "RUNNING") {
-      return {
-        error: forbidden(
-          "Capability credential is outside its execution boundary.",
-        ),
-      };
-    }
-
-    if (
-      attempt.executionOwner !== undefined &&
-      !attempt.hasActiveExecutionLease(this.clock.now())
-    ) {
+    if (attempt === null) {
       return {
         error: forbidden(
           "Capability credential is outside its execution boundary.",

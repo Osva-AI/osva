@@ -192,6 +192,54 @@ describe("PostgreSQL execution lease recovery", () => {
     );
   });
 
+  it("uses PostgreSQL now() for capability-eligible lease lookup", async () => {
+    const seeded = await seedQueuedPending("cap-eligible");
+    const runningAttempt = seeded.attempt
+      .transitionTo("RUNNING", LATER)
+      .withExecutionLease({
+        owner: "worker-1",
+        generation: 1,
+        expiresAt: LATER,
+      });
+    await runs.transitionRunAndAttempt(
+      seeded.run.status,
+      seeded.run.transitionTo("RUNNING", LATER),
+      seeded.attempt.status,
+      runningAttempt,
+      { leaseTtlMs: 30_000 },
+    );
+
+    expect(
+      await runs.findCapabilityEligibleRunAttemptById(seeded.attempt.id),
+    ).not.toBeNull();
+
+    await database.db
+      .update(runAttempts)
+      .set({ leaseExpiresAt: new Date(Date.now() - 5_000) })
+      .where(eq(runAttempts.id, seeded.attempt.id));
+
+    expect(
+      await runs.findCapabilityEligibleRunAttemptById(seeded.attempt.id),
+    ).toBeNull();
+    expect((await runs.findRunAttemptById(seeded.attempt.id))?.status).toBe(
+      "RUNNING",
+    );
+  });
+
+  it("keeps legacy unleased RUNNING attempts capability-eligible", async () => {
+    const seeded = await seedQueuedPending("cap-legacy");
+    await runs.transitionRunAndAttempt(
+      seeded.run.status,
+      seeded.run.transitionTo("RUNNING", LATER),
+      seeded.attempt.status,
+      seeded.attempt.transitionTo("RUNNING", LATER),
+    );
+
+    expect(
+      await runs.findCapabilityEligibleRunAttemptById(seeded.attempt.id),
+    ).not.toBeNull();
+  });
+
   async function seedQueuedPending(label: string) {
     const ids = createIds(label);
     await workspaces.save(

@@ -17,6 +17,8 @@
 | Missing resource or foreign workspace ID | 404 | `RESOURCE_NOT_FOUND` |
 | Resource in workspace, role lacks action | 403 | `PERMISSION_DENIED` |
 | JSON body above default limit | 413 | `REQUEST_TOO_LARGE` |
+| Abuse rate limit exceeded | 429 | `RATE_LIMITED` |
+| Rate-limit store unavailable | 503 | `SERVICE_UNAVAILABLE` |
 
 Foreign workspace access must not return `403` (existence leak).
 
@@ -33,6 +35,10 @@ Stable security and tenancy errors use:
 ```
 
 Clients must key on HTTP status and stable `code` values, not message text.
+
+`429 RATE_LIMITED` includes `Retry-After` (seconds) and `x-osva-request-id`. It is abuse protection, not a billing quota. Official TypeScript/Python SDKs and the CLI (via the Node SDK) do not automatically retry `429`. `503 SERVICE_UNAVAILABLE` is used when the Valkey rate-limit store is down; it is not a throttle signal.
+
+Workspace identity remains the authenticated `RequestPrincipal` (`subjectId`, `workspaceId`, `role`, `authenticationMethod: API_KEY`). Community `/v1` does not introduce member, organization, invitation, or billing fields.
 
 ## Compatibility within `/v1`
 

@@ -136,6 +136,12 @@ application startup != migrate database automatically
 Production web/worker/scheduler/MCP processes must not implicitly migrate schema.
 Migration advisory locking and history verification remain Pass 4.
 
+## Community identity boundary
+
+Community Edition keeps `RequestPrincipal` as API-key identity (`subjectId`, `workspaceId`, `role`, `authenticationMethod: API_KEY`). Native member accounts, login sessions, invitations, SSO, SCIM, custom RBAC, billing, and license enforcement are out of scope.
+
+A future Team or Enterprise management plane can map an individual identity onto this principal (workspace-scoped subject + role) without changing Run/Workflow execution.
+
 ## Deferred (explicit)
 
 - Pass 2: mandatory auth + workspace scoping across `/v1` routes and repository lookup conversion.

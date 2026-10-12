@@ -8,6 +8,8 @@ export const SECURITY_EVENT_NAMES = {
   CONNECTOR_STDIO_DENIED: "connector.stdio_denied",
   CONNECTOR_SECRET_RESOLUTION_FAILED: "connector.secret_resolution_failed",
   CONNECTOR_DISCOVERY_FAILED: "connector.discovery_failed",
+  RATE_LIMIT_THROTTLED: "rate_limit.throttled",
+  RATE_LIMIT_STORE_UNAVAILABLE: "rate_limit.store_unavailable",
 } as const;
 
 export type SecurityEventName =

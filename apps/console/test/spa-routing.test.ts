@@ -46,6 +46,7 @@ describe("console production SPA routing", () => {
       host: "127.0.0.1",
       port: 0,
       clientDistDir: tempDir,
+      allowedOrigins: [],
     };
 
     server = createConsoleServer({ config, client: undefined });

@@ -10,9 +10,10 @@ The console never connects to PostgreSQL directly and never exposes the workspac
 | --- | --- |
 | `OSVA_CONSOLE_API_KEY` | Workspace API key used server-side only |
 | `OSVA_BASE_URL` | Control plane base URL (default `http://127.0.0.1:3000`) |
-| `OSVA_CONSOLE_HOST` | Console bind host (default `127.0.0.1`) |
+| `OSVA_CONSOLE_HOST` | Console bind host (default `127.0.0.1`). Must be loopback (`127.0.0.0/8`, `::1`, or `localhost`). |
 | `OSVA_CONSOLE_PORT` | Console bind port (default `4174`) |
-| `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` | Required `true` to bind `0.0.0.0` / `::` / `*` |
+| `OSVA_CONSOLE_ALLOWED_ORIGINS` | Optional comma-separated http(s) origins for browser mutations through an operator-controlled proxy. Not CORS. Not authentication. No wildcards. |
+| `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` | **Deprecated.** Does not enable public binding, authentication, or access control. Non-loopback binds are always rejected. |
 
 `OSVA_API_BASE_URL` is accepted as an alias for `OSVA_BASE_URL`.
 
@@ -36,11 +37,18 @@ Open the Vite dev URL (default `http://127.0.0.1:5173`). API calls are proxied t
 
 ## Security model
 
-Console is a **localhost workstation tool**. It is not packaged in Compose or Helm. Default bind is `127.0.0.1`. Public binds (`0.0.0.0`, `::`, `*`) are rejected unless `OSVA_CONSOLE_ALLOW_PUBLIC_BIND=true` is set for an explicitly documented, authenticated network setup. Do not treat that flag as a substitute for Team user management or enterprise authentication.
+Community Console is a **local trusted-operator application**, not a multi-user identity product. It is not packaged in Compose or Helm. There is no native Console login, session, invitation, SSO, or SCIM.
 
-- API key stays on the console server process.
+**Default bind is loopback** (`127.0.0.1`). `OSVA_CONSOLE_HOST` may be `127.0.0.0/8`, `::1`, or `localhost`. Wildcard and non-loopback binds (`0.0.0.0`, `::`, `*`, LAN/public addresses) are rejected. `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` is deprecated and **does not provide access control**.
+
+Remote operators must use a secure tunnel (for example SSH) or an authenticating reverse proxy whose isolated network path reaches only the loopback listener. Proxy authentication, TLS, and network isolation are **operator responsibilities**. OSVA does not treat `X-Forwarded-Host`, `X-Forwarded-Proto`, or `X-Remote-User` as identities. Proxy login is not Community RBAC and is not a Team/Enterprise member account.
+
+State-changing BFF methods require a loopback `Host` and a same-origin, loopback, or explicitly listed `OSVA_CONSOLE_ALLOWED_ORIGINS` browser `Origin`. Cross-site `Sec-Fetch-Site` mutations are rejected before any upstream `/v1` call. Missing `Origin` is allowed for legitimate non-browser operator clients. This is request validation, not permissive CORS.
+
+- API key stays on the console server process and is never echoed to the browser.
 - Console API routes are an explicit allowlist (no generic HTTP proxy).
-- Responses are checked so the configured key cannot leak in JSON payloads.
+- JSON BFF request bodies are capped at the same 1 MiB default as control-plane `/v1` (`OSVA_DEFAULT_JSON_BODY_MAX_BYTES`). Oversized bodies return 413; invalid JSON returns 400; rejected payloads are not forwarded upstream.
+- Control-plane `429 RATE_LIMITED` is surfaced as a wait-and-retry operator error; the Console does not retry in a loop.
 - Workflow builder drafts may be stored in **workspace-scoped `sessionStorage`** for authoring recovery only. Drafts never contain API keys or other secrets.
 
 ## Supported surfaces

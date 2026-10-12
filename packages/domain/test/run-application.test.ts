@@ -75,6 +75,16 @@ class FakeRunRepository implements RunRepository {
     return this.attempts.get(id) ?? null;
   }
 
+  async findCapabilityEligibleRunAttemptById(
+    id: RunAttemptId,
+  ): Promise<RunAttempt | null> {
+    const attempt = await this.findRunAttemptById(id);
+    if (attempt === null || attempt.status !== "RUNNING") {
+      return null;
+    }
+    return attempt;
+  }
+
   async listRunAttempts(runId: RunId): Promise<readonly RunAttempt[]> {
     return [...this.attempts.values()].filter(
       (attempt) => attempt.runId === runId,

@@ -19,8 +19,21 @@ Sensitive values must be supplied by the operator. Examples below use placeholde
 |----------|-----------|----------|---------|-----------|-------|
 | `OSVA_WEB_HOST` | web | no | `127.0.0.1` | no | Bind address; use `0.0.0.0` in containers. |
 | `OSVA_WEB_PORT` | web | no | `3000` | no | HTTP port (TLS terminates at ingress/proxy). |
+| `OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE` | web | no | `60` | no | Unauthenticated `/v1` requests per source IP per minute. Abuse protection, not billing. |
+| `OSVA_RATE_LIMIT_AUTH_PER_MINUTE` | web | no | `600` | no | Authenticated `/v1` requests per API key per minute. |
+| `OSVA_TRUSTED_PROXIES` | web | no | (none) | no | Comma-separated proxy IPs/CIDRs allowed to supply `X-Forwarded-For` / `Forwarded`. Default uses the peer socket address. |
 
-Public routes: `/health`, `/ready`. All `/v1/*` require API key authentication.
+Public routes: `/health`, `/ready` (not rate-limited as API traffic). All `/v1/*` require API key authentication and share the Valkey rate-limit store. Store outage fails closed with `503 SERVICE_UNAVAILABLE`.
+
+## Console (local operator UI)
+
+| Variable | Processes | Required | Default | Sensitive | Notes |
+|----------|-----------|----------|---------|-----------|-------|
+| `OSVA_CONSOLE_API_KEY` | console | yes | — | yes | Server-held workspace API key. Never sent to the browser. |
+| `OSVA_CONSOLE_HOST` | console | no | `127.0.0.1` | no | Loopback only (`127.0.0.0/8`, `::1`, `localhost`). |
+| `OSVA_CONSOLE_PORT` | console | no | `4174` | no | Console HTTP port. |
+| `OSVA_CONSOLE_ALLOWED_ORIGINS` | console | no | (none) | no | Explicit browser origins when using an operator proxy. Not CORS or auth. |
+| `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` | console | — | — | no | Deprecated. Does not enable public bind or authentication. |
 
 ## MCP server
 

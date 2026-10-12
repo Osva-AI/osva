@@ -29,6 +29,23 @@ describe("loadWebConfig", () => {
     expect(config.port).toBe(3000);
     expect(config.databaseUrl).toBe("postgres://osva@127.0.0.1:5432/osva");
     expect(config.valkeyUrl).toBe("redis://127.0.0.1:6379");
+    expect(config.unauthenticatedRateLimitPerMinute).toBe(60);
+    expect(config.authenticatedRateLimitPerMinute).toBe(600);
+    expect(config.trustedProxies).toEqual([]);
+  });
+
+  it("reads rate-limit and trusted-proxy overrides", () => {
+    const config = loadWebConfig({
+      OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+      OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+      OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE: "5",
+      OSVA_RATE_LIMIT_AUTH_PER_MINUTE: "50",
+      OSVA_TRUSTED_PROXIES: "10.0.0.0/8, 192.168.1.1",
+    });
+
+    expect(config.unauthenticatedRateLimitPerMinute).toBe(5);
+    expect(config.authenticatedRateLimitPerMinute).toBe(50);
+    expect(config.trustedProxies).toEqual(["10.0.0.0/8", "192.168.1.1"]);
   });
 
   it("reads host and port overrides", () => {

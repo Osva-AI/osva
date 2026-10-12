@@ -42,11 +42,29 @@ Secrets must be supplied via environment/secret stores (`OSVA_DATABASE_URL`, pro
 - Keep `OSVA_CONTAINER_ENABLED=false` unless Docker Engine container execution is deliberately enabled.
 - Terminate TLS at ingress/reverse proxy; do not expose database or Valkey ports publicly.
 - Restrict outbound network access per your threat model (`OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS`, MCP private network flags default to off).
+- Bind Community Console to loopback. Remote Console access requires a secure tunnel or an authenticating reverse proxy to that loopback listener. `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` is deprecated and is not access control.
+- Do not trust arbitrary `X-Forwarded-For` / `Forwarded` on `/v1` unless `OSVA_TRUSTED_PROXIES` lists the connecting proxy CIDRs.
 
-## API keys
+## Community identity
 
-- Bootstrap emits a highly sensitive root key once.
-- Store keys in secret managers; rotate using `/v1/api-keys` workflows.
+Community Edition identity is the API-key `RequestPrincipal`: `subjectId`, `workspaceId`, `role` (`VIEWER` / `OPERATOR` / `EDITOR` / `ADMIN`), and `authenticationMethod: API_KEY`. There are no native member accounts, login sessions, invitations, SSO, SCIM, custom RBAC, billing, or license enforcement.
+
+Future Team or Enterprise management can map an individual identity onto this same principal (a workspace-scoped subject and role) without changing the execution engine. Organizational `Team` / Office `Role` metadata is not security RBAC.
+
+## API keys and RBAC
+
+- Bootstrap emits a highly sensitive root ADMIN key once.
+- Store keys in secret managers; rotate using `/v1/api-keys` workflows (`ADMIN` only to list/create/revoke).
+- Listing workspace API keys never returns secrets.
+- Cross-workspace identifiers return `404 RESOURCE_NOT_FOUND`, not `403`.
+
+## HTTP abuse protection
+
+`/v1` uses Valkey fixed-window rate limits (not billing quotas): 60 requests/minute/source IP unauthenticated, 600 requests/minute/API key authenticated. Exceeding the window returns additive `429 RATE_LIMITED` with `Retry-After`. Valkey outage on protected paths fails closed as `503 SERVICE_UNAVAILABLE` (not `429`). `GET /health` and `GET /ready` are not counted. Clients and SDKs must not retry `429` indefinitely.
+
+## Execution leases
+
+Capability and bootstrap authorization use PostgreSQL time for persisted lease expiry. Expired or non-`RUNNING` attempts cannot start new capability operations. Legacy unleased `RUNNING` rows remain eligible until operators settle them. OSVA does not claim exactly-once external tool effects; a crash after a side effect can still fail the attempt.
 
 ## Responsible disclosure
 

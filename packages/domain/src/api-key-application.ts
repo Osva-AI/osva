@@ -202,7 +202,7 @@ export class ListWorkspaceApiKeys {
   async execute(scope: ControlPlaneScope): Promise<readonly ApiKey[]> {
     requireControlPlaneAuthorization(
       scope,
-      AUTHORIZATION_ACTIONS.READ,
+      AUTHORIZATION_ACTIONS.ADMIN,
       API_KEY_RESOURCE,
     );
 

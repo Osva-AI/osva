@@ -16,6 +16,7 @@ import {
   RunStepNotFoundError,
   assertLegalRunAttemptTransition,
   assertLegalRunTransition,
+  selectCapabilityEligibleRunAttempt,
 } from "@osva/domain";
 import type {
   FailExpiredLeasedAttemptCommand,
@@ -168,6 +169,15 @@ export class MemoryRunRepository implements RunRepository {
 
   async findRunAttemptById(id: RunAttemptId): Promise<RunAttempt | null> {
     return this.attempts.get(id) ?? null;
+  }
+
+  async findCapabilityEligibleRunAttemptById(
+    id: RunAttemptId,
+  ): Promise<RunAttempt | null> {
+    return selectCapabilityEligibleRunAttempt(
+      await this.findRunAttemptById(id),
+      this.clock.now(),
+    );
   }
 
   async listRunAttempts(runId: RunId): Promise<readonly RunAttempt[]> {

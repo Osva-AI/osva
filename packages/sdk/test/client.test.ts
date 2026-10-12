@@ -151,6 +151,34 @@ describe("OsvaClient", () => {
     expect(calls).toBe(1);
   });
 
+  it("does not retry HTTP 429 RATE_LIMITED", async () => {
+    let calls = 0;
+    const server = await startMockServer(servers, (_req, res) => {
+      calls += 1;
+      res.writeHead(429, {
+        "content-type": "application/json",
+        "retry-after": "60",
+      });
+      res.end(
+        JSON.stringify({
+          status: "error",
+          code: "RATE_LIMITED",
+          requestId: "req-rate-1",
+        }),
+      );
+    });
+    const client = new OsvaClient({
+      baseUrl: server.origin,
+      apiKey: TEST_API_KEY,
+    });
+
+    await expect(client.agents.list()).rejects.toMatchObject({
+      status: 429,
+      body: { code: "RATE_LIMITED" },
+    });
+    expect(calls).toBe(1);
+  });
+
   it("freezes apiKey-only construction and representative resource clients", async () => {
     type ClientOptions = ConstructorParameters<typeof OsvaClient>[0];
     type NoWorkspaceId = "workspaceId" extends keyof ClientOptions

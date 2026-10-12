@@ -86,6 +86,7 @@ export async function createTestWebApplication(options?: {
   readonly secrets?: Readonly<Record<string, string>>;
   readonly stdioConnectorsEnabled?: boolean;
   readonly secretResolver?: SecretResolver;
+  readonly rateLimit?: import("../src/http-rate-limit.js").HttpRateLimitContext;
 }) {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
@@ -349,6 +350,7 @@ export async function createTestWebApplication(options?: {
       ids,
     }),
     security,
+    rateLimit: options?.rateLimit,
   });
 
   return {

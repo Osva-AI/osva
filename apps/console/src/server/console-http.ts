@@ -3,6 +3,10 @@ import type { ServerResponse } from "node:http";
 import { OsvaApiError, OsvaTransportError } from "@osva-ai/sdk";
 
 import {
+  ConsoleInvalidJsonBodyError,
+  ConsoleRequestBodyTooLargeError,
+} from "./read-json-body.js";
+import {
   assertSafeSerializedResponse,
   type ResponseSecurityOptions,
 } from "./response-security.js";
@@ -35,6 +39,26 @@ export function mapOsvaError(error: unknown): {
   body: ConsoleErrorBody;
   requestId?: string;
 } {
+  if (error instanceof ConsoleRequestBodyTooLargeError) {
+    return {
+      status: 413,
+      body: {
+        error: error.message,
+        code: "request_too_large",
+      },
+    };
+  }
+
+  if (error instanceof ConsoleInvalidJsonBodyError) {
+    return {
+      status: 400,
+      body: {
+        error: error.message,
+        code: "invalid_request",
+      },
+    };
+  }
+
   if (error instanceof OsvaApiError) {
     const requestId =
       error.requestId ??
@@ -80,6 +104,9 @@ function humanizeApiError(error: OsvaApiError): string {
   }
   if (error.status === 404) {
     return "Resource not found.";
+  }
+  if (error.status === 429) {
+    return "Control plane rate limit exceeded. Wait before retrying.";
   }
   if (error.status === 503) {
     return "Requested resource is unavailable.";
