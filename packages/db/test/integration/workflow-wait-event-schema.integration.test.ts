@@ -390,11 +390,11 @@ describe("PostgreSQL workflow wait and event schema", () => {
     );
   });
 
-  it("retains migration journal entries 17 through 22 in order", async () => {
+  it("retains migration journal entries 17 through 23 in order", async () => {
     const journalModule = await import("../../drizzle/meta/_journal.json");
     const journal = journalModule.default ?? journalModule;
     const tail = journal.entries
-      .slice(-6)
+      .slice(-7)
       .map((entry: { idx: number; tag: string }) => ({
         idx: entry.idx,
         tag: entry.tag,
