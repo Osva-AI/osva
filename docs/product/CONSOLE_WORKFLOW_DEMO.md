@@ -6,7 +6,7 @@ Do not present mocked or fabricated execution states as live runs.
 
 ## What this shows
 
-OSVA is a control plane for agents and workflows. Operators compose immutable AgentVersions into a Workflow Definition V3, publish a WorkflowVersion, start a WorkflowRun, and observe persisted execution: child Runs for AGENT nodes, human approval, durable waits, and results.
+OSVA is a control plane for agents and workflows. Operators register Agents and immutable AgentVersions in the Console (`/agents`, `/onboarding`), compose those versions into a Workflow Definition V3, publish a WorkflowVersion, start a WorkflowRun, and observe persisted execution: child Runs for AGENT nodes, human approval, durable waits, and results. Individual Runs launched from an AgentVersion are not WorkflowRuns.
 
 ## Prerequisites
 

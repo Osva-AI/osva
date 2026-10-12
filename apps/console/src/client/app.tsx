@@ -3,6 +3,12 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/app-shell/app-shell";
 import { createQueryClient } from "./lib/query-client";
+import { AgentCreatePage } from "./routes/agent-create-page";
+import { AgentDetailPage } from "./routes/agent-detail-page";
+import { AgentVersionCreatePage } from "./routes/agent-version-create-page";
+import { AgentVersionPage } from "./routes/agent-version-page";
+import { AgentsPage } from "./routes/agents-page";
+import { OnboardingPage } from "./routes/onboarding-page";
 import { RunDetailPage } from "./routes/run-detail-page";
 import { RunsPage } from "./routes/runs-page";
 import { WorkflowDetailPage } from "./routes/workflow-detail-page";
@@ -21,6 +27,18 @@ export function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<Navigate to="/runs" replace />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/agents" element={<AgentsPage />} />
+            <Route path="/agents/new" element={<AgentCreatePage />} />
+            <Route path="/agents/:agentId" element={<AgentDetailPage />} />
+            <Route
+              path="/agents/:agentId/versions/new"
+              element={<AgentVersionCreatePage />}
+            />
+            <Route
+              path="/agents/:agentId/versions/:agentVersionId"
+              element={<AgentVersionPage />}
+            />
             <Route path="/runs" element={<RunsPage />} />
             <Route path="/runs/:runId" element={<RunDetailPage />} />
             <Route

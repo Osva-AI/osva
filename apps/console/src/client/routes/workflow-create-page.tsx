@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { WorkflowBuilderForm } from "../components/workflow/workflow-builder-form";
 import { WorkflowPublishReview } from "../components/workflow/workflow-publish-review";
@@ -10,6 +10,7 @@ import {
   useAppendWorkflowVersionMutation,
   useCreateWorkflowMutation,
 } from "../hooks/use-workflows";
+import { parseBuilderHandoff } from "../lib/builder-handoff";
 import { ConsoleApiError } from "../lib/console-api";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 import {
@@ -27,6 +28,8 @@ import {
 
 export function WorkflowCreatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const handoff = parseBuilderHandoff(searchParams);
   const authQuery = useAuthContextQuery();
   const createWorkflowMutation = useCreateWorkflowMutation();
   const [draft, setDraft] = useState<WorkflowBuilderDraft | undefined>();
@@ -190,6 +193,33 @@ export function WorkflowCreatePage() {
         <p className="muted">
           Your API key role cannot create workflows (EDITOR or ADMIN required).
         </p>
+      ) : null}
+
+      {handoff.agentVersionId !== undefined ? (
+        <section className="panel">
+          <h2 className="panel-title">AgentVersion handoff</h2>
+          <p>
+            Bind this immutable AgentVersion on AGENT nodes. The builder does
+            not auto-select it, and publishing a workflow never mutates the
+            AgentVersion.
+          </p>
+          <dl className="meta-grid">
+            {handoff.agentId !== undefined ? (
+              <div>
+                <dt>Agent ID</dt>
+                <dd className="mono">{handoff.agentId}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>AgentVersion ID</dt>
+              <dd className="mono">{handoff.agentVersionId}</dd>
+            </div>
+          </dl>
+          <p className="muted">
+            Add an AGENT node, choose the agent, then select version{" "}
+            <span className="mono">{handoff.agentVersionId}</span>.
+          </p>
+        </section>
       ) : null}
 
       {showRestoreBanner ? (

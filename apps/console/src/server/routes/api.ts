@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type {
   AgentId,
+  AgentVersionId,
   ApprovalRequestId,
   RunAttemptId,
   RunId,
@@ -126,6 +127,51 @@ export async function handleConsoleApiRequest(
       if (pathname === "/api/v1/workflow-runs") {
         const body = await readJsonBody(request);
         const created = await deps.client.createWorkflowRun(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/agents") {
+        const body = await readJsonBody(request);
+        const created = await deps.client.createAgent(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const agentVersionPostMatch = pathname.match(
+        /^\/api\/v1\/agents\/([^/]+)\/versions$/,
+      );
+      if (agentVersionPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await deps.client.createAgentVersion(
+          agentVersionPostMatch[1] as AgentId,
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/runs") {
+        const body = await readJsonBody(request);
+        const created = await deps.client.createRun(body);
         sendJson(
           response,
           201,
@@ -302,6 +348,24 @@ export async function handleConsoleApiRequest(
       return true;
     }
 
+    const agentVersionItemMatch = pathname.match(
+      /^\/api\/v1\/agents\/([^/]+)\/versions\/([^/]+)$/,
+    );
+    if (agentVersionItemMatch !== null) {
+      const version = await deps.client.getAgentVersion(
+        agentVersionItemMatch[1] as AgentId,
+        agentVersionItemMatch[2] as AgentVersionId,
+      );
+      sendJson(
+        response,
+        200,
+        version.data,
+        upstreamRequestIdHeaders(version.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
     const agentVersionsMatch = pathname.match(
       /^\/api\/v1\/agents\/([^/]+)\/versions$/,
     );
@@ -314,6 +378,19 @@ export async function handleConsoleApiRequest(
         200,
         versions.data,
         upstreamRequestIdHeaders(versions.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const agentItemMatch = pathname.match(/^\/api\/v1\/agents\/([^/]+)$/);
+    if (agentItemMatch !== null) {
+      const agent = await deps.client.getAgent(agentItemMatch[1] as AgentId);
+      sendJson(
+        response,
+        200,
+        agent.data,
+        upstreamRequestIdHeaders(agent.requestId),
         deps.security,
       );
       return true;

@@ -56,6 +56,18 @@ describe("console production SPA routing", () => {
     }
     const origin = `http://127.0.0.1:${address.port}`;
 
+    const agents = await fetch(`${origin}/agents`);
+    expect(agents.status).toBe(200);
+    expect(await agents.text()).toContain('id="root"');
+
+    const agentVersion = await fetch(`${origin}/agents/agent-1/versions/av-1`);
+    expect(agentVersion.status).toBe(200);
+    expect(await agentVersion.text()).toContain('id="root"');
+
+    const onboarding = await fetch(`${origin}/onboarding`);
+    expect(onboarding.status).toBe(200);
+    expect(await onboarding.text()).toContain('id="root"');
+
     const runDetail = await fetch(`${origin}/runs/run-123`);
     expect(runDetail.status).toBe(200);
     expect(await runDetail.text()).toContain('id="root"');

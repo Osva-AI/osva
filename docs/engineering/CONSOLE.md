@@ -42,12 +42,31 @@ Open the Vite dev URL (default `http://127.0.0.1:5173`). API calls are proxied t
 
 ## Supported surfaces
 
-### Runs (read)
+### Agents (M8.6)
+
+**Routes:** `/agents`, `/agents/new`, `/agents/:agentId`, `/agents/:agentId/versions/new`, `/agents/:agentId/versions/:agentVersionId`, `/onboarding`.
+
+- Agent Registry list of persisted workspace Agents
+- Agent Detail with immutable AgentVersion table (id, version number, runtime type, created timestamp)
+- Register Agent (`POST /api/v1/agents` → `POST /v1/agents`) — **EDITOR** or **ADMIN** (WRITE)
+- Create AgentVersion from a hybrid guided form + JSON editor that share one Agent Manifest v1 document (`POST /api/v1/agents/:agentId/versions`) — previous versions are never rewritten. TRUSTED_TYPESCRIPT placeholder integrity is rejected before submit
+- Individual **Run Agent** from a selected AgentVersion (`POST /api/v1/runs` → `POST /v1/runs`) — **OPERATOR**, **EDITOR**, or **ADMIN** (EXECUTE)
+- Version selection is explicit (URL + version control). The Console never silently substitutes another version
+- Input contract comes from `manifest.input.schema`. JSON syntax is checked in the browser; valid JSON is not presented as executable success
+- Successful create navigates to the persisted Run ID. HTTP 201 / `QUEUED` is not a terminal SUCCEEDED status
+- Run observation reuses Run Detail (RunAttempts, steps, usage, artifacts). Cancellation is not offered (no public cancel API). Retry scheduling is not implemented
+- First-agent onboarding (`/onboarding`) links each step to a real page. Runtime readiness uses three states: **Verified ready** only when an existing API proves it, **Requires setup** when configuration is known missing, **Not verified** otherwise. Console API success is not worker health. A digest-pinned container image in a manifest is not evidence the image exists
+- Deterministic example: trusted TypeScript echo-input agent (`adapters/runtime-typescript/test/fixtures/echo-input-agent.ts`). Copy it under `OSVA_TRUSTED_RUNTIME_ROOT`, compute `sha256:<hex>`, then register through the Console. No paid model provider is required. Do not use the test `echo-agent.ts` fixture for Console first-run inspection — it echoes process environment values
+- Workflow Builder handoff: **Use in Workflow Builder** opens `/workflows/new?agentId=&agentVersionId=` with selection guidance. The builder does not auto-bind; publishing a workflow never mutates the AgentVersion. Query parameters carry ids only, never secrets
+
+### Runs (read + individual launch)
 
 - Runs list with filters and cursor pagination
+- Individual Run launch from an AgentVersion (see Agents)
 - Run detail, attempts, steps, usage
 - Artifact metadata, on-demand safe text/JSON preview (512 KiB cap), and streamed original-byte download via the Console BFF
 - Polling while runs/attempts are active
+- Run Detail distinguishes an individual Run from a WorkflowRun, and RunAttempts from WorkflowNodeRuns
 
 ### Workflows (read)
 
@@ -122,14 +141,25 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 **Limitations:**
 
-- No agent creation or settings from the builder flow
+- The builder does not create Agents; register them on the Agents surface first
 - Execution overlay is run-detail only; the editor and published-version graph stay authoring/read-only
 - `WorkflowNodeRun` has `childRunId` but no `runAttemptId`; attempt inspection stays on Run Detail. WorkflowRun Detail discovers artifacts via AGENT child Runs.
 - Requires **EDITOR** or **ADMIN** role (WRITE) to publish; **OPERATOR**, **EDITOR**, or **ADMIN** (EXECUTE) to start runs and decide waits
 
+### Common registration and execution failures
+
+| Symptom | Likely cause |
+| --- | --- |
+| 400 on Agent or AgentVersion create | Extra HTTP fields (including `workspaceId`), invalid manifest, placeholder integrity, or malformed JSON |
+| 403 on register / version / run | VIEWER cannot WRITE or EXECUTE. Use EDITOR/ADMIN to register, OPERATOR+ to launch |
+| 404 on Agent, version, or Run | Resource is not in the authenticated workspace |
+| Run stays QUEUED | Worker, Valkey, or queue is not running. Console cannot verify worker health |
+| RunAttempt FAILED `UNSUPPORTED_RUNTIME` | Worker has no adapter for the manifest runtime type (common for `BUILTIN_PACKAGE` in production) |
+| Trusted TypeScript integrity/entrypoint errors | File missing under `OSVA_TRUSTED_RUNTIME_ROOT`, or `runtime.integrity` is not sha256 of those bytes |
+| Syntax-valid JSON then FAILED attempt | Input did not match the agent's runtime expectations. Inspect persisted attempt error |
+
 ### Not yet in console
 
-- Full Agents product surface (Agents nav remains disabled; agents are listed only inside workflow creation)
 - Global Artifact Explorer, knowledge, tools, models, settings
 
 ### Artifact retrieval (M8.5.2)
