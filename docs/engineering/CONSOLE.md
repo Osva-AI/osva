@@ -45,7 +45,8 @@ Open the Vite dev URL (default `http://127.0.0.1:5173`). API calls are proxied t
 ### Runs (read)
 
 - Runs list with filters and cursor pagination
-- Run detail, attempts, steps, usage, artifact metadata
+- Run detail, attempts, steps, usage
+- Artifact metadata, on-demand safe text/JSON preview (512 KiB cap), and streamed original-byte download via the Console BFF
 - Polling while runs/attempts are active
 
 ### Workflows (read)
@@ -115,7 +116,7 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 - PARALLEL children and JOIN predecessors are listed from persisted neighbor records only
 - WAITING approval/wait copy states that the workflow is suspended and workers are not kept alive
 - Selecting a node reuses the existing execution card (approval decision, event emit, child Run link)
-- WorkflowRun detail shows Waiting + Execution (graph) before Input/Output so persisted execution state is the primary surface
+- WorkflowRun detail shows Waiting + Execution (graph), then Related artifacts, then Input/Output so persisted execution state is the primary surface
 - Active runs continue to poll via TanStack Query (`ACTIVE_RUN_POLL_MS`); terminal runs do not
 - Product demo sequence: `docs/product/CONSOLE_WORKFLOW_DEMO.md`
 
@@ -123,10 +124,26 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 - No agent creation or settings from the builder flow
 - Execution overlay is run-detail only; the editor and published-version graph stay authoring/read-only
-- `WorkflowNodeRun` has `childRunId` but no `runAttemptId` or artifact URLs; attempt and artifact inspection stay on Run Detail
+- `WorkflowNodeRun` has `childRunId` but no `runAttemptId`; attempt inspection stays on Run Detail. WorkflowRun Detail discovers artifacts via AGENT child Runs.
 - Requires **EDITOR** or **ADMIN** role (WRITE) to publish; **OPERATOR**, **EDITOR**, or **ADMIN** (EXECUTE) to start runs and decide waits
 
 ### Not yet in console
 
 - Full Agents product surface (Agents nav remains disabled; agents are listed only inside workflow creation)
-- Artifact preview/download, knowledge, tools, models, settings
+- Global Artifact Explorer, knowledge, tools, models, settings
+
+### Artifact retrieval (M8.5.2)
+
+Allowlisted BFF routes (server-held `OSVA_CONSOLE_API_KEY`, no generic proxy):
+
+- `GET /api/v1/artifacts`
+- `GET /api/v1/artifacts/:artifactId` → `GET /v1/artifacts/:artifactId`
+- `GET /api/v1/artifacts/:artifactId/content` → `GET /v1/artifacts/:artifactId/content`
+
+Content is streamed with `OsvaHttpClient.download()`, which returns the upstream body without buffering. The SDK default **30s timeout applies only to waiting for response headers** and is not increased. After headers arrive, the Console applies a **60s idle timeout** on the body stream so a stalled upstream cannot hang the browser connection indefinitely.
+
+Downloads always send `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`. Filenames are sanitized (no CR/LF or path separators). Object-store URLs and API keys never leave the Console server.
+
+Run Detail previews are user-triggered, allowlisted (`text/markdown`, `text/plain`, `application/json`, and a few other text types), rendered as escaped text or `JsonView`, and capped at 512 KiB with a streaming byte limit. HTML, SVG, XML, and other unsafe types are not previewed. Download uses the same-origin BFF content URL.
+
+WorkflowRun Detail associates artifacts by AGENT `WorkflowNodeRun.childRunId` → `Artifact.producer.runId`. APPROVAL, WAIT, BRANCH, PARALLEL, and JOIN nodes are not treated as producers. List queries are scoped per child Run (`GET /api/v1/artifacts?runId=`) with bounded pagination (100 items, 5 pages). Partial child-run failures and truncated pages are shown explicitly. Contract-valid `ArtifactReferenceV1` values on workflow or AGENT node output may enrich the list only when metadata producer verification succeeds.

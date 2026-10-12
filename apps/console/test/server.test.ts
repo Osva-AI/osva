@@ -51,6 +51,12 @@ function createMockClient(
       },
     }),
     listArtifacts: async () => ({ data: { items: [] } }),
+    getArtifact: async () => {
+      throw new Error("not implemented");
+    },
+    downloadArtifact: async () => {
+      throw new Error("not implemented");
+    },
     listAgents: async () => ({
       data: { agents: [] },
       requestId: "req-agents-list",
@@ -441,6 +447,249 @@ describe("console server API", () => {
     expect(response.status).toBe(405);
   });
 
+  it("returns artifact metadata without exposing the API key", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        getArtifact: async (artifactId) => ({
+          data: {
+            id: artifactId,
+            workspaceId: "workspace-1",
+            name: "report.md",
+            mediaType: "text/markdown",
+            sizeBytes: 12,
+            digest: `sha256:${"a".repeat(64)}`,
+            metadata: {},
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+          requestId: "req-artifact-get",
+        }),
+      }),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(`${origin}/api/v1/artifacts/artifact-1`);
+    const body = await response.text();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-osva-request-id")).toBe("req-artifact-get");
+    expect(JSON.parse(body)).toMatchObject({
+      id: "artifact-1",
+      name: "report.md",
+      mediaType: "text/markdown",
+    });
+    expect(body).not.toContain("super-secret-console-key");
+    expect(body).not.toContain("Bearer");
+    expect(body).not.toContain(".osva/artifacts");
+    expect(body).not.toContain("s3://");
+  });
+
+  it.each([
+    [401, "req-artifact-401", "authentication_required"],
+    [403, "req-artifact-403", "permission_denied"],
+    [404, "req-artifact-404", "not_found"],
+    [503, "req-artifact-503", "unavailable"],
+  ] as const)(
+    "forwards artifact metadata %i from the control plane",
+    async (status, requestId, code) => {
+      server = createConsoleServer({
+        config: testConfig,
+        client: createMockClient({
+          getArtifact: async () => {
+            const { OsvaApiError } = await import("@osva-ai/sdk");
+            throw new OsvaApiError(status, { status: code }, requestId);
+          },
+        }),
+      });
+      const origin = await listen(server);
+
+      const response = await fetch(`${origin}/api/v1/artifacts/missing`);
+      const body = (await response.json()) as {
+        error?: string;
+        requestId?: string;
+        code?: string;
+      };
+      expect(response.status).toBe(status);
+      expect(response.headers.get("x-osva-request-id")).toBe(requestId);
+      expect(body.requestId).toBe(requestId);
+      expect(body.code).toBe(code);
+      expect(JSON.stringify(body)).not.toContain("super-secret-console-key");
+      expect(JSON.stringify(body)).not.toContain(".osva/artifacts");
+    },
+  );
+
+  it("rejects unsafe artifact ids", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient(),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(`${origin}/api/v1/artifacts/has..dots`);
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("invalid_request");
+  });
+
+  it("streams artifact bytes with forced download headers", async () => {
+    const payload = Uint8Array.from([0x00, 0x01, 0xff, 0x7f]);
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        downloadArtifact: async () => ({
+          status: 200,
+          headers: new Headers({
+            "content-type": "text/html",
+            "content-length": String(payload.length),
+            "content-disposition": 'inline; filename="evil.html"',
+            "x-content-type-options": "nosniff",
+            digest: `sha256:${"b".repeat(64)}`,
+            authorization: "Bearer leaked",
+            "set-cookie": "session=1",
+            location: "s3://bucket/v1/artifact-1",
+          }),
+          body: uint8Stream(payload),
+          requestId: "req-artifact-content",
+        }),
+      }),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(
+      `${origin}/api/v1/artifacts/artifact-1/content`,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/html");
+    expect(response.headers.get("content-disposition")).toContain("attachment");
+    expect(response.headers.get("content-disposition")).toContain("evil.html");
+    expect(response.headers.get("content-disposition")).not.toContain("inline");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("content-length")).toBe(String(payload.length));
+    expect(response.headers.get("digest")).toBe(`sha256:${"b".repeat(64)}`);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-osva-request-id")).toBe(
+      "req-artifact-content",
+    );
+    expect(response.headers.get("authorization")).toBeNull();
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("location")).toBeNull();
+
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(bytes).toEqual(payload);
+  });
+
+  it("sanitizes attachment filenames and rejects header injection", async () => {
+    const payload = Uint8Array.from([0x41]);
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        downloadArtifact: async () => ({
+          status: 200,
+          headers: headerMap({
+            "content-type": "text/plain",
+            "content-disposition":
+              'attachment; filename="ok.md\r\nX-Injected: yes"',
+          }),
+          body: uint8Stream(payload),
+        }),
+      }),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(
+      `${origin}/api/v1/artifacts/artifact-1/content`,
+    );
+    const disposition = response.headers.get("content-disposition") ?? "";
+    expect(response.status).toBe(200);
+    expect(disposition).toContain("attachment");
+    expect(disposition).not.toMatch(/\r|\n/);
+    expect(disposition).not.toContain("X-Injected");
+    expect(response.headers.get("x-injected")).toBeNull();
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(payload);
+  });
+
+  it.each([
+    [401, "req-content-401", "authentication_required"],
+    [403, "req-content-403", "permission_denied"],
+    [404, "req-content-404", "not_found"],
+    [503, "req-content-503", "unavailable"],
+  ] as const)(
+    "forwards artifact content %i from the control plane",
+    async (status, requestId, code) => {
+      server = createConsoleServer({
+        config: testConfig,
+        client: createMockClient({
+          downloadArtifact: async () => {
+            const { OsvaApiError } = await import("@osva-ai/sdk");
+            throw new OsvaApiError(status, { status: code }, requestId);
+          },
+        }),
+      });
+      const origin = await listen(server);
+
+      const response = await fetch(
+        `${origin}/api/v1/artifacts/missing/content`,
+      );
+      const body = (await response.json()) as {
+        error?: string;
+        requestId?: string;
+        code?: string;
+      };
+      expect(response.status).toBe(status);
+      expect(response.headers.get("x-osva-request-id")).toBe(requestId);
+      expect(body.requestId).toBe(requestId);
+      expect(body.code).toBe(code);
+      expect(JSON.stringify(body)).not.toContain("super-secret-console-key");
+      expect(JSON.stringify(body)).not.toContain("v1/artifact");
+    },
+  );
+
+  it("rejects unsupported methods on artifact routes", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient(),
+    });
+    const origin = await listen(server);
+
+    const metadata = await fetch(`${origin}/api/v1/artifacts/artifact-1`, {
+      method: "POST",
+      body: "{}",
+    });
+    expect(metadata.status).toBe(405);
+
+    const content = await fetch(
+      `${origin}/api/v1/artifacts/artifact-1/content`,
+      {
+        method: "DELETE",
+      },
+    );
+    expect(content.status).toBe(405);
+  });
+
+  it("destroys the download when the upstream body stream fails", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        downloadArtifact: async () => ({
+          status: 200,
+          headers: new Headers({
+            "content-type": "application/octet-stream",
+          }),
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(Uint8Array.from([1, 2, 3]));
+              controller.error(new Error("upstream reset"));
+            },
+          }),
+        }),
+      }),
+    });
+    const origin = await listen(server);
+
+    await expect(
+      fetch(`${origin}/api/v1/artifacts/artifact-1/content`),
+    ).rejects.toBeInstanceOf(Error);
+  });
+
   it("reports missing configuration state", async () => {
     server = createConsoleServer({ config: undefined, client: undefined });
     await new Promise<void>((resolve) => server!.listen(0, resolve));
@@ -455,3 +704,29 @@ describe("console server API", () => {
     expect(response.status).toBe(503);
   });
 });
+
+async function listen(server: http.Server): Promise<string> {
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("expected server address");
+  }
+  return `http://127.0.0.1:${address.port}`;
+}
+
+function uint8Stream(payload: Uint8Array): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(payload);
+      controller.close();
+    },
+  });
+}
+
+function headerMap(values: Record<string, string>): Headers {
+  return {
+    get(name: string) {
+      return values[name.toLowerCase()] ?? null;
+    },
+  } as Headers;
+}

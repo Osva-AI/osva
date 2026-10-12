@@ -64,6 +64,13 @@ const definition = {
   ],
 };
 
+function emptyArtifactListOrNotFound(url: string): Response {
+  if (url.includes("/api/v1/artifacts?")) {
+    return Response.json({ items: [] });
+  }
+  return Response.json({ error: "not found" }, { status: 404 });
+}
+
 function renderDetail() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -193,10 +200,7 @@ describe("WorkflowRunDetailPage", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      return new Response(JSON.stringify({ error: "not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return emptyArtifactListOrNotFound(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -295,10 +299,7 @@ describe("WorkflowRunDetailPage", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      return new Response(JSON.stringify({ error: "not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return emptyArtifactListOrNotFound(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -383,7 +384,7 @@ describe("WorkflowRunDetailPage", () => {
           approvalRequests: [],
         });
       }
-      return Response.json({ error: "not found" }, { status: 404 });
+      return emptyArtifactListOrNotFound(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -490,7 +491,7 @@ describe("WorkflowRunDetailPage", () => {
           approvalRequests: [],
         });
       }
-      return Response.json({ error: "not found" }, { status: 404 });
+      return emptyArtifactListOrNotFound(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -570,7 +571,7 @@ describe("WorkflowRunDetailPage", () => {
           approvalRequests: [],
         });
       }
-      return Response.json({ error: "not found" }, { status: 404 });
+      return emptyArtifactListOrNotFound(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -644,7 +645,7 @@ describe("WorkflowRunDetailPage", () => {
             ],
           });
         }
-        return Response.json({ error: "not found" }, { status: 404 });
+        return emptyArtifactListOrNotFound(url);
       }),
     );
 
@@ -654,5 +655,581 @@ describe("WorkflowRunDetailPage", () => {
     });
     expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
     expect(screen.getByText(/cannot submit approval decisions/)).toBeTruthy();
+  });
+});
+
+const reportDigest = `sha256:${"c".repeat(64)}`;
+
+const canonicalDefinition = {
+  schemaVersion: "3",
+  nodes: [
+    { key: "research", type: "AGENT", agentVersionId: "av-research" },
+    { key: "approval", type: "APPROVAL", title: "Review" },
+    { key: "report", type: "AGENT", agentVersionId: "av-report" },
+    {
+      key: "wait-event",
+      type: "WAIT",
+      wait: {
+        kind: "EVENT",
+        source: "billing",
+        eventType: "invoice.paid",
+        correlation: { kind: "LITERAL", value: "inv-1" },
+      },
+    },
+  ],
+  edges: [
+    { from: "research", to: "approval" },
+    { from: "approval", to: "report" },
+    { from: "report", to: "wait-event" },
+  ],
+};
+
+function workflowArtifact(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "artifact-report",
+    name: "report.md",
+    mediaType: "text/markdown",
+    sizeBytes: 32,
+    digest: reportDigest,
+    createdAt: "2026-01-01T00:00:02.000Z",
+    producer: { runId: "run-report", runAttemptId: "ra-report" },
+    ...overrides,
+  };
+}
+
+function renderWorkflowRunWithArtifacts(
+  handler: (url: string, init?: RequestInit) => Response | Promise<Response>,
+) {
+  const fetchMock = vi.fn(async (input: RequestInfo, init?: RequestInit) => {
+    return handler(String(input), init);
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  renderDetail();
+  return fetchMock;
+}
+
+describe("WorkflowRunDetailPage artifacts", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("associates the canonical Report markdown artifact with the Report AGENT node", async () => {
+    renderWorkflowRunWithArtifacts((url) => {
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "VIEWER",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: canonicalDefinition,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "WAITING",
+          input: {},
+          output: {
+            artifact: {
+              type: "artifact",
+              artifactId: "artifact-report",
+            },
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:02.000Z",
+          nodeRuns: [
+            {
+              id: "wn-research",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "research",
+              sequence: 1,
+              status: "SUCCEEDED",
+              input: {},
+              childRunId: "run-research",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+            {
+              id: "wn-approval",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "approval",
+              sequence: 2,
+              status: "SUCCEEDED",
+              input: {},
+              createdAt: "2026-01-01T00:00:01.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+            {
+              id: "wn-report",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "report",
+              sequence: 3,
+              status: "SUCCEEDED",
+              input: {},
+              output: {
+                artifact: {
+                  type: "artifact",
+                  artifactId: "artifact-report",
+                },
+              },
+              childRunId: "run-report",
+              createdAt: "2026-01-01T00:00:01.000Z",
+              updatedAt: "2026-01-01T00:00:02.000Z",
+            },
+            {
+              id: "wn-wait",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "wait-event",
+              sequence: 4,
+              status: "WAITING",
+              input: {},
+              createdAt: "2026-01-01T00:00:02.000Z",
+              updatedAt: "2026-01-01T00:00:02.000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      if (url.includes("/api/v1/artifacts?") && url.includes("run-report")) {
+        return Response.json({ items: [workflowArtifact()] });
+      }
+      if (url.includes("/api/v1/artifacts?") && url.includes("run-research")) {
+        return Response.json({ items: [] });
+      }
+      if (url.endsWith("/api/v1/artifacts/artifact-report")) {
+        return Response.json(workflowArtifact());
+      }
+      return emptyArtifactListOrNotFound(url);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("report.md")).toBeTruthy();
+    });
+    expect(screen.getByText("text/markdown")).toBeTruthy();
+    expect(screen.getAllByText("report").length).toBeGreaterThan(0);
+    expect(
+      screen
+        .getAllByRole("link", { name: "run-report" })
+        .some((link) => link.getAttribute("href") === "/runs/run-report"),
+    ).toBe(true);
+    expect(screen.getByLabelText("Preview report.md")).toBeTruthy();
+    expect(
+      screen.getByLabelText("Download report.md").getAttribute("href"),
+    ).toBe("/api/v1/artifacts/artifact-report/content");
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Emit event" })).toBeNull();
+  });
+
+  it("lists artifacts from multiple AGENT nodes and ignores approval/wait producers", async () => {
+    const fetchMock = renderWorkflowRunWithArtifacts((url) => {
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "OPERATOR",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: canonicalDefinition,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "FAILED",
+          input: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:03.000Z",
+          nodeRuns: [
+            {
+              id: "wn-research",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "research",
+              sequence: 1,
+              status: "SUCCEEDED",
+              input: {},
+              childRunId: "run-research",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+            {
+              id: "wn-approval",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "approval",
+              sequence: 2,
+              status: "SUCCEEDED",
+              input: {},
+              createdAt: "2026-01-01T00:00:01.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+            {
+              id: "wn-report",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "report",
+              sequence: 3,
+              status: "FAILED",
+              input: {},
+              childRunId: "run-report",
+              createdAt: "2026-01-01T00:00:02.000Z",
+              updatedAt: "2026-01-01T00:00:03.000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      if (url.includes("/api/v1/artifacts?") && url.includes("run-research")) {
+        return Response.json({
+          items: [
+            workflowArtifact({
+              id: "artifact-notes",
+              name: "notes.md",
+              producer: { runId: "run-research", runAttemptId: "ra-r" },
+              createdAt: "2026-01-01T00:00:01.000Z",
+            }),
+          ],
+        });
+      }
+      if (url.includes("/api/v1/artifacts?") && url.includes("run-report")) {
+        return Response.json({ items: [workflowArtifact()] });
+      }
+      return emptyArtifactListOrNotFound(url);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("notes.md")).toBeTruthy();
+    });
+    expect(screen.getByText("report.md")).toBeTruthy();
+    expect(screen.getAllByText("research").length).toBeGreaterThan(0);
+    expect(
+      fetchMock.mock.calls.filter(([input]) =>
+        String(input).includes("/api/v1/artifacts?"),
+      ),
+    ).toHaveLength(2);
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).includes("should-not-exist"),
+      ),
+    ).toBe(false);
+  });
+
+  it("communicates a partial list failure and keeps other artifacts", async () => {
+    renderWorkflowRunWithArtifacts((url) => {
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "OPERATOR",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: canonicalDefinition,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "SUCCEEDED",
+          input: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:02.000Z",
+          nodeRuns: [
+            {
+              id: "wn-research",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "research",
+              sequence: 1,
+              status: "SUCCEEDED",
+              input: {},
+              childRunId: "run-research",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+            {
+              id: "wn-report",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "report",
+              sequence: 2,
+              status: "SUCCEEDED",
+              input: {},
+              childRunId: "run-report",
+              createdAt: "2026-01-01T00:00:01.000Z",
+              updatedAt: "2026-01-01T00:00:02.000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      if (url.includes("/api/v1/artifacts?") && url.includes("run-research")) {
+        return Response.json({ error: "upstream failed" }, { status: 503 });
+      }
+      if (url.includes("/api/v1/artifacts?") && url.includes("run-report")) {
+        return Response.json({ items: [workflowArtifact()] });
+      }
+      return emptyArtifactListOrNotFound(url);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("report.md")).toBeTruthy();
+    });
+    expect(
+      screen.getByText("Some artifact lists could not be loaded"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Could not load artifacts for research/),
+    ).toBeTruthy();
+  });
+
+  it("surfaces a pagination bound instead of silently omitting later artifacts", async () => {
+    renderWorkflowRunWithArtifacts((url) => {
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "OPERATOR",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: {
+            schemaVersion: "3",
+            nodes: [{ key: "report", type: "AGENT", agentVersionId: "av-1" }],
+            edges: [],
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "SUCCEEDED",
+          input: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:01.000Z",
+          nodeRuns: [
+            {
+              id: "wn-report",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "report",
+              sequence: 1,
+              status: "SUCCEEDED",
+              input: {},
+              childRunId: "run-report",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      if (url.includes("/api/v1/artifacts?")) {
+        return Response.json({
+          items: [workflowArtifact()],
+          nextCursor: "more",
+        });
+      }
+      return emptyArtifactListOrNotFound(url);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("report.md")).toBeTruthy();
+    });
+    expect(screen.getByText(/bounded page of artifacts/i)).toBeTruthy();
+  });
+
+  it("keeps an open preview across workflow refresh polling", async () => {
+    let runGeneration = 0;
+    renderWorkflowRunWithArtifacts((url) => {
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "OPERATOR",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: {
+            schemaVersion: "3",
+            nodes: [{ key: "report", type: "AGENT", agentVersionId: "av-1" }],
+            edges: [],
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        runGeneration += 1;
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "WAITING",
+          input: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: `2026-01-01T00:00:0${runGeneration}.000Z`,
+          nodeRuns: [
+            {
+              id: "wn-report",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "report",
+              sequence: 1,
+              status: "SUCCEEDED",
+              input: {},
+              childRunId: "run-report",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      if (url.includes("/api/v1/artifacts?") && url.includes("run-report")) {
+        return Response.json({ items: [workflowArtifact()] });
+      }
+      if (url.endsWith("/api/v1/artifacts/artifact-report/content")) {
+        return new Response("preview body", { status: 200 });
+      }
+      return emptyArtifactListOrNotFound(url);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("report.md")).toBeTruthy();
+    });
+    await userEvent.click(screen.getByLabelText("Preview report.md"));
+    await waitFor(() => {
+      expect(screen.getByText("preview body")).toBeTruthy();
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => {
+      expect(runGeneration).toBeGreaterThan(1);
+    });
+    expect(screen.getByText("preview body")).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole("link", { name: "run-report" })
+        .some((link) => link.getAttribute("href") === "/runs/run-report"),
+    ).toBe(true);
+  });
+
+  it("does not treat a producer-mismatched list item as a workflow artifact", async () => {
+    renderWorkflowRunWithArtifacts((url) => {
+      if (url.includes("/api/v1/auth/context")) {
+        return Response.json({
+          subjectId: "sub-1",
+          workspaceId: "ws-1",
+          role: "OPERATOR",
+        });
+      }
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: {
+            schemaVersion: "3",
+            nodes: [{ key: "report", type: "AGENT", agentVersionId: "av-1" }],
+            edges: [],
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "SUCCEEDED",
+          input: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:01.000Z",
+          nodeRuns: [
+            {
+              id: "wn-report",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "report",
+              sequence: 1,
+              status: "SUCCEEDED",
+              input: {},
+              childRunId: "run-report",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      if (url.includes("/api/v1/artifacts?")) {
+        return Response.json({
+          items: [
+            workflowArtifact({
+              id: "artifact-foreign",
+              name: "foreign.md",
+              producer: { runId: "run-other", runAttemptId: "ra-x" },
+            }),
+          ],
+        });
+      }
+      return emptyArtifactListOrNotFound(url);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("No artifacts produced.")).toBeTruthy();
+    });
+    expect(screen.queryByText("foreign.md")).toBeNull();
   });
 });
