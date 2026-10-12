@@ -1,12 +1,16 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isLoopbackBindHost } from "./loopback.js";
+import { parseAllowedConsoleOrigins } from "./request-guard.js";
+
 export interface ConsoleConfig {
   readonly osvaBaseUrl: string;
   readonly osvaApiKey: string;
   readonly host: string;
   readonly port: number;
   readonly clientDistDir: string;
+  readonly allowedOrigins: readonly string[];
 }
 
 const DEFAULT_HOST = "127.0.0.1";
@@ -39,6 +43,18 @@ export function loadConsoleConfig(
   const port = parsePort(env.OSVA_CONSOLE_PORT, DEFAULT_PORT);
   const clientDistDir =
     readOptional(env.OSVA_CONSOLE_CLIENT_DIST) ?? defaultClientDistDir();
+  let allowedOrigins: readonly string[];
+  try {
+    allowedOrigins = parseAllowedConsoleOrigins(
+      env.OSVA_CONSOLE_ALLOWED_ORIGINS,
+    );
+  } catch (error) {
+    throw new ConsoleConfigurationError(
+      error instanceof Error
+        ? error.message
+        : "Invalid OSVA_CONSOLE_ALLOWED_ORIGINS.",
+    );
+  }
 
   return {
     osvaBaseUrl,
@@ -46,6 +62,7 @@ export function loadConsoleConfig(
     host,
     port,
     clientDistDir,
+    allowedOrigins,
   };
 }
 
@@ -68,26 +85,21 @@ export function defaultClientDistDir(): string {
 }
 
 function assertConsoleBindHost(host: string, env: NodeJS.ProcessEnv): void {
-  if (!isPublicConsoleBindHost(host)) {
+  if (isLoopbackBindHost(host)) {
     return;
   }
 
-  if (readOptionalBoolean(env.OSVA_CONSOLE_ALLOW_PUBLIC_BIND) === true) {
-    return;
+  const publicBindFlag = readOptionalBoolean(
+    env.OSVA_CONSOLE_ALLOW_PUBLIC_BIND,
+  );
+  if (publicBindFlag === true) {
+    throw new ConsoleConfigurationError(
+      "OSVA_CONSOLE_HOST must be a loopback address. OSVA_CONSOLE_ALLOW_PUBLIC_BIND is deprecated and does not enable public Console binding or authentication. Use an SSH tunnel or an authenticating reverse proxy to the loopback listener.",
+    );
   }
 
   throw new ConsoleConfigurationError(
-    "OSVA_CONSOLE_HOST is a public bind address. Set OSVA_CONSOLE_ALLOW_PUBLIC_BIND=true only for an explicitly documented, authenticated network setup. Console remains a localhost workstation tool and is not part of Compose/Helm.",
-  );
-}
-
-function isPublicConsoleBindHost(host: string): boolean {
-  const normalized = host.trim().toLowerCase();
-  return (
-    normalized === "0.0.0.0" ||
-    normalized === "::" ||
-    normalized === "[::]" ||
-    normalized === "*"
+    "OSVA_CONSOLE_HOST must be a loopback address (127.0.0.0/8, ::1, or localhost). Remote access requires a secure tunnel or an authenticating reverse proxy in front of the loopback listener. OSVA_CONSOLE_ALLOW_PUBLIC_BIND does not provide access control.",
   );
 }
 

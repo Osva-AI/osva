@@ -421,6 +421,10 @@ class FakeRunRepository implements RunRepository {
   async listQueuedPendingDeliveries(): Promise<never> {
     throw new Error("not used");
   }
+
+  async findCapabilityEligibleRunAttemptById(): Promise<never> {
+    throw new Error("not used");
+  }
 }
 
 function createTestBlobStore(): ArtifactBlobStore {

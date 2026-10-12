@@ -162,6 +162,9 @@ export function wrapRunRepository(
     findRunAttemptById:
       overrides.findRunAttemptById?.bind(overrides) ??
       inner.findRunAttemptById.bind(inner),
+    findCapabilityEligibleRunAttemptById:
+      overrides.findCapabilityEligibleRunAttemptById?.bind(overrides) ??
+      inner.findCapabilityEligibleRunAttemptById.bind(inner),
     listRunAttempts:
       overrides.listRunAttempts?.bind(overrides) ??
       inner.listRunAttempts.bind(inner),

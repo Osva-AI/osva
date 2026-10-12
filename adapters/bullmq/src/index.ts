@@ -19,6 +19,11 @@ export {
   ValkeyUnavailableError,
 } from "./errors.js";
 export { toBullMqJobId } from "./job-id.js";
+export {
+  ValkeyFixedWindowRateLimiter,
+  type RateLimitConsumeResult,
+  type ValkeyFixedWindowRateLimiterOptions,
+} from "./valkey-rate-limiter.js";
 export type { PingableJobQueue } from "./pingable-job-queue.js";
 export {
   BullMqKnowledgeIndexQueue,

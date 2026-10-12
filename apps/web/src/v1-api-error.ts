@@ -10,6 +10,7 @@ export function sendV1Error(
   statusCode: number,
   code: PublicApiErrorCode,
   requestId: string,
+  extraHeaders: Readonly<Record<string, string>> = {},
 ): void {
   sendJson(
     response,
@@ -21,6 +22,7 @@ export function sendV1Error(
     },
     {
       [OSVA_REQUEST_ID_HEADER]: requestId,
+      ...extraHeaders,
     },
   );
 }

@@ -3,6 +3,7 @@ export interface OsvaApiErrorBody {
   readonly [key: string]: unknown;
 }
 
+/** Control-plane `/v1` error. HTTP 429 `RATE_LIMITED` is not retried by this SDK. */
 export class OsvaApiError extends Error {
   readonly status: number;
   readonly body: OsvaApiErrorBody;

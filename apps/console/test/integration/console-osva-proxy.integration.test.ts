@@ -61,6 +61,7 @@ describe("console OSVA proxy integration", () => {
       host: "127.0.0.1",
       port: 0,
       clientDistDir: "/tmp/unused",
+      allowedOrigins: [],
     };
 
     consoleServer = createConsoleServer({ config });
@@ -154,6 +155,7 @@ describe("console OSVA proxy integration", () => {
       host: "127.0.0.1",
       port: 0,
       clientDistDir: "/tmp/unused",
+      allowedOrigins: [],
     };
     consoleServer = createConsoleServer({ config });
     await new Promise<void>((resolve) => consoleServer!.listen(0, resolve));

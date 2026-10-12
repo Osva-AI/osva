@@ -352,4 +352,46 @@ describe("execution bootstrap", () => {
       ),
     ).toBe(true);
   });
+
+  it("rejects bootstrap after the persisted execution lease expires", async () => {
+    const store = new RuntimeExecutionBootstrapStore();
+    const { runs, agents } = await seedRunningExecution();
+    const attempt = await runs.findRunAttemptById(runAttemptId);
+    if (attempt === null) {
+      throw new Error("expected running attempt");
+    }
+    runs.clock = { now: () => NOW };
+    runs.replaceRunAttempt(
+      attempt.withExecutionLease({
+        owner: "worker-1",
+        generation: 1,
+        expiresAt: NOW,
+      }),
+    );
+    const bridge = new RuntimeCapabilityBridge({
+      secret: SECRET,
+      runs,
+      agents,
+      executionBootstrap: store,
+      clock: { now: () => NOW },
+      createScopedModelGateway: () => undefined,
+      createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
+    });
+    const exp = NOW.getTime() + 5_000;
+    store.register(runAttemptId, validRequest, exp);
+    const token = issueBootstrapToken(SECRET, {
+      executionId: runAttemptId,
+      exp,
+    });
+    const response = await bridge.handle({
+      method: "GET",
+      pathname: RUNTIME_CAPABILITY_PATHS.executionBootstrap,
+      searchParams: new URLSearchParams({ executionId: runAttemptId }),
+      authorization: `Bearer ${token}`,
+      body: undefined,
+    });
+    expect(response.status).toBe(403);
+  });
 });

@@ -39,6 +39,7 @@ import {
   eq,
   gt,
   isNotNull,
+  isNull,
   lt,
   lte,
   or,
@@ -216,6 +217,30 @@ export class PostgresRunRepository implements RunRepository {
       .select()
       .from(runAttempts)
       .where(eq(runAttempts.id, id))
+      .limit(1);
+
+    return row === undefined ? null : runAttemptFromRow(row);
+  }
+
+  async findCapabilityEligibleRunAttemptById(
+    id: RunAttemptId,
+  ): Promise<RunAttempt | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(runAttempts)
+      .where(
+        and(
+          eq(runAttempts.id, id),
+          eq(runAttempts.status, "RUNNING"),
+          or(
+            isNull(runAttempts.executionOwner),
+            and(
+              isNotNull(runAttempts.executionOwner),
+              gt(runAttempts.leaseExpiresAt, sql`now()`),
+            ),
+          ),
+        ),
+      )
       .limit(1);
 
     return row === undefined ? null : runAttemptFromRow(row);

@@ -22,7 +22,13 @@ Lease expiry and heartbeat renewal use PostgreSQL `now()`, not worker clocks.
 | `OSVA_EXECUTION_RECOVERY_BATCH_LIMIT` | `50` | Expired RUNNING scan |
 | `OSVA_TRANSPORT_REPAIR_BATCH_LIMIT` | `50` | QUEUED/PENDING repair |
 
-A process that loses the lease must not persist terminal `SUCCEEDED`. Capability calls for an expired leased attempt are rejected. Cancellation after lease loss is best-effort and cannot undo prior external side effects.
+A process that loses the lease must not persist terminal `SUCCEEDED`. Capability and execution-bootstrap HTTP authorization re-read persisted eligibility using **PostgreSQL `now()`**, not the worker process clock: the attempt must still be `RUNNING`, and a leased row must have `lease_expires_at > now()`. Legacy unleased `RUNNING` rows stay eligible (operators settle them manually).
+
+Capability tokens do not carry owner/generation. A still-valid lease therefore authorizes capability HTTP even if generation later changes; that is a residual TOCTOU window, not a second lifecycle authority. Late in-flight tool/model calls that started before expiry are not recalled. OSVA does not claim exactly-once external tool effects.
+
+Trusted TypeScript `cancel()` after lease loss would require a broader runtime lifecycle change and is **deferred**; workers still fail expired leased attempts in PostgreSQL.
+
+Cancellation after lease loss is best-effort and cannot undo prior external side effects. Crash recovery never creates a new logical RunAttempt.
 
 ## Recovery ticker
 

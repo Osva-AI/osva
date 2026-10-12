@@ -22,12 +22,14 @@ import { ConsoleConfigurationError } from "../config.js";
 import { mapOsvaError, sendJson } from "../console-http.js";
 import type { ConsoleOsvaClient } from "../osva-client.js";
 import { readJsonBody } from "../read-json-body.js";
+import { evaluateConsoleApiRequestGuard } from "../request-guard.js";
 import type { ResponseSecurityOptions } from "../response-security.js";
 import { upstreamRequestIdHeaders } from "../upstream-response.js";
 
 export interface ConsoleApiDependencies {
   readonly client: ConsoleOsvaClient | undefined;
   readonly security: ResponseSecurityOptions;
+  readonly allowedOrigins?: readonly string[];
 }
 
 export async function handleConsoleApiRequest(
@@ -39,6 +41,20 @@ export async function handleConsoleApiRequest(
 ): Promise<boolean> {
   if (!pathname.startsWith("/api/v1/")) {
     return false;
+  }
+
+  const guard = evaluateConsoleApiRequestGuard(request, {
+    allowedOrigins: deps.allowedOrigins ?? [],
+  });
+  if (!guard.allowed) {
+    sendJson(
+      response,
+      guard.status,
+      { error: guard.error, code: guard.code },
+      {},
+      deps.security,
+    );
+    return true;
   }
 
   const method = request.method ?? "GET";

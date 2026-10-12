@@ -110,6 +110,9 @@ export interface RunRepository {
   listRuns(query: ListRunsQuery): Promise<ListRunsResult>;
   saveRunAttempt(attempt: RunAttempt): Promise<void>;
   findRunAttemptById(id: RunAttemptId): Promise<RunAttempt | null>;
+  findCapabilityEligibleRunAttemptById(
+    id: RunAttemptId,
+  ): Promise<RunAttempt | null>;
   listRunAttempts(runId: RunId): Promise<readonly RunAttempt[]>;
   insertRunningRunStep(step: RunStep): Promise<void>;
   finalizeRunStep(

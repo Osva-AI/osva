@@ -18,7 +18,7 @@ Architecturally meaningful packages after Stage 2.9 (Community Beta). Paths are 
 
 ### apps/console
 
-**Purpose:** Browser-based OSVA operator console (M8+). Serves the product UI and a narrow same-origin `/api/v1/*` BFF that calls the public control plane with a server-held API key.
+**Purpose:** Browser-based OSVA Community operator console (M8+). Loopback-only trusted-operator UI and a narrow same-origin `/api/v1/*` BFF that calls the public control plane with a server-held API key. Not a multi-user identity product.
 
 **Owns:** Console HTTP server, React product shell, Agent Registry/execution UX (M8.6), Runs UX, workflow builder/execution overlay, and artifact preview/download.
 

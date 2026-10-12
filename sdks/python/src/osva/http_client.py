@@ -48,6 +48,7 @@ class HTTPClient:
         if body is not None:
             request_headers = {**request_headers, "content-type": "application/json"}
         try:
+            # Single attempt: do not retry 429 RATE_LIMITED or other HTTP errors.
             response = self._client.request(
                 method,
                 url,

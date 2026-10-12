@@ -1,6 +1,8 @@
 import http from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { OSVA_DEFAULT_JSON_BODY_MAX_BYTES } from "@osva-ai/contracts";
+
 import type { ConsoleConfig } from "../src/server/config.js";
 import type { ConsoleOsvaClient } from "../src/server/osva-client.js";
 import { createConsoleServer } from "../src/server/server.js";
@@ -11,6 +13,7 @@ const testConfig: ConsoleConfig = {
   host: "127.0.0.1",
   port: 4174,
   clientDistDir: "/tmp/unused",
+  allowedOrigins: [],
 };
 
 function createMockClient(
@@ -267,6 +270,128 @@ describe("console server API", () => {
     );
     expect(response.status).toBe(201);
     expect(response.headers.get("x-osva-request-id")).toBe("req-event-1");
+  });
+
+  it("rejects oversized JSON BFF bodies with 413", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        ingestWorkflowEvent: async () => {
+          throw new Error("upstream must not be called for oversized bodies");
+        },
+      }),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/workflow-events`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "x".repeat(OSVA_DEFAULT_JSON_BODY_MAX_BYTES + 32),
+      },
+    );
+    const body = (await response.json()) as { code?: string; error?: string };
+    expect(response.status).toBe(413);
+    expect(body.code).toBe("request_too_large");
+    expect(JSON.stringify(body)).not.toContain(testConfig.osvaApiKey);
+  });
+
+  it("rejects invalid JSON BFF bodies with 400", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        ingestWorkflowEvent: async () => {
+          throw new Error("upstream must not be called for invalid JSON");
+        },
+      }),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/workflow-events`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{",
+      },
+    );
+    const body = (await response.json()) as { code?: string };
+    expect(response.status).toBe(400);
+    expect(body.code).toBe("invalid_request");
+  });
+
+  it("rejects foreign-origin and malicious-host Console API mutations without calling upstream", async () => {
+    let upstreamCalls = 0;
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        ingestWorkflowEvent: async () => {
+          upstreamCalls += 1;
+          return { data: { id: "we-1" }, requestId: "req-event-1" };
+        },
+      }),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+    const origin = `http://127.0.0.1:${address.port}`;
+
+    const foreign = await fetch(`${origin}/api/v1/workflow-events`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "https://evil.example",
+      },
+      body: "{}",
+    });
+    expect(foreign.status).toBe(403);
+    const foreignBody = (await foreign.json()) as {
+      code?: string;
+      error?: string;
+    };
+    expect(foreignBody.code).toBe("invalid_origin");
+    expect(JSON.stringify(foreignBody)).not.toContain(testConfig.osvaApiKey);
+
+    const hostStatus = await new Promise<number>((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: "127.0.0.1",
+          port: address.port,
+          path: "/api/v1/auth/context",
+          headers: { host: "evil.example" },
+        },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+    expect(hostStatus).toBe(403);
+
+    const sameOrigin = await fetch(`${origin}/api/v1/workflow-events`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin,
+        "sec-fetch-site": "same-origin",
+      },
+      body: "{}",
+    });
+    expect(sameOrigin.status).toBe(201);
+    expect(upstreamCalls).toBe(1);
   });
 
   it("forwards workflow creation and version append POST routes", async () => {

@@ -1,5 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import http from "node:http";
+import {
+  OSVA_REQUEST_ID_HEADER,
+  PUBLIC_API_ERROR_CODES,
+} from "@osva-ai/contracts";
 import type {
   AgentApplication,
   ArtifactApplication,
@@ -10,6 +14,7 @@ import type {
   WorkflowApplication,
   ApiKeyApplication,
 } from "@osva/domain";
+import { emitSecurityEvent, SECURITY_EVENT_NAMES } from "@osva/observability";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
 import { handleArtifactRequest } from "./artifact-http.js";
@@ -53,11 +58,11 @@ import {
   runWithSecurityRequestContext,
   resolveRequestId,
 } from "./security-request-context.js";
-import {
-  OSVA_REQUEST_ID_HEADER,
-  PUBLIC_API_ERROR_CODES,
-} from "@osva-ai/contracts";
 import { sendV1Error } from "./v1-api-error.js";
+import {
+  consumeHttpRateLimit,
+  type HttpRateLimitContext,
+} from "./http-rate-limit.js";
 
 export type ReadinessCheck = () => Promise<boolean>;
 
@@ -80,6 +85,7 @@ export interface CreateWebApplicationOptions {
   readonly knowledge: KnowledgeHttpServices;
   readonly security: WebSecurityServices;
   readonly apiKeys: ApiKeyApplication;
+  readonly rateLimit?: HttpRateLimitContext;
 }
 
 export function createWebApplication(
@@ -107,6 +113,7 @@ export function createWebApplication(
       options.knowledge,
       options.security,
       options.apiKeys,
+      options.rateLimit,
     );
   });
 }
@@ -132,6 +139,7 @@ async function handleRequest(
   knowledge: KnowledgeHttpServices,
   security: WebSecurityServices,
   apiKeys: ApiKeyApplication,
+  rateLimit: HttpRateLimitContext | undefined,
 ): Promise<void> {
   const requestId = createRequestId();
   response.setHeader(OSVA_REQUEST_ID_HEADER, requestId);
@@ -159,6 +167,7 @@ async function handleRequest(
       office,
       knowledge,
       apiKeys,
+      rateLimit,
     );
   });
 }
@@ -183,6 +192,7 @@ async function handleRequestWithContext(
   office: OfficeHttpServices,
   knowledge: KnowledgeHttpServices,
   apiKeys: ApiKeyApplication,
+  rateLimit: HttpRateLimitContext | undefined,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -228,6 +238,50 @@ async function handleRequestWithContext(
 
     sendJson(response, 503, { status: "unavailable" });
     return;
+  }
+
+  if (path.startsWith("/v1") && rateLimit !== undefined) {
+    const decision = await consumeHttpRateLimit(
+      request,
+      getRequestPrincipal(),
+      rateLimit,
+    );
+    if (decision.kind === "throttled") {
+      emitSecurityEvent({
+        event: SECURITY_EVENT_NAMES.RATE_LIMIT_THROTTLED,
+        requestId: resolveRequestId(),
+        workspaceId: getRequestPrincipal()?.workspaceId,
+        subjectId: getRequestPrincipal()?.subjectId,
+        outcome: "DENIED",
+        reasonCode:
+          getRequestPrincipal() === undefined
+            ? "unauthenticated"
+            : "authenticated",
+      });
+      sendV1Error(
+        response,
+        429,
+        PUBLIC_API_ERROR_CODES.RATE_LIMITED,
+        resolveRequestId(),
+        { "retry-after": String(decision.retryAfterSeconds) },
+      );
+      return;
+    }
+    if (decision.kind === "unavailable") {
+      emitSecurityEvent({
+        event: SECURITY_EVENT_NAMES.RATE_LIMIT_STORE_UNAVAILABLE,
+        requestId: resolveRequestId(),
+        outcome: "DENIED",
+        reasonCode: "store_unavailable",
+      });
+      sendV1Error(
+        response,
+        503,
+        PUBLIC_API_ERROR_CODES.SERVICE_UNAVAILABLE,
+        resolveRequestId(),
+      );
+      return;
+    }
   }
 
   if (path.startsWith("/v1")) {

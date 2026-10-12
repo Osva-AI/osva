@@ -85,7 +85,11 @@ workspace IDs in request bodies or query parameters are not authoritative in sta
 ### Errors
 
 Clients must key on stable machine codes (for example `AUTHENTICATION_REQUIRED`,
-`PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `REQUEST_TOO_LARGE`), not human-readable messages.
+`PERMISSION_DENIED`, `RESOURCE_NOT_FOUND`, `REQUEST_TOO_LARGE`, `RATE_LIMITED`,
+`SERVICE_UNAVAILABLE`), not human-readable messages.
+
+`429 RATE_LIMITED` is an additive `/v1` error. Existing codes keep their meanings.
+Do not retry `429` indefinitely.
 
 Insufficient role within the authenticated workspace maps to `403 PERMISSION_DENIED`.
 Missing resources and foreign-workspace IDs map to `404 RESOURCE_NOT_FOUND`.

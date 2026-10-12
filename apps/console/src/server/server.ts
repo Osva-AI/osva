@@ -45,7 +45,7 @@ export function createConsoleServer(
       response,
       pathname,
       url.searchParams,
-      { client, security },
+      { client, security, allowedOrigins: config?.allowedOrigins ?? [] },
     );
     if (handledApi) {
       return;

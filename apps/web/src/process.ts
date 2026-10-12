@@ -4,6 +4,7 @@ import type { Server } from "node:http";
 import {
   BullMqJobQueue,
   BullMqKnowledgeIndexQueue,
+  ValkeyFixedWindowRateLimiter,
   type PingableJobQueue,
 } from "@osva/adapters-bullmq";
 import { PgVectorStore } from "@osva/adapters-vector-pgvector";
@@ -76,6 +77,7 @@ import {
 
 import { loadWebConfig, type WebConfig } from "./config.js";
 import { createWebApplication } from "./http.js";
+import { defaultHttpRateLimitContext } from "./http-rate-limit.js";
 import { logEvent } from "./log.js";
 import { createWebSecurityServices } from "./web-security-services.js";
 import { postgresAndValkeyReadinessCheck } from "./readiness.js";
@@ -112,6 +114,9 @@ export function createWebProcess(
     ((valkeyUrl: string) =>
       new BullMqJobQueue({ url: valkeyUrl, instrumentation }));
   const queue = createQueue(config.valkeyUrl);
+  const rateLimiter = new ValkeyFixedWindowRateLimiter({
+    url: config.valkeyUrl,
+  });
   const knowledgeIndexQueue = new BullMqKnowledgeIndexQueue({
     url: config.valkeyUrl,
   });
@@ -348,6 +353,11 @@ export function createWebProcess(
     },
     apiKeys: apiKeyApplication,
     security: createWebSecurityServices(authenticateApiKey),
+    rateLimit: defaultHttpRateLimitContext(rateLimiter, {
+      trustedProxies: config.trustedProxies,
+      unauthenticatedPerMinute: config.unauthenticatedRateLimitPerMinute,
+      authenticatedPerMinute: config.authenticatedRateLimitPerMinute,
+    }),
   });
 
   let stopping: Promise<void> | undefined;
@@ -370,6 +380,7 @@ export function createWebProcess(
         await knowledgeIndexQueue.stop();
         await closeHttpServer(server);
         await queue.shutdown();
+        await rateLimiter.close();
         await database.close();
         await telemetryLifecycle.shutdown();
         logEvent("web.shutdown_complete");
