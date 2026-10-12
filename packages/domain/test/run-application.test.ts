@@ -116,6 +116,22 @@ class FakeRunRepository implements RunRepository {
     throw new Error("not used");
   }
 
+  async renewExecutionLease(): Promise<boolean> {
+    throw new Error("not used");
+  }
+
+  async failExpiredLeasedAttempt(): Promise<null> {
+    throw new Error("not used");
+  }
+
+  async listExpiredLeasedRunningAttempts(): Promise<[]> {
+    throw new Error("not used");
+  }
+
+  async listQueuedPendingDeliveries(): Promise<[]> {
+    throw new Error("not used");
+  }
+
   seed(run: Run, attempt?: RunAttempt): void {
     this.runs.set(run.id, run);
     if (attempt) {

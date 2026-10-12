@@ -1,6 +1,9 @@
+import { readProcessProbeBind, type ProcessProbeBind } from "@osva/db";
+
 export interface KnowledgeWorkerConfig {
   readonly databaseUrl: string;
   readonly valkeyUrl: string;
+  readonly health: ProcessProbeBind;
 }
 
 export function loadKnowledgeWorkerConfig(
@@ -8,7 +11,7 @@ export function loadKnowledgeWorkerConfig(
 ): KnowledgeWorkerConfig {
   const databaseUrl = readRequired(env.OSVA_DATABASE_URL, "OSVA_DATABASE_URL");
   const valkeyUrl = readRequired(env.OSVA_VALKEY_URL, "OSVA_VALKEY_URL");
-  return { databaseUrl, valkeyUrl };
+  return { databaseUrl, valkeyUrl, health: readProcessProbeBind(env) };
 }
 
 function readRequired(value: string | undefined, name: string): string {

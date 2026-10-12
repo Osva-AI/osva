@@ -18,11 +18,14 @@ import {
   assertLegalRunTransition,
 } from "@osva/domain";
 import type {
+  FailExpiredLeasedAttemptCommand,
   FinalizeRunStepProps,
   ListRunStepsQuery,
   ListRunStepsResult,
   ListRunsQuery,
   ListRunsResult,
+  QueuedPendingDelivery,
+  RenewExecutionLeaseCommand,
   RunAttemptUsageSummary,
   RunLifecycleTransitionResult,
   RunListCursor,
@@ -36,6 +39,7 @@ export class MemoryRunRepository implements RunRepository {
   private readonly attempts = new Map<RunAttemptId, RunAttempt>();
   private readonly steps = new Map<RunStepId, RunStep>();
   private readonly runsByWorkspaceIdempotencyKey = new Map<string, RunId>();
+  clock: { now(): Date } = { now: () => new Date() };
 
   async createRunWithInitialAttempt(
     run: Run,
@@ -339,6 +343,7 @@ export class MemoryRunRepository implements RunRepository {
     nextRun: Run,
     expectedAttemptStatus: RunAttemptState,
     nextAttempt: RunAttempt,
+    options?: { readonly leaseTtlMs?: number },
   ): Promise<RunLifecycleTransitionResult> {
     if (nextAttempt.runId !== nextRun.id) {
       throw new DomainInvariantError(
@@ -347,9 +352,16 @@ export class MemoryRunRepository implements RunRepository {
     }
 
     const previousAttempt = this.attempts.get(nextAttempt.id);
-    const runAttempt = await this.transitionRunAttempt(
+    assertExecutionFence(
+      previousAttempt,
       expectedAttemptStatus,
       nextAttempt,
+      this.clock.now(),
+    );
+    const leasedAttempt = applyLeaseTtl(nextAttempt, options?.leaseTtlMs);
+    const runAttempt = await this.transitionRunAttempt(
+      expectedAttemptStatus,
+      leasedAttempt,
     );
 
     try {
@@ -363,6 +375,115 @@ export class MemoryRunRepository implements RunRepository {
       }
       throw error;
     }
+  }
+
+  async renewExecutionLease(
+    command: RenewExecutionLeaseCommand,
+  ): Promise<boolean> {
+    const current = this.attempts.get(command.runAttemptId);
+    const now = command.now ?? this.clock.now();
+    if (
+      current === undefined ||
+      current.status !== "RUNNING" ||
+      current.executionOwner !== command.owner ||
+      current.executionGeneration !== command.generation ||
+      current.leaseExpiresAt === undefined ||
+      current.leaseExpiresAt.getTime() <= now.getTime()
+    ) {
+      return false;
+    }
+
+    this.attempts.set(
+      current.id,
+      current.withExecutionLease({
+        owner: command.owner,
+        generation: command.generation,
+        expiresAt: new Date(now.getTime() + command.ttlMs),
+      }),
+    );
+    return true;
+  }
+
+  async failExpiredLeasedAttempt(
+    command: FailExpiredLeasedAttemptCommand,
+  ): Promise<RunLifecycleTransitionResult | null> {
+    const current = this.attempts.get(command.runAttemptId);
+    if (
+      current === undefined ||
+      current.status !== "RUNNING" ||
+      current.executionOwner === undefined ||
+      current.executionGeneration !== command.generation ||
+      current.leaseExpiresAt === undefined ||
+      current.leaseExpiresAt.getTime() > command.now.getTime()
+    ) {
+      return null;
+    }
+
+    const run = this.runs.get(current.runId);
+    if (run === undefined || run.status !== "RUNNING") {
+      return null;
+    }
+
+    const failedAttempt = current.transitionTo("FAILED", command.now, {
+      error: command.error,
+      infrastructureMetadata: command.infrastructureMetadata,
+    });
+    const failedRun = run.transitionTo("FAILED", command.now);
+    this.attempts.set(failedAttempt.id, failedAttempt);
+    this.runs.set(failedRun.id, failedRun);
+    return { run: failedRun, runAttempt: failedAttempt };
+  }
+
+  async listExpiredLeasedRunningAttempts(
+    limit: number,
+  ): Promise<readonly RunAttempt[]> {
+    const now = this.clock.now();
+    return [...this.attempts.values()]
+      .filter(
+        (attempt) =>
+          attempt.status === "RUNNING" &&
+          attempt.executionOwner !== undefined &&
+          attempt.leaseExpiresAt !== undefined &&
+          attempt.leaseExpiresAt.getTime() <= now.getTime(),
+      )
+      .sort((left, right) => {
+        const leftExpiry = left.leaseExpiresAt?.getTime() ?? 0;
+        const rightExpiry = right.leaseExpiresAt?.getTime() ?? 0;
+        if (leftExpiry !== rightExpiry) {
+          return leftExpiry - rightExpiry;
+        }
+        return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
+      })
+      .slice(0, limit);
+  }
+
+  async listQueuedPendingDeliveries(
+    limit: number,
+  ): Promise<readonly QueuedPendingDelivery[]> {
+    const deliveries: QueuedPendingDelivery[] = [];
+    for (const run of this.runs.values()) {
+      if (run.status !== "QUEUED") {
+        continue;
+      }
+      for (const attempt of this.attempts.values()) {
+        if (attempt.runId === run.id && attempt.status === "PENDING") {
+          deliveries.push({ run, runAttempt: attempt });
+        }
+      }
+    }
+    deliveries.sort((left, right) => {
+      const created =
+        left.run.createdAt.getTime() - right.run.createdAt.getTime();
+      if (created !== 0) {
+        return created;
+      }
+      return left.run.id < right.run.id
+        ? -1
+        : left.run.id > right.run.id
+          ? 1
+          : 0;
+    });
+    return deliveries.slice(0, limit);
   }
 
   /**
@@ -512,5 +633,53 @@ function applyRunAttemptLifecycle(
     error: next.error,
     output: next.output,
     infrastructureMetadata: next.infrastructureMetadata,
+    executionOwner: next.executionOwner,
+    executionGeneration: next.executionGeneration,
+    leaseExpiresAt: next.leaseExpiresAt,
+  });
+}
+
+function assertExecutionFence(
+  current: RunAttempt | undefined,
+  expectedStatus: RunAttemptState,
+  next: RunAttempt,
+  now: Date,
+): void {
+  if (
+    expectedStatus !== "RUNNING" ||
+    next.executionOwner === undefined ||
+    next.status === "RUNNING"
+  ) {
+    return;
+  }
+
+  if (
+    current === undefined ||
+    current.executionOwner !== next.executionOwner ||
+    current.executionGeneration !== next.executionGeneration ||
+    current.leaseExpiresAt === undefined ||
+    current.leaseExpiresAt.getTime() <= now.getTime()
+  ) {
+    throw new LifecycleConflictError("runAttempt", next.id, expectedStatus);
+  }
+}
+
+function applyLeaseTtl(
+  attempt: RunAttempt,
+  leaseTtlMs: number | undefined,
+): RunAttempt {
+  if (
+    attempt.status !== "RUNNING" ||
+    attempt.executionOwner === undefined ||
+    leaseTtlMs === undefined
+  ) {
+    return attempt;
+  }
+
+  const startedAt = attempt.startedAt ?? new Date();
+  return attempt.withExecutionLease({
+    owner: attempt.executionOwner,
+    generation: attempt.executionGeneration,
+    expiresAt: new Date(startedAt.getTime() + leaseTtlMs),
   });
 }

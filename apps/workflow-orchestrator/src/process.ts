@@ -11,6 +11,8 @@ import type {
 import {
   checkDatabaseConnection,
   createDatabase,
+  startProcessProbeServer,
+  type ProcessProbeServer,
   PostgresAgentRepository,
   PostgresApprovalRequestRepository,
   PostgresRunRepository,
@@ -119,6 +121,11 @@ export function createWorkflowOrchestratorProcess(
       eventWaitResolution,
     }),
   });
+  let probeServer: ProcessProbeServer | undefined;
+  const readinessCheck = async () => {
+    await checkDatabaseConnection(database);
+    await queue.ping();
+  };
   const workflowTick = new WorkflowOrchestratorTick({
     workflowRuns,
     reconcile,
@@ -131,10 +138,7 @@ export function createWorkflowOrchestratorProcess(
   const orchestrator: WorkflowOrchestratorApplication =
     createWorkflowOrchestratorApplication({
       pollMs: config.pollMs,
-      readinessCheck: async () => {
-        await checkDatabaseConnection(database);
-        await queue.ping();
-      },
+      readinessCheck,
       onTick: async () => {
         const now = clock.now();
         await runWorkflowOrchestratorPipeline({
@@ -150,6 +154,10 @@ export function createWorkflowOrchestratorProcess(
         });
       },
       onClose: async () => {
+        if (probeServer !== undefined) {
+          await probeServer.close();
+          probeServer = undefined;
+        }
         await queue.shutdown();
         await database.close();
         await telemetryLifecycle.shutdown();
@@ -162,6 +170,11 @@ export function createWorkflowOrchestratorProcess(
     tickOnce: () => orchestrator.tickOnce(),
     async start() {
       await orchestrator.start();
+      probeServer = await startProcessProbeServer({
+        host: config.health.host,
+        port: config.health.port,
+        readinessCheck,
+      });
       logEvent("workflow_orchestrator.started", { pollMs: config.pollMs });
     },
     async stop() {

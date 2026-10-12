@@ -31,6 +31,7 @@ export type {
 
 export {
   APPROVAL_REJECTED_ERROR_CODE,
+  EXECUTION_INTERRUPTED_ERROR_CODE,
   APPROVAL_REQUEST_STATES,
   RUN_ATTEMPT_STATES,
   RUN_STATES,
@@ -172,6 +173,7 @@ export {
   RunAttempt,
   type CreateFirstAttemptProps,
   type CreateSubsequentAttemptProps,
+  type ExecutionLeaseProps,
   type InfrastructureMetadata,
   type RunAttemptError,
   type RunAttemptRehydrateProps,
@@ -431,6 +433,9 @@ export type {
   ToolRepository,
   RunAttemptUsageSummary,
   RunLifecycleTransitionResult,
+  QueuedPendingDelivery,
+  RenewExecutionLeaseCommand,
+  FailExpiredLeasedAttemptCommand,
   RunListCursor,
   RunStepListCursor,
   RunRepository,

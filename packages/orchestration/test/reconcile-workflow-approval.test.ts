@@ -768,6 +768,7 @@ async function createHarness(): Promise<TestHarness> {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
   const innerRuns = new MemoryRunRepository();
+  innerRuns.clock = { now: () => LATER };
   const runs = wrapRunRepository(innerRuns, {});
   const workflows = new MemoryWorkflowRepository();
   const workflowRuns = new MemoryWorkflowRunRepository();

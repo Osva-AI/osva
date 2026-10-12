@@ -8,7 +8,9 @@ x-osva-image: &osva-image
 
 x-osva-common-env: &osva-common-env
   OSVA_DATABASE_URL: postgres://osva:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/osva
-  OSVA_VALKEY_URL: redis://valkey:6379
+  OSVA_VALKEY_URL: ${OSVA_VALKEY_URL:-redis://valkey:6379}
+  OSVA_HEALTH_HOST: 0.0.0.0
+  OSVA_HEALTH_PORT: "8081"
   OSVA_ARTIFACT_STORAGE_DRIVER: filesystem
   OSVA_ARTIFACT_FILESYSTEM_ROOT: /var/lib/osva/artifacts
   OSVA_ARTIFACT_MAX_BYTES: ${OSVA_ARTIFACT_MAX_BYTES:-67108864}
@@ -38,11 +40,25 @@ services:
   valkey:
     image: valkey/valkey:8.1.10-alpine
     restart: unless-stopped
-    command: ["valkey-server", "--appendonly", "yes"]
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:-}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        if [ -n "$$VALKEY_PASSWORD" ]; then
+          exec valkey-server --appendonly yes --requirepass "$$VALKEY_PASSWORD"
+        else
+          exec valkey-server --appendonly yes
+        fi
     volumes:
       - osva-valkey-data:/data
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          'if [ -n "$$VALKEY_PASSWORD" ]; then valkey-cli -a "$$VALKEY_PASSWORD" ping; else valkey-cli ping; fi',
+        ]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -96,11 +112,24 @@ services:
       OSVA_PROCESS: worker
     volumes:
       - osva-artifacts:/var/lib/osva/artifacts
+      - osva-trusted-runtime:/var/lib/osva/trusted-runtime
     depends_on:
       migrate:
         condition: service_completed_successfully
       valkey:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8081/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   scheduler:
     <<: *osva-image
@@ -113,6 +142,18 @@ services:
         condition: service_completed_successfully
       valkey:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8081/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   workflow-orchestrator:
     <<: *osva-image
@@ -125,6 +166,18 @@ services:
         condition: service_completed_successfully
       valkey:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8081/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   knowledge-worker:
     <<: *osva-image
@@ -139,6 +192,18 @@ services:
         condition: service_completed_successfully
       valkey:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8081/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   mcp-server:
     <<: *osva-image
@@ -184,3 +249,4 @@ volumes:
   osva-postgres-data:
   osva-valkey-data:
   osva-artifacts:
+  osva-trusted-runtime:

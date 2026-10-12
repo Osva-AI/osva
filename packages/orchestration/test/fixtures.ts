@@ -188,6 +188,18 @@ export function wrapRunRepository(
     transitionRunAndAttempt:
       overrides.transitionRunAndAttempt?.bind(overrides) ??
       inner.transitionRunAndAttempt.bind(inner),
+    renewExecutionLease:
+      overrides.renewExecutionLease?.bind(overrides) ??
+      inner.renewExecutionLease.bind(inner),
+    failExpiredLeasedAttempt:
+      overrides.failExpiredLeasedAttempt?.bind(overrides) ??
+      inner.failExpiredLeasedAttempt.bind(inner),
+    listExpiredLeasedRunningAttempts:
+      overrides.listExpiredLeasedRunningAttempts?.bind(overrides) ??
+      inner.listExpiredLeasedRunningAttempts.bind(inner),
+    listQueuedPendingDeliveries:
+      overrides.listQueuedPendingDeliveries?.bind(overrides) ??
+      inner.listQueuedPendingDeliveries.bind(inner),
   };
 }
 

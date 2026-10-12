@@ -140,16 +140,37 @@ function assertDefaultTemplate(output) {
   assert.doesNotMatch(output, /OSVA_ARTIFACT_MAX_BYTES: "6\.7108864e\+07"/);
 }
 
+function extractConfigMapManifest(output) {
+  const documents = output
+    .split(/^---\s*$/m)
+    .filter((doc) => doc.trim().length > 0);
+  const configMap = documents.find(
+    (doc) => /kind: ConfigMap/.test(doc) && /name: .*env/.test(doc),
+  );
+  if (!configMap) {
+    throw new Error("ConfigMap manifest not found in helm template output");
+  }
+  return configMap;
+}
+
 function assertProductionTemplate(output) {
   assertMigrationJobLifecycle(extractMigrationJobManifest(output), {
     existingSecret: true,
   });
+  const configMap = extractConfigMapManifest(output);
+  assert.doesNotMatch(configMap, /OSVA_DATABASE_URL:/);
+  assert.doesNotMatch(configMap, /OSVA_VALKEY_URL:/);
+  assert.doesNotMatch(configMap, /postgres:\/\//);
+  assert.doesNotMatch(configMap, /redis:\/\//);
   assert.match(output, /OSVA_ARTIFACT_STORAGE_DRIVER: "s3"/);
   assert.doesNotMatch(output, /name: artifacts/);
   assert.match(output, /OSVA_ARTIFACT_S3_BUCKET: "osva-artifacts-example"/);
   assert.match(output, /OSVA_MCP_ALLOWED_HOSTS: "mcp.example.com"/);
   assert.match(output, /host: mcp\.example\.com/);
   assert.match(output, /secretRef:\s*\n\s*name: osva-secrets/);
+  assert.match(output, /containerPort: 8081/);
+  assert.match(output, /path: \/ready/);
+  assert.doesNotMatch(output, /app\.kubernetes\.io\/component: console/);
   assert.doesNotMatch(output, /password: /i);
 }
 

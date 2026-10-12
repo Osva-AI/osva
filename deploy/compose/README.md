@@ -35,6 +35,11 @@ Copy the printed `osva_ak_…` token immediately.
 
 - Web: `http://localhost:${OSVA_PUBLISH_WEB_PORT:-8080}/health` and `/ready`
 - MCP: `http://localhost:${OSVA_PUBLISH_MCP_PORT:-3100}/health`
+- Worker, scheduler, workflow-orchestrator, and knowledge-worker: container `GET /health` and `/ready` on port `8081` (dependency checks, not process existence)
+
+Optional Valkey AUTH: set `VALKEY_PASSWORD` and `OSVA_VALKEY_URL=redis://:password@valkey:6379`. Leave both unset for the default no-auth topology. Do not log connection strings.
+
+Console is not part of this Compose file.
 
 ## Notes
 

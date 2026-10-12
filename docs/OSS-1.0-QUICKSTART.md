@@ -23,7 +23,7 @@ Compose bundles **PostgreSQL (pgvector)** and **Valkey** for convenience, shares
 
 ## 2. Migrate
 
-Migrations are explicit (applications do not auto-migrate):
+`docker compose up` already runs the `migrate` service (other app services `depends_on` it). Applications do not auto-migrate at process start. To run migrations alone:
 
 ```bash
 docker compose run --rm migrate
@@ -83,7 +83,7 @@ print(client.agents.list())
 
 ## 7. Optional MCP
 
-The Compose stack starts `mcp-server` on the published MCP port (default **13100**).
+The Compose stack starts `mcp-server` on the published MCP port (default **3100**, override with `OSVA_PUBLISH_MCP_PORT`).
 
 - `GET /health` — not subject to MCP Host header validation.
 - MCP routes validate `Host` via `OSVA_MCP_ALLOWED_HOSTS`.
@@ -91,7 +91,7 @@ The Compose stack starts `mcp-server` on the published MCP port (default **13100
 Example health check:
 
 ```bash
-curl -sS http://127.0.0.1:13100/health
+curl -sS http://127.0.0.1:3100/health
 ```
 
 Configure MCP clients to use an allowed Host (for example `127.0.0.1`) and the MCP URL documented in [`deployment/CONFIGURATION.md`](deployment/CONFIGURATION.md).

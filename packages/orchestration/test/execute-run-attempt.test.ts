@@ -51,6 +51,7 @@ async function queuedAttempt(options?: {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
   const runs = new MemoryRunRepository();
+  runs.clock = { now: () => LATER };
   const queue = new MemoryJobQueue();
   const received: ExecutionRequest[] = [];
   await seedAgentGraph(workspaces, agents, {

@@ -12,6 +12,7 @@ The console never connects to PostgreSQL directly and never exposes the workspac
 | `OSVA_BASE_URL` | Control plane base URL (default `http://127.0.0.1:3000`) |
 | `OSVA_CONSOLE_HOST` | Console bind host (default `127.0.0.1`) |
 | `OSVA_CONSOLE_PORT` | Console bind port (default `4174`) |
+| `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` | Required `true` to bind `0.0.0.0` / `::` / `*` |
 
 `OSVA_API_BASE_URL` is accepted as an alias for `OSVA_BASE_URL`.
 
@@ -34,6 +35,8 @@ OSVA_CONSOLE_API_KEY=<key> pnpm dev:console
 Open the Vite dev URL (default `http://127.0.0.1:5173`). API calls are proxied to the console server.
 
 ## Security model
+
+Console is a **localhost workstation tool**. It is not packaged in Compose or Helm. Default bind is `127.0.0.1`. Public binds (`0.0.0.0`, `::`, `*`) are rejected unless `OSVA_CONSOLE_ALLOW_PUBLIC_BIND=true` is set for an explicitly documented, authenticated network setup. Do not treat that flag as a substitute for Team user management or enterprise authentication.
 
 - API key stays on the console server process.
 - Console API routes are an explicit allowlist (no generic HTTP proxy).

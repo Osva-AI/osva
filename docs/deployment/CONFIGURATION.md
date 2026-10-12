@@ -8,8 +8,10 @@ Sensitive values must be supplied by the operator. Examples below use placeholde
 
 | Variable | Processes | Required | Default | Sensitive | Notes |
 |----------|-----------|----------|---------|-----------|-------|
-| `OSVA_DATABASE_URL` | web, worker, scheduler, workflow-orchestrator, knowledge-worker, migrate, bootstrap | yes | — | yes | PostgreSQL connection string (pgvector). |
-| `OSVA_VALKEY_URL` | web, worker, scheduler, workflow-orchestrator, knowledge-worker | yes | — | yes | Redis-compatible URL for BullMQ transport. |
+| `OSVA_DATABASE_URL` | web, worker, scheduler, workflow-orchestrator, knowledge-worker, migrate, bootstrap | yes | — | yes | PostgreSQL connection string (pgvector). With Helm `existingSecret`, supply this in the Secret — it is omitted from the ConfigMap. |
+| `OSVA_VALKEY_URL` | web, worker, scheduler, workflow-orchestrator, knowledge-worker | yes | — | yes | Redis-compatible URL for BullMQ transport. Same Secret rule as `OSVA_DATABASE_URL`. Optional Compose `VALKEY_PASSWORD` requires a matching URL (`redis://:password@valkey:6379`). Do not log this value. |
+| `OSVA_HEALTH_HOST` | worker, scheduler, workflow-orchestrator, knowledge-worker | no | `127.0.0.1` | no | Process probe bind host. Containers/Helm set `0.0.0.0`. |
+| `OSVA_HEALTH_PORT` | worker, scheduler, workflow-orchestrator, knowledge-worker | no | `0` (disabled) | no | `8081` in Compose/Helm. `/health` is liveness; `/ready` re-checks PostgreSQL and Valkey. |
 
 ## Web / REST API
 
@@ -36,8 +38,8 @@ Public routes: `/health`, `/ready`. All `/v1/*` require API key authentication.
 
 | Variable | Processes | Required | Default | Sensitive | Notes |
 |----------|-----------|----------|---------|-----------|-------|
-| `OSVA_SCHEDULER_POLL_MS` | scheduler | no | `5000` | no | Scheduler tick interval (bounded). |
-| `OSVA_WORKFLOW_ORCHESTRATOR_POLL_MS` | workflow-orchestrator | no | `5000` | no | Orchestrator poll interval (bounded). |
+| `OSVA_SCHEDULER_POLL_MS` | scheduler | no | `1000` in-process; Helm `5000` | no | Scheduler tick interval (100–60000). |
+| `OSVA_WORKFLOW_ORCHESTRATOR_POLL_MS` | workflow-orchestrator | no | `1000` in-process; Helm `5000` | no | Orchestrator poll interval (100–60000). |
 
 ## Artifact storage
 
@@ -68,7 +70,12 @@ Public routes: `/health`, `/ready`. All `/v1/*` require API key authentication.
 
 | Variable | Processes | Required | Default | Sensitive | Notes |
 |----------|-----------|----------|---------|-----------|-------|
-| `OSVA_TRUSTED_RUNTIME_ROOT` | worker | yes (worker) | — | no | Directory for trusted TypeScript agent bundles. |
+| `OSVA_TRUSTED_RUNTIME_ROOT` | worker | yes (worker) | — | no | Directory for trusted TypeScript agent bundles. Compose mounts `osva-trusted-runtime`; copy bundles here. |
+| `OSVA_EXECUTION_LEASE_TTL_MS` | worker | no | `30000` | no | Execution lease TTL. Must exceed the heartbeat interval. |
+| `OSVA_EXECUTION_HEARTBEAT_INTERVAL_MS` | worker | no | `10000` | no | Lease renewal interval. |
+| `OSVA_EXECUTION_RECOVERY_POLL_MS` | worker | no | `5000` | no | Recovery ticker interval. |
+| `OSVA_EXECUTION_RECOVERY_BATCH_LIMIT` | worker | no | `50` | no | Expired RUNNING scan batch. |
+| `OSVA_TRANSPORT_REPAIR_BATCH_LIMIT` | worker | no | `50` | no | QUEUED/PENDING transport repair batch. |
 | `OSVA_RUNTIME_CAPABILITY_SECRET` | worker | optional | — | yes | Remote HTTP runtime bridge authentication. |
 | `OSVA_RUNTIME_CAPABILITY_HOST` | worker | no | `127.0.0.1` | no | Capability server bind host. |
 | `OSVA_RUNTIME_CAPABILITY_PORT` | worker | no | `0` | no | `0` = ephemeral port. |

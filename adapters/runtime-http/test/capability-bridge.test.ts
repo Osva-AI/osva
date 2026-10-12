@@ -260,6 +260,44 @@ describe("RuntimeCapabilityBridge", () => {
     }
   });
 
+  it("rejects capability calls after an execution lease expires", async () => {
+    const seeded = await seedRunningExecution();
+    const attempt = await seeded.runs.findRunAttemptById(runAttemptId);
+    if (attempt === null) {
+      throw new Error("expected running attempt");
+    }
+    seeded.runs.replaceRunAttempt(
+      attempt.withExecutionLease({
+        owner: "worker-1",
+        generation: 1,
+        expiresAt: NOW,
+      }),
+    );
+    const bridge = new RuntimeCapabilityBridge({
+      secret: SECRET,
+      runs: seeded.runs,
+      agents: seeded.agents,
+      clock: { now: () => NOW },
+      createScopedModelGateway: () => undefined,
+      createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
+    });
+    const server = await startRuntimeCapabilityServer({
+      handler: bridge.handle,
+    });
+    try {
+      const response = await invokeModel(
+        server.origin,
+        tokenFor(runAttemptId),
+        runAttemptId,
+      );
+      expect(response.status).toBe(403);
+    } finally {
+      await server.close();
+    }
+  });
+
   it("rejects a token after the RunAttempt leaves RUNNING", async () => {
     const seeded = await seedRunningExecution({ succeedAttempt: true });
     const bridge = new RuntimeCapabilityBridge({

@@ -12,16 +12,20 @@ Production-oriented Kubernetes packaging for OSVA Community Edition. **PostgreSQ
 ## Install (example)
 
 ```bash
+kubectl create secret generic osva-secrets \
+  --from-literal=OSVA_DATABASE_URL='postgres://user:pass@postgres.example:5432/osva' \
+  --from-literal=OSVA_VALKEY_URL='redis://valkey.example:6379'
+
 helm upgrade --install osva ./deploy/helm/osva \
   --set image.repository=your-registry/osva \
   --set image.tag=your-tag \
-  --set database.url='postgres://user:pass@postgres.example:5432/osva' \
-  --set valkey.url='redis://valkey.example:6379' \
-  --set artifactStorage.s3.bucket=osva-artifacts \
-  --set existingSecret=osva-secrets
+  --set existingSecret=osva-secrets \
+  --set artifactStorage.s3.bucket=osva-artifacts
 ```
 
-Mount provider keys and S3 credentials through `existingSecret` and/or `extraEnvFrom`. Do not put secrets in `values.yaml`.
+When `existingSecret` is set, `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL` are omitted from the ConfigMap. `secretEnv` renders an extra chart Secret for non-DSN keys and is mutually exclusive with `existingSecret`. The pre-install migration Job cannot read `secretEnv`; use `existingSecret` or `database.url` for migrate.
+
+Mount provider keys and S3 credentials through `existingSecret` and/or `extraEnvFrom`. Do not put secrets in `values.yaml`. The Console is not part of this chart.
 
 ## Migration Job
 

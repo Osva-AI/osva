@@ -4,6 +4,20 @@ All notable OSVA changes are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Reliability
+
+- Execution leases, heartbeats, and fencing on RunAttempt. Expired ownership fails the same attempt with `EXECUTION_INTERRUPTED`; abandoned `RUNNING` attempts are never automatically re-executed.
+- Worker-hosted recovery ticker repairs lost `QUEUED`/`PENDING` BullMQ deliveries using the existing RunAttempt ID.
+
+### Deployment
+
+- Helm omits PostgreSQL/Valkey URLs from ConfigMaps when `existingSecret` is set. `secretEnv` now renders an optional extra Secret.
+- Process `/health` and `/ready` probes for worker, scheduler, workflow-orchestrator, and knowledge-worker.
+- Optional authenticated Valkey in production Compose; local `docker-compose.yml` remains no-auth.
+- Console rejects public binds unless `OSVA_CONSOLE_ALLOW_PUBLIC_BIND=true`. Console remains off Compose/Helm.
+
 ## [1.0.0] - 2026-09-22
 
 OSS 1.0 Community Edition baseline. Release implementation and release acceptance verified in-repository (including Linux kind CI).
@@ -59,5 +73,5 @@ OSS 1.0 Community Edition baseline. Release implementation and release acceptanc
 
 ### Migrations / compatibility
 
-- Append-only SQL migrations through `0022_api_security_slice` (no downgrade tooling).
+- Append-only SQL migrations through `0023_execution_lease_slice` (no downgrade tooling).
 - `/v1` API compatibility expectations documented for OSS 1.0.

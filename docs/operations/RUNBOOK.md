@@ -9,6 +9,8 @@ Focused guidance for Community Edition operators. This is not an enterprise SRE 
 | `GET /health` | Process liveness (no DB/Valkey required) |
 | `GET /ready` | `200` when PostgreSQL and Valkey are reachable |
 
+Web exposes these on `OSVA_WEB_PORT`. Worker, scheduler, workflow-orchestrator, and knowledge-worker expose them on `OSVA_HEALTH_PORT` (Compose/Helm: `8081`). Readiness must not succeed solely because the process exists.
+
 ## Web `/ready` failure
 
 1. Check PostgreSQL: connection string, TLS, credentials, disk space.

@@ -1,3 +1,5 @@
+import { readProcessProbeBind, type ProcessProbeBind } from "@osva/db";
+
 const DEFAULT_POLL_MS = 1_000;
 const MIN_POLL_MS = 100;
 const MAX_POLL_MS = 60_000;
@@ -6,6 +8,7 @@ export interface SchedulerConfig {
   readonly databaseUrl: string;
   readonly valkeyUrl: string;
   readonly pollMs: number;
+  readonly health: ProcessProbeBind;
 }
 
 export function loadSchedulerConfig(
@@ -19,6 +22,7 @@ export function loadSchedulerConfig(
     databaseUrl,
     valkeyUrl,
     pollMs,
+    health: readProcessProbeBind(env),
   };
 }
 

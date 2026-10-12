@@ -40,7 +40,7 @@
     "version": "1.0.0",
     "path": "sdks/python"
   },
-  "migrationHead": "0022_api_security_slice",
+  "migrationHead": "0023_execution_lease_slice",
   "license": "Apache-2.0",
   "thirdPartyLicenses": [
     "docs/release/THIRD_PARTY_LICENSES_NODE.md",

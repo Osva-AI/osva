@@ -162,6 +162,13 @@
       "when": 1789515000000,
       "tag": "0022_api_security_slice",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789600000000,
+      "tag": "0023_execution_lease_slice",
+      "breakpoints": true
     }
   ]
 }

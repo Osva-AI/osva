@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   check,
   foreignKey,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -35,6 +36,12 @@ export const runAttempts = pgTable(
     infrastructureMetadata: jsonb("infrastructure_metadata").$type<
       Readonly<Record<string, unknown>>
     >(),
+    executionOwner: text("execution_owner"),
+    executionGeneration: integer("execution_generation").notNull().default(0),
+    leaseExpiresAt: timestamp("lease_expires_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
   },
   (table) => [
     foreignKey({
@@ -52,5 +59,10 @@ export const runAttempts = pgTable(
       "run_attempts_status_check",
       sql`${table.status} in (${sqlTextInList(PERSISTED_RUN_ATTEMPT_STATES)})`,
     ),
+    index("run_attempts_expired_lease_idx")
+      .on(table.leaseExpiresAt)
+      .where(
+        sql`${table.status} = 'RUNNING' AND ${table.executionOwner} IS NOT NULL`,
+      ),
   ],
 );

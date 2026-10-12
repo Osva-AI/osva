@@ -15,6 +15,8 @@ import {
 import {
   checkDatabaseConnection,
   createDatabase,
+  startProcessProbeServer,
+  type ProcessProbeServer,
   PostgresArtifactRepository,
   PostgresKnowledgeRepository,
   PostgresRunRepository,
@@ -104,12 +106,16 @@ export function createKnowledgeWorkerProcess(
   });
 
   const queue = new BullMqKnowledgeIndexQueue({ url: config.valkeyUrl });
+  let probeServer: ProcessProbeServer | undefined;
+  const readinessCheck = async () => {
+    await checkDatabaseConnection(database);
+    await queue.ping();
+  };
 
   return {
     config,
     async start() {
-      await checkDatabaseConnection(database);
-      await queue.ping();
+      await readinessCheck();
       await queue.start(async (knowledgeIndexId) => {
         try {
           await ingestion.processIndex(knowledgeIndexId);
@@ -117,9 +123,18 @@ export function createKnowledgeWorkerProcess(
           // durable failure state is persisted on the index
         }
       });
+      probeServer = await startProcessProbeServer({
+        host: config.health.host,
+        port: config.health.port,
+        readinessCheck,
+      });
       logEvent("knowledge_worker.started");
     },
     async stop() {
+      if (probeServer !== undefined) {
+        await probeServer.close();
+        probeServer = undefined;
+      }
       await queue.stop();
       await database.close();
       logEvent("knowledge_worker.stopped");

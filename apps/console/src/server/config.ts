@@ -35,6 +35,7 @@ export function loadConsoleConfig(
   }
 
   const host = readOptional(env.OSVA_CONSOLE_HOST) ?? DEFAULT_HOST;
+  assertConsoleBindHost(host, env);
   const port = parsePort(env.OSVA_CONSOLE_PORT, DEFAULT_PORT);
   const clientDistDir =
     readOptional(env.OSVA_CONSOLE_CLIENT_DIST) ?? defaultClientDistDir();
@@ -64,6 +65,49 @@ export function tryLoadConsoleConfig(
 export function defaultClientDistDir(): string {
   const serverDir = path.dirname(fileURLToPath(import.meta.url));
   return path.resolve(serverDir, "../client");
+}
+
+function assertConsoleBindHost(host: string, env: NodeJS.ProcessEnv): void {
+  if (!isPublicConsoleBindHost(host)) {
+    return;
+  }
+
+  if (readOptionalBoolean(env.OSVA_CONSOLE_ALLOW_PUBLIC_BIND) === true) {
+    return;
+  }
+
+  throw new ConsoleConfigurationError(
+    "OSVA_CONSOLE_HOST is a public bind address. Set OSVA_CONSOLE_ALLOW_PUBLIC_BIND=true only for an explicitly documented, authenticated network setup. Console remains a localhost workstation tool and is not part of Compose/Helm.",
+  );
+}
+
+function isPublicConsoleBindHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase();
+  return (
+    normalized === "0.0.0.0" ||
+    normalized === "::" ||
+    normalized === "[::]" ||
+    normalized === "*"
+  );
+}
+
+function readOptionalBoolean(value: string | undefined): boolean | undefined {
+  if (value === undefined || value.trim().length === 0) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1" || normalized === "yes") {
+    return true;
+  }
+
+  if (normalized === "false" || normalized === "0" || normalized === "no") {
+    return false;
+  }
+
+  throw new ConsoleConfigurationError(
+    "OSVA_CONSOLE_ALLOW_PUBLIC_BIND must be true or false.",
+  );
 }
 
 function readOptional(value: string | undefined): string | undefined {

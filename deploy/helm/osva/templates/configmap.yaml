@@ -1,3 +1,6 @@
+{{- if and .Values.existingSecret (include "osva.usesSecretEnv" .) }}
+{{- fail "Set either existingSecret or secretEnv, not both." }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,8 +10,10 @@ metadata:
     helm.sh/chart: {{ include "osva.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 data:
-  OSVA_DATABASE_URL: {{ required "database.url is required" .Values.database.url | quote }}
-  OSVA_VALKEY_URL: {{ required "valkey.url is required" .Values.valkey.url | quote }}
+  {{- if not (include "osva.omitSensitiveConfig" .) }}
+  OSVA_DATABASE_URL: {{ required "database.url is required when existingSecret is not set" .Values.database.url | quote }}
+  OSVA_VALKEY_URL: {{ required "valkey.url is required when existingSecret is not set" .Values.valkey.url | quote }}
+  {{- end }}
   OSVA_ARTIFACT_STORAGE_DRIVER: {{ .Values.artifactStorage.driver | quote }}
   OSVA_ARTIFACT_MAX_BYTES: {{ .Values.artifactStorage.maxBytes | int | printf "%d" | quote }}
   OSVA_ARTIFACT_FILESYSTEM_ROOT: {{ .Values.artifactStorage.filesystemRoot | quote }}
@@ -23,8 +28,13 @@ data:
   OSVA_CONTAINER_ENABLED: {{ .Values.worker.containerEnabled | toString | quote }}
   OSVA_WEB_HOST: {{ .Values.web.host | quote }}
   OSVA_WEB_PORT: {{ .Values.web.port | toString | quote }}
+  OSVA_HEALTH_HOST: "0.0.0.0"
+  OSVA_HEALTH_PORT: {{ (.Values.health).port | default 8081 | toString | quote }}
   OSVA_SCHEDULER_POLL_MS: {{ .Values.scheduler.pollMs | toString | quote }}
   OSVA_WORKFLOW_ORCHESTRATOR_POLL_MS: {{ .Values.workflowOrchestrator.pollMs | toString | quote }}
+  OSVA_EXECUTION_LEASE_TTL_MS: {{ .Values.worker.leaseTtlMs | default 30000 | toString | quote }}
+  OSVA_EXECUTION_HEARTBEAT_INTERVAL_MS: {{ .Values.worker.heartbeatIntervalMs | default 10000 | toString | quote }}
+  OSVA_EXECUTION_RECOVERY_POLL_MS: {{ .Values.worker.recoveryPollMs | default 5000 | toString | quote }}
   OSVA_MCP_HOST: {{ .Values.mcp.host | quote }}
   OSVA_MCP_PORT: {{ .Values.mcp.port | toString | quote }}
   OSVA_MCP_PATH: {{ .Values.mcp.path | quote }}

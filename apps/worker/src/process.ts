@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { hostname } from "node:os";
 
 import { BullMqJobQueue, type PingableJobQueue } from "@osva/adapters-bullmq";
 import {
@@ -39,6 +40,8 @@ import type { RuntimeAdapter } from "@osva-ai/contracts";
 import {
   checkDatabaseConnection,
   createDatabase,
+  startProcessProbeServer,
+  type ProcessProbeServer,
   PostgresAgentRepository,
   PostgresConnectorRepository,
   PostgresEvaluationSuiteRepository,
@@ -71,7 +74,11 @@ import {
   createInstrumentedRuntimeAdapter,
   createRunStepRecorder,
 } from "@osva/observability";
-import { EvaluationCoordinator, ExecuteRunAttempt } from "@osva/orchestration";
+import {
+  EvaluationCoordinator,
+  ExecuteRunAttempt,
+  ExecutionRecoveryTick,
+} from "@osva/orchestration";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
 
@@ -148,6 +155,10 @@ export function createWorkerProcess(
   let mcpClientPool:
     Awaited<ReturnType<typeof createMcpClientPool>> | undefined;
   let consumeStarted = false;
+  let probeServer: ProcessProbeServer | undefined;
+  let recoveryStopped = false;
+  let recoveryLoop: Promise<void> | undefined;
+  let interruptRecoverySleep: (() => void) | undefined;
 
   const worker: WorkerApplication = createWorkerApplication({
     readinessCheck: async () => {
@@ -375,6 +386,21 @@ export function createWorkerProcess(
         agents,
         runtime,
         instrumentation,
+        executionOwner: `worker:${hostname()}:${String(process.pid)}:${randomUUID()}`,
+        leaseTtlMs: config.leaseTtlMs,
+        heartbeatIntervalMs: config.heartbeatIntervalMs,
+      });
+      const recoveryTick = new ExecutionRecoveryTick({
+        runs: runsRepository,
+        queue,
+        clock,
+        expiredBatchLimit: config.recoveryBatchLimit,
+        transportBatchLimit: config.transportRepairBatchLimit,
+        instrumentation,
+        logger: {
+          info: logEvent,
+          error: (event, fields) => logEvent(event, fields ?? {}),
+        },
       });
       const evaluationCoordinator = new EvaluationCoordinator({
         reconcileEvaluationCase: createEvaluationRunApplication({
@@ -395,8 +421,53 @@ export function createWorkerProcess(
         ),
       );
       consumeStarted = true;
+      probeServer = await startProcessProbeServer({
+        host: config.health.host,
+        port: config.health.port,
+        readinessCheck: async () => {
+          await checkDatabaseConnection(database);
+          await queue.ping();
+        },
+      });
+      recoveryStopped = false;
+      recoveryLoop = (async () => {
+        while (!recoveryStopped) {
+          try {
+            await recoveryTick.execute();
+          } catch (error) {
+            logError("execution.recovery.tick_failed", error);
+          }
+          if (recoveryStopped) {
+            break;
+          }
+          await new Promise<void>((resolve) => {
+            if (recoveryStopped) {
+              resolve();
+              return;
+            }
+            const timer = setTimeout(() => {
+              interruptRecoverySleep = undefined;
+              resolve();
+            }, config.recoveryPollMs);
+            interruptRecoverySleep = () => {
+              clearTimeout(timer);
+              interruptRecoverySleep = undefined;
+              resolve();
+            };
+          });
+        }
+      })();
     },
     onClose: async () => {
+      recoveryStopped = true;
+      interruptRecoverySleep?.();
+      if (recoveryLoop !== undefined) {
+        await recoveryLoop.catch(() => undefined);
+      }
+      if (probeServer !== undefined) {
+        await probeServer.close();
+        probeServer = undefined;
+      }
       if (runtime !== undefined && isClosableRuntime(runtime)) {
         await runtime.close();
       }

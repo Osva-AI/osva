@@ -27,6 +27,7 @@ describe("in-process walking skeleton", () => {
     const workspaces = new MemoryWorkspaceRepository();
     const agents = new MemoryAgentRepository();
     const runs = new MemoryRunRepository();
+    runs.clock = { now: () => LATER };
     const queue = new MemoryJobQueue();
     const received: ExecutionRequest[] = [];
 

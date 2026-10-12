@@ -31,19 +31,12 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           envFrom:
-            - configMapRef:
-                name: {{ include "osva.fullname" . }}-env
-            {{- if .Values.existingSecret }}
-            - secretRef:
-                name: {{ .Values.existingSecret }}
-            {{- end }}
-            {{- with .Values.extraEnvFrom }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
+            {{- include "osva.workloadEnvFrom" . | nindent 12 }}
           {{- with .Values.extraEnv }}
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- include "osva.processProbes" . | nindent 10 }}
           resources:
             {{- toYaml .Values.scheduler.resources | nindent 12 }}
           volumeMounts:

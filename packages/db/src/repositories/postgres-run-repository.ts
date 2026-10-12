@@ -14,13 +14,17 @@ import {
   RunStepNotFoundError,
   assertLegalRunAttemptTransition,
   assertLegalRunTransition,
+  isTerminalRunState,
 } from "@osva/domain";
 import type {
+  FailExpiredLeasedAttemptCommand,
   FinalizeRunStepProps,
   ListRunStepsQuery,
   ListRunStepsResult,
   ListRunsQuery,
   ListRunsResult,
+  QueuedPendingDelivery,
+  RenewExecutionLeaseCommand,
   Run,
   RunAttempt,
   RunAttemptUsageSummary,
@@ -28,7 +32,19 @@ import type {
   RunRepository,
   RunStep,
 } from "@osva/domain";
-import { and, asc, desc, eq, gt, lt, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  isNotNull,
+  lt,
+  lte,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import {
@@ -391,20 +407,8 @@ export class PostgresRunRepository implements RunRepository {
 
     const [row] = await this.database.db
       .update(runAttempts)
-      .set({
-        status: next.status,
-        startedAt: next.startedAt ?? null,
-        completedAt: next.completedAt ?? null,
-        error: next.error ?? null,
-        output: next.status === "SUCCEEDED" ? (next.output ?? null) : null,
-        infrastructureMetadata: next.infrastructureMetadata ?? null,
-      })
-      .where(
-        and(
-          eq(runAttempts.id, next.id),
-          eq(runAttempts.status, expectedStatus),
-        ),
-      )
+      .set(runAttemptUpdateSet(next))
+      .where(runAttemptTransitionWhere(next, expectedStatus))
       .returning();
 
     if (row !== undefined) {
@@ -424,6 +428,7 @@ export class PostgresRunRepository implements RunRepository {
     nextRun: Run,
     expectedAttemptStatus: RunAttemptState,
     nextAttempt: RunAttempt,
+    options?: { readonly leaseTtlMs?: number },
   ): Promise<RunLifecycleTransitionResult> {
     if (nextAttempt.runId !== nextRun.id) {
       throw new DomainInvariantError(
@@ -437,23 +442,8 @@ export class PostgresRunRepository implements RunRepository {
     return this.database.db.transaction(async (tx) => {
       const [attemptRow] = await tx
         .update(runAttempts)
-        .set({
-          status: nextAttempt.status,
-          startedAt: nextAttempt.startedAt ?? null,
-          completedAt: nextAttempt.completedAt ?? null,
-          error: nextAttempt.error ?? null,
-          output:
-            nextAttempt.status === "SUCCEEDED"
-              ? (nextAttempt.output ?? null)
-              : null,
-          infrastructureMetadata: nextAttempt.infrastructureMetadata ?? null,
-        })
-        .where(
-          and(
-            eq(runAttempts.id, nextAttempt.id),
-            eq(runAttempts.status, expectedAttemptStatus),
-          ),
-        )
+        .set(runAttemptUpdateSet(nextAttempt, options?.leaseTtlMs))
+        .where(runAttemptTransitionWhere(nextAttempt, expectedAttemptStatus))
         .returning();
 
       if (attemptRow === undefined) {
@@ -501,6 +491,189 @@ export class PostgresRunRepository implements RunRepository {
       };
     });
   }
+
+  async renewExecutionLease(
+    command: RenewExecutionLeaseCommand,
+  ): Promise<boolean> {
+    const [row] = await this.database.db
+      .update(runAttempts)
+      .set({
+        leaseExpiresAt: sql`now() + (${command.ttlMs}::int * interval '1 millisecond')`,
+      })
+      .where(
+        and(
+          eq(runAttempts.id, command.runAttemptId),
+          eq(runAttempts.status, "RUNNING"),
+          eq(runAttempts.executionOwner, command.owner),
+          eq(runAttempts.executionGeneration, command.generation),
+          gt(runAttempts.leaseExpiresAt, sql`now()`),
+        ),
+      )
+      .returning({ id: runAttempts.id });
+
+    return row !== undefined;
+  }
+
+  async failExpiredLeasedAttempt(
+    command: FailExpiredLeasedAttemptCommand,
+  ): Promise<RunLifecycleTransitionResult | null> {
+    return this.database.db.transaction(async (tx) => {
+      const [attemptRow] = await tx
+        .update(runAttempts)
+        .set({
+          status: "FAILED",
+          completedAt: sql`now()`,
+          error: command.error,
+          output: null,
+          leaseExpiresAt: null,
+          infrastructureMetadata: command.infrastructureMetadata ?? null,
+        })
+        .where(
+          and(
+            eq(runAttempts.id, command.runAttemptId),
+            eq(runAttempts.status, "RUNNING"),
+            eq(runAttempts.executionGeneration, command.generation),
+            isNotNull(runAttempts.executionOwner),
+            lte(runAttempts.leaseExpiresAt, sql`now()`),
+          ),
+        )
+        .returning();
+
+      if (attemptRow === undefined) {
+        return null;
+      }
+
+      const [runRow] = await tx
+        .update(runs)
+        .set({
+          status: "FAILED",
+          updatedAt: sql`now()`,
+        })
+        .where(and(eq(runs.id, attemptRow.runId), eq(runs.status, "RUNNING")))
+        .returning();
+
+      if (runRow === undefined) {
+        const [existingRun] = await tx
+          .select()
+          .from(runs)
+          .where(eq(runs.id, attemptRow.runId))
+          .limit(1);
+        if (
+          existingRun !== undefined &&
+          isTerminalRunState(existingRun.status as RunState)
+        ) {
+          return {
+            run: runFromRow(existingRun),
+            runAttempt: runAttemptFromRow(attemptRow),
+          };
+        }
+
+        throw new LifecycleConflictError(
+          "run",
+          attemptRow.runId as RunId,
+          "RUNNING",
+        );
+      }
+
+      return {
+        run: runFromRow(runRow),
+        runAttempt: runAttemptFromRow(attemptRow),
+      };
+    });
+  }
+
+  async listExpiredLeasedRunningAttempts(
+    limit: number,
+  ): Promise<readonly RunAttempt[]> {
+    const rows = await this.database.db
+      .select()
+      .from(runAttempts)
+      .where(
+        and(
+          eq(runAttempts.status, "RUNNING"),
+          isNotNull(runAttempts.executionOwner),
+          lte(runAttempts.leaseExpiresAt, sql`now()`),
+        ),
+      )
+      .orderBy(asc(runAttempts.leaseExpiresAt), asc(runAttempts.id))
+      .limit(limit);
+
+    return rows.map(runAttemptFromRow);
+  }
+
+  async listQueuedPendingDeliveries(
+    limit: number,
+  ): Promise<readonly QueuedPendingDelivery[]> {
+    const rows = await this.database.db
+      .select({
+        run: runs,
+        attempt: runAttempts,
+      })
+      .from(runs)
+      .innerJoin(runAttempts, eq(runAttempts.runId, runs.id))
+      .where(and(eq(runs.status, "QUEUED"), eq(runAttempts.status, "PENDING")))
+      .orderBy(asc(runs.createdAt), asc(runs.id))
+      .limit(limit);
+
+    return rows.map((row) => ({
+      run: runFromRow(row.run),
+      runAttempt: runAttemptFromRow(row.attempt),
+    }));
+  }
+}
+
+function runAttemptUpdateSet(
+  next: RunAttempt,
+  leaseTtlMs?: number,
+): Record<string, unknown> {
+  const leaseExpiresAt =
+    next.status === "RUNNING" && leaseTtlMs !== undefined
+      ? sql`now() + (${leaseTtlMs}::int * interval '1 millisecond')`
+      : (next.leaseExpiresAt ?? null);
+
+  return {
+    status: next.status,
+    startedAt: next.startedAt ?? null,
+    completedAt: next.completedAt ?? null,
+    error: next.error ?? null,
+    output: next.status === "SUCCEEDED" ? (next.output ?? null) : null,
+    infrastructureMetadata: next.infrastructureMetadata ?? null,
+    executionOwner: next.executionOwner ?? null,
+    executionGeneration: next.executionGeneration,
+    leaseExpiresAt,
+  };
+}
+
+function runAttemptTransitionWhere(
+  next: RunAttempt,
+  expectedStatus: RunAttemptState,
+): SQL {
+  if (
+    expectedStatus === "RUNNING" &&
+    next.executionOwner !== undefined &&
+    next.status !== "RUNNING"
+  ) {
+    const fenced = and(
+      eq(runAttempts.id, next.id),
+      eq(runAttempts.status, expectedStatus),
+      eq(runAttempts.executionOwner, next.executionOwner),
+      eq(runAttempts.executionGeneration, next.executionGeneration),
+      gt(runAttempts.leaseExpiresAt, sql`now()`),
+    );
+    if (fenced === undefined) {
+      throw new DomainInvariantError("Lease fence predicate is required.");
+    }
+    return fenced;
+  }
+
+  const unfenced = and(
+    eq(runAttempts.id, next.id),
+    eq(runAttempts.status, expectedStatus),
+  );
+  if (unfenced === undefined) {
+    throw new DomainInvariantError("Attempt transition predicate is required.");
+  }
+  return unfenced;
 }
 
 function runInsertMessages(run: Run): Record<string, string> {
