@@ -11,9 +11,16 @@ export {
   type ExecuteRunAttemptCommand,
   type ExecuteRunAttemptDependencies,
   type ExecuteRunAttemptFailed,
+  type ExecuteRunAttemptHeartbeat,
+  type ExecuteRunAttemptOwnershipLost,
   type ExecuteRunAttemptResult,
   type ExecuteRunAttemptSucceeded,
 } from "./execute-run-attempt.js";
+export {
+  ExecutionRecoveryTick,
+  type ExecutionRecoveryTickDependencies,
+  type ExecutionRecoveryTickLogger,
+} from "./execution-recovery-tick.js";
 export {
   DispatchScheduleOccurrence,
   type DispatchScheduleOccurrenceCommand,

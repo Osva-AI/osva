@@ -64,4 +64,9 @@ export type ExecutionResult = ExecutionSuccess | ExecutionFailure;
  */
 export interface RuntimeAdapter {
   execute(request: ExecutionRequest): Promise<ExecutionResult>;
+  /**
+   * Best-effort cooperative cancel after lease loss. Implementations must not
+   * treat cancellation as undoing completed external side effects.
+   */
+  cancel?(runAttemptId: RunAttemptId): Promise<void>;
 }

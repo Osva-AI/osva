@@ -13,16 +13,25 @@
     },
     "database": {
       "type": "object",
-      "required": ["url"],
       "properties": {
-        "url": { "type": "string", "minLength": 1 }
+        "url": { "type": "string" }
       }
     },
     "valkey": {
       "type": "object",
-      "required": ["url"],
       "properties": {
-        "url": { "type": "string", "minLength": 1 }
+        "url": { "type": "string" }
+      }
+    },
+    "existingSecret": { "type": "string" },
+    "secretEnv": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "health": {
+      "type": "object",
+      "properties": {
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
       }
     },
     "worker": {

@@ -66,3 +66,57 @@
   emptyDir: {}
 {{- end }}
 {{- end }}
+
+{{- define "osva.usesSecretEnv" -}}
+{{- if and .Values.secretEnv (gt (len .Values.secretEnv) 0) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{- define "osva.envSecretName" -}}
+{{- if .Values.existingSecret -}}
+{{- .Values.existingSecret -}}
+{{- else if include "osva.usesSecretEnv" . -}}
+{{- printf "%s-secrets" (include "osva.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "osva.omitSensitiveConfig" -}}
+{{- if .Values.existingSecret -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{- define "osva.workloadEnvFrom" -}}
+- configMapRef:
+    name: {{ include "osva.fullname" . }}-env
+{{- if include "osva.envSecretName" . }}
+- secretRef:
+    name: {{ include "osva.envSecretName" . }}
+{{- end }}
+{{- with .Values.extraEnvFrom }}
+{{- toYaml . | nindent 0 }}
+{{- end }}
+{{- end -}}
+
+{{- define "osva.processProbes" -}}
+ports:
+  - name: health
+    containerPort: {{ (.Values.health).port | default 8081 }}
+startupProbe:
+  httpGet:
+    path: /ready
+    port: health
+  failureThreshold: 12
+  periodSeconds: 5
+livenessProbe:
+  httpGet:
+    path: /health
+    port: health
+  periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: health
+  periodSeconds: 5
+{{- end -}}

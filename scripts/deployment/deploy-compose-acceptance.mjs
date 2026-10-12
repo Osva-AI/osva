@@ -132,7 +132,7 @@ async function assertMcpHostBehavior(mcpPort) {
   }
 }
 
-const EXPECTED_MIGRATION_HEAD = "0022_api_security_slice";
+const EXPECTED_MIGRATION_HEAD = "0023_execution_lease_slice";
 
 function assertMigrationStatus(password, composeEnv) {
   const databaseUrl = `postgres://osva:${password}@postgres:5432/osva`;

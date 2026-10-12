@@ -44,9 +44,15 @@ web:
     port: 80
   resources: {}
 
+health:
+  port: 8081
+
 worker:
   replicaCount: 1
   containerEnabled: false
+  leaseTtlMs: 30000
+  heartbeatIntervalMs: 10000
+  recoveryPollMs: 5000
   resources: {}
 
 scheduler:
@@ -87,7 +93,12 @@ ingress:
     host: ""
     tls: []
 
+# Pre-created Secret with OSVA_DATABASE_URL and OSVA_VALKEY_URL (and provider keys).
+# When set, those URLs are omitted from the ConfigMap.
 existingSecret: ""
+# Optional chart-rendered Secret for extra keys (API keys, not a DSN replacement).
+# Mutually exclusive with existingSecret. The pre-install migration Job cannot
+# read this Secret; supply database.url or existingSecret for migrate.
 secretEnv: {}
 
 extraEnv: []

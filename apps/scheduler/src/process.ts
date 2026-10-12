@@ -10,6 +10,8 @@ import type {
 import {
   checkDatabaseConnection,
   createDatabase,
+  startProcessProbeServer,
+  type ProcessProbeServer,
   PostgresAgentRepository,
   PostgresRunRepository,
   PostgresScheduleRepository,
@@ -83,6 +85,11 @@ export function createSchedulerProcess(
       error: logError,
     },
   });
+  let probeServer: ProcessProbeServer | undefined;
+  const readinessCheck = async () => {
+    await checkDatabaseConnection(database);
+    await queue.ping();
+  };
   const tick = new SchedulerTick({
     schedules,
     dispatch,
@@ -96,10 +103,7 @@ export function createSchedulerProcess(
   const scheduler: SchedulerApplication = createSchedulerApplication({
     pollMs: config.pollMs,
     clock,
-    readinessCheck: async () => {
-      await checkDatabaseConnection(database);
-      await queue.ping();
-    },
+    readinessCheck,
     onTick: async () => {
       await tick.execute(clock.now(), {
         createRunId: () => randomUUID() as RunId,
@@ -108,6 +112,10 @@ export function createSchedulerProcess(
       });
     },
     onClose: async () => {
+      if (probeServer !== undefined) {
+        await probeServer.close();
+        probeServer = undefined;
+      }
       await queue.shutdown();
       await database.close();
       await telemetryLifecycle.shutdown();
@@ -120,6 +128,11 @@ export function createSchedulerProcess(
     tickOnce: () => scheduler.tickOnce(),
     async start() {
       await scheduler.start();
+      probeServer = await startProcessProbeServer({
+        host: config.health.host,
+        port: config.health.port,
+        readinessCheck,
+      });
       logEvent("scheduler.started", { pollMs: config.pollMs });
     },
     async stop() {

@@ -20,6 +20,7 @@ export const OSVA_SPAN = {
   MCP_INBOUND_RESOURCE: "osva.mcp.inbound.resource",
   HTTP_REQUEST: "osva.http.request",
   QUEUE_PROCESS: "osva.queue.process",
+  EXECUTION_RECOVERY: "osva.execution.recovery",
 } as const;
 
 export type OsvaSpanName = (typeof OSVA_SPAN)[keyof typeof OSVA_SPAN];

@@ -7,8 +7,13 @@ import type {
 } from "@osva-ai/contracts";
 import type { RunAttemptId, RunState } from "@osva-ai/contracts";
 import {
+  DEFAULT_EXECUTION_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_EXECUTION_LEASE_TTL_MS,
+} from "@osva-ai/contracts";
+import {
   isTerminalRunAttemptState,
   DomainInvariantError,
+  LifecycleConflictError,
   type AgentRepository,
   type Run,
   type RunAttempt,
@@ -39,6 +44,8 @@ import {
 const RUNTIME_ADAPTER_ERROR_CODE = "RUNTIME_ADAPTER_ERROR";
 const MAX_ERROR_MESSAGE_LENGTH = 500;
 const MAX_ERROR_CODE_LENGTH = 128;
+const DEFAULT_EXECUTION_OWNER = "execution-worker";
+const INITIAL_EXECUTION_GENERATION = 1;
 
 const TERMINAL_ATTEMPT_TO_RUN: Record<TerminalRunAttemptState, RunState> = {
   SUCCEEDED: "SUCCEEDED",
@@ -52,11 +59,19 @@ export interface ExecuteRunAttemptCommand {
   readonly now: Date;
 }
 
+export interface ExecuteRunAttemptHeartbeat {
+  start(tick: () => Promise<void>, intervalMs: number): () => void;
+}
+
 export interface ExecuteRunAttemptDependencies {
   readonly runs: RunRepository;
   readonly agents: AgentRepository;
   readonly runtime: RuntimeAdapter;
   readonly instrumentation?: OsvaInstrumentation;
+  readonly executionOwner?: string;
+  readonly leaseTtlMs?: number;
+  readonly heartbeatIntervalMs?: number;
+  readonly heartbeat?: ExecuteRunAttemptHeartbeat;
 }
 
 export interface ExecuteRunAttemptSucceeded {
@@ -85,23 +100,41 @@ export interface ExecuteRunAttemptAlreadyInProgress {
   readonly runAttempt: RunAttempt;
 }
 
+export interface ExecuteRunAttemptOwnershipLost {
+  readonly outcome: "ownership-lost";
+  readonly run: Run;
+  readonly runAttempt: RunAttempt;
+}
+
 export type ExecuteRunAttemptResult =
   | ExecuteRunAttemptSucceeded
   | ExecuteRunAttemptFailed
   | ExecuteRunAttemptAlreadyTerminal
-  | ExecuteRunAttemptAlreadyInProgress;
+  | ExecuteRunAttemptAlreadyInProgress
+  | ExecuteRunAttemptOwnershipLost;
 
 /**
  * Reconstructs ExecutionRequest from persisted OSVA state and drives one
  * RunAttempt through the runtime boundary.
  *
- * RuntimeAdapter throws are converted into FAILED Run/RunAttempt snapshots
- * with a normalized `{ code, message }` error, then returned as
- * `{ outcome: "failed" }`. The service does not rethrow after that persist,
- * so Stage 0 does not leave attempts marked RUNNING after an adapter crash.
+ * PENDING → RUNNING acquires an execution lease. Only the winning owner may
+ * heartbeat or persist a terminal outcome. Queue redelivery of a RUNNING
+ * attempt is a no-op and never invokes runtime.execute().
  */
 export class ExecuteRunAttempt {
-  constructor(private readonly deps: ExecuteRunAttemptDependencies) {}
+  private readonly executionOwner: string;
+  private readonly leaseTtlMs: number;
+  private readonly heartbeatIntervalMs: number;
+  private readonly heartbeat: ExecuteRunAttemptHeartbeat;
+
+  constructor(private readonly deps: ExecuteRunAttemptDependencies) {
+    this.executionOwner =
+      deps.executionOwner?.trim() || DEFAULT_EXECUTION_OWNER;
+    this.leaseTtlMs = deps.leaseTtlMs ?? DEFAULT_EXECUTION_LEASE_TTL_MS;
+    this.heartbeatIntervalMs =
+      deps.heartbeatIntervalMs ?? DEFAULT_EXECUTION_HEARTBEAT_INTERVAL_MS;
+    this.heartbeat = deps.heartbeat ?? intervalHeartbeat();
+  }
 
   async execute(
     command: ExecuteRunAttemptCommand,
@@ -228,31 +261,46 @@ export class ExecuteRunAttempt {
       );
     }
 
-    const runningAttempt = attempt.transitionTo("RUNNING", command.now);
-    const runningRun = run.transitionTo("RUNNING", command.now);
-    await this.deps.runs.transitionRunAndAttempt(
-      run.status,
-      runningRun,
-      attempt.status,
-      runningAttempt,
-    );
+    const acquired = await this.acquireRunningLease(run, attempt, command.now);
+    if (acquired.outcome !== "acquired") {
+      return acquired.result;
+    }
 
+    const runningRun = acquired.run;
+    const runningAttempt = acquired.runAttempt;
     const request = createExecutionRequest({
       run: runningRun,
       runAttempt: runningAttempt,
       agentVersion,
     });
 
+    let ownershipLost = false;
+    const stopHeartbeat = this.startLeaseHeartbeat(runningAttempt, () => {
+      ownershipLost = true;
+    });
+
     let result: ExecutionResult;
     try {
       result = await this.deps.runtime.execute(request);
     } catch (error) {
+      stopHeartbeat();
+      if (ownershipLost) {
+        await this.signalRuntimeCancellation(runningAttempt.id);
+        return this.loadOwnershipLost(runningRun.id, runningAttempt.id);
+      }
       return this.persistFailure(
         runningRun,
         runningAttempt,
         command.now,
         snapshotThrownError(error),
       );
+    }
+
+    stopHeartbeat();
+
+    if (ownershipLost) {
+      await this.signalRuntimeCancellation(runningAttempt.id);
+      return this.loadOwnershipLost(runningRun.id, runningAttempt.id);
     }
 
     if (result.status === "succeeded") {
@@ -280,18 +328,18 @@ export class ExecuteRunAttempt {
       }
 
       const succeededRun = runningRun.transitionTo("SUCCEEDED", command.now);
-      await this.deps.runs.transitionRunAndAttempt(
-        runningRun.status,
+      return this.persistTerminal(
+        runningRun,
+        runningAttempt,
         succeededRun,
-        runningAttempt.status,
         succeededAttempt,
+        {
+          outcome: "succeeded",
+          result,
+          run: succeededRun,
+          runAttempt: succeededAttempt,
+        },
       );
-      return {
-        outcome: "succeeded",
-        result,
-        run: succeededRun,
-        runAttempt: succeededAttempt,
-      };
     }
 
     return this.persistFailure(
@@ -302,33 +350,241 @@ export class ExecuteRunAttempt {
     );
   }
 
+  private async acquireRunningLease(
+    run: Run,
+    attempt: RunAttempt,
+    now: Date,
+  ): Promise<
+    | {
+        readonly outcome: "acquired";
+        readonly run: Run;
+        readonly runAttempt: RunAttempt;
+      }
+    | {
+        readonly outcome: "conflict";
+        readonly result: ExecuteRunAttemptResult;
+      }
+  > {
+    const runningAttempt = attempt
+      .transitionTo("RUNNING", now)
+      .withExecutionLease({
+        owner: this.executionOwner,
+        generation: INITIAL_EXECUTION_GENERATION,
+        expiresAt: new Date(now.getTime() + this.leaseTtlMs),
+      });
+    const runningRun = run.transitionTo("RUNNING", now);
+
+    try {
+      const persisted = await this.deps.runs.transitionRunAndAttempt(
+        run.status,
+        runningRun,
+        attempt.status,
+        runningAttempt,
+        { leaseTtlMs: this.leaseTtlMs },
+      );
+      return {
+        outcome: "acquired",
+        run: persisted.run,
+        runAttempt: persisted.runAttempt,
+      };
+    } catch (error) {
+      if (!(error instanceof LifecycleConflictError)) {
+        throw error;
+      }
+
+      const latestAttempt = await this.deps.runs.findRunAttemptById(attempt.id);
+      const latestRun =
+        latestAttempt === null
+          ? null
+          : await this.deps.runs.findRunById(latestAttempt.runId);
+      if (latestAttempt === null || latestRun === null) {
+        throw error;
+      }
+
+      if (isTerminalRunAttemptState(latestAttempt.status)) {
+        return {
+          outcome: "conflict",
+          result: {
+            outcome: "already-terminal",
+            run: latestRun,
+            runAttempt: latestAttempt,
+          },
+        };
+      }
+
+      if (latestAttempt.status === "RUNNING") {
+        return {
+          outcome: "conflict",
+          result: {
+            outcome: "already-in-progress",
+            run: latestRun,
+            runAttempt: latestAttempt,
+          },
+        };
+      }
+
+      throw error;
+    }
+  }
+
+  private startLeaseHeartbeat(
+    attempt: RunAttempt,
+    onLost: () => void,
+  ): () => void {
+    if (this.heartbeatIntervalMs <= 0 || attempt.executionOwner === undefined) {
+      return () => undefined;
+    }
+
+    const owner = attempt.executionOwner;
+    const generation = attempt.executionGeneration;
+    let stopped = false;
+
+    const stop = this.heartbeat.start(async () => {
+      if (stopped) {
+        return;
+      }
+
+      const renewed = await this.deps.runs.renewExecutionLease({
+        runAttemptId: attempt.id,
+        owner,
+        generation,
+        ttlMs: this.leaseTtlMs,
+      });
+      if (!renewed && !stopped) {
+        stopped = true;
+        onLost();
+        await this.signalRuntimeCancellation(attempt.id);
+      }
+    }, this.heartbeatIntervalMs);
+
+    return () => {
+      stopped = true;
+      stop();
+    };
+  }
+
   private async persistFailure(
     runningRun: Run,
     runningAttempt: RunAttempt,
     now: Date,
     error: RunAttemptError,
-  ): Promise<ExecuteRunAttemptFailed> {
+  ): Promise<ExecuteRunAttemptFailed | ExecuteRunAttemptOwnershipLost> {
     const failedAttempt = runningAttempt.transitionTo("FAILED", now, { error });
     const failedRun = runningRun.transitionTo("FAILED", now);
-    await this.deps.runs.transitionRunAndAttempt(
-      runningRun.status,
+    const persisted = await this.persistTerminal(
+      runningRun,
+      runningAttempt,
       failedRun,
-      runningAttempt.status,
       failedAttempt,
+      {
+        outcome: "failed",
+        result: {
+          status: "failed",
+          error,
+        },
+        run: failedRun,
+        runAttempt: failedAttempt,
+      },
     );
 
-    const result: ExecutionFailure = {
-      status: "failed",
-      error,
-    };
+    if (persisted.outcome === "failed") {
+      return persisted;
+    }
+
+    if (persisted.outcome === "ownership-lost") {
+      return persisted;
+    }
+
+    return this.loadOwnershipLost(runningRun.id, runningAttempt.id);
+  }
+
+  private async persistTerminal<
+    T extends ExecuteRunAttemptSucceeded | ExecuteRunAttemptFailed,
+  >(
+    expectedRun: Run,
+    expectedAttempt: RunAttempt,
+    nextRun: Run,
+    nextAttempt: RunAttempt,
+    success: T,
+  ): Promise<T | ExecuteRunAttemptOwnershipLost> {
+    try {
+      const persisted = await this.deps.runs.transitionRunAndAttempt(
+        expectedRun.status,
+        nextRun,
+        expectedAttempt.status,
+        nextAttempt,
+      );
+      return {
+        ...success,
+        run: persisted.run,
+        runAttempt: persisted.runAttempt,
+      };
+    } catch (error) {
+      if (error instanceof LifecycleConflictError) {
+        return this.loadOwnershipLost(expectedRun.id, expectedAttempt.id);
+      }
+
+      throw error;
+    }
+  }
+
+  private async loadOwnershipLost(
+    runId: Run["id"],
+    runAttemptId: RunAttemptId,
+  ): Promise<ExecuteRunAttemptOwnershipLost> {
+    const runAttempt = await this.deps.runs.findRunAttemptById(runAttemptId);
+    const run =
+      runAttempt === null ? null : await this.deps.runs.findRunById(runId);
+    if (runAttempt === null || run === null) {
+      throw new RunAttemptNotFoundError(runAttemptId);
+    }
 
     return {
-      outcome: "failed",
-      result,
-      run: failedRun,
-      runAttempt: failedAttempt,
+      outcome: "ownership-lost",
+      run,
+      runAttempt,
     };
   }
+
+  private async signalRuntimeCancellation(
+    runAttemptId: RunAttemptId,
+  ): Promise<void> {
+    const runtime = this.deps.runtime;
+    if (!isCancellableRuntime(runtime)) {
+      return;
+    }
+
+    try {
+      await runtime.cancel(runAttemptId);
+    } catch {
+      // Cancellation is best-effort and cannot undo prior external side effects.
+    }
+  }
+}
+
+function intervalHeartbeat(): ExecuteRunAttemptHeartbeat {
+  return {
+    start(tick, intervalMs) {
+      const timer = setInterval(() => {
+        void tick();
+      }, intervalMs);
+      timer.unref?.();
+      return () => {
+        clearInterval(timer);
+      };
+    },
+  };
+}
+
+function isCancellableRuntime(
+  runtime: RuntimeAdapter,
+): runtime is RuntimeAdapter & {
+  cancel(runAttemptId: RunAttemptId): Promise<void>;
+} {
+  return (
+    "cancel" in runtime &&
+    typeof (runtime as { cancel?: unknown }).cancel === "function"
+  );
 }
 
 function snapshotExecutionError(error: ExecutionError): RunAttemptError {

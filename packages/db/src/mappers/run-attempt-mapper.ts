@@ -23,6 +23,9 @@ export function runAttemptToRow(attempt: RunAttempt) {
     error: attempt.error ?? null,
     output: attempt.status === "SUCCEEDED" ? (attempt.output ?? null) : null,
     infrastructureMetadata: attempt.infrastructureMetadata ?? null,
+    executionOwner: attempt.executionOwner ?? null,
+    executionGeneration: attempt.executionGeneration,
+    leaseExpiresAt: attempt.leaseExpiresAt ?? null,
   };
 }
 
@@ -38,6 +41,9 @@ export function runAttemptFromRow(row: RunAttemptRow): RunAttempt {
     error: toOptionalError(row.error),
     output: toOptionalOutput(row.status as RunAttemptState, row.output),
     infrastructureMetadata: toOptionalMetadata(row.infrastructureMetadata),
+    executionOwner: row.executionOwner ?? undefined,
+    executionGeneration: row.executionGeneration,
+    leaseExpiresAt: toOptionalDomainDate(row.leaseExpiresAt),
   });
 }
 

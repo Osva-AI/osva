@@ -406,6 +406,7 @@ describe("PostgreSQL workflow wait and event schema", () => {
       { idx: 20, tag: "0020_knowledge_retrieval_slice" },
       { idx: 21, tag: "0021_knowledge_runtime_slice" },
       { idx: 22, tag: "0022_api_security_slice" },
+      { idx: 23, tag: "0023_execution_lease_slice" },
     ]);
   });
 

@@ -29,7 +29,12 @@ export function createExecuteRunAttemptHandler(
     if (
       result.outcome === "succeeded" ||
       result.outcome === "failed" ||
-      result.outcome === "already-terminal"
+      result.outcome === "already-terminal" ||
+      (result.outcome === "ownership-lost" &&
+        (result.runAttempt.status === "SUCCEEDED" ||
+          result.runAttempt.status === "FAILED" ||
+          result.runAttempt.status === "TIMED_OUT" ||
+          result.runAttempt.status === "CANCELLED"))
     ) {
       await evaluationCoordinator.reconcileTerminalChildRun({
         workspaceId: result.run.workspaceId,

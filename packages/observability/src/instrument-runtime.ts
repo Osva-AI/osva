@@ -63,6 +63,12 @@ export function createInstrumentedRuntimeAdapter(
           close: () => runtime.close(),
         }
       : {}),
+    ...(isCancellableRuntime(runtime)
+      ? {
+          cancel: (runAttemptId: ExecutionRequest["runAttemptId"]) =>
+            runtime.cancel(runAttemptId),
+        }
+      : {}),
   };
 }
 
@@ -72,5 +78,16 @@ function isClosableRuntime(
   return (
     "close" in value &&
     typeof (value as { close?: unknown }).close === "function"
+  );
+}
+
+function isCancellableRuntime(
+  value: RuntimeAdapter,
+): value is RuntimeAdapter & {
+  cancel(runAttemptId: ExecutionRequest["runAttemptId"]): Promise<void>;
+} {
+  return (
+    "cancel" in value &&
+    typeof (value as { cancel?: unknown }).cancel === "function"
   );
 }

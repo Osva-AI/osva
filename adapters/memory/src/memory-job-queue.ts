@@ -23,6 +23,9 @@ export class MemoryJobQueue implements JobQueue {
 
   async enqueue(runAttemptId: RunAttemptId): Promise<void> {
     this.assertOpen("enqueue");
+    if (this.pending.includes(runAttemptId)) {
+      return;
+    }
     this.pending.push(runAttemptId);
   }
 

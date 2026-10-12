@@ -760,6 +760,17 @@ export class RuntimeCapabilityBridge {
       };
     }
 
+    if (
+      attempt.executionOwner !== undefined &&
+      !attempt.hasActiveExecutionLease(this.clock.now())
+    ) {
+      return {
+        error: forbidden(
+          "Capability credential is outside its execution boundary.",
+        ),
+      };
+    }
+
     const run = await this.runs.findRunById(attempt.runId);
     if (run === null || run.id !== claims.runId) {
       return {

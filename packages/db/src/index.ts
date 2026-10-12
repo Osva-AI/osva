@@ -46,3 +46,10 @@ export { PostgresEvaluationSuiteRepository } from "./repositories/postgres-evalu
 export { PostgresOfficeRepository } from "./repositories/postgres-office-repository.js";
 export { PostgresArtifactRepository } from "./repositories/postgres-artifact-repository.js";
 export { PostgresKnowledgeRepository } from "./repositories/postgres-knowledge-repository.js";
+export {
+  readProcessProbeBind,
+  startProcessProbeServer,
+  type ProcessProbeBind,
+  type ProcessProbeServer,
+  type StartProcessProbeServerOptions,
+} from "./process-probe-server.js";

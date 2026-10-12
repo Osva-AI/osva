@@ -71,6 +71,30 @@ export interface RunLifecycleTransitionResult {
   readonly runAttempt: RunAttempt;
 }
 
+export interface QueuedPendingDelivery {
+  readonly run: Run;
+  readonly runAttempt: RunAttempt;
+}
+
+export interface RenewExecutionLeaseCommand {
+  readonly runAttemptId: RunAttemptId;
+  readonly owner: string;
+  readonly generation: number;
+  readonly ttlMs: number;
+  readonly now?: Date;
+}
+
+export interface FailExpiredLeasedAttemptCommand {
+  readonly runAttemptId: RunAttemptId;
+  readonly generation: number;
+  readonly now: Date;
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+  };
+  readonly infrastructureMetadata?: Readonly<Record<string, unknown>>;
+}
+
 export interface RunRepository {
   createRunWithInitialAttempt(run: Run, attempt: RunAttempt): Promise<void>;
   saveRun(run: Run): Promise<void>;
@@ -107,5 +131,16 @@ export interface RunRepository {
     nextRun: Run,
     expectedAttemptStatus: RunAttemptState,
     nextAttempt: RunAttempt,
+    options?: { readonly leaseTtlMs?: number },
   ): Promise<RunLifecycleTransitionResult>;
+  renewExecutionLease(command: RenewExecutionLeaseCommand): Promise<boolean>;
+  failExpiredLeasedAttempt(
+    command: FailExpiredLeasedAttemptCommand,
+  ): Promise<RunLifecycleTransitionResult | null>;
+  listExpiredLeasedRunningAttempts(
+    limit: number,
+  ): Promise<readonly RunAttempt[]>;
+  listQueuedPendingDeliveries(
+    limit: number,
+  ): Promise<readonly QueuedPendingDelivery[]>;
 }

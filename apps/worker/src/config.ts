@@ -3,6 +3,14 @@ import {
   validateContainerCapabilityBaseUrl,
   type ContainerResourcePolicy,
 } from "@osva/adapters-runtime-container";
+import {
+  DEFAULT_EXECUTION_HEARTBEAT_INTERVAL_MS,
+  DEFAULT_EXECUTION_LEASE_TTL_MS,
+  DEFAULT_EXECUTION_RECOVERY_BATCH_LIMIT,
+  DEFAULT_EXECUTION_RECOVERY_POLL_MS,
+  DEFAULT_TRANSPORT_REPAIR_BATCH_LIMIT,
+} from "@osva-ai/contracts";
+import { readProcessProbeBind, type ProcessProbeBind } from "@osva/db";
 
 export interface WorkerConfig {
   readonly databaseUrl: string;
@@ -12,6 +20,12 @@ export interface WorkerConfig {
   readonly runtimeCapabilityHost: string;
   readonly runtimeCapabilityPort: number;
   readonly runtimeCapabilityBaseUrl?: string;
+  readonly health: ProcessProbeBind;
+  readonly leaseTtlMs: number;
+  readonly heartbeatIntervalMs: number;
+  readonly recoveryPollMs: number;
+  readonly recoveryBatchLimit: number;
+  readonly transportRepairBatchLimit: number;
   /**
    * Operator-only opt-in for REMOTE_HTTP private/loopback destinations.
    * AgentVersion configuration cannot enable this.
@@ -96,7 +110,39 @@ export function loadWorkerConfig(
     containerResourcePolicy: containerEnabled
       ? readContainerResourcePolicy(env)
       : undefined,
+    health: readProcessProbeBind(env),
+    leaseTtlMs: readPositiveInt(
+      env.OSVA_EXECUTION_LEASE_TTL_MS,
+      DEFAULT_EXECUTION_LEASE_TTL_MS,
+      "OSVA_EXECUTION_LEASE_TTL_MS",
+    ),
+    heartbeatIntervalMs: readPositiveInt(
+      env.OSVA_EXECUTION_HEARTBEAT_INTERVAL_MS,
+      DEFAULT_EXECUTION_HEARTBEAT_INTERVAL_MS,
+      "OSVA_EXECUTION_HEARTBEAT_INTERVAL_MS",
+    ),
+    recoveryPollMs: readPositiveInt(
+      env.OSVA_EXECUTION_RECOVERY_POLL_MS,
+      DEFAULT_EXECUTION_RECOVERY_POLL_MS,
+      "OSVA_EXECUTION_RECOVERY_POLL_MS",
+    ),
+    recoveryBatchLimit: readPositiveInt(
+      env.OSVA_EXECUTION_RECOVERY_BATCH_LIMIT,
+      DEFAULT_EXECUTION_RECOVERY_BATCH_LIMIT,
+      "OSVA_EXECUTION_RECOVERY_BATCH_LIMIT",
+    ),
+    transportRepairBatchLimit: readPositiveInt(
+      env.OSVA_TRANSPORT_REPAIR_BATCH_LIMIT,
+      DEFAULT_TRANSPORT_REPAIR_BATCH_LIMIT,
+      "OSVA_TRANSPORT_REPAIR_BATCH_LIMIT",
+    ),
   };
+
+  if (config.heartbeatIntervalMs >= config.leaseTtlMs) {
+    throw new Error(
+      "OSVA_EXECUTION_HEARTBEAT_INTERVAL_MS must be less than OSVA_EXECUTION_LEASE_TTL_MS.",
+    );
+  }
 
   if (config.containerEnabled && config.runtimeCapabilitySecret !== undefined) {
     const explicitCapabilityBaseUrl = resolveContainerCapabilityBaseUrl({

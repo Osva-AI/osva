@@ -42,10 +42,13 @@ Create a Run, snapshot immutable bindings, enqueue execution, drive one RunAttem
 
 ## Failure / cancellation
 
-- Enqueue failure after QUEUED persist: CreateRun fails; durable QUEUED rows remain recoverable (no transactional outbox in current stage).
+- Enqueue failure after QUEUED persist: CreateRun fails; durable QUEUED rows remain recoverable. The worker recovery ticker re-enqueues the same RunAttempt ID.
+- PENDING → RUNNING acquires an execution lease (`execution_owner`, `execution_generation`, `lease_expires_at` via PostgreSQL `now()`). Only the owner may heartbeat or persist a terminal outcome.
+- Abandoned leased RUNNING attempts are failed in place with `EXECUTION_INTERRUPTED`. They are never automatically re-executed and never get a new RunAttempt.
 - Runtime adapter failure: FAILED RunAttempt with normalized error code/message.
-- Already terminal / already in progress: idempotent handler outcomes without duplicate execution side effects.
-- BullMQ retry/redelivery: worker re-executes same RunAttemptId; ExecuteRunAttempt handles terminal/no-op paths.
+- Already terminal / already in progress / ownership-lost: idempotent handler outcomes without duplicate execution side effects.
+- BullMQ retry/redelivery: worker re-delivers the same RunAttemptId; ExecuteRunAttempt no-ops RUNNING and terminal attempts.
+- See [`docs/operations/EXECUTION_RECOVERY.md`](../../operations/EXECUTION_RECOVERY.md).
 
 ## Diagram
 
@@ -74,6 +77,7 @@ sequenceDiagram
 
 - `packages/orchestration/src/create-run.ts`
 - `packages/orchestration/src/execute-run-attempt.ts`
+- `packages/orchestration/src/execution-recovery-tick.ts`
 - `packages/runtime-core/src/create-execution-request.ts`
 - `packages/runtime-core/src/runtime-dispatcher.ts`
 - `adapters/bullmq/src/bullmq-job-queue.ts`

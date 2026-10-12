@@ -139,6 +139,12 @@
       "tag": "0022_api_security_slice",
       "file": "0022_api_security_slice.sql",
       "sha256": "392c33a76d3881c3c52220471c123f04146ba7b46e4900592509071089c6ad28"
+    },
+    {
+      "idx": 23,
+      "tag": "0023_execution_lease_slice",
+      "file": "0023_execution_lease_slice.sql",
+      "sha256": "699ddea260974f14cceb5f27b2dfdf8d3602db66360ec411b9b881d5d7a9a687"
     }
   ]
 }

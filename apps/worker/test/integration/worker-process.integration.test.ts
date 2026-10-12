@@ -2,12 +2,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type {
-  AgentId,
-  AgentVersionId,
-  RunAttemptId,
-  RunId,
-  WorkspaceId,
+import {
+  EXECUTION_INTERRUPTED_ERROR_CODE,
+  type AgentId,
+  type AgentVersionId,
+  type RunAttemptId,
+  type RunId,
+  type WorkspaceId,
 } from "@osva-ai/contracts";
 import { FakeRuntimeAdapter } from "@osva/adapters-memory";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
@@ -81,33 +82,7 @@ describe("worker process BullMQ integration", () => {
     const producer = new BullMqJobQueue({ url: valkey.url });
     let executions = 0;
 
-    await agents.saveAgent(
-      Agent.create({
-        id: agentId,
-        workspaceId,
-        key: "example-agent",
-        name: "Example Agent",
-        createdAt: NOW,
-      }),
-    );
-    await agents.saveAgentVersion(
-      AgentVersion.create({
-        id: agentVersionId,
-        agentId,
-        version: 1,
-        manifest: {
-          schemaVersion: "1",
-          key: "example-agent",
-          name: "Example Agent",
-          runtime: { type: "BUILTIN_PACKAGE", key: "example-agent" },
-          input: { schema: {} },
-          output: { schema: {} },
-          execution: { timeoutMs: 30_000, maxAttempts: 2 },
-          capabilities: { model: false, tools: [] },
-        },
-        createdAt: NOW,
-      }),
-    );
+    await seedExampleAgent(agents);
 
     const worker = createWorkerProcess(
       {
@@ -160,6 +135,86 @@ describe("worker process BullMQ integration", () => {
     }
   });
 
+  it("fails an expired leased RUNNING attempt without invoking runtime.execute", async () => {
+    const agents = new PostgresAgentRepository(database);
+    const runs = new PostgresRunRepository(database);
+    const producer = new BullMqJobQueue({ url: valkey.url });
+    let executions = 0;
+    const recoveryRunId = "run-recovery-1" as RunId;
+    const recoveryAttemptId = "run-attempt-recovery-1" as RunAttemptId;
+
+    await seedExampleAgent(agents);
+    const createRun = new CreateRun({ runs, agents, queue: producer });
+    await createRun.execute({
+      runId: recoveryRunId,
+      runAttemptId: recoveryAttemptId,
+      workspaceId,
+      agentId,
+      agentVersionId,
+      input: { prompt: "recover" },
+      now: NOW,
+    });
+
+    const pending = await runs.findRunAttemptById(recoveryAttemptId);
+    const queued = await runs.findRunById(recoveryRunId);
+    if (pending === null || queued === null) {
+      throw new Error("expected persisted run");
+    }
+
+    await runs.transitionRunAndAttempt(
+      queued.status,
+      queued.transitionTo("RUNNING", NOW),
+      pending.status,
+      pending.transitionTo("RUNNING", NOW).withExecutionLease({
+        owner: "crashed-worker",
+        generation: 1,
+        expiresAt: NOW,
+      }),
+      { leaseTtlMs: 1 },
+    );
+    await delay(50);
+
+    const worker = createWorkerProcess(
+      {
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_EXECUTION_RECOVERY_POLL_MS: "200",
+      },
+      (connectionString) =>
+        createDatabase({
+          connectionString,
+          max: 5,
+        }),
+      {
+        runtime: new FakeRuntimeAdapter(async () => {
+          executions += 1;
+          return { status: "succeeded", output: { ok: true } };
+        }),
+      },
+    );
+
+    try {
+      await worker.start();
+      const deadline = Date.now() + 10_000;
+      while (Date.now() < deadline) {
+        const attempt = await runs.findRunAttemptById(recoveryAttemptId);
+        if (attempt?.status === "FAILED") {
+          break;
+        }
+        await delay(50);
+      }
+
+      expect(executions).toBe(0);
+      expect((await runs.findRunById(recoveryRunId))?.status).toBe("FAILED");
+      const attempt = await runs.findRunAttemptById(recoveryAttemptId);
+      expect(attempt?.status).toBe("FAILED");
+      expect(attempt?.error?.code).toBe(EXECUTION_INTERRUPTED_ERROR_CODE);
+    } finally {
+      await worker.stop();
+      await producer.shutdown();
+    }
+  });
+
   it("shuts down without hanging after connecting to Valkey", async () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-worker-runtime-"),
@@ -192,4 +247,36 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+async function seedExampleAgent(
+  agents: PostgresAgentRepository,
+): Promise<void> {
+  await agents.saveAgent(
+    Agent.create({
+      id: agentId,
+      workspaceId,
+      key: "example-agent",
+      name: "Example Agent",
+      createdAt: NOW,
+    }),
+  );
+  await agents.saveAgentVersion(
+    AgentVersion.create({
+      id: agentVersionId,
+      agentId,
+      version: 1,
+      manifest: {
+        schemaVersion: "1",
+        key: "example-agent",
+        name: "Example Agent",
+        runtime: { type: "BUILTIN_PACKAGE", key: "example-agent" },
+        input: { schema: {} },
+        output: { schema: {} },
+        execution: { timeoutMs: 30_000, maxAttempts: 2 },
+        capabilities: { model: false, tools: [] },
+      },
+      createdAt: NOW,
+    }),
+  );
 }

@@ -70,7 +70,7 @@ describe("PostgreSQL migration acceptance", () => {
     await migrateDatabase(database);
     const status = await readMigrationStatus(database.sql);
     expect(status.status).toBe("current");
-    expect(status.repositoryHead).toBe("0022_api_security_slice");
+    expect(status.repositoryHead).toBe("0023_execution_lease_slice");
     expect(status.pendingMigrations).toEqual([]);
 
     const apiKeys = await database.sql`
@@ -128,7 +128,7 @@ describe("PostgreSQL migration acceptance", () => {
 
     const status = await readMigrationStatus(database.sql);
     expect(status.status).toBe("current");
-    expect(status.repositoryHead).toBe("0022_api_security_slice");
+    expect(status.repositoryHead).toBe("0023_execution_lease_slice");
 
     const apiKeys = await database.sql`
       SELECT to_regclass('public.api_keys') AS api_keys_table

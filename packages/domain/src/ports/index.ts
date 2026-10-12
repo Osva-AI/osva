@@ -19,10 +19,13 @@ export type {
   ToolRepository,
 } from "./tool-repository.js";
 export type {
+  FailExpiredLeasedAttemptCommand,
   ListRunStepsQuery,
   ListRunStepsResult,
   ListRunsQuery,
   ListRunsResult,
+  QueuedPendingDelivery,
+  RenewExecutionLeaseCommand,
   RunAttemptUsageSummary,
   RunLifecycleTransitionResult,
   RunListCursor,

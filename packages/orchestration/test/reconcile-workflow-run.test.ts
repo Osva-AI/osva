@@ -256,6 +256,7 @@ async function createHarness(options?: {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
   const innerRuns = new MemoryRunRepository();
+  innerRuns.clock = { now: () => LATER };
   let runsCreated = 0;
   const runs = wrapRunRepository(innerRuns, {
     createRunWithInitialAttempt: async (run, attempt) => {

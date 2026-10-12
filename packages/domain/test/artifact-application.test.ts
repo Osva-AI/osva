@@ -405,6 +405,22 @@ class FakeRunRepository implements RunRepository {
   async transitionRunAndAttempt(): Promise<never> {
     throw new Error("not used");
   }
+
+  async renewExecutionLease(): Promise<never> {
+    throw new Error("not used");
+  }
+
+  async failExpiredLeasedAttempt(): Promise<never> {
+    throw new Error("not used");
+  }
+
+  async listExpiredLeasedRunningAttempts(): Promise<never> {
+    throw new Error("not used");
+  }
+
+  async listQueuedPendingDeliveries(): Promise<never> {
+    throw new Error("not used");
+  }
 }
 
 function createTestBlobStore(): ArtifactBlobStore {
