@@ -247,7 +247,7 @@ python -m build
 
 Agent Registry:
 
-- `POST /v1/agents` — create an Agent (`workspaceId`, `key`, `name`)
+- `POST /v1/agents` — create an Agent (`key`, `name`; workspace from the API key)
 - `GET /v1/agents` — list Agents
 - `GET /v1/agents/:agentId` — get an Agent
 - `PATCH /v1/agents/:agentId` — update Agent `name`
@@ -279,8 +279,9 @@ Run lifecycle:
 - `GET /v1/runs/:runId/attempts/:runAttemptId` — get a nested RunAttempt
 
 Clients cannot supply Run IDs, RunAttempt IDs, statuses, timestamps, queue
-IDs, or internal `effectiveBindings`. `POST /v1/runs` accepts `workspaceId`,
-`agentId`, `agentVersionId`, `input`, and optional `idempotencyKey`. OSVA
+IDs, or internal `effectiveBindings`. `POST /v1/runs` accepts `agentId`,
+`agentVersionId`, `input`, and optional `idempotencyKey`. Workspace comes
+from the authenticated API key. OSVA
 resolves the immutable `effectiveBindings` snapshot from the requested
 AgentVersion, including that version's logical model bindings. Runtime
 execution reuses the persisted snapshot and does not re-read AgentVersion

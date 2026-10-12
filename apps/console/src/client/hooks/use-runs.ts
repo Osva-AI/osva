@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { consoleFetch } from "../lib/console-api";
 import { ACTIVE_RUN_POLL_MS } from "../lib/query-client";
@@ -202,6 +202,36 @@ export function useRunUsageQuery(
       attemptStatus !== undefined && isAttemptLive(attemptStatus)
         ? ACTIVE_RUN_POLL_MS
         : false,
+  });
+}
+
+export interface CreateRunInput {
+  readonly agentId: string;
+  readonly agentVersionId: string;
+  readonly input: unknown;
+}
+
+export interface CreateRunResponseResource {
+  readonly run: RunResource;
+  readonly runAttempt: RunAttemptResource;
+}
+
+export function useCreateRunMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateRunInput) =>
+      consoleFetch<CreateRunResponseResource>("/api/v1/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          agentId: input.agentId,
+          agentVersionId: input.agentVersionId,
+          input: input.input,
+        }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["runs", "list"] });
+    },
   });
 }
 

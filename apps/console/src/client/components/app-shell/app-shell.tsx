@@ -6,7 +6,7 @@ import { LoadingBlock } from "../loading/loading-block";
 
 const navItems = [
   { label: "Overview", disabled: true },
-  { label: "Agents", disabled: true },
+  { label: "Agents", to: "/agents", disabled: false },
   { label: "Runs", to: "/runs", disabled: false },
   { label: "Workflows", to: "/workflows", disabled: false },
   { label: "WorkflowRuns", to: "/workflow-runs", disabled: false },

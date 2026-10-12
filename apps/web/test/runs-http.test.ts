@@ -1,10 +1,19 @@
-import type { AgentId, WorkspaceId } from "@osva-ai/contracts";
+import type { AgentId, ApiKeyId, WorkspaceId } from "@osva-ai/contracts";
+import { COMMUNITY_EDITION_ROLES } from "@osva-ai/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { encodeRunListCursor } from "../src/run-cursor.js";
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
-import { fetchJson, setTestAuthHeaders } from "./http-test-helpers.js";
-import { TEST_NOW, createTestWebApplication } from "./test-web.js";
+import {
+  authHeadersForKey,
+  fetchJson,
+  setTestAuthHeaders,
+} from "./http-test-helpers.js";
+import {
+  TEST_NOW,
+  createTestWebApplication,
+  seedTestApiKey,
+} from "./test-web.js";
 
 const WORKSPACE_ID = "ws-1" as WorkspaceId;
 
@@ -70,6 +79,33 @@ describe("Run HTTP API", () => {
     const loaded = await fetchJson(`${origin}/v1/runs/id-3`);
     expect(loaded.status).toBe(200);
     expect(loaded.body).toEqual((created.body as { run: unknown }).run);
+  });
+
+  it("rejects VIEWER creating a Run", async () => {
+    const { origin, apiKeys } = await listen();
+    const registered = await registerAgent(origin);
+    const viewer = await seedTestApiKey({
+      apiKeys,
+      workspaceId: WORKSPACE_ID,
+      role: COMMUNITY_EDITION_ROLES.VIEWER,
+      apiKeyId: "ak-viewer-run" as ApiKeyId,
+    });
+
+    const created = await fetchJson(`${origin}/v1/runs`, {
+      method: "POST",
+      headers: authHeadersForKey(viewer),
+      body: {
+        agentId: registered.agentId,
+        agentVersionId: registered.agentVersionId,
+        input: { prompt: "hello" },
+      },
+    });
+
+    expect(created.status).toBe(403);
+    expect(created.body).toMatchObject({
+      status: "error",
+      code: "PERMISSION_DENIED",
+    });
   });
 
   it("rejects a client-authored effectiveBindings object", async () => {
@@ -351,13 +387,14 @@ describe("Run HTTP API", () => {
   });
 
   async function listen() {
-    const { server, queue, testApiKey } = await createTestWebApplication({
-      workspaceId: WORKSPACE_ID,
-    });
+    const { server, queue, testApiKey, apiKeys } =
+      await createTestWebApplication({
+        workspaceId: WORKSPACE_ID,
+      });
     servers.push(server);
     const port = await listenHttpServer(server, "127.0.0.1", 0);
     setTestAuthHeaders(testApiKey);
-    return { origin: `http://127.0.0.1:${String(port)}`, queue };
+    return { origin: `http://127.0.0.1:${String(port)}`, queue, apiKeys };
   }
 });
 

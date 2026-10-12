@@ -61,6 +61,19 @@ function createMockClient(
       data: { agents: [] },
       requestId: "req-agents-list",
     }),
+    getAgent: async () => ({
+      data: {
+        id: "agent-1",
+        workspaceId: "workspace-1",
+        key: "echo-agent",
+        name: "Echo Agent",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+      requestId: "req-agent-get",
+    }),
+    createAgent: async () => {
+      throw new Error("not implemented");
+    },
     listAgentVersions: async () => ({
       data: {
         versions: [
@@ -83,6 +96,25 @@ function createMockClient(
       },
       requestId: "req-agent-versions",
     }),
+    getAgentVersion: async () => ({
+      data: {
+        id: "av-research",
+        agentId: "agent-1",
+        version: 1,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        manifest: {
+          runtime: { type: "TRUSTED_TYPESCRIPT" },
+          input: { schema: {} },
+        },
+      },
+      requestId: "req-agent-version-get",
+    }),
+    createAgentVersion: async () => {
+      throw new Error("not implemented");
+    },
+    createRun: async () => {
+      throw new Error("not implemented");
+    },
     listWorkflows: async () => ({ data: { workflows: [] } }),
     createWorkflow: async () => {
       throw new Error("not implemented");
@@ -427,9 +459,183 @@ describe("console server API", () => {
       required: ["schemaVersion"],
       properties: { schemaVersion: { const: "1" } },
     });
+
+    const agentResponse = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/agents/agent-1`,
+    );
+    expect(agentResponse.status).toBe(200);
+    expect(agentResponse.headers.get("x-osva-request-id")).toBe(
+      "req-agent-get",
+    );
+
+    const versionResponse = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/agents/agent-1/versions/av-research`,
+    );
+    expect(versionResponse.status).toBe(200);
+    expect(versionResponse.headers.get("x-osva-request-id")).toBe(
+      "req-agent-version-get",
+    );
   });
 
-  it("rejects non-GET methods on console API routes", async () => {
+  it("forwards Agent and Run creation POST routes", async () => {
+    let createAgentBody: unknown;
+    let createVersionBody: unknown;
+    let createRunBody: unknown;
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        createAgent: async (body) => {
+          createAgentBody = body;
+          return {
+            data: {
+              id: "agent-created",
+              workspaceId: "workspace-1",
+              key: "echo-agent",
+              name: "Echo Agent",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+            requestId: "req-agent-create",
+          };
+        },
+        createAgentVersion: async (_agentId, body) => {
+          createVersionBody = body;
+          return {
+            data: {
+              id: "av-created",
+              agentId: "agent-created",
+              version: 1,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              manifest: body,
+            },
+            requestId: "req-agent-version-create",
+          };
+        },
+        createRun: async (body) => {
+          createRunBody = body;
+          return {
+            data: {
+              run: {
+                id: "run-created",
+                agentId: "agent-created",
+                status: "QUEUED",
+                effectiveBindings: {
+                  agentVersionId: "av-created",
+                  modelProfileVersionBindings: {},
+                  toolVersionBindings: {},
+                },
+                input: { prompt: "hello" },
+                createdAt: "2026-01-01T00:00:00.000Z",
+                updatedAt: "2026-01-01T00:00:00.000Z",
+              },
+              runAttempt: {
+                id: "ra-created",
+                runId: "run-created",
+                sequence: 1,
+                status: "PENDING",
+                createdAt: "2026-01-01T00:00:00.000Z",
+              },
+            },
+            requestId: "req-run-create",
+          };
+        },
+      }),
+    });
+    const origin = await listen(server);
+
+    const agentResponse = await fetch(`${origin}/api/v1/agents`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: "echo-agent", name: "Echo Agent" }),
+    });
+    expect(agentResponse.status).toBe(201);
+    expect(agentResponse.headers.get("x-osva-request-id")).toBe(
+      "req-agent-create",
+    );
+    expect(createAgentBody).toEqual({
+      key: "echo-agent",
+      name: "Echo Agent",
+    });
+    expect(await agentResponse.text()).not.toContain(
+      "super-secret-console-key",
+    );
+
+    const versionResponse = await fetch(
+      `${origin}/api/v1/agents/agent-created/versions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          manifest: { schemaVersion: "1", key: "echo-agent" },
+        }),
+      },
+    );
+    expect(versionResponse.status).toBe(201);
+    expect(versionResponse.headers.get("x-osva-request-id")).toBe(
+      "req-agent-version-create",
+    );
+    expect(createVersionBody).toEqual({
+      manifest: { schemaVersion: "1", key: "echo-agent" },
+    });
+
+    const runResponse = await fetch(`${origin}/api/v1/runs`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        agentId: "agent-created",
+        agentVersionId: "av-created",
+        input: { prompt: "hello" },
+      }),
+    });
+    const runBody = (await runResponse.json()) as {
+      run?: { id?: string; status?: string };
+    };
+    expect(runResponse.status).toBe(201);
+    expect(runResponse.headers.get("x-osva-request-id")).toBe("req-run-create");
+    expect(runBody.run?.id).toBe("run-created");
+    expect(runBody.run?.status).toBe("QUEUED");
+    expect(createRunBody).toEqual({
+      agentId: "agent-created",
+      agentVersionId: "av-created",
+      input: { prompt: "hello" },
+    });
+  });
+
+  it.each([400, 403, 404, 409] as const)(
+    "propagates control-plane %i for Run create",
+    async (status) => {
+      server = createConsoleServer({
+        config: testConfig,
+        client: createMockClient({
+          createRun: async () => {
+            const { OsvaApiError } = await import("@osva-ai/sdk");
+            throw new OsvaApiError(
+              status,
+              { status: "error" },
+              `req-run-${String(status)}`,
+            );
+          },
+        }),
+      });
+      const origin = await listen(server);
+      const response = await fetch(`${origin}/api/v1/runs`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          agentId: "agent-1",
+          agentVersionId: "av-1",
+          input: {},
+        }),
+      });
+      const body = (await response.json()) as { requestId?: string };
+      expect(response.status).toBe(status);
+      expect(response.headers.get("x-osva-request-id")).toBe(
+        `req-run-${String(status)}`,
+      );
+      expect(body.requestId).toBe(`req-run-${String(status)}`);
+    },
+  );
+
+  it("rejects unsupported methods on console API routes", async () => {
     server = createConsoleServer({
       config: testConfig,
       client: createMockClient(),
@@ -441,7 +647,7 @@ describe("console server API", () => {
     }
 
     const response = await fetch(
-      `http://127.0.0.1:${address.port}/api/v1/runs`,
+      `http://127.0.0.1:${address.port}/api/v1/auth/context`,
       { method: "POST", body: "{}" },
     );
     expect(response.status).toBe(405);

@@ -148,6 +148,15 @@ describe("RunDetailPage artifacts", () => {
     await waitFor(() => {
       expect(screen.getByText("report.md")).toBeTruthy();
     });
+    expect(
+      screen.getByText(/Individual Run \(not a WorkflowRun\)/),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "agent-1" }).getAttribute("href"),
+    ).toBe("/agents/agent-1");
+    expect(
+      screen.getByRole("link", { name: "av-1" }).getAttribute("href"),
+    ).toBe("/agents/agent-1/versions/av-1");
     expect(screen.getByText("text/markdown")).toBeTruthy();
     expect(screen.getByText("24 B")).toBeTruthy();
     expect(screen.getByTitle(digest)).toBeTruthy();

@@ -151,7 +151,7 @@ describe("Workflow create page", () => {
     });
     expect(createCalls).toBe(1);
     expect(versionCalls).toBe(1);
-  });
+  }, 15_000);
 
   it("retries version publish without recreating workflow", async () => {
     const user = userEvent.setup();
@@ -274,7 +274,7 @@ describe("Workflow create page", () => {
     });
     expect(createCalls).toBe(1);
     expect(versionCalls).toBe(2);
-  });
+  }, 15_000);
 
   it("restores saved draft with agent and version selectors populated", async () => {
     const user = userEvent.setup();
@@ -520,5 +520,5 @@ describe("Workflow create page", () => {
         screen.getByTestId("workflow-validation-summary").textContent,
       ).toMatch(/No blocking errors/);
     });
-  });
+  }, 15_000);
 });

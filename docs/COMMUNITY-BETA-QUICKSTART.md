@@ -103,19 +103,25 @@ Base URL for examples below: `http://127.0.0.1:3000`
 
 ## 5. First Agent and Run (no paid model key)
 
-Use the trusted echo agent fixture. It runs entirely locally.
+Use a trusted TypeScript echo fixture. It runs entirely locally and needs no paid model key.
+
+The Product Console first-agent path uses `adapters/runtime-typescript/test/fixtures/echo-input-agent.ts`, which echoes only Run input. The test `echo-agent.ts` fixture also echoes process environment values and is not recommended for shared Console inspection.
 
 ### Create workspace-scoped Agent
 
+Workspace is taken from the API key principal. Extra fields such as `workspaceId` are rejected.
+
 ```bash
 curl -sS -X POST http://127.0.0.1:3000/v1/agents \
+  -H 'Authorization: Bearer <workspace-api-key>' \
   -H 'Content-Type: application/json' \
   -d '{
-    "workspaceId": "ws-dev",
     "key": "echo-agent",
     "name": "Echo Agent"
   }'
 ```
+
+The Product Console (`/agents`, `/onboarding`) performs the same registration through its BFF. See [`docs/engineering/CONSOLE.md`](./engineering/CONSOLE.md).
 
 ### Append immutable AgentVersion
 
@@ -148,9 +154,9 @@ curl -sS -X POST http://127.0.0.1:3000/v1/agents/<agentId>/versions \
 
 ```bash
 curl -sS -X POST http://127.0.0.1:3000/v1/runs \
+  -H 'Authorization: Bearer <workspace-api-key>' \
   -H 'Content-Type: application/json' \
   -d '{
-    "workspaceId": "ws-dev",
     "agentId": "<agentId>",
     "agentVersionId": "<agentVersionId>",
     "input": { "prompt": "hello" }

@@ -191,6 +191,83 @@ describe("console real control-plane stack", () => {
       );
       expect(artifacts.status).toBe(200);
 
+      const agentsList = await fetch(`${consoleOrigin}/api/v1/agents`);
+      const agentsListBody = (await agentsList.json()) as {
+        agents: { id: string }[];
+      };
+      expect(agentsList.status).toBe(200);
+      expect(agentsListBody.agents.length).toBeGreaterThan(0);
+      expect(JSON.stringify(agentsListBody)).not.toContain(
+        integrationAuth.token,
+      );
+
+      const registered = await fetch(`${consoleOrigin}/api/v1/agents`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          key: `console-bff-${String(Date.now())}`,
+          name: "Console BFF Agent",
+        }),
+      });
+      const registeredBody = (await registered.json()) as { id?: string };
+      expect(registered.status).toBe(201);
+      expect(registeredBody.id).toBeTruthy();
+      expect(JSON.stringify(registeredBody)).not.toContain(
+        integrationAuth.token,
+      );
+
+      const appended = await fetch(
+        `${consoleOrigin}/api/v1/agents/${registeredBody.id}/versions`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            manifest: {
+              schemaVersion: "1",
+              key: "console-bff-agent",
+              name: "Console BFF Agent",
+              runtime: {
+                type: "REMOTE_HTTP",
+                protocolVersion: "1",
+                endpoint: runtimeEndpoint,
+              },
+              input: { schema: {} },
+              output: { schema: {} },
+              execution: { timeoutMs: 8_000, maxAttempts: 1 },
+              capabilities: { model: false, tools: [] },
+            },
+          }),
+        },
+      );
+      const appendedBody = (await appended.json()) as { id?: string };
+      expect(appended.status).toBe(201);
+      expect(appendedBody.id).toBeTruthy();
+
+      const launched = await fetch(`${consoleOrigin}/api/v1/runs`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          agentId: registeredBody.id,
+          agentVersionId: appendedBody.id,
+          input: { prompt: "console-bff-create" },
+        }),
+      });
+      const launchedBody = (await launched.json()) as {
+        run?: { id?: string; status?: string; agentId?: string };
+        runAttempt?: { id?: string; status?: string };
+      };
+      expect(launched.status).toBe(201);
+      expect(launchedBody.run?.id).toBeTruthy();
+      expect(launchedBody.run?.status).toBe("QUEUED");
+      expect(launchedBody.run?.agentId).toBe(registeredBody.id);
+      expect(launchedBody.runAttempt?.id).toBeTruthy();
+      expect(launchedBody.runAttempt?.status).toBe("PENDING");
+      expect(JSON.stringify(launchedBody)).not.toContain(integrationAuth.token);
+
+      console.info(
+        `ACCEPTANCE_BFF_AGENT_ID=${registeredBody.id} ACCEPTANCE_BFF_AGENT_VERSION_ID=${appendedBody.id} ACCEPTANCE_BFF_RUN_ID=${launchedBody.run?.id} ACCEPTANCE_BFF_RUN_ATTEMPT_ID=${launchedBody.runAttempt?.id}`,
+      );
+
       const deepLinkRun = await fetch(`${consoleOrigin}/runs/${created.runId}`);
       expect(deepLinkRun.status).toBe(200);
       expect(await deepLinkRun.text()).toContain('id="root"');

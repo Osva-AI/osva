@@ -83,6 +83,10 @@ export function RunDetailPage() {
         <div>
           <h1 className="page-title">Run</h1>
           <p className="page-subtitle mono">{run.id}</p>
+          <p className="muted">
+            Individual Run (not a WorkflowRun). Attempts below are RunAttempts,
+            not WorkflowNodeRuns.
+          </p>
         </div>
         <div className="toolbar">
           <Link className="button" to="/runs">
@@ -118,11 +122,22 @@ export function RunDetailPage() {
           </div>
           <div>
             <dt>Agent ID</dt>
-            <dd className="mono">{run.agentId}</dd>
+            <dd>
+              <Link className="mono" to={`/agents/${run.agentId}`}>
+                {run.agentId}
+              </Link>
+            </dd>
           </div>
           <div>
             <dt>Agent version ID</dt>
-            <dd className="mono">{run.effectiveBindings.agentVersionId}</dd>
+            <dd>
+              <Link
+                className="mono"
+                to={`/agents/${run.agentId}/versions/${run.effectiveBindings.agentVersionId}`}
+              >
+                {run.effectiveBindings.agentVersionId}
+              </Link>
+            </dd>
           </div>
           <div>
             <dt>Created</dt>

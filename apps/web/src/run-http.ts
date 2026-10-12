@@ -10,6 +10,7 @@ import {
   runResourceSchema,
 } from "@osva-ai/contracts/schemas";
 import {
+  CONTROL_PLANE_RESOURCE_KINDS,
   DEFAULT_RUN_LIST_LIMIT,
   MAX_RUN_LIST_LIMIT,
   type Run,
@@ -18,7 +19,10 @@ import {
 } from "@osva/domain";
 import type { CreateRun } from "@osva/orchestration";
 
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  authorizeControlPlaneExecute,
+  requireControlPlaneScope,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 import { decodeRunListCursor, encodeRunListCursor } from "./run-cursor.js";
@@ -101,6 +105,7 @@ async function dispatchRunRoute(
         return;
       }
 
+      authorizeControlPlaneExecute(scope, CONTROL_PLANE_RESOURCE_KINDS.run);
       const created = await services.createRun.execute({
         runId: services.ids.createId() as RunId,
         runAttemptId: services.ids.createId() as RunAttemptId,

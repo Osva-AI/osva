@@ -46,7 +46,8 @@ export function RunsPage() {
         <div>
           <h1 className="page-title">Runs</h1>
           <p className="page-subtitle">
-            Read-only execution history from the OSVA control plane.
+            Individual Runs from the OSVA control plane. Launch from an
+            AgentVersion; this list is not WorkflowRuns.
           </p>
         </div>
         <button

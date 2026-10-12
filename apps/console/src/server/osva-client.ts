@@ -1,5 +1,6 @@
 import type {
   AgentId,
+  AgentVersionId,
   ApprovalRequestId,
   ArtifactId,
   RunAttemptId,
@@ -70,9 +71,20 @@ export interface ConsoleOsvaClient {
    */
   downloadArtifact(artifactId: ArtifactId): Promise<ConsoleArtifactContent>;
   listAgents(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getAgent(agentId: AgentId): Promise<ConsoleUpstreamResponse<unknown>>;
+  createAgent(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   listAgentVersions(
     agentId: AgentId,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getAgentVersion(
+    agentId: AgentId,
+    agentVersionId: AgentVersionId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createAgentVersion(
+    agentId: AgentId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createRun(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   listWorkflows(): Promise<ConsoleUpstreamResponse<unknown>>;
   createWorkflow(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   getWorkflow(
@@ -219,10 +231,38 @@ export function createConsoleOsvaClient(
         method: "GET",
         path: "/v1/agents",
       }),
+    getAgent: (agentId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/agents/${encodeURIComponent(agentId)}`,
+      }),
+    createAgent: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/agents",
+        body,
+      }),
     listAgentVersions: (agentId) =>
       http.requestWithMeta({
         method: "GET",
         path: `/v1/agents/${encodeURIComponent(agentId)}/versions`,
+      }),
+    getAgentVersion: (agentId, agentVersionId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/agents/${encodeURIComponent(agentId)}/versions/${encodeURIComponent(agentVersionId)}`,
+      }),
+    createAgentVersion: (agentId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/agents/${encodeURIComponent(agentId)}/versions`,
+        body,
+      }),
+    createRun: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/runs",
+        body,
       }),
     listWorkflows: () =>
       http.requestWithMeta({

@@ -104,6 +104,7 @@ docker compose down -v
 
 ## Next steps
 
+- First Agent in the Product Console: [`engineering/CONSOLE.md`](engineering/CONSOLE.md) (Agents, Run Agent, `/onboarding`)
 - [`architecture/DEPLOYMENT_TOPOLOGIES.md`](architecture/DEPLOYMENT_TOPOLOGIES.md)
 - [`deployment/CONFIGURATION.md`](deployment/CONFIGURATION.md)
 - [`operations/RUNBOOK.md`](operations/RUNBOOK.md)

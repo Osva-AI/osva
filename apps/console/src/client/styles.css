@@ -124,6 +124,7 @@ a:hover {
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-4);
+  flex-wrap: wrap;
 }
 
 .page-title {
@@ -179,8 +180,13 @@ a:hover {
 
 .data-table {
   width: 100%;
+  min-width: 36rem;
   border-collapse: collapse;
   font-size: 0.86rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
 }
 
 .data-table th,
@@ -330,6 +336,18 @@ a:hover {
 .stack {
   display: grid;
   gap: var(--space-3);
+}
+
+.onboarding-steps {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.onboarding-steps li {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .field textarea {

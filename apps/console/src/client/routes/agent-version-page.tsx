@@ -1,0 +1,251 @@
+import { Link, useNavigate, useParams } from "react-router-dom";
+
+import { AgentRunLaunchForm } from "../components/agent/agent-run-launch-form";
+import { RuntimeReadinessPanel } from "../components/agent/runtime-readiness-panel";
+import { EmptyState } from "../components/empty-state/empty-state";
+import { ErrorState } from "../components/error-state/error-state";
+import { JsonView } from "../components/json-view/json-view";
+import { LoadingBlock } from "../components/loading/loading-block";
+import {
+  useAgentQuery,
+  useAgentVersionQuery,
+  useAgentVersionsQuery,
+} from "../hooks/use-agents";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
+import {
+  readAgentRuntimeView,
+  readManifestBindingNames,
+  readManifestCapabilities,
+  readManifestIoSchemas,
+} from "../lib/agent-manifest-view";
+import { onboardingSearch } from "../lib/agent-onboarding";
+import { builderHandoffSearch } from "../lib/builder-handoff";
+import { ConsoleApiError } from "../lib/console-api";
+import { formatTimestamp } from "../lib/formatting";
+import { roleCanExecuteControlPlaneActions } from "../lib/permissions";
+
+export function AgentVersionPage() {
+  const { agentId, agentVersionId } = useParams<{
+    agentId: string;
+    agentVersionId: string;
+  }>();
+  const navigate = useNavigate();
+  const agentQuery = useAgentQuery(agentId);
+  const versionQuery = useAgentVersionQuery(agentId, agentVersionId);
+  const versionsQuery = useAgentVersionsQuery(agentId);
+  const authQuery = useAuthContextQuery();
+  const canExecute =
+    authQuery.data !== undefined &&
+    roleCanExecuteControlPlaneActions(authQuery.data.role);
+
+  const notFound =
+    versionQuery.isError &&
+    versionQuery.error instanceof ConsoleApiError &&
+    versionQuery.error.status === 404;
+
+  if (agentId === undefined || agentVersionId === undefined) {
+    return (
+      <ErrorState
+        title="Invalid route"
+        error={new Error("Missing route parameters.")}
+      />
+    );
+  }
+
+  const version = versionQuery.data;
+  const runtime = readAgentRuntimeView(version?.manifest);
+  const capabilities = readManifestCapabilities(version?.manifest);
+  const io = readManifestIoSchemas(version?.manifest);
+  const bindings = readManifestBindingNames(version?.manifest);
+  const versions = versionsQuery.data?.versions ?? [];
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">AgentVersion</h1>
+          <p className="page-subtitle mono">{agentVersionId}</p>
+        </div>
+        <div className="toolbar">
+          <Link
+            className="button"
+            to={`/onboarding${onboardingSearch({ agentId, agentVersionId })}`}
+          >
+            Continue onboarding
+          </Link>
+          <Link
+            className="button"
+            to={`/workflows/new${builderHandoffSearch({ agentId, agentVersionId })}`}
+          >
+            Use in Workflow Builder
+          </Link>
+          <Link className="button" to={`/agents/${agentId}`}>
+            Back to agent
+          </Link>
+        </div>
+      </header>
+
+      {versionQuery.isLoading ? (
+        <LoadingBlock label="Loading AgentVersion…" />
+      ) : null}
+      {notFound ? (
+        <EmptyState
+          title="AgentVersion not found."
+          description="This version is not visible for the agent in your workspace."
+        />
+      ) : null}
+      {versionQuery.isError && !notFound ? (
+        <ErrorState
+          title="Failed to load AgentVersion"
+          error={versionQuery.error}
+        />
+      ) : null}
+
+      {version !== undefined ? (
+        <>
+          <section className="panel">
+            <dl className="meta-grid">
+              <div>
+                <dt>Agent</dt>
+                <dd>
+                  {agentQuery.data?.name ?? (
+                    <span className="mono">{agentId}</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Agent ID</dt>
+                <dd className="mono">{version.agentId}</dd>
+              </div>
+              <div>
+                <dt>Version number</dt>
+                <dd>v{version.version}</dd>
+              </div>
+              <div>
+                <dt>AgentVersion ID</dt>
+                <dd className="mono">{version.id}</dd>
+              </div>
+              <div>
+                <dt>Runtime type</dt>
+                <dd className="mono">{runtime.type}</dd>
+              </div>
+              <div>
+                <dt>Created</dt>
+                <dd>{formatTimestamp(version.createdAt)}</dd>
+              </div>
+            </dl>
+            {versions.length > 1 ? (
+              <div className="field">
+                <label htmlFor="agent-version-select">
+                  Selected AgentVersion
+                </label>
+                <select
+                  id="agent-version-select"
+                  value={version.id}
+                  onChange={(event) => {
+                    navigate(
+                      `/agents/${agentId}/versions/${event.target.value}`,
+                    );
+                  }}
+                >
+                  {versions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      v{item.version} — {item.id}
+                    </option>
+                  ))}
+                </select>
+                <p className="muted">
+                  Changing this control navigates to the chosen immutable
+                  version. The Console never silently substitutes another
+                  version.
+                </p>
+              </div>
+            ) : (
+              <p className="muted">
+                Selected AgentVersion is{" "}
+                <span className="mono">{version.id}</span>.
+              </p>
+            )}
+          </section>
+
+          <section className="panel">
+            <h2 className="panel-title">Runtime configuration</h2>
+            <p className="muted">{runtime.summary}</p>
+            {Object.keys(runtime.details).length > 0 ? (
+              <dl className="meta-grid">
+                {Object.entries(runtime.details).map(([key, value]) => (
+                  <div key={key}>
+                    <dt>{key}</dt>
+                    <dd className="mono">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+            <p className="muted">
+              Model capability:{" "}
+              {capabilities.model ? "declared" : "not declared"}. Tools:{" "}
+              {capabilities.tools.length === 0
+                ? "none declared"
+                : capabilities.tools.join(", ")}
+              .
+            </p>
+            <p className="muted">
+              Bindings — models: {formatBindingNames(bindings.models)}; tools:{" "}
+              {formatBindingNames(bindings.tools)}; memory:{" "}
+              {formatBindingNames(bindings.memory)}; knowledge:{" "}
+              {formatBindingNames(bindings.knowledge)}.
+            </p>
+          </section>
+
+          <section className="panel">
+            <h2 className="panel-title">Input and output contracts</h2>
+            <p className="muted">
+              These schemas are copied from the persisted manifest. They are
+              documentation for operators, not a Console execution validator.
+            </p>
+            {io.input !== undefined ? (
+              <JsonView label="Input schema" value={io.input} />
+            ) : (
+              <p className="muted">
+                No input schema is present on this manifest.
+              </p>
+            )}
+            {io.output !== undefined ? (
+              <JsonView label="Output schema" value={io.output} />
+            ) : (
+              <p className="muted">
+                No output schema is present on this manifest.
+              </p>
+            )}
+          </section>
+
+          <RuntimeReadinessPanel
+            controlPlaneReachable={authQuery.data !== undefined}
+            selectedVersion={version}
+          />
+
+          <section className="panel">
+            <h2 className="panel-title">Manifest</h2>
+            <p className="muted">
+              This payload is the persisted immutable AgentVersion manifest.
+            </p>
+            <JsonView label="Manifest" value={version.manifest ?? {}} />
+          </section>
+
+          <AgentRunLaunchForm
+            agentId={agentId}
+            agentKey={agentQuery.data?.key}
+            agentName={agentQuery.data?.name}
+            selectedVersion={version}
+            canExecute={canExecute}
+            versionLoading={versionQuery.isLoading}
+          />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function formatBindingNames(names: readonly string[]): string {
+  return names.length === 0 ? "none" : names.join(", ");
+}
