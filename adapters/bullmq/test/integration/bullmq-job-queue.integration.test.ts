@@ -127,6 +127,112 @@ describe("BullMqJobQueue Valkey integration", () => {
     }
   });
 
+  it("reports already_present when duplicating an active execution job", async () => {
+    const queue = await createQueue();
+    let release: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    try {
+      await queue.consume(async () => {
+        release?.();
+        await delay(500);
+      });
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      await started;
+      expect(await queue.enqueue(FIRST)).toEqual({
+        outcome: "already_present",
+      });
+      expect(await queue.countActiveJobs()).toBeLessThanOrEqual(1);
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("assigns enqueued to one concurrent caller and already_present to the other", async () => {
+    const queue = await createQueue();
+    try {
+      const [first, second] = await Promise.all([
+        queue.enqueue(FIRST),
+        queue.enqueue(FIRST),
+      ]);
+      const outcomes = [first.outcome, second.outcome].sort();
+      expect(outcomes).toEqual(["already_present", "enqueued"]);
+      expect(await queue.countActiveJobs()).toBe(1);
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("reports already_present when the BullMQ job hash still exists after completion", async () => {
+    const queue = await createQueue();
+    const delivered: RunAttemptId[] = [];
+    try {
+      await queue.consume(async (payload) => {
+        delivered.push(payload.runAttemptId);
+      });
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      await waitForDelivery(delivered);
+      expect(await queue.enqueue(FIRST)).toEqual({
+        outcome: "already_present",
+      });
+      expect(await queue.countActiveJobs()).toBe(0);
+      await delay(200);
+      expect(delivered).toEqual([FIRST]);
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("enqueues after an orphaned claim expires without a queue job", async () => {
+    const prefix = nextPrefix();
+    const queue = new BullMqJobQueue({ url: context.url, prefix });
+    const jobId = toBullMqJobId(FIRST);
+    try {
+      await queue.enqueue(FIRST);
+      await queue.cancel(FIRST);
+      expect(await queue.getQueuedJob(FIRST)).toBeNull();
+
+      const raw = new Queue(OSVA_EXECUTION_QUEUE_NAME, {
+        connection: { url: context.url, maxRetriesPerRequest: null },
+        prefix,
+      });
+      try {
+        const client = await raw.client;
+        const claimKey = `${raw.toKey("osva-enqueue-claim")}:${jobId}`;
+        await client.set(claimKey, "orphan", "PX", 50);
+        await delay(100);
+      } finally {
+        await raw.close();
+      }
+
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      expect(await queue.countActiveJobs()).toBe(1);
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("enqueues again after cancel removes the waiting job", async () => {
+    const queue = await createQueue();
+    try {
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      expect(await queue.enqueue(FIRST)).toEqual({
+        outcome: "already_present",
+      });
+      await queue.cancel(FIRST);
+      expect(await queue.getQueuedJob(FIRST)).toBeNull();
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      expect(await queue.countActiveJobs()).toBe(1);
+      expect(await queue.getQueuedJob(FIRST)).toMatchObject({
+        id: toBullMqJobId(FIRST),
+        data: { runAttemptId: FIRST },
+      });
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
   it("creates a distinct queue job for another RunAttempt", async () => {
     const queue = await createQueue();
     try {

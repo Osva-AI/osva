@@ -21,6 +21,7 @@ import {
   OSVA_EXECUTION_QUEUE_NAME,
 } from "./constants.js";
 import { JobQueueShutdownError, UnsupportedQueueJobError } from "./errors.js";
+import { enqueueWithTransportClaim } from "./enqueue-claim.js";
 import { toBullMqJobId } from "./job-id.js";
 import { parseExecutionJobPayload } from "./payload.js";
 import type { PingableJobQueue } from "./pingable-job-queue.js";
@@ -110,14 +111,23 @@ export class BullMqJobQueue implements PingableJobQueue {
     this.assertOpen("enqueue");
     const jobId = toBullMqJobId(runAttemptId);
 
+    const carrier = this.instrumentation?.injectTraceContext();
+    const payload = withBullMqTraceCarrier(
+      Object.freeze({ runAttemptId }),
+      carrier,
+    );
+
     try {
-      const carrier = this.instrumentation?.injectTraceContext();
-      const payload = withBullMqTraceCarrier(
-        Object.freeze({ runAttemptId }),
-        carrier,
+      const outcome = await enqueueWithTransportClaim(
+        this.queue,
+        jobId,
+        async () => {
+          await this.queue.add(EXECUTE_RUN_ATTEMPT_JOB_NAME, payload, {
+            jobId,
+          });
+        },
       );
-      await this.queue.add(EXECUTE_RUN_ATTEMPT_JOB_NAME, payload, { jobId });
-      return { outcome: "enqueued" };
+      return { outcome };
     } catch (error) {
       if (isDuplicateJobError(error)) {
         return { outcome: "already_present" };
@@ -131,17 +141,16 @@ export class BullMqJobQueue implements PingableJobQueue {
       return;
     }
 
-    const job = await this.queue.getJob(toBullMqJobId(runAttemptId));
-    if (job === undefined) {
-      return;
+    const jobId = toBullMqJobId(runAttemptId);
+    const job = await this.queue.getJob(jobId);
+    if (job !== undefined) {
+      const state = await job.getState();
+      if (state !== "completed" && state !== "failed" && state !== "active") {
+        await job.remove();
+      }
     }
 
-    const state = await job.getState();
-    if (state === "completed" || state === "failed" || state === "active") {
-      return;
-    }
-
-    await job.remove();
+    await this.clearEnqueueClaim(jobId);
   }
 
   async consume(handler: JobQueueHandler): Promise<void> {
@@ -195,6 +204,12 @@ export class BullMqJobQueue implements PingableJobQueue {
     }
 
     await this.queue.close();
+  }
+
+  private async clearEnqueueClaim(jobId: string): Promise<void> {
+    await this.queue.waitUntilReady();
+    const client = await this.queue.client;
+    await client.del(`${this.queue.toKey("osva-enqueue-claim")}:${jobId}`);
   }
 
   /**

@@ -70,7 +70,7 @@ Helm validation.
 
 This chart does **not** deploy a Collector, Prometheus, or Grafana. Point
 workloads at an operator-managed OTLP HTTP collector. Example values:
-[`../../../observability/helm/external-collector-values.example.yaml`](../../../observability/helm/external-collector-values.example.yaml).
+[`../../observability/helm/external-collector-values.example.yaml`](../../observability/helm/external-collector-values.example.yaml).
 
 Put `OTEL_EXPORTER_OTLP_HEADERS` in `existingSecret` or `secretEnv`, never in
 `values.yaml` or the ConfigMap. Telemetry is not a readiness dependency.
