@@ -150,12 +150,19 @@ export class ExecuteRunAttempt {
       async (span) => {
         const result = await this.executeInner(command, span);
         if (result.outcome === "succeeded" || result.outcome === "failed") {
+          const durationMs = elapsedMs(startedAt, performance.now());
+          const durationAttributes = {
+            terminal_status: result.run.status,
+          };
+          telemetry.recordHistogram(
+            OSVA_METRIC.RUN_ATTEMPT_DURATION_MS,
+            durationMs,
+            durationAttributes,
+          );
           telemetry.recordHistogram(
             OSVA_METRIC.RUN_DURATION_MS,
-            elapsedMs(startedAt, performance.now()),
-            {
-              terminal_status: result.run.status,
-            },
+            durationMs,
+            durationAttributes,
           );
           if (result.outcome === "succeeded") {
             telemetry.recordCounter(OSVA_METRIC.RUNS_COMPLETED, 1, {

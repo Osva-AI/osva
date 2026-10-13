@@ -45,12 +45,12 @@ class GatedBullMqJobQueue extends BullMqJobQueue {
     this.enqueueEnabled = true;
   }
 
-  override async enqueue(runAttemptId: RunAttemptId): Promise<void> {
+  override async enqueue(runAttemptId: RunAttemptId) {
     if (!this.enqueueEnabled) {
       throw new Error("queue unavailable");
     }
 
-    await super.enqueue(runAttemptId);
+    return super.enqueue(runAttemptId);
   }
 }
 

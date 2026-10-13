@@ -20,6 +20,8 @@ backup
 - Migrations are **forward** operations. OSVA does not promise automatic database downgrade.
 - Application rollback (previous image) and database rollback are **not equivalent**. Rolling back application binaries without matching schema expectations is unsupported.
 - Take a PostgreSQL backup before upgrading production.
+- After migrate, run `pnpm db:migrations:status` **and** `pnpm db:migrations:integrity`. A current journal is not proof the 0023 lease columns and `run_attempts_expired_lease_idx` exist.
+- If integrity reports `schema_mismatch`, do **not** blindly replay `0023_execution_lease_slice.sql`. Back up, compare catalog vs journal, then apply an explicit reviewed repair. See [`RUNBOOK.md`](RUNBOOK.md).
 - `0023_execution_lease_slice` adds nullable `execution_owner` / `lease_expires_at` and `execution_generation` default `0`. Existing `RUNNING` rows without a lease are **not** auto-failed. After upgrade, list `run_attempts` where `status = 'RUNNING' AND execution_owner IS NULL`, confirm no worker still owns them, then fail those rows with an operator UPDATE. See [`EXECUTION_RECOVERY.md`](EXECUTION_RECOVERY.md).
 
 ## Helm

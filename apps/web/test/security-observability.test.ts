@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  resetSecurityEventInstrumentation,
   resetSecurityEventSink,
   setSecurityEventSink,
   SECURITY_EVENT_NAMES,
@@ -13,6 +14,7 @@ import { MemoryApiKeyRepository } from "@osva/adapters-memory";
 describe("security observability", () => {
   afterEach(() => {
     resetSecurityEventSink();
+    resetSecurityEventInstrumentation();
     vi.restoreAllMocks();
   });
 

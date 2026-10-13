@@ -48,6 +48,33 @@ Database URL precedence for the migration container:
 
 Set `mcp.allowedHosts` or enable `ingress.mcp` with a hostname so MCP DNS rebinding protection accepts production `Host` headers. `/health` is not host-filtered for probe compatibility.
 
+## Telemetry (optional)
+
+`telemetry.enabled` defaults to `false`. Existing installs are unchanged.
+
+```yaml
+telemetry:
+  enabled: true
+  otlpEndpoint: http://otel-collector.observability.svc.cluster.local:4318
+  serviceNameOverride: ""
+  tracesSampler: parentbased_always_on
+  tracesSamplerArg: ""
+```
+
+When enabled, the ConfigMap receives `OTEL_EXPORTER_OTLP_ENDPOINT` and sampler
+settings. Each workload gets its default `OTEL_SERVICE_NAME`
+(`osva-web`, `osva-worker`, `osva-scheduler`,
+`osva-workflow-orchestrator`, `osva-knowledge-worker`, `osva-mcp`) unless
+`serviceNameOverride` is set. Invalid sampler names or an empty endpoint fail
+Helm validation.
+
+This chart does **not** deploy a Collector, Prometheus, or Grafana. Point
+workloads at an operator-managed OTLP HTTP collector. Example values:
+[`../../../observability/helm/external-collector-values.example.yaml`](../../../observability/helm/external-collector-values.example.yaml).
+
+Put `OTEL_EXPORTER_OTLP_HEADERS` in `existingSecret` or `secretEnv`, never in
+`values.yaml` or the ConfigMap. Telemetry is not a readiness dependency.
+
 ## Bootstrap
 
 Run a one-off pod or `kubectl run` with `OSVA_PROCESS=bootstrap` after migrations. This is not part of the migration hook.

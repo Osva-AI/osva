@@ -10,6 +10,7 @@ import {
   workspaceIdSchema,
 } from "./ids.js";
 import { RUN_ATTEMPT_STATES, RUN_STATES } from "../run-state.js";
+import { RUN_ATTEMPT_EXECUTION_STATES } from "../run-lifecycle.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 import { jsonValueSchema } from "./json-value.js";
 
@@ -57,6 +58,17 @@ export const runAttemptResourceSchema = z.strictObject({
     })
     .optional(),
   output: jsonValueSchema.optional(),
+  execution: z
+    .strictObject({
+      state: z.enum(RUN_ATTEMPT_EXECUTION_STATES),
+      leased: z.boolean(),
+      leaseExpiresAt: utcIso8601TimestampSchema.optional(),
+      executionGeneration: z.int().nonnegative(),
+      interrupted: z.boolean(),
+      recoveryReason: z.string().min(1).optional(),
+      observedAt: utcIso8601TimestampSchema,
+    })
+    .optional(),
 });
 
 export const createRunResponseSchema = z.strictObject({

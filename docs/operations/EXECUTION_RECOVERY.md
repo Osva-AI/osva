@@ -37,7 +37,27 @@ The execution worker hosts the ticker. Multiple replicas may run it; correctness
 - Expired **leased** `RUNNING` attempts → `FAILED` + `EXECUTION_INTERRUPTED`
 - Already-terminal rows are left unchanged
 - The ticker never calls `runtime.execute()`
-- `QUEUED` runs with `PENDING` attempts are re-enqueued with the **same** RunAttempt ID (BullMQ job identity). Duplicate enqueue is a no-op.
+- `QUEUED` runs with `PENDING` attempts are re-enqueued with the **same** RunAttempt ID (BullMQ job identity). Duplicate enqueue returns `already_present` and is not counted as `osva.recovery.transport_repaired`.
+
+## Interpreting RunAttempt diagnostics
+
+Public RunAttempt resources may include additive `execution` diagnostics:
+
+| Field | Meaning |
+| --- | --- |
+| `state` | Operator-facing summary: queued, running_leased, running_lease_expired, running_unleased, interrupted, failed, completed, cancelled, timed_out |
+| `leased` | Structural: RUNNING with owner and `leaseExpiresAt` present. Not a worker-health signal. |
+| `leaseExpiresAt` | Persisted PostgreSQL timestamp |
+| `executionGeneration` | Fencing generation |
+| `interrupted` | Attempt failed with `EXECUTION_INTERRUPTED` or allowlisted recovery reason |
+| `recoveryReason` | Currently `LEASE_EXPIRED` when present |
+| `observedAt` | Control-plane clock used for the observational `running_leased` / `running_lease_expired` comparison |
+
+Recovery CAS uses PostgreSQL `now()`, not `observedAt`. Console Run Detail shows these fields and states that an expired lease is not proof a worker is down. Queue backlog is transport-only; durable status lives on the RunAttempt.
+
+Raw `executionOwner` stays internal. VIEWER, OPERATOR, EDITOR, and ADMIN share the same GET `/v1/runs/:id/attempts/:id` READ contract, so owner identity is not exposed on the public resource.
+
+Do not conflate a failed interrupted attempt with a new logical retry. Crash recovery never creates a subsequent RunAttempt.
 
 ## Legacy pre-migration RUNNING rows
 

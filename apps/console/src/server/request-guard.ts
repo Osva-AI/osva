@@ -4,12 +4,16 @@ import { isLoopbackBindHost, normalizeBindHost } from "./loopback.js";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+export type ConsoleRequestGuardDenialReason =
+  "forwarded_host" | "invalid_host" | "cross_site_mutation" | "invalid_origin";
+
 export type ConsoleRequestGuardResult =
   | { readonly allowed: true }
   | {
       readonly allowed: false;
       readonly status: number;
       readonly code: "invalid_host" | "invalid_origin";
+      readonly reason: ConsoleRequestGuardDenialReason;
       readonly error: string;
     };
 
@@ -26,6 +30,7 @@ export function evaluateConsoleApiRequestGuard(
   if (forwardedHost !== undefined || forwardedProto !== undefined) {
     return denied(
       "invalid_host",
+      "forwarded_host",
       "Forwarded host headers are not trusted by the OSVA console.",
     );
   }
@@ -33,6 +38,7 @@ export function evaluateConsoleApiRequestGuard(
   const host = parseHostHeader(headerValue(request.headers.host));
   if (host === undefined || !isLoopbackBindHost(host.hostname)) {
     return denied(
+      "invalid_host",
       "invalid_host",
       "Console API Host must be a loopback address.",
     );
@@ -47,6 +53,7 @@ export function evaluateConsoleApiRequestGuard(
   if (fetchSite !== undefined && isCrossSiteFetch(fetchSite)) {
     return denied(
       "invalid_origin",
+      "cross_site_mutation",
       "Cross-site Console API mutations are not allowed.",
     );
   }
@@ -58,6 +65,7 @@ export function evaluateConsoleApiRequestGuard(
 
   if (!isAllowedConsoleOrigin(origin, options.allowedOrigins)) {
     return denied(
+      "invalid_origin",
       "invalid_origin",
       "Cross-origin Console API mutations are not allowed.",
     );
@@ -189,9 +197,10 @@ function isCrossSiteFetch(value: string): boolean {
 
 function denied(
   code: "invalid_host" | "invalid_origin",
+  reason: ConsoleRequestGuardDenialReason,
   error: string,
 ): ConsoleRequestGuardResult {
-  return { allowed: false, status: 403, code, error };
+  return { allowed: false, status: 403, code, reason, error };
 }
 
 function headerValue(

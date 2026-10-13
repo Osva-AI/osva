@@ -719,6 +719,9 @@ importers:
       '@osva/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@osva/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@tanstack/react-query':
         specifier: ^5.90.2
         version: 5.104.1(react@19.3.0)
@@ -804,6 +807,9 @@ importers:
       '@osva/adapters-knowledge-parser':
         specifier: workspace:*
         version: link:../../adapters/knowledge-parser
+      '@osva/adapters-opentelemetry':
+        specifier: workspace:*
+        version: link:../../adapters/opentelemetry
       '@osva/adapters-vector-pgvector':
         specifier: workspace:*
         version: link:../../adapters/vector-pgvector
@@ -816,6 +822,9 @@ importers:
       '@osva/embedding-gateway':
         specifier: workspace:*
         version: link:../../packages/embedding-gateway
+      '@osva/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -847,6 +856,9 @@ importers:
       '@osva-ai/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      '@osva/adapters-opentelemetry':
+        specifier: workspace:*
+        version: link:../../adapters/opentelemetry
       '@osva/observability':
         specifier: workspace:*
         version: link:../../packages/observability

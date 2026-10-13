@@ -22,7 +22,9 @@
     "@osva-ai/contracts": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/domain": "workspace:*",
-    "@osva/embedding-gateway": "workspace:*"
+    "@osva/embedding-gateway": "workspace:*",
+    "@osva/adapters-opentelemetry": "workspace:*",
+    "@osva/observability": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

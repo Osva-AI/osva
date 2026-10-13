@@ -16,6 +16,7 @@ import {
   type Run,
   type RunApplication,
   type RunAttempt,
+  toRunAttemptExecutionDiagnostics,
 } from "@osva/domain";
 import type { CreateRun } from "@osva/orchestration";
 
@@ -119,7 +120,11 @@ async function dispatchRunRoute(
       sendJson(
         response,
         201,
-        toCreateRunResponse(created.run, created.runAttempt),
+        toCreateRunResponse(
+          created.run,
+          created.runAttempt,
+          services.clock.now(),
+        ),
       );
       return;
     }
@@ -150,7 +155,11 @@ async function dispatchRunRoute(
         scope,
         route.runId,
       );
-      sendJson(response, 200, toRunAttemptListResource(attempts));
+      sendJson(
+        response,
+        200,
+        toRunAttemptListResource(attempts, services.clock.now()),
+      );
       return;
     }
 
@@ -163,7 +172,11 @@ async function dispatchRunRoute(
       runId: route.runId,
       runAttemptId: route.runAttemptId,
     });
-    sendJson(response, 200, toRunAttemptResource(attempt));
+    sendJson(
+      response,
+      200,
+      toRunAttemptResource(attempt, services.clock.now()),
+    );
     return;
   }
 
@@ -280,7 +293,7 @@ function toRunResource(run: Run) {
   });
 }
 
-function toRunAttemptResource(attempt: RunAttempt) {
+function toRunAttemptResource(attempt: RunAttempt, observedAt: Date) {
   return runAttemptResourceSchema.parse({
     id: attempt.id,
     runId: attempt.runId,
@@ -291,13 +304,14 @@ function toRunAttemptResource(attempt: RunAttempt) {
     completedAt: attempt.completedAt?.toISOString(),
     error: attempt.error,
     ...(attempt.output !== undefined ? { output: attempt.output } : {}),
+    execution: toRunAttemptExecutionDiagnostics(attempt, observedAt),
   });
 }
 
-function toCreateRunResponse(run: Run, attempt: RunAttempt) {
+function toCreateRunResponse(run: Run, attempt: RunAttempt, observedAt: Date) {
   return createRunResponseSchema.parse({
     run: toRunResource(run),
-    runAttempt: toRunAttemptResource(attempt),
+    runAttempt: toRunAttemptResource(attempt, observedAt),
   });
 }
 
@@ -317,9 +331,14 @@ function toRunListResource(
   });
 }
 
-function toRunAttemptListResource(attempts: readonly RunAttempt[]) {
+function toRunAttemptListResource(
+  attempts: readonly RunAttempt[],
+  observedAt: Date,
+) {
   return runAttemptListResourceSchema.parse({
-    attempts: attempts.map((attempt) => toRunAttemptResource(attempt)),
+    attempts: attempts.map((attempt) =>
+      toRunAttemptResource(attempt, observedAt),
+    ),
   });
 }
 export const V1_HTTP_ROUTES = [

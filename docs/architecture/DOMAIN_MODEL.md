@@ -16,7 +16,7 @@ Run
   ├── input (immutable execution snapshot)
   ├── RunAttempt*
   │    └── RunStep*
-  ├── RunLog*
+  ├── RunLog* (conceptual only; not a persisted OSVA entity)
   ├── UsageRecord*
   ├── Artifact*
   └── EvaluationResult*

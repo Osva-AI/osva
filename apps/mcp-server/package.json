@@ -18,6 +18,7 @@
     "@modelcontextprotocol/server": "2.0.0",
     "@osva-ai/contracts": "workspace:*",
     "@osva/observability": "workspace:*",
+    "@osva/adapters-opentelemetry": "workspace:*",
     "@osva-ai/sdk": "workspace:*"
   },
   "devDependencies": {

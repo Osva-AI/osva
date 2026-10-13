@@ -1,0 +1,103 @@
+# Example Prometheus alerts for OSVA Community observability.
+# Thresholds are starting points for operators, not calibrated SLOs.
+# Counters are queried with rate()/increase(), never as raw cumulative values.
+#
+# Do not enable OsvaCollectorDown unless Prometheus scrapes job
+# osva-otel-collector. An absent() alert without that scrape always fires.
+
+groups:
+  - name: osva.examples
+    rules:
+      - alert: OsvaApiHigh5xxRate
+        expr: |
+          (
+            sum(rate(osva_http_requests_total{status_class="5xx"}[5m]))
+            /
+            clamp_min(sum(rate(osva_http_requests_total[5m])), 0.001)
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: example
+        annotations:
+          summary: Sustained OSVA API 5xx rate above the example 5% threshold.
+          description: Investigate web logs and GET /ready failedDependency. Example threshold, not an SLO.
+          runbook: docs/operations/RUNBOOK.md#api-5xx-rate
+
+      - alert: OsvaQueueBacklogGrowing
+        expr: |
+          osva_queue_jobs{queue="execution",state="waiting"} > 20
+        for: 15m
+        labels:
+          severity: example
+        annotations:
+          summary: Execution queue waiting jobs stay above the example threshold.
+          description: Queue depth is transport state. Confirm durable RunAttempt rows in PostgreSQL before assuming work is lost.
+          runbook: docs/operations/RUNBOOK.md#queue-backlog
+
+      - alert: OsvaWorkerConsumersMissing
+        expr: |
+          osva_queue_jobs{queue="execution",state="waiting"} > 0
+          and
+          osva_queue_jobs{queue="execution",state="active"} == 0
+        for: 10m
+        labels:
+          severity: example
+        annotations:
+          summary: Jobs are waiting while no execution jobs are active.
+          description: Example proxy for missing workers. OSVA does not export a consumer-count metric.
+          runbook: docs/operations/RUNBOOK.md#missing-worker-consumers
+
+      - alert: OsvaQueueStalls
+        expr: |
+          rate(osva_queue_stalled_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: example
+        annotations:
+          summary: BullMQ stall events are occurring.
+          description: Repeated stalls often mean workers died mid-job or Valkey is overloaded.
+          runbook: docs/operations/RUNBOOK.md#worker-stalls
+
+      - alert: OsvaLeaseInterruptions
+        expr: |
+          rate(osva_recovery_lease_interrupted_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: example
+        annotations:
+          summary: Execution leases are being interrupted.
+          description: Interruptions fail the same RunAttempt with EXECUTION_INTERRUPTED. Check worker health and lease TTL.
+          runbook: docs/operations/RUNBOOK.md#lease-interruptions
+
+      - alert: OsvaRecoveryTickerErrors
+        expr: |
+          rate(osva_recovery_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: example
+        annotations:
+          summary: Execution recovery ticker is recording errors.
+          description: Recovery errors are not the same as a successful transport repair.
+          runbook: docs/operations/RUNBOOK.md#recovery-ticker-failures
+
+      - alert: OsvaRateLimitStoreOutage
+        expr: |
+          rate(osva_security_events_total{event="rate_limit.store_unavailable"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: example
+        annotations:
+          summary: Rate-limit store (Valkey) is failing closed.
+          description: Web returns 503 SERVICE_UNAVAILABLE for /v1 when the limiter store is down. Distinct from 429 RATE_LIMITED.
+          runbook: docs/operations/RUNBOOK.md#rate-limit-store-outage
+
+      # Optional. Enable only when Prometheus scrapes job osva-otel-collector.
+      # - alert: OsvaCollectorDown
+      #   expr: up{job="osva-otel-collector"} == 0
+      #   for: 5m
+      #   labels:
+      #     severity: example
+      #   annotations:
+      #     summary: The example OSVA Collector scrape target is down.
+      #     description: Application execution continues (fail-open). Telemetry is delayed or dropped.
+      #     runbook: docs/operations/RUNBOOK.md#collector-outage

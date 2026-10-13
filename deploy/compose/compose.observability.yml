@@ -1,0 +1,95 @@
+# Opt-in observability overlay. Default compose.yml does not set an OTLP
+# endpoint and does not start a collector.
+#
+# Enable with:
+#   docker compose -f compose.yml -f compose.observability.yml up -d
+#
+# Compose profiles cannot condition environment variables on other services.
+# Including this overlay is the activation mechanism: it starts the collector
+# and points application containers at http://otel-collector:4318 together.
+# Do not add OTEL_EXPORTER_OTLP_ENDPOINT to the default compose.yml.
+#
+# Collector / Prometheus ports stay on the internal Compose network.
+# Grafana binds loopback only for local dashboard import.
+
+x-osva-otel-env: &osva-otel-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.128.0
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ../observability/collector/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    mem_limit: 512m
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${OSVA_METRICS_RETENTION:-15d}
+      - --web.enable-lifecycle
+    volumes:
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - osva-prometheus-data:/prometheus
+    depends_on:
+      - otel-collector
+    mem_limit: 512m
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-osva-example}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_LOG_LEVEL: info
+    ports:
+      - "127.0.0.1:${OSVA_PUBLISH_GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observability/grafana/dashboards:/var/lib/grafana/dashboards/osva:ro
+      - osva-grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    mem_limit: 256m
+
+  web:
+    environment:
+      <<: *osva-otel-env
+      OTEL_SERVICE_NAME: osva-web
+
+  worker:
+    environment:
+      <<: *osva-otel-env
+      OTEL_SERVICE_NAME: osva-worker
+
+  scheduler:
+    environment:
+      <<: *osva-otel-env
+      OTEL_SERVICE_NAME: osva-scheduler
+
+  workflow-orchestrator:
+    environment:
+      <<: *osva-otel-env
+      OTEL_SERVICE_NAME: osva-workflow-orchestrator
+
+  knowledge-worker:
+    environment:
+      <<: *osva-otel-env
+      OTEL_SERVICE_NAME: osva-knowledge-worker
+
+  mcp-server:
+    environment:
+      <<: *osva-otel-env
+      OTEL_SERVICE_NAME: osva-mcp
+
+volumes:
+  osva-prometheus-data:
+  osva-grafana-data:

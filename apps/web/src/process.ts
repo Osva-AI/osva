@@ -106,7 +106,8 @@ export function createWebProcess(
   const config = loadWebConfig(env);
   const artifactStorage = loadArtifactStorageConfig(env);
   const telemetryLifecycle =
-    dependencies.telemetry ?? createOpenTelemetryLifecycle(env);
+    dependencies.telemetry ??
+    createOpenTelemetryLifecycle(env, { defaultServiceName: "osva-web" });
   const instrumentation = telemetryLifecycle.instrumentation;
   const database = databaseFactory(config.databaseUrl);
   const createQueue =
@@ -353,6 +354,8 @@ export function createWebProcess(
     },
     apiKeys: apiKeyApplication,
     security: createWebSecurityServices(authenticateApiKey),
+    instrumentation,
+    logEvent,
     rateLimit: defaultHttpRateLimitContext(rateLimiter, {
       trustedProxies: config.trustedProxies,
       unauthenticatedPerMinute: config.unauthenticatedRateLimitPerMinute,

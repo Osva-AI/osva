@@ -5,7 +5,9 @@ export function createFakePingableQueue(): PingableJobQueue & {
 } {
   const queue = {
     consumeCalls: 0,
-    async enqueue() {},
+    async enqueue() {
+      return { outcome: "enqueued" as const };
+    },
     async cancel() {},
     async consume() {
       queue.consumeCalls += 1;

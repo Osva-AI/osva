@@ -32,10 +32,7 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           envFrom:
             {{- include "osva.workloadEnvFrom" . | nindent 12 }}
-          {{- with .Values.extraEnv }}
-          env:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "osva.containerEnvBlock" (dict "root" . "serviceName" "osva-scheduler") | nindent 10 }}
           {{- include "osva.processProbes" . | nindent 10 }}
           resources:
             {{- toYaml .Values.scheduler.resources | nindent 12 }}

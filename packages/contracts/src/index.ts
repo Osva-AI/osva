@@ -58,12 +58,15 @@ export type {
 export type {
   CreateRunRequestV1,
   CreateRunResponseV1,
+  RunAttemptExecutionDiagnosticsV1,
+  RunAttemptExecutionStateV1,
   RunAttemptListResourceV1,
   RunAttemptResourceV1,
   RunListCursorV1,
   RunListResourceV1,
   RunResourceV1,
 } from "./run-lifecycle.js";
+export { RUN_ATTEMPT_EXECUTION_STATES } from "./run-lifecycle.js";
 
 export type {
   CreateModelProfileRequestV1,
@@ -412,10 +415,13 @@ export type {
 } from "./event-envelope.js";
 
 export type {
+  JobEnqueueOutcome,
+  JobEnqueueResult,
   JobQueue,
   JobQueueHandler,
   JobQueuePayload,
 } from "./job-queue.js";
+export { JOB_ENQUEUE_OUTCOMES } from "./job-queue.js";
 
 export {
   MODEL_BINDING_NAME_PATTERN,

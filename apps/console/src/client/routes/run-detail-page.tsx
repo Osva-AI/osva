@@ -19,6 +19,7 @@ import {
   formatTimestamp,
   formatUsdMicros,
 } from "../lib/formatting";
+import { executionStateLabel } from "../lib/execution-diagnostics";
 import { attemptStatusCategory, runStatusCategory } from "../lib/statuses";
 
 export function RunDetailPage() {
@@ -267,6 +268,69 @@ export function RunDetailPage() {
                     </dd>
                   </div>
                 </dl>
+                {attemptQuery.data.execution !== undefined ? (
+                  <div data-testid="execution-diagnostics">
+                    <h3 className="panel-title">Execution diagnostics</h3>
+                    <dl className="meta-grid">
+                      <div>
+                        <dt>Execution state</dt>
+                        <dd>
+                          {executionStateLabel(
+                            attemptQuery.data.execution.state,
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Leased</dt>
+                        <dd>
+                          {attemptQuery.data.execution.leased ? "Yes" : "No"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Lease expires</dt>
+                        <dd>
+                          {formatTimestamp(
+                            attemptQuery.data.execution.leaseExpiresAt,
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Execution generation</dt>
+                        <dd>
+                          {attemptQuery.data.execution.executionGeneration}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Interrupted</dt>
+                        <dd>
+                          {attemptQuery.data.execution.interrupted
+                            ? "Yes"
+                            : "No"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Recovery reason</dt>
+                        <dd className="mono">
+                          {attemptQuery.data.execution.recoveryReason ?? "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Observed at</dt>
+                        <dd>
+                          {formatTimestamp(
+                            attemptQuery.data.execution.observedAt,
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+                    <p className="muted">
+                      Lease timestamps are persisted PostgreSQL state. Recovery
+                      eligibility uses PostgreSQL <code>now()</code>, not this
+                      browser clock or worker process time. An expired lease is
+                      not proof that a worker is down.
+                    </p>
+                  </div>
+                ) : null}
                 {attemptQuery.data.error !== undefined ? (
                   <JsonView label="Error" value={attemptQuery.data.error} />
                 ) : null}

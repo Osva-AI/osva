@@ -18,6 +18,15 @@ describe("OpenTelemetryInstrumentation", () => {
     await harness.shutdown();
   });
 
+  it("drops forbidden metric labels without failing the caller", () => {
+    expect(() =>
+      harness.instrumentation.recordCounter("osva.http.requests", 1, {
+        runId: "secret-run-id",
+        route_family: "v1.runs",
+      }),
+    ).not.toThrow();
+  });
+
   it("does not capture prompt or secret payload attributes", async () => {
     await harness.instrumentation.withSpan(
       OSVA_SPAN.MODEL_GENERATE_TEXT,

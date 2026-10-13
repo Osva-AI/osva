@@ -1,6 +1,7 @@
 {{- if and .Values.existingSecret (include "osva.usesSecretEnv" .) }}
 {{- fail "Set either existingSecret or secretEnv, not both." }}
 {{- end }}
+{{- include "osva.validateTelemetry" . }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -40,3 +41,10 @@ data:
   OSVA_MCP_PATH: {{ .Values.mcp.path | quote }}
   OSVA_MCP_ALLOWED_HOSTS: {{ include "osva.mcpAllowedHosts" . | quote }}
   OSVA_API_BASE_URL: {{ include "osva.mcpApiBaseUrl" . | quote }}
+  {{- if and .Values.telemetry .Values.telemetry.enabled }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.telemetry.otlpEndpoint | quote }}
+  OTEL_TRACES_SAMPLER: {{ .Values.telemetry.tracesSampler | default "parentbased_always_on" | quote }}
+  {{- if .Values.telemetry.tracesSamplerArg }}
+  OTEL_TRACES_SAMPLER_ARG: {{ .Values.telemetry.tracesSamplerArg | quote }}
+  {{- end }}
+  {{- end }}

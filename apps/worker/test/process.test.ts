@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import { describe, expect, it } from "vitest";
 
-import type { Database } from "@osva/db";
+import { ReadinessUnavailableError, type Database } from "@osva/db";
 
 import { createWorkerProcess } from "../src/process.js";
 import { createFakePingableQueue } from "./fake-queue.js";
@@ -117,7 +117,17 @@ describe("createWorkerProcess", () => {
       { queueFactory: () => createFakePingableQueue() },
     );
 
-    await expect(worker.start()).rejects.toThrow("PostgreSQL is unavailable.");
+    await expect(worker.start()).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(ReadinessUnavailableError);
+      expect((error as ReadinessUnavailableError).message).toBe(
+        "Service is unavailable.",
+      );
+      expect((error as ReadinessUnavailableError).failedDependencies).toEqual([
+        "postgres",
+      ]);
+      expect(String(error)).not.toContain("postgres://secret");
+      return true;
+    });
     expect(worker.status()).toBe("created");
     await worker.stop();
   });
@@ -133,7 +143,16 @@ describe("createWorkerProcess", () => {
       { queueFactory: () => queue },
     );
 
-    await expect(worker.start()).rejects.toThrow("Valkey is unavailable.");
+    await expect(worker.start()).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(ReadinessUnavailableError);
+      expect((error as ReadinessUnavailableError).message).toBe(
+        "Service is unavailable.",
+      );
+      expect((error as ReadinessUnavailableError).failedDependencies).toEqual([
+        "valkey",
+      ]);
+      return true;
+    });
     expect(worker.status()).toBe("created");
     await worker.stop();
   });

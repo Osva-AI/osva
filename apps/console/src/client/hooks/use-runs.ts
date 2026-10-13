@@ -33,6 +33,15 @@ export interface RunAttemptResource {
   readonly completedAt?: string;
   readonly error?: { readonly code: string; readonly message: string };
   readonly output?: unknown;
+  readonly execution?: {
+    readonly state: string;
+    readonly leased: boolean;
+    readonly leaseExpiresAt?: string;
+    readonly executionGeneration: number;
+    readonly interrupted: boolean;
+    readonly recoveryReason?: string;
+    readonly observedAt: string;
+  };
 }
 
 export interface RunAttemptListResource {

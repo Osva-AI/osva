@@ -16,6 +16,8 @@ export {
   OSVA_ATTR,
   OSVA_METRIC_ATTR,
   FORBIDDEN_METRIC_LABELS,
+  isForbiddenMetricLabel,
+  normalizeMetricLabelKey,
 } from "./attributes.js";
 export {
   NO_OP_INSTRUMENTATION,
@@ -35,6 +37,13 @@ export {
   type MetricAttributes,
   type OsvaMetricName,
 } from "./metrics.js";
+export {
+  OSVA_METRIC_KIND,
+  otelNameToPrometheusBase,
+  prometheusHistogramBucket,
+  prometheusMetricName,
+  prometheusNameForOsvaMetric,
+} from "./prometheus-names.js";
 export { OSVA_SPAN, type OsvaSpanName } from "./span-names.js";
 export { createInstrumentedRuntimeAdapter } from "./instrument-runtime.js";
 export {
@@ -46,9 +55,16 @@ export {
 export {
   SECURITY_EVENT_NAMES,
   emitSecurityEvent,
+  resetSecurityEventInstrumentation,
   resetSecurityEventSink,
+  setSecurityEventInstrumentation,
   setSecurityEventSink,
   type SecurityEventFields,
   type SecurityEventName,
   type SecurityEventSink,
 } from "./security-events.js";
+export {
+  RecordingInstrumentation,
+  type RecordedMetric,
+  type RecordedSpan,
+} from "./recording-instrumentation.js";

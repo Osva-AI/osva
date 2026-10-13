@@ -1,3 +1,8 @@
+import {
+  createOpenTelemetryLifecycle,
+  type OpenTelemetryLifecycle,
+} from "@osva/adapters-opentelemetry";
+
 import type { McpServerConfig } from "./config.js";
 import { loadMcpServerConfig } from "./config.js";
 import { createRestAuthContextMcpAuthenticator } from "./auth.js";
@@ -11,10 +16,18 @@ export interface McpServerProcess {
   readonly port?: number;
 }
 
+export interface McpServerProcessDependencies {
+  readonly telemetry?: OpenTelemetryLifecycle;
+}
+
 export function createMcpServerProcess(
   env: NodeJS.ProcessEnv = process.env,
+  dependencies: McpServerProcessDependencies = {},
 ): McpServerProcess {
   const config = loadMcpServerConfig(env);
+  const telemetryLifecycle =
+    dependencies.telemetry ??
+    createOpenTelemetryLifecycle(env, { defaultServiceName: "osva-mcp" });
   const authenticator = createRestAuthContextMcpAuthenticator({
     osvaApiBaseUrl: config.osvaApiBaseUrl,
   });
@@ -23,6 +36,7 @@ export function createMcpServerProcess(
     config,
     authenticator,
     clients,
+    instrumentation: telemetryLifecycle.instrumentation,
   });
 
   let port: number | undefined;
@@ -41,6 +55,7 @@ export function createMcpServerProcess(
     },
     async stop() {
       await httpServer.close();
+      await telemetryLifecycle.shutdown();
       logEvent("mcp_server.stopped", {});
     },
   };

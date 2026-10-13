@@ -80,13 +80,20 @@ export {
 } from "../src/test-security.js";
 
 export async function createTestWebApplication(options?: {
-  readonly readinessCheck?: () => Promise<boolean>;
+  readonly readinessCheck?: () => Promise<
+    boolean | import("@osva/db").DependencyReadinessSnapshot
+  >;
   readonly workspaceId?: WorkspaceId;
   readonly idPrefix?: string;
   readonly secrets?: Readonly<Record<string, string>>;
   readonly stdioConnectorsEnabled?: boolean;
   readonly secretResolver?: SecretResolver;
   readonly rateLimit?: import("../src/http-rate-limit.js").HttpRateLimitContext;
+  readonly instrumentation?: import("@osva/observability").OsvaInstrumentation;
+  readonly logEvent?: (
+    event: string,
+    fields?: Readonly<Record<string, unknown>>,
+  ) => void;
 }) {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
@@ -351,6 +358,8 @@ export async function createTestWebApplication(options?: {
     }),
     security,
     rateLimit: options?.rateLimit,
+    instrumentation: options?.instrumentation,
+    logEvent: options?.logEvent,
   });
 
   return {

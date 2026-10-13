@@ -19,6 +19,10 @@ import {
   pipeArtifactBodyToResponse,
 } from "../artifact-download.js";
 import { ConsoleConfigurationError } from "../config.js";
+import {
+  emitConsoleRequestGuardDenial,
+  emitConsoleRequestTooLarge,
+} from "../console-security-events.js";
 import { mapOsvaError, sendJson } from "../console-http.js";
 import type { ConsoleOsvaClient } from "../osva-client.js";
 import { readJsonBody } from "../read-json-body.js";
@@ -47,6 +51,7 @@ export async function handleConsoleApiRequest(
     allowedOrigins: deps.allowedOrigins ?? [],
   });
   if (!guard.allowed) {
+    emitConsoleRequestGuardDenial(guard);
     sendJson(
       response,
       guard.status,
@@ -652,6 +657,9 @@ export async function handleConsoleApiRequest(
       return true;
     }
     const mapped = mapOsvaError(error);
+    if (mapped.body.code === "request_too_large") {
+      emitConsoleRequestTooLarge();
+    }
     sendJson(
       response,
       mapped.status,

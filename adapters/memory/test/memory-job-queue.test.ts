@@ -20,7 +20,10 @@ async function collectDeliveries(
 describe("MemoryJobQueue", () => {
   it("enqueues a runAttemptId and consume delivers only that payload", async () => {
     const queue: JobQueue = new MemoryJobQueue();
-    await queue.enqueue(runAttemptId);
+    expect(await queue.enqueue(runAttemptId)).toEqual({ outcome: "enqueued" });
+    expect(await queue.enqueue(runAttemptId)).toEqual({
+      outcome: "already_present",
+    });
 
     const delivered = await collectDeliveries(queue);
 

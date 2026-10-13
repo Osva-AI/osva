@@ -8,6 +8,7 @@ import type {
   ScheduleOccurrenceId,
 } from "@osva-ai/contracts";
 import {
+  assertPostgresAndValkeyReady,
   checkDatabaseConnection,
   createDatabase,
   startProcessProbeServer,
@@ -53,7 +54,9 @@ export function createSchedulerProcess(
   dependencies: SchedulerProcessDependencies = {},
 ): SchedulerProcess {
   const config = loadSchedulerConfig(env);
-  const telemetryLifecycle = createOpenTelemetryLifecycle(env);
+  const telemetryLifecycle = createOpenTelemetryLifecycle(env, {
+    defaultServiceName: "osva-scheduler",
+  });
   const instrumentation = telemetryLifecycle.instrumentation;
   const createDatabaseHandle = dependencies.databaseFactory ?? databaseFactory;
   const createQueue =
@@ -87,8 +90,11 @@ export function createSchedulerProcess(
   });
   let probeServer: ProcessProbeServer | undefined;
   const readinessCheck = async () => {
-    await checkDatabaseConnection(database);
-    await queue.ping();
+    await assertPostgresAndValkeyReady(
+      database,
+      queue,
+      checkDatabaseConnection,
+    );
   };
   const tick = new SchedulerTick({
     schedules,

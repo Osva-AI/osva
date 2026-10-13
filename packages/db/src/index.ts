@@ -25,6 +25,29 @@ export {
   redactDatabaseTarget,
   type MigrationStatusSnapshot,
 } from "./migration-status.js";
+export {
+  LEASE_SLICE_COLUMNS,
+  LEASE_SLICE_INDEXES,
+  LEASE_SLICE_MIGRATION_TAG,
+  classifySchemaIntegrity,
+  evaluateColumnCheck,
+  evaluateIndexCheck,
+  formatSchemaIntegrity,
+  journalClaimsMigration,
+  verifySchemaIntegrity,
+  type SchemaIntegrityOutcome,
+  type SchemaIntegrityReport,
+  type SchemaObjectCheck,
+} from "./schema-integrity.js";
+export {
+  READINESS_DEPENDENCIES,
+  ReadinessUnavailableError,
+  assertPostgresAndValkeyReady,
+  collectDependencyReadiness,
+  readinessFailureBody,
+  type DependencyReadinessSnapshot,
+  type ReadinessDependency,
+} from "./readiness-result.js";
 export { PostgresWorkspaceRepository } from "./repositories/postgres-workspace-repository.js";
 export { PostgresApiKeyRepository } from "./repositories/postgres-api-key-repository.js";
 export { PostgresAgentRepository } from "./repositories/postgres-agent-repository.js";

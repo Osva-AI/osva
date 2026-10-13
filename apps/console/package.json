@@ -16,6 +16,7 @@
     "@osva-ai/contracts": "workspace:*",
     "@osva/domain": "workspace:*",
     "@osva-ai/sdk": "workspace:*",
+    "@osva/observability": "workspace:*",
     "@tanstack/react-query": "^5.90.2",
     "@xyflow/react": "^12.12.0",
     "react": "^19.1.1",

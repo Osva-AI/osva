@@ -48,7 +48,7 @@ export function createInstrumentedRuntimeAdapter(
             throw error;
           } finally {
             telemetry.recordHistogram(
-              OSVA_METRIC.RUN_DURATION_MS,
+              OSVA_METRIC.RUNTIME_EXECUTE_DURATION_MS,
               elapsedMs(startedAt, performance.now()),
               {
                 runtime_kind: request.runtime.type,

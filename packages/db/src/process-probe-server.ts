@@ -1,5 +1,10 @@
 import http from "node:http";
 
+import {
+  readinessFailureBody,
+  ReadinessUnavailableError,
+} from "./readiness-result.js";
+
 export interface ProcessProbeBind {
   readonly host: string;
   readonly port: number;
@@ -96,8 +101,16 @@ async function handleProbeRequest(
     try {
       await readinessCheck();
       sendJson(response, 200, { status: "ready" });
-    } catch {
-      sendJson(response, 503, { status: "unavailable" });
+    } catch (error) {
+      sendJson(
+        response,
+        503,
+        readinessFailureBody(
+          error instanceof ReadinessUnavailableError
+            ? error.failedDependencies
+            : [],
+        ),
+      );
     }
     return;
   }

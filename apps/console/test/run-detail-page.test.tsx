@@ -92,6 +92,13 @@ function defaultRunResponses(
       startedAt: "2026-01-01T00:00:00.000Z",
       completedAt: "2026-01-01T00:00:01.000Z",
       output: { ok: true },
+      execution: {
+        state: "completed",
+        leased: false,
+        executionGeneration: 1,
+        interrupted: false,
+        observedAt: "2026-01-01T00:00:01.000Z",
+      },
     });
   }
   if (url.includes("/api/v1/runs/run-1/attempts")) {
@@ -498,5 +505,53 @@ describe("RunDetailPage artifacts", () => {
     expect(screen.getByRole("link", { name: "Back to runs" })).toBeTruthy();
     expect(screen.queryByText("No output recorded yet.")).toBeNull();
     expect(screen.getByText("Output")).toBeTruthy();
+  });
+
+  it("renders execution diagnostics for an interrupted attempt without owner secrets", async () => {
+    stubRunFetch((url) => {
+      if (
+        url.includes("/api/v1/runs/run-1/attempts/ra-1") &&
+        !url.includes("/steps") &&
+        !url.includes("/usage")
+      ) {
+        return jsonResponse({
+          id: "ra-1",
+          runId: "run-1",
+          sequence: 1,
+          status: "FAILED",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          startedAt: "2026-01-01T00:00:00.000Z",
+          completedAt: "2026-01-01T00:00:01.000Z",
+          error: {
+            code: "EXECUTION_INTERRUPTED",
+            message: "Execution lease expired; worker ownership was lost.",
+          },
+          execution: {
+            state: "interrupted",
+            leased: false,
+            leaseExpiresAt: "2026-01-01T00:00:00.500Z",
+            executionGeneration: 2,
+            interrupted: true,
+            recoveryReason: "LEASE_EXPIRED",
+            observedAt: "2026-01-01T00:00:02.000Z",
+          },
+        });
+      }
+      const fallback = defaultRunResponses(url, []);
+      if (fallback !== undefined) {
+        return fallback;
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+
+    renderRunDetail("/runs/run-1/attempts/ra-1");
+    await waitFor(() => {
+      expect(screen.getByTestId("execution-diagnostics")).toBeTruthy();
+    });
+    expect(screen.getByText("Execution interrupted")).toBeTruthy();
+    expect(screen.getByText("LEASE_EXPIRED")).toBeTruthy();
+    expect(screen.getByText(/PostgreSQL/)).toBeTruthy();
+    expect(screen.queryByText(/worker-secret/)).toBeNull();
+    expect(screen.queryByText(/postgres:\/\//)).toBeNull();
   });
 });

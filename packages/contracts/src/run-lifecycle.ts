@@ -8,6 +8,31 @@ import type {
 import type { JsonValue } from "./json-value.js";
 import type { RunAttemptState, RunState } from "./run-state.js";
 
+export const RUN_ATTEMPT_EXECUTION_STATES = [
+  "queued",
+  "running_leased",
+  "running_lease_expired",
+  "running_unleased",
+  "interrupted",
+  "failed",
+  "completed",
+  "cancelled",
+  "timed_out",
+] as const;
+
+export type RunAttemptExecutionStateV1 =
+  (typeof RUN_ATTEMPT_EXECUTION_STATES)[number];
+
+export interface RunAttemptExecutionDiagnosticsV1 {
+  readonly state: RunAttemptExecutionStateV1;
+  readonly leased: boolean;
+  readonly leaseExpiresAt?: string;
+  readonly executionGeneration: number;
+  readonly interrupted: boolean;
+  readonly recoveryReason?: string;
+  readonly observedAt: string;
+}
+
 export interface CreateRunRequestV1 {
   readonly workspaceId: WorkspaceId;
   readonly agentId: AgentId;
@@ -45,6 +70,7 @@ export interface RunAttemptResourceV1 {
     readonly message: string;
   };
   readonly output?: JsonValue;
+  readonly execution?: RunAttemptExecutionDiagnosticsV1;
 }
 
 export interface CreateRunResponseV1 {
