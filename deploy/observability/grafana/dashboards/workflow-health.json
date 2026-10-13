@@ -1,0 +1,52 @@
+{
+  "uid": "osva-workflow-health",
+  "title": "OSVA workflow health",
+  "tags": ["osva", "example"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Workflow reconciliations",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(osva_workflow_reconciliations_total[5m]))",
+          "legendFormat": "reconciliations"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "Metric gaps",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 10 },
+      "options": {
+        "mode": "markdown",
+        "content": "OSVA does not emit a dedicated workflow-terminal-outcome counter. Terminal WorkflowRun state lives in PostgreSQL. Evaluation activity uses `osva_evaluation_reconciliations_total` when that coordinator runs."
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Evaluation reconciliations",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(osva_evaluation_reconciliations_total[5m]))",
+          "legendFormat": "evaluation reconciliations"
+        }
+      ]
+    }
+  ]
+}

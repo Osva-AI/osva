@@ -127,7 +127,7 @@ export async function seedAgentGraph(
 }
 
 export class FailingJobQueue implements JobQueue {
-  async enqueue(): Promise<void> {
+  async enqueue(): Promise<import("@osva-ai/contracts").JobEnqueueResult> {
     throw new Error("queue unavailable");
   }
 

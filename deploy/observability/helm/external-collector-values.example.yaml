@@ -1,0 +1,12 @@
+# Example values for connecting OSVA Helm workloads to an operator-managed
+# OpenTelemetry Collector. The application chart does not deploy a collector.
+#
+# Put OTEL_EXPORTER_OTLP_HEADERS in existingSecret or secretEnv — never in
+# this file or the chart ConfigMap.
+
+telemetry:
+  enabled: true
+  otlpEndpoint: http://otel-collector.observability.svc.cluster.local:4318
+  serviceNameOverride: ""
+  tracesSampler: parentbased_always_on
+  tracesSamplerArg: ""

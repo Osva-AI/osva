@@ -1,4 +1,4 @@
-import { FORBIDDEN_METRIC_LABELS } from "./attributes.js";
+import { isForbiddenMetricLabel } from "./attributes.js";
 import type { MetricAttributes, MetricKind } from "./metrics.js";
 
 export type SpanAttributeValue = string | number | boolean;
@@ -40,6 +40,7 @@ export interface OsvaInstrumentation {
     value: number,
     attributes?: MetricAttributes,
   ): void;
+  recordGauge(name: string, value: number, attributes?: MetricAttributes): void;
   injectTraceContext(): TraceContextCarrier | undefined;
   runWithExtractedContext<T>(
     carrier: TraceContextCarrier | undefined,
@@ -69,6 +70,7 @@ export const NO_OP_INSTRUMENTATION: OsvaInstrumentation = Object.freeze({
   },
   recordCounter(): void {},
   recordHistogram(): void {},
+  recordGauge(): void {},
   injectTraceContext(): TraceContextCarrier | undefined {
     return undefined;
   },
@@ -94,7 +96,7 @@ export function assertSafeMetricAttributes(
   }
 
   for (const key of Object.keys(attributes)) {
-    if (FORBIDDEN_METRIC_LABELS.has(key)) {
+    if (isForbiddenMetricLabel(key)) {
       throw new Error(
         `Metric attribute '${key}' is high-cardinality and must not be used as a label.`,
       );

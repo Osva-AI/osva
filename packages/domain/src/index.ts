@@ -178,6 +178,7 @@ export {
   type RunAttemptError,
   type RunAttemptRehydrateProps,
 } from "./run-attempt.js";
+export { toRunAttemptExecutionDiagnostics } from "./run-attempt-execution-diagnostics.js";
 export { selectCapabilityEligibleRunAttempt } from "./capability-eligibility.js";
 export {
   RunStep,

@@ -16,6 +16,7 @@ import {
   Run,
   RunAttempt,
 } from "@osva/domain";
+import { OSVA_METRIC, RecordingInstrumentation } from "@osva/observability";
 import { describe, expect, it } from "vitest";
 
 import { CreateRun } from "../src/create-run.js";
@@ -541,6 +542,35 @@ describe("ExecuteRunAttempt", () => {
     expect((await runs.findRunAttemptById(runAttemptId))?.status).toBe(
       "RUNNING",
     );
+  });
+
+  it("records attempt duration on the dedicated metric and compatibility alias", async () => {
+    const telemetry = new RecordingInstrumentation();
+    const { runs, agents } = await queuedAttempt();
+    const execute = new ExecuteRunAttempt({
+      runs,
+      agents,
+      runtime: new FakeRuntimeAdapter(async () => ({
+        status: "succeeded",
+        output: { ok: true },
+      })),
+      instrumentation: telemetry,
+    });
+
+    await execute.execute({ runAttemptId, now: LATER });
+
+    const attempt = telemetry.histogramsNamed(
+      OSVA_METRIC.RUN_ATTEMPT_DURATION_MS,
+    );
+    const alias = telemetry.histogramsNamed(OSVA_METRIC.RUN_DURATION_MS);
+    expect(attempt).toHaveLength(1);
+    expect(alias).toHaveLength(1);
+    expect(attempt[0]?.value).toBe(alias[0]?.value);
+    expect(attempt[0]?.attributes).toEqual({ terminal_status: "SUCCEEDED" });
+    expect(alias[0]?.attributes).toEqual({ terminal_status: "SUCCEEDED" });
+    expect(
+      telemetry.histogramsNamed(OSVA_METRIC.RUNTIME_EXECUTE_DURATION_MS),
+    ).toHaveLength(0);
   });
 });
 

@@ -5,6 +5,10 @@ import {
   loadArtifactStorageConfig,
 } from "@osva/adapters-artifact-storage";
 import { BullMqKnowledgeIndexQueue } from "@osva/adapters-bullmq";
+import {
+  createOpenTelemetryLifecycle,
+  type OpenTelemetryLifecycle,
+} from "@osva/adapters-opentelemetry";
 import { OpenAiCompatibleEmbeddingAdapter } from "@osva/adapters-embedding-openai-compatible";
 import { OsvaKnowledgeParserRegistry } from "@osva/adapters-knowledge-parser";
 import { PgVectorStore } from "@osva/adapters-vector-pgvector";
@@ -13,6 +17,7 @@ import {
   KNOWLEDGE_MAX_SOURCE_BYTES,
 } from "@osva-ai/contracts";
 import {
+  assertPostgresAndValkeyReady,
   checkDatabaseConnection,
   createDatabase,
   startProcessProbeServer,
@@ -44,13 +49,23 @@ export interface KnowledgeWorkerProcess {
   stop(): Promise<void>;
 }
 
+export interface KnowledgeWorkerProcessDependencies {
+  readonly telemetry?: OpenTelemetryLifecycle;
+}
+
 export function createKnowledgeWorkerProcess(
   env: NodeJS.ProcessEnv = process.env,
   databaseFactory: (connectionString: string) => Database = (
     connectionString,
   ) => createDatabase({ connectionString }),
+  dependencies: KnowledgeWorkerProcessDependencies = {},
 ): KnowledgeWorkerProcess {
   const config = loadKnowledgeWorkerConfig(env);
+  const telemetryLifecycle =
+    dependencies.telemetry ??
+    createOpenTelemetryLifecycle(env, {
+      defaultServiceName: "osva-knowledge-worker",
+    });
   const artifactStorage = loadArtifactStorageConfig(env);
   const database = databaseFactory(config.databaseUrl);
   const knowledgeRepository = new PostgresKnowledgeRepository(database);
@@ -108,8 +123,11 @@ export function createKnowledgeWorkerProcess(
   const queue = new BullMqKnowledgeIndexQueue({ url: config.valkeyUrl });
   let probeServer: ProcessProbeServer | undefined;
   const readinessCheck = async () => {
-    await checkDatabaseConnection(database);
-    await queue.ping();
+    await assertPostgresAndValkeyReady(
+      database,
+      queue,
+      checkDatabaseConnection,
+    );
   };
 
   return {
@@ -137,6 +155,7 @@ export function createKnowledgeWorkerProcess(
       }
       await queue.stop();
       await database.close();
+      await telemetryLifecycle.shutdown();
       logEvent("knowledge_worker.stopped");
     },
   };

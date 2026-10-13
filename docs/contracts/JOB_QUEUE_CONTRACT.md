@@ -9,10 +9,14 @@ Dispatch OSVA work without exposing queue-engine semantics to domain services.
 Conceptually:
 
 ```text
-enqueue(runAttemptId)
+enqueue(runAttemptId) → { outcome: "enqueued" | "already_present" }
 cancel(runAttemptId)
 consume(handler)
 ```
+
+`enqueue` remains duplicate-tolerant. Adapters must distinguish a newly accepted
+delivery from an already-present job without changing job IDs, redelivery, or
+RunAttempt identity. Callers that ignore the result remain valid.
 
 ## Delivery
 

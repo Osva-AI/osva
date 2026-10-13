@@ -20,7 +20,8 @@
     "bootstrap": "node dist/bootstrap-cli.js",
     "migrations:verify": "node dist/migrations-verify-cli.js",
     "migrations:lock": "node dist/migrations-lock-cli.js",
-    "migrations:status": "node dist/migrations-status-cli.js"
+    "migrations:status": "node dist/migrations-status-cli.js",
+    "migrations:integrity": "node dist/migrations-integrity-cli.js"
   },
   "dependencies": {
     "@osva-ai/contracts": "workspace:*",

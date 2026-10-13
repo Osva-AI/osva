@@ -115,10 +115,18 @@ Connector versions store `SecretReference` values. Resolve environment-backed re
 
 | Variable | Processes | Required | Default | Sensitive | Notes |
 |----------|-----------|----------|---------|-----------|-------|
-| `OTEL_SERVICE_NAME` | all instrumented apps | no | `osva` | no | Service name for OTLP. |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | all instrumented apps | optional | — | no | OTLP HTTP endpoint. |
-| `OTEL_EXPORTER_OTLP_HEADERS` | all instrumented apps | optional | — | yes | e.g. `Authorization=Bearer …` |
+| `OTEL_SERVICE_NAME` | all instrumented apps | no | process default (`osva-web`, `osva-worker`, `osva-scheduler`, `osva-workflow-orchestrator`, `osva-mcp`, `osva-knowledge-worker`) | no | Overrides the process default OTLP service name. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | all instrumented apps | optional | — | no | OTLP **HTTP** base URL (example `http://otel-collector:4318`). The adapter appends `/v1/traces` and `/v1/metrics`. Unset = no-op. |
+| `OTEL_EXPORTER_OTLP_HEADERS` | all instrumented apps | optional | — | yes | `key=value` pairs, comma-separated (example `Authorization=Bearer …`). Secret. Never log. Helm: Secret / `secretEnv` only. |
 | `OTEL_SDK_DISABLED` | all instrumented apps | no | — | no | When `true`, disables OTLP export. |
+| `OTEL_TRACES_SAMPLER` | all instrumented apps | no | SDK default | no | `always_on`, `always_off`, `traceidratio`, `parentbased_always_on`, `parentbased_always_off`, `parentbased_traceidratio`. |
+| `OTEL_TRACES_SAMPLER_ARG` | all instrumented apps | no | — | no | Ratio for `traceidratio` / `parentbased_traceidratio` (0–1). |
+
+Compose overlay (`compose.observability.yml`) sets the internal endpoint
+`http://otel-collector:4318` on application services. Helm `telemetry.enabled`
+defaults to `false`. Community observability has no Team/Enterprise license
+gate. See [`../architecture/OPENTELEMETRY.md`](../architecture/OPENTELEMETRY.md)
+and `deploy/observability/README.md`.
 
 ## Database CLI
 

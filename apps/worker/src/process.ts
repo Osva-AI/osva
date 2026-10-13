@@ -38,6 +38,7 @@ import {
 } from "@osva/adapters-runtime-typescript";
 import type { RuntimeAdapter } from "@osva-ai/contracts";
 import {
+  assertPostgresAndValkeyReady,
   checkDatabaseConnection,
   createDatabase,
   startProcessProbeServer,
@@ -132,7 +133,8 @@ export function createWorkerProcess(
   const config = loadWorkerConfig(env);
   const artifactStorage = loadArtifactStorageConfig(env);
   const telemetryLifecycle =
-    dependencies.telemetry ?? createOpenTelemetryLifecycle(env);
+    dependencies.telemetry ??
+    createOpenTelemetryLifecycle(env, { defaultServiceName: "osva-worker" });
   const instrumentation = telemetryLifecycle.instrumentation;
   const createDatabaseHandle = dependencies.databaseFactory ?? databaseFactory;
   const createQueue =
@@ -162,8 +164,11 @@ export function createWorkerProcess(
 
   const worker: WorkerApplication = createWorkerApplication({
     readinessCheck: async () => {
-      await checkDatabaseConnection(database);
-      await queue.ping();
+      await assertPostgresAndValkeyReady(
+        database,
+        queue,
+        checkDatabaseConnection,
+      );
       if (injectedRuntime === undefined) {
         await assertTrustedTypeScriptRuntimeReady({
           trustedRuntimeRoot: config.trustedRuntimeRoot ?? "",
@@ -425,8 +430,11 @@ export function createWorkerProcess(
         host: config.health.host,
         port: config.health.port,
         readinessCheck: async () => {
-          await checkDatabaseConnection(database);
-          await queue.ping();
+          await assertPostgresAndValkeyReady(
+            database,
+            queue,
+            checkDatabaseConnection,
+          );
         },
       });
       recoveryStopped = false;

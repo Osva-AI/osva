@@ -41,6 +41,29 @@ Optional Valkey AUTH: set `VALKEY_PASSWORD` and `OSVA_VALKEY_URL=redis://:passwo
 
 Console is not part of this Compose file.
 
+## Observability (optional)
+
+Default `up` does **not** start a collector and does **not** set
+`OTEL_EXPORTER_OTLP_ENDPOINT`. Processes stay in no-op telemetry mode.
+
+Compose profiles cannot condition environment variables on other services, so
+observability is an overlay, not `--profile observability`:
+
+```bash
+docker compose -f compose.yml -f compose.observability.yml up -d
+```
+
+That command starts `otel-collector`, example Prometheus, and Grafana, and
+points web/worker/scheduler/workflow-orchestrator/knowledge-worker/mcp-server
+at `http://otel-collector:4318`. Application containers do not `depends_on`
+the collector; a collector crash does not fail OSVA execution.
+
+- OTLP (`4317`/`4318`) and Prometheus scrape (`8889`) are internal only.
+- Grafana binds `127.0.0.1:${OSVA_PUBLISH_GRAFANA_PORT:-3001}`.
+- Dashboards and alerts: [`../observability/README.md`](../observability/README.md).
+- Optional `OTEL_EXPORTER_OTLP_HEADERS` belongs in the environment/secret, not
+  Compose logs.
+
 ## Notes
 
 - PostgreSQL and Valkey are on the internal Compose network only (not published by default).

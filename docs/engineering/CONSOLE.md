@@ -47,7 +47,7 @@ State-changing BFF methods require a loopback `Host` and a same-origin, loopback
 
 - API key stays on the console server process and is never echoed to the browser.
 - Console API routes are an explicit allowlist (no generic HTTP proxy).
-- JSON BFF request bodies are capped at the same 1 MiB default as control-plane `/v1` (`OSVA_DEFAULT_JSON_BODY_MAX_BYTES`). Oversized bodies return 413; invalid JSON returns 400; rejected payloads are not forwarded upstream.
+- JSON BFF request bodies are capped at the same 1 MiB default as control-plane `/v1` (`OSVA_DEFAULT_JSON_BODY_MAX_BYTES`). Oversized bodies return 413; invalid JSON returns 400; rejected payloads are not forwarded upstream. Rejected Host, Origin, cross-site mutation, and oversized-body requests emit one bounded security event each. Events do not include raw Host/Origin strings or `OSVA_CONSOLE_API_KEY`.
 - Control-plane `429 RATE_LIMITED` is surfaced as a wait-and-retry operator error; the Console does not retry in a loop.
 - Workflow builder drafts may be stored in **workspace-scoped `sessionStorage`** for authoring recovery only. Drafts never contain API keys or other secrets.
 
@@ -74,7 +74,7 @@ State-changing BFF methods require a loopback `Host` and a same-origin, loopback
 
 - Runs list with filters and cursor pagination
 - Individual Run launch from an AgentVersion (see Agents)
-- Run detail, attempts, steps, usage
+- Run detail, attempts, steps, usage, and a compact execution-diagnostics panel (lease/recovery state from additive public `execution` fields). Lease expiry is persisted PostgreSQL state; the Console does not treat process or browser clocks as recovery authority. Raw execution owner is not shown.
 - Artifact metadata, on-demand safe text/JSON preview (512 KiB cap), and streamed original-byte download via the Console BFF
 - Polling while runs/attempts are active
 - Run Detail distinguishes an individual Run from a WorkflowRun, and RunAttempts from WorkflowNodeRuns

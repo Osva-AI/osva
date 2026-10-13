@@ -2,6 +2,12 @@ import type { JobQueueHandler, RunAttemptId } from "@osva-ai/contracts";
 import { Queue } from "bullmq";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import {
+  OSVA_METRIC,
+  OSVA_SPAN,
+  RecordingInstrumentation,
+} from "@osva/observability";
+
 import { BullMqJobQueue } from "../../src/bullmq-job-queue.js";
 import {
   EXECUTE_RUN_ATTEMPT_JOB_NAME,
@@ -42,11 +48,17 @@ describe("BullMqJobQueue Valkey integration", () => {
 
   async function createQueue(options?: {
     readonly logger?: ConstructorParameters<typeof BullMqJobQueue>[0]["logger"];
+    readonly instrumentation?: ConstructorParameters<
+      typeof BullMqJobQueue
+    >[0]["instrumentation"];
+    readonly metricsPollIntervalMs?: number;
   }): Promise<BullMqJobQueue> {
     return new BullMqJobQueue({
       url: context.url,
       prefix: nextPrefix(),
       logger: options?.logger,
+      instrumentation: options?.instrumentation,
+      metricsPollIntervalMs: options?.metricsPollIntervalMs,
     });
   }
 
@@ -101,8 +113,116 @@ describe("BullMqJobQueue Valkey integration", () => {
   it("does not create a second active job when the same RunAttempt is enqueued twice", async () => {
     const queue = await createQueue();
     try {
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      expect(await queue.enqueue(FIRST)).toEqual({
+        outcome: "already_present",
+      });
+      expect(await queue.countActiveJobs()).toBe(1);
+      expect(await queue.getQueuedJob(FIRST)).toMatchObject({
+        id: toBullMqJobId(FIRST),
+        data: { runAttemptId: FIRST },
+      });
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("reports already_present when duplicating an active execution job", async () => {
+    const queue = await createQueue();
+    let release: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    try {
+      await queue.consume(async () => {
+        release?.();
+        await delay(500);
+      });
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      await started;
+      expect(await queue.enqueue(FIRST)).toEqual({
+        outcome: "already_present",
+      });
+      expect(await queue.countActiveJobs()).toBeLessThanOrEqual(1);
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("assigns enqueued to one concurrent caller and already_present to the other", async () => {
+    const queue = await createQueue();
+    try {
+      const [first, second] = await Promise.all([
+        queue.enqueue(FIRST),
+        queue.enqueue(FIRST),
+      ]);
+      const outcomes = [first.outcome, second.outcome].sort();
+      expect(outcomes).toEqual(["already_present", "enqueued"]);
+      expect(await queue.countActiveJobs()).toBe(1);
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("reports already_present when the BullMQ job hash still exists after completion", async () => {
+    const queue = await createQueue();
+    const delivered: RunAttemptId[] = [];
+    try {
+      await queue.consume(async (payload) => {
+        delivered.push(payload.runAttemptId);
+      });
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      await waitForDelivery(delivered);
+      expect(await queue.enqueue(FIRST)).toEqual({
+        outcome: "already_present",
+      });
+      expect(await queue.countActiveJobs()).toBe(0);
+      await delay(200);
+      expect(delivered).toEqual([FIRST]);
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("enqueues after an orphaned claim expires without a queue job", async () => {
+    const prefix = nextPrefix();
+    const queue = new BullMqJobQueue({ url: context.url, prefix });
+    const jobId = toBullMqJobId(FIRST);
+    try {
       await queue.enqueue(FIRST);
-      await queue.enqueue(FIRST);
+      await queue.cancel(FIRST);
+      expect(await queue.getQueuedJob(FIRST)).toBeNull();
+
+      const raw = new Queue(OSVA_EXECUTION_QUEUE_NAME, {
+        connection: { url: context.url, maxRetriesPerRequest: null },
+        prefix,
+      });
+      try {
+        const client = await raw.client;
+        const claimKey = `${raw.toKey("osva-enqueue-claim")}:${jobId}`;
+        await client.set(claimKey, "orphan", "PX", 50);
+        await delay(100);
+      } finally {
+        await raw.close();
+      }
+
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      expect(await queue.countActiveJobs()).toBe(1);
+    } finally {
+      await queue.shutdown();
+    }
+  });
+
+  it("enqueues again after cancel removes the waiting job", async () => {
+    const queue = await createQueue();
+    try {
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
+      expect(await queue.enqueue(FIRST)).toEqual({
+        outcome: "already_present",
+      });
+      await queue.cancel(FIRST);
+      expect(await queue.getQueuedJob(FIRST)).toBeNull();
+      expect(await queue.enqueue(FIRST)).toEqual({ outcome: "enqueued" });
       expect(await queue.countActiveJobs()).toBe(1);
       expect(await queue.getQueuedJob(FIRST)).toMatchObject({
         id: toBullMqJobId(FIRST),
@@ -295,6 +415,79 @@ describe("BullMqJobQueue Valkey integration", () => {
   it("uses the Community Alpha execution queue name", () => {
     expect(OSVA_EXECUTION_QUEUE_NAME).toBe("osva-execution");
     expect(EXECUTE_RUN_ATTEMPT_JOB_NAME).toBe("execute-run-attempt");
+  });
+
+  it("creates queue.process as a child of extracted trace context", async () => {
+    const telemetry = new RecordingInstrumentation();
+    const parent = await telemetry.withSpan(
+      OSVA_SPAN.RUN_CREATE,
+      {},
+      async () => telemetry.injectTraceContext(),
+    );
+    const queue = new BullMqJobQueue({
+      url: context.url,
+      prefix: nextPrefix(),
+      instrumentation: telemetry,
+    });
+    const delivered: RunAttemptId[] = [];
+    try {
+      await telemetry.withSpan(OSVA_SPAN.RUN_CREATE, {}, async () => {
+        await queue.enqueue(FIRST);
+      });
+      await queue.consume(async (payload) => {
+        delivered.push(payload.runAttemptId);
+      });
+      await waitForDelivery(delivered);
+    } finally {
+      await queue.shutdown();
+    }
+
+    const create = telemetry.spans.filter(
+      (span) => span.name === OSVA_SPAN.RUN_CREATE,
+    );
+    const process = telemetry.spans.find(
+      (span) => span.name === OSVA_SPAN.QUEUE_PROCESS,
+    );
+    expect(process).toBeDefined();
+    expect(process?.traceId).toBe(create.at(-1)?.traceId);
+    expect(process?.parentSpanId).toBe(create.at(-1)?.spanId);
+    expect(JSON.stringify(telemetry.metrics).includes(FIRST)).toBe(false);
+    expect(parent === undefined || typeof parent.traceparent === "string").toBe(
+      true,
+    );
+  });
+
+  it("records failed-job counters and shuts down polling", async () => {
+    const telemetry = new RecordingInstrumentation();
+    const queue = await createQueue({
+      instrumentation: telemetry,
+      metricsPollIntervalMs: 20,
+    });
+    try {
+      await queue.consume(async () => {
+        throw new Error("handler failed");
+      });
+      await queue.enqueue(FIRST);
+      const deadline = Date.now() + 8_000;
+      while (
+        telemetry.countersNamed(OSVA_METRIC.QUEUE_JOB_ERRORS).length === 0 &&
+        Date.now() < deadline
+      ) {
+        await delay(25);
+      }
+      expect(
+        telemetry.countersNamed(OSVA_METRIC.QUEUE_JOB_ERRORS)[0]?.attributes,
+      ).toEqual({ queue: "execution", kind: "failed" });
+      expect(
+        telemetry.metrics.some(
+          (metric) =>
+            metric.name === OSVA_METRIC.QUEUE_JOBS &&
+            metric.attributes?.state === "waiting",
+        ),
+      ).toBe(true);
+    } finally {
+      await queue.shutdown();
+    }
   });
 });
 

@@ -1,4 +1,10 @@
-export { loadOpenTelemetryConfig, type OpenTelemetryConfig } from "./config.js";
+export {
+  loadOpenTelemetryConfig,
+  OSVA_OTEL_SERVICE_NAMES,
+  type LoadOpenTelemetryConfigOptions,
+  type OpenTelemetryConfig,
+} from "./config.js";
+export { createTraceSampler } from "./sampler.js";
 export {
   createOpenTelemetryLifecycle,
   type OpenTelemetryLifecycle,

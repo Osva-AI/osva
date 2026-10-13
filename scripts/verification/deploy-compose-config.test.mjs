@@ -40,6 +40,81 @@ describe("self-hosted compose distribution", () => {
     assert.match(result.stdout, /OSVA_HEALTH_PORT: "8081"/);
     assert.doesNotMatch(result.stdout, /console:/);
     assert.doesNotMatch(result.stdout, /OSVA_PROCESS: console/);
+    assert.doesNotMatch(result.stdout, /otel-collector/);
+    assert.doesNotMatch(result.stdout, /OTEL_EXPORTER_OTLP_ENDPOINT/);
+  });
+
+  it("keeps default Compose free of observability endpoints", async () => {
+    const env = await loadEnvironment();
+    if (!env.docker?.version) {
+      console.log("SKIP compose default observability test: Docker not found");
+      return;
+    }
+
+    const composeCmd = env.docker.source ?? "docker";
+    const result = spawnSync(
+      composeCmd,
+      ["compose", "-f", path.join(COMPOSE_DIR, "compose.yml"), "config"],
+      {
+        cwd: COMPOSE_DIR,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          POSTGRES_PASSWORD: "compose-config-test-password",
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.doesNotMatch(result.stdout, /published: ["']?4318/);
+    assert.doesNotMatch(result.stdout, /published: ["']?8889/);
+  });
+
+  it("opt-in overlay starts the collector and points application services at it", async () => {
+    const env = await loadEnvironment();
+    if (!env.docker?.version) {
+      console.log("SKIP compose observability overlay test: Docker not found");
+      return;
+    }
+
+    const composeCmd = env.docker.source ?? "docker";
+    const result = spawnSync(
+      composeCmd,
+      [
+        "compose",
+        "-f",
+        path.join(COMPOSE_DIR, "compose.yml"),
+        "-f",
+        path.join(COMPOSE_DIR, "compose.observability.yml"),
+        "config",
+      ],
+      {
+        cwd: COMPOSE_DIR,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          POSTGRES_PASSWORD: "compose-config-test-password",
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /otel-collector/);
+    assert.match(
+      result.stdout,
+      /OTEL_EXPORTER_OTLP_ENDPOINT: http:\/\/otel-collector:4318/,
+    );
+    assert.match(result.stdout, /OTEL_SERVICE_NAME: osva-web/);
+    assert.match(result.stdout, /OTEL_SERVICE_NAME: osva-worker/);
+    assert.match(result.stdout, /OTEL_SERVICE_NAME: osva-scheduler/);
+    assert.match(
+      result.stdout,
+      /OTEL_SERVICE_NAME: osva-workflow-orchestrator/,
+    );
+    assert.match(result.stdout, /OTEL_SERVICE_NAME: osva-knowledge-worker/);
+    assert.match(result.stdout, /OTEL_SERVICE_NAME: osva-mcp/);
+    assert.doesNotMatch(result.stdout, /published: ["']?4318/);
+    assert.doesNotMatch(result.stdout, /published: ["']?4317/);
+    assert.doesNotMatch(result.stdout, /published: ["']?8889/);
+    assert.match(result.stdout, /127\.0\.0\.1/);
   });
 
   it("renders optional Valkey AUTH without changing the default no-auth topology", async () => {

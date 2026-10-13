@@ -41,6 +41,7 @@ Historical Drizzle SQL through the current repository head is locked in
 pnpm db:migrations:verify   # read-only integrity gate (CI harness)
 pnpm db:migrations:lock     # append-only manifest update for new 0023+ migrations
 pnpm db:migrations:status   # compare repository head vs applied database rows
+pnpm db:migrations:integrity  # non-destructive catalog probe for 0023 lease objects
 pnpm db:migrate             # advisory-locked migrator (also used by db:bootstrap)
 ```
 

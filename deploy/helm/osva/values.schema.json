@@ -46,6 +46,51 @@
         "enabled": { "type": "boolean" },
         "serviceAccountName": { "type": "string" }
       }
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "otlpEndpoint": { "type": "string" },
+        "serviceNameOverride": { "type": "string" },
+        "tracesSampler": {
+          "type": "string",
+          "enum": [
+            "always_on",
+            "always_off",
+            "traceidratio",
+            "parentbased_always_on",
+            "parentbased_always_off",
+            "parentbased_traceidratio",
+            ""
+          ]
+        },
+        "tracesSamplerArg": { "type": "string" }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "telemetry": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          }
+        },
+        "required": ["telemetry"]
+      },
+      "then": {
+        "properties": {
+          "telemetry": {
+            "properties": {
+              "otlpEndpoint": { "type": "string", "minLength": 1 }
+            },
+            "required": ["otlpEndpoint"]
+          }
+        }
+      }
+    }
+  ]
 }

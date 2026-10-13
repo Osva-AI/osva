@@ -1,8 +1,23 @@
+export const OSVA_OTEL_SERVICE_NAMES = {
+  WEB: "osva-web",
+  WORKER: "osva-worker",
+  SCHEDULER: "osva-scheduler",
+  WORKFLOW_ORCHESTRATOR: "osva-workflow-orchestrator",
+  MCP: "osva-mcp",
+  KNOWLEDGE_WORKER: "osva-knowledge-worker",
+} as const;
+
 export interface OpenTelemetryConfig {
   readonly enabled: boolean;
   readonly serviceName: string;
   readonly otlpEndpoint: string | undefined;
   readonly otlpHeaders: Record<string, string>;
+  readonly tracesSampler: string | undefined;
+  readonly tracesSamplerArg: string | undefined;
+}
+
+export interface LoadOpenTelemetryConfigOptions {
+  readonly defaultServiceName?: string;
 }
 
 function parseOtlpHeaders(raw: string | undefined): Record<string, string> {
@@ -43,13 +58,21 @@ function isTruthy(value: string | undefined): boolean {
 
 export function loadOpenTelemetryConfig(
   env: NodeJS.ProcessEnv = process.env,
+  options: LoadOpenTelemetryConfigOptions = {},
 ): OpenTelemetryConfig {
+  const defaultServiceName = options.defaultServiceName?.trim() || "osva";
+  const serviceName = env.OTEL_SERVICE_NAME?.trim() || defaultServiceName;
+  const tracesSampler = env.OTEL_TRACES_SAMPLER?.trim() || undefined;
+  const tracesSamplerArg = env.OTEL_TRACES_SAMPLER_ARG?.trim() || undefined;
+
   if (isTruthy(env.OTEL_SDK_DISABLED)) {
     return {
       enabled: false,
-      serviceName: env.OTEL_SERVICE_NAME?.trim() || "osva",
+      serviceName,
       otlpEndpoint: undefined,
       otlpHeaders: {},
+      tracesSampler,
+      tracesSamplerArg,
     };
   }
 
@@ -61,8 +84,10 @@ export function loadOpenTelemetryConfig(
 
   return {
     enabled: otlpEndpoint !== undefined,
-    serviceName: env.OTEL_SERVICE_NAME?.trim() || "osva",
+    serviceName,
     otlpEndpoint,
     otlpHeaders: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
+    tracesSampler,
+    tracesSamplerArg,
   };
 }

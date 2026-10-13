@@ -18,6 +18,7 @@ export function createFakePingableQueue(): PingableJobQueue & {
     },
     async enqueue(runAttemptId) {
       enqueueCalls.push(runAttemptId);
+      return { outcome: "enqueued" as const };
     },
     async cancel() {},
     async consume() {

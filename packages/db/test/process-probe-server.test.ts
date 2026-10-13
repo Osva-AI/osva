@@ -53,4 +53,30 @@ describe("process probe server", () => {
       await live.close();
     }
   });
+
+  it("identifies a typed readiness dependency failure without leaking details", async () => {
+    const { ReadinessUnavailableError } =
+      await import("../src/readiness-result.js");
+    const live = await startProcessProbeServer({
+      host: "127.0.0.1",
+      port: 18_082,
+      readinessCheck: async () => {
+        throw new ReadinessUnavailableError(["valkey"]);
+      },
+    });
+    if (live === undefined) {
+      throw new Error("expected probe server");
+    }
+
+    try {
+      const ready = await fetch(`http://127.0.0.1:${String(live.port)}/ready`);
+      expect(ready.status).toBe(503);
+      expect(await ready.json()).toEqual({
+        status: "unavailable",
+        failedDependency: "valkey",
+      });
+    } finally {
+      await live.close();
+    }
+  });
 });

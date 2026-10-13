@@ -101,6 +101,17 @@ existingSecret: ""
 # read this Secret; supply database.url or existingSecret for migrate.
 secretEnv: {}
 
+# Optional OTLP export. Disabled by default. When enabled, injects OTEL_*
+# into application workloads. Does not deploy a Collector — point
+# otlpEndpoint at an operator-managed collector (OTLP HTTP, typically :4318).
+# Put OTEL_EXPORTER_OTLP_HEADERS in existingSecret or secretEnv, never here.
+telemetry:
+  enabled: false
+  otlpEndpoint: ""
+  serviceNameOverride: ""
+  tracesSampler: parentbased_always_on
+  tracesSamplerArg: ""
+
 extraEnv: []
 extraEnvFrom: []
 

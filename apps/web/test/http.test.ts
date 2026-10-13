@@ -15,7 +15,9 @@ describe("web HTTP shell", () => {
   });
 
   async function listen(
-    readinessCheck: () => Promise<boolean> = async () => true,
+    readinessCheck: () => Promise<
+      boolean | import("@osva/db").DependencyReadinessSnapshot
+    > = async () => true,
   ) {
     const { server, testApiKey } = await createTestWebApplication({
       readinessCheck,
@@ -45,6 +47,34 @@ describe("web HTTP shell", () => {
     const response = await fetch(`${origin}/ready`);
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ status: "unavailable" });
+  });
+
+  it("identifies a postgres readiness failure without leaking secrets", async () => {
+    const { origin } = await listen(async () => ({
+      ready: false,
+      failedDependencies: ["postgres"],
+    }));
+    const response = await fetch(`${origin}/ready`);
+    const body = await response.text();
+    expect(response.status).toBe(503);
+    expect(body).toBe(
+      JSON.stringify({ status: "unavailable", failedDependency: "postgres" }),
+    );
+    expect(body).not.toContain("postgres://");
+  });
+
+  it("identifies simultaneous postgres and valkey readiness failures", async () => {
+    const { origin } = await listen(async () => ({
+      ready: false,
+      failedDependencies: ["postgres", "valkey"],
+    }));
+    const response = await fetch(`${origin}/ready`);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      status: "unavailable",
+      failedDependency: "postgres",
+      failedDependencies: ["postgres", "valkey"],
+    });
   });
 
   it("does not leak raw Error messages when readiness throws", async () => {

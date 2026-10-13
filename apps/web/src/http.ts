@@ -4,6 +4,10 @@ import {
   OSVA_REQUEST_ID_HEADER,
   PUBLIC_API_ERROR_CODES,
 } from "@osva-ai/contracts";
+import {
+  readinessFailureBody,
+  type DependencyReadinessSnapshot,
+} from "@osva/db";
 import type {
   AgentApplication,
   ArtifactApplication,
@@ -14,7 +18,12 @@ import type {
   WorkflowApplication,
   ApiKeyApplication,
 } from "@osva/domain";
-import { emitSecurityEvent, SECURITY_EVENT_NAMES } from "@osva/observability";
+import {
+  emitSecurityEvent,
+  SECURITY_EVENT_NAMES,
+  setSecurityEventInstrumentation,
+  type OsvaInstrumentation,
+} from "@osva/observability";
 
 import { handleAgentRegistryRequest } from "./agent-http.js";
 import { handleArtifactRequest } from "./artifact-http.js";
@@ -63,8 +72,16 @@ import {
   consumeHttpRateLimit,
   type HttpRateLimitContext,
 } from "./http-rate-limit.js";
+import { parseBearerAuthorization } from "./bearer-authorization.js";
+import {
+  withHttpRequestTelemetry,
+  type HttpRequestLog,
+} from "./http-telemetry.js";
+import { logEvent } from "./log.js";
 
-export type ReadinessCheck = () => Promise<boolean>;
+export type ReadinessCheck = () => Promise<
+  boolean | DependencyReadinessSnapshot
+>;
 
 export interface CreateWebApplicationOptions {
   readonly readinessCheck: ReadinessCheck;
@@ -86,90 +103,82 @@ export interface CreateWebApplicationOptions {
   readonly security: WebSecurityServices;
   readonly apiKeys: ApiKeyApplication;
   readonly rateLimit?: HttpRateLimitContext;
+  readonly instrumentation?: OsvaInstrumentation;
+  readonly logEvent?: HttpRequestLog;
 }
 
 export function createWebApplication(
   options: CreateWebApplicationOptions,
 ): http.Server {
+  if (options.instrumentation !== undefined) {
+    setSecurityEventInstrumentation(options.instrumentation);
+  }
+
   return http.createServer((request, response) => {
-    void handleRequest(
-      request,
-      response,
-      options.readinessCheck,
-      options.agents,
-      options.connectors,
-      options.memory,
-      options.artifacts,
-      options.artifactMaxBytes,
-      options.evaluations,
-      options.modelProfiles,
-      options.tools,
-      options.runs,
-      options.runObservability,
-      options.schedules,
-      options.workflows,
-      options.workflowEvents,
-      options.office,
-      options.knowledge,
-      options.security,
-      options.apiKeys,
-      options.rateLimit,
-    );
+    void handleRequest(request, response, options);
   });
 }
 
 async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
-  readinessCheck: ReadinessCheck,
-  agents: AgentApplication,
-  connectors: ConnectorApplication,
-  memory: MemoryApplication,
-  artifacts: ArtifactApplication,
-  artifactMaxBytes: number,
-  evaluations: EvaluationHttpServices,
-  modelProfiles: ModelProfileApplication,
-  tools: ToolApplication,
-  runs: RunHttpServices,
-  runObservability: RunObservabilityHttpServices,
-  schedules: ScheduleHttpServices,
-  workflows: WorkflowApplication,
-  workflowEvents: WorkflowEventHttpServices | undefined,
-  office: OfficeHttpServices,
-  knowledge: KnowledgeHttpServices,
-  security: WebSecurityServices,
-  apiKeys: ApiKeyApplication,
-  rateLimit: HttpRateLimitContext | undefined,
+  options: CreateWebApplicationOptions,
 ): Promise<void> {
   const requestId = createRequestId();
   response.setHeader(OSVA_REQUEST_ID_HEADER, requestId);
+  const url = requestUrl(request);
 
-  const principal = await authenticateRequest(request, security);
-
-  await runWithSecurityRequestContext({ requestId, principal }, async () => {
-    await handleRequestWithContext(
-      request,
-      response,
-      readinessCheck,
-      agents,
-      connectors,
-      memory,
-      artifacts,
-      artifactMaxBytes,
-      evaluations,
-      modelProfiles,
-      tools,
-      runs,
-      runObservability,
-      schedules,
-      workflows,
-      workflowEvents,
-      office,
-      knowledge,
-      apiKeys,
-      rateLimit,
+  try {
+    await withHttpRequestTelemetry(
+      {
+        method: request.method ?? "GET",
+        pathname: url.pathname,
+        requestId,
+        response,
+        instrumentation: options.instrumentation,
+        logEvent: options.logEvent ?? logEvent,
+      },
+      async () => {
+        await runWithSecurityRequestContext({ requestId }, async () => {
+          const principal = await authenticateRequest(
+            request,
+            options.security,
+          );
+          await runWithSecurityRequestContext(
+            { requestId, principal },
+            async () => {
+              await handleRequestWithContext(
+                request,
+                response,
+                options.readinessCheck,
+                options.agents,
+                options.connectors,
+                options.memory,
+                options.artifacts,
+                options.artifactMaxBytes,
+                options.evaluations,
+                options.modelProfiles,
+                options.tools,
+                options.runs,
+                options.runObservability,
+                options.schedules,
+                options.workflows,
+                options.workflowEvents,
+                options.office,
+                options.knowledge,
+                options.apiKeys,
+                options.rateLimit,
+              );
+            },
+          );
+        });
+      },
     );
-  });
+  } catch {
+    if (!response.headersSent) {
+      sendJson(response, 500, { status: "error" });
+    }
+  }
 }
 
 async function handleRequestWithContext(
@@ -224,20 +233,26 @@ async function handleRequestWithContext(
       return;
     }
 
-    let ready = false;
     try {
-      ready = (await readinessCheck()) === true;
+      const result = await readinessCheck();
+      if (result === true) {
+        sendJson(response, 200, { status: "ready" });
+        return;
+      }
+      if (result === false) {
+        sendJson(response, 503, { status: "unavailable" });
+        return;
+      }
+      if (result.ready) {
+        sendJson(response, 200, { status: "ready" });
+        return;
+      }
+      sendJson(response, 503, readinessFailureBody(result.failedDependencies));
+      return;
     } catch {
-      ready = false;
-    }
-
-    if (ready) {
-      sendJson(response, 200, { status: "ready" });
+      sendJson(response, 503, { status: "unavailable" });
       return;
     }
-
-    sendJson(response, 503, { status: "unavailable" });
-    return;
   }
 
   if (path.startsWith("/v1") && rateLimit !== undefined) {
@@ -286,6 +301,16 @@ async function handleRequestWithContext(
 
   if (path.startsWith("/v1")) {
     if (getRequestPrincipal() === undefined) {
+      if (
+        parseBearerAuthorization(request.headers.authorization) === undefined
+      ) {
+        emitSecurityEvent({
+          event: SECURITY_EVENT_NAMES.AUTH_AUTHENTICATION_MISSING,
+          requestId: resolveRequestId(),
+          outcome: "DENIED",
+          reasonCode: "missing_bearer",
+        });
+      }
       sendV1Error(
         response,
         401,

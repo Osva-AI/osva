@@ -1,4 +1,9 @@
-import { checkDatabaseConnection, type Database } from "@osva/db";
+import {
+  checkDatabaseConnection,
+  collectDependencyReadiness,
+  type Database,
+  type DependencyReadinessSnapshot,
+} from "@osva/db";
 
 import type { PingableJobQueue } from "@osva/adapters-bullmq";
 
@@ -8,12 +13,13 @@ export function postgresReadinessCheck(
   database: Pick<Database, "ping">,
 ): ReadinessCheck {
   return async () => {
-    try {
-      await checkDatabaseConnection(database);
-      return true;
-    } catch {
-      return false;
-    }
+    const snapshot = await collectDependencyReadiness([
+      {
+        name: "postgres",
+        check: () => checkDatabaseConnection(database),
+      },
+    ]);
+    return toReadinessResult(snapshot);
   };
 }
 
@@ -22,12 +28,22 @@ export function postgresAndValkeyReadinessCheck(
   queue: Pick<PingableJobQueue, "ping">,
 ): ReadinessCheck {
   return async () => {
-    try {
-      await checkDatabaseConnection(database);
-      await queue.ping();
-      return true;
-    } catch {
-      return false;
-    }
+    const snapshot = await collectDependencyReadiness([
+      {
+        name: "postgres",
+        check: () => checkDatabaseConnection(database),
+      },
+      {
+        name: "valkey",
+        check: () => queue.ping(),
+      },
+    ]);
+    return toReadinessResult(snapshot);
   };
+}
+
+function toReadinessResult(
+  snapshot: DependencyReadinessSnapshot,
+): boolean | DependencyReadinessSnapshot {
+  return snapshot;
 }

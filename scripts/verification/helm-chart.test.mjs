@@ -206,4 +206,104 @@ describe("helm chart packaging", () => {
     fs.rmSync(DEFAULT_VALUES, { force: true });
     fs.rmSync(PRODUCTION_VALUES, { force: true });
   });
+
+  it("omits OTEL export when telemetry is disabled", () => {
+    helmVersion();
+    writeDefaultValues();
+    const output = runHelm([
+      "template",
+      "osva-default",
+      CHART_DIR,
+      "-f",
+      path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
+    ]);
+    const configMap = extractConfigMapManifest(output);
+    assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_ENDPOINT/);
+    assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_HEADERS/);
+    assert.doesNotMatch(output, /OTEL_SERVICE_NAME/);
+    fs.rmSync(DEFAULT_VALUES, { force: true });
+  });
+
+  it("injects per-process OTEL settings when telemetry is enabled", () => {
+    helmVersion();
+    writeDefaultValues();
+    const output = runHelm([
+      "template",
+      "osva-otel",
+      CHART_DIR,
+      "-f",
+      path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
+      "--set",
+      "telemetry.enabled=true",
+      "--set",
+      "telemetry.otlpEndpoint=http://otel-collector.observability.svc:4318",
+    ]);
+    const configMap = extractConfigMapManifest(output);
+    assert.match(
+      configMap,
+      /OTEL_EXPORTER_OTLP_ENDPOINT: "http:\/\/otel-collector\.observability\.svc:4318"/,
+    );
+    assert.match(configMap, /OTEL_TRACES_SAMPLER: "parentbased_always_on"/);
+    assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_HEADERS/);
+    assert.match(output, /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-web"/);
+    assert.match(output, /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-worker"/);
+    assert.match(
+      output,
+      /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-scheduler"/,
+    );
+    assert.match(
+      output,
+      /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-workflow-orchestrator"/,
+    );
+    assert.match(
+      output,
+      /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-knowledge-worker"/,
+    );
+    assert.match(output, /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-mcp"/);
+    fs.rmSync(DEFAULT_VALUES, { force: true });
+  });
+
+  it("rejects enabled telemetry without an OTLP endpoint", () => {
+    helmVersion();
+    writeDefaultValues();
+    try {
+      runHelm([
+        "template",
+        "osva-otel-invalid",
+        CHART_DIR,
+        "-f",
+        path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
+        "--set",
+        "telemetry.enabled=true",
+      ]);
+      assert.fail("expected helm template to fail");
+    } catch (error) {
+      assert.match(String(error), /telemetry.otlpEndpoint/);
+    }
+    fs.rmSync(DEFAULT_VALUES, { force: true });
+  });
+
+  it("rejects an unsupported traces sampler", () => {
+    helmVersion();
+    writeDefaultValues();
+    try {
+      runHelm([
+        "template",
+        "osva-otel-sampler",
+        CHART_DIR,
+        "-f",
+        path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
+        "--set",
+        "telemetry.enabled=true",
+        "--set",
+        "telemetry.otlpEndpoint=http://collector:4318",
+        "--set",
+        "telemetry.tracesSampler=not-a-sampler",
+      ]);
+      assert.fail("expected helm template to fail");
+    } catch (error) {
+      assert.match(String(error), /telemetry.tracesSampler must be one of/);
+    }
+    fs.rmSync(DEFAULT_VALUES, { force: true });
+  });
 });

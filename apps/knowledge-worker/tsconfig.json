@@ -16,6 +16,8 @@
     { "path": "../../adapters/bullmq" },
     { "path": "../../adapters/vector-pgvector" },
     { "path": "../../adapters/knowledge-parser" },
-    { "path": "../../adapters/embedding-openai-compatible" }
+    { "path": "../../adapters/embedding-openai-compatible" },
+    { "path": "../../adapters/opentelemetry" },
+    { "path": "../../packages/observability" }
   ]
 }

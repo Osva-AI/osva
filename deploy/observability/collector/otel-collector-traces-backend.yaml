@@ -1,0 +1,58 @@
+# Example Collector config that forwards traces to an operator-selected
+# OTLP HTTP backend. Metrics still scrape locally on :8889.
+#
+# Set OSVA_OTEL_TRACES_BACKEND_ENDPOINT to a base URL such as
+# http://jaeger:4318 (no /v1/traces suffix).
+# Put authentication in OSVA_OTEL_TRACES_BACKEND_HEADERS
+# (example: Authorization=Bearer …). Do not commit header values.
+#
+# Swap this file in place of otel-collector.yaml. An empty backend
+# endpoint will fail Collector startup — that is intentional so traces
+# are not silently dropped when you opted into a backend.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 400
+    spike_limit_mib: 80
+  batch:
+    send_batch_size: 512
+    timeout: 5s
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    send_timestamps: true
+    metric_expiration: 5m
+    resource_to_telemetry_conversion:
+      enabled: true
+  otlphttp/traces:
+    endpoint: ${env:OSVA_OTEL_TRACES_BACKEND_ENDPOINT}
+    headers:
+      Authorization: ${env:OSVA_OTEL_TRACES_BACKEND_AUTHORIZATION:-}
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: none
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/traces, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus, debug]

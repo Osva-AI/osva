@@ -20,6 +20,12 @@ export {
 } from "./errors.js";
 export { toBullMqJobId } from "./job-id.js";
 export {
+  DEFAULT_QUEUE_METRICS_POLL_MS,
+  QUEUE_METRIC_STATES,
+  queueMetricLabel,
+  queueTimeToStartMs,
+} from "./queue-metrics.js";
+export {
   ValkeyFixedWindowRateLimiter,
   type RateLimitConsumeResult,
   type ValkeyFixedWindowRateLimiterOptions,

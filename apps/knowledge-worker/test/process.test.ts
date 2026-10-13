@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createOpenTelemetryLifecycle } from "@osva/adapters-opentelemetry";
+import { NO_OP_INSTRUMENTATION } from "@osva/observability";
 
 import { createKnowledgeWorkerProcess } from "../src/process.js";
 
@@ -13,5 +15,32 @@ describe("createKnowledgeWorkerProcess", () => {
   it("fails startup when required dependencies are unavailable", async () => {
     const worker = createKnowledgeWorkerProcess(BASE_ENV);
     await expect(worker.start()).rejects.toThrow();
+  });
+
+  it("shuts down OpenTelemetry after a failed start and stays no-op without OTLP", async () => {
+    let shutdowns = 0;
+    const worker = createKnowledgeWorkerProcess(BASE_ENV, undefined, {
+      telemetry: {
+        instrumentation: NO_OP_INSTRUMENTATION,
+        config: createOpenTelemetryLifecycle(BASE_ENV, {
+          defaultServiceName: "osva-knowledge-worker",
+        }).config,
+        shutdown: async () => {
+          shutdowns += 1;
+        },
+      },
+    });
+    await expect(worker.start()).rejects.toThrow();
+    await worker.stop();
+    expect(shutdowns).toBe(1);
+  });
+
+  it("honors an explicit service name override", () => {
+    const lifecycle = createOpenTelemetryLifecycle(
+      { ...BASE_ENV, OTEL_SERVICE_NAME: "custom-kw" },
+      { defaultServiceName: "osva-knowledge-worker" },
+    );
+    expect(lifecycle.config.enabled).toBe(false);
+    expect(lifecycle.config.serviceName).toBe("custom-kw");
   });
 });

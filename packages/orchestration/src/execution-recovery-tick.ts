@@ -6,6 +6,8 @@ import {
 import type { JobQueue } from "@osva-ai/contracts";
 import type { RunRepository } from "@osva/domain";
 import {
+  elapsedMs,
+  OSVA_METRIC,
   OSVA_SPAN,
   resolveInstrumentation,
   type OsvaInstrumentation,
@@ -50,17 +52,32 @@ export class ExecutionRecoveryTick {
 
   async execute(): Promise<void> {
     const telemetry = resolveInstrumentation(this.deps.instrumentation);
-    await telemetry.withSpan(
-      OSVA_SPAN.EXECUTION_RECOVERY,
-      undefined,
-      async () => {
-        await this.failExpiredLeases();
-        await this.repairQueuedDeliveries();
-      },
-    );
+    const startedAt = performance.now();
+    try {
+      await telemetry.withSpan(
+        OSVA_SPAN.EXECUTION_RECOVERY,
+        undefined,
+        async () => {
+          await this.failExpiredLeases(telemetry);
+          await this.repairQueuedDeliveries(telemetry);
+        },
+      );
+    } catch (error) {
+      telemetry.recordCounter(OSVA_METRIC.RECOVERY_ERRORS, 1, {
+        kind: "tick",
+      });
+      throw error;
+    } finally {
+      telemetry.recordHistogram(
+        OSVA_METRIC.RECOVERY_DURATION_MS,
+        elapsedMs(startedAt, performance.now()),
+      );
+    }
   }
 
-  private async failExpiredLeases(): Promise<void> {
+  private async failExpiredLeases(
+    telemetry: OsvaInstrumentation,
+  ): Promise<void> {
     const expired = await this.deps.runs.listExpiredLeasedRunningAttempts(
       this.expiredBatchLimit,
     );
@@ -95,12 +112,16 @@ export class ExecutionRecoveryTick {
           continue;
         }
 
+        telemetry.recordCounter(OSVA_METRIC.RECOVERY_LEASE_INTERRUPTED, 1);
         this.deps.logger?.info("execution.recovery.lease_interrupted", {
           runAttemptId: result.runAttempt.id,
           runId: result.run.id,
           errorCode: EXECUTION_INTERRUPTED_ERROR_CODE,
         });
       } catch (error) {
+        telemetry.recordCounter(OSVA_METRIC.RECOVERY_ERRORS, 1, {
+          kind: "lease",
+        });
         this.deps.logger?.error("execution.recovery.lease_failed", {
           runAttemptId: attempt.id,
           runId: attempt.runId,
@@ -110,7 +131,9 @@ export class ExecutionRecoveryTick {
     }
   }
 
-  private async repairQueuedDeliveries(): Promise<void> {
+  private async repairQueuedDeliveries(
+    telemetry: OsvaInstrumentation,
+  ): Promise<void> {
     const deliveries = await this.deps.runs.listQueuedPendingDeliveries(
       this.transportBatchLimit,
     );
@@ -124,12 +147,26 @@ export class ExecutionRecoveryTick {
       }
 
       try {
-        await this.deps.queue.enqueue(delivery.runAttempt.id);
-        this.deps.logger?.info("execution.recovery.transport_repaired", {
-          runAttemptId: delivery.runAttempt.id,
-          runId: delivery.run.id,
-        });
+        const enqueue = await this.deps.queue.enqueue(delivery.runAttempt.id);
+        if (enqueue.outcome === "enqueued") {
+          telemetry.recordCounter(OSVA_METRIC.RECOVERY_TRANSPORT_REPAIRED, 1);
+          this.deps.logger?.info("execution.recovery.transport_repaired", {
+            runAttemptId: delivery.runAttempt.id,
+            runId: delivery.run.id,
+          });
+        } else {
+          this.deps.logger?.info(
+            "execution.recovery.transport_already_present",
+            {
+              runAttemptId: delivery.runAttempt.id,
+              runId: delivery.run.id,
+            },
+          );
+        }
       } catch (error) {
+        telemetry.recordCounter(OSVA_METRIC.RECOVERY_ERRORS, 1, {
+          kind: "transport",
+        });
         this.deps.logger?.error("execution.recovery.transport_repair_failed", {
           runAttemptId: delivery.runAttempt.id,
           runId: delivery.run.id,

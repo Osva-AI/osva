@@ -5,7 +5,14 @@ import {
   metrics,
   SpanStatusCode,
 } from "@opentelemetry/api";
-import type { Counter, Histogram, Meter } from "@opentelemetry/api";
+import type {
+  Counter,
+  Gauge,
+  Histogram,
+  Meter,
+  MeterProvider,
+  TracerProvider,
+} from "@opentelemetry/api";
 import type { Span } from "@opentelemetry/api";
 import {
   assertSafeMetricAttributes,
@@ -56,6 +63,8 @@ class OpenTelemetrySpan implements ActiveSpan {
 export interface OpenTelemetryInstrumentationOptions {
   readonly tracerName?: string;
   readonly meterName?: string;
+  readonly tracerProvider?: TracerProvider;
+  readonly meterProvider?: MeterProvider;
 }
 
 export class OpenTelemetryInstrumentation implements OsvaInstrumentation {
@@ -63,10 +72,13 @@ export class OpenTelemetryInstrumentation implements OsvaInstrumentation {
   private readonly meter: Meter;
   private readonly counters = new Map<string, Counter>();
   private readonly histograms = new Map<string, Histogram>();
+  private readonly gauges = new Map<string, Gauge>();
 
   constructor(options: OpenTelemetryInstrumentationOptions = {}) {
-    this.tracer = trace.getTracer(options.tracerName ?? "osva");
-    this.meter = metrics.getMeter(options.meterName ?? "osva");
+    const tracerProvider = options.tracerProvider ?? trace;
+    const meterProvider = options.meterProvider ?? metrics;
+    this.tracer = tracerProvider.getTracer(options.tracerName ?? "osva");
+    this.meter = meterProvider.getMeter(options.meterName ?? "osva");
   }
 
   startSpan(name: string, attributes?: SpanAttributes): ActiveSpan {
@@ -83,22 +95,26 @@ export class OpenTelemetryInstrumentation implements OsvaInstrumentation {
     attributes: SpanAttributes | undefined,
     fn: (span: ActiveSpan) => Promise<T>,
   ): Promise<T> {
-    return this.tracer.startActiveSpan(name, async (span) => {
-      const wrapped = new OpenTelemetrySpan(span);
-      if (attributes !== undefined) {
-        wrapped.setAttributes(attributes);
-      }
+    const span = this.tracer.startSpan(name, {}, context.active());
+    const wrapped = new OpenTelemetrySpan(span);
+    if (attributes !== undefined) {
+      wrapped.setAttributes(attributes);
+    }
 
-      try {
-        const result = await fn(wrapped);
-        wrapped.setStatus(true);
-        return result;
-      } catch (error) {
-        wrapped.setStatus(false, error instanceof Error ? error.name : "ERROR");
-        wrapped.recordException(error);
-        throw error;
-      }
-    });
+    try {
+      const result = await context.with(
+        trace.setSpan(context.active(), span),
+        () => fn(wrapped),
+      );
+      wrapped.setStatus(true);
+      return result;
+    } catch (error) {
+      wrapped.setStatus(false, error instanceof Error ? error.name : "ERROR");
+      wrapped.recordException(error);
+      throw error;
+    } finally {
+      wrapped.end();
+    }
   }
 
   recordCounter(name: string, value = 1, attributes?: MetricAttributes): void {
@@ -111,6 +127,14 @@ export class OpenTelemetryInstrumentation implements OsvaInstrumentation {
     attributes?: MetricAttributes,
   ): void {
     this.recordMetric("histogram", name, value, attributes);
+  }
+
+  recordGauge(
+    name: string,
+    value: number,
+    attributes?: MetricAttributes,
+  ): void {
+    this.recordMetric("gauge", name, value, attributes);
   }
 
   injectTraceContext(): TraceContextCarrier | undefined {
@@ -149,7 +173,7 @@ export class OpenTelemetryInstrumentation implements OsvaInstrumentation {
   }
 
   private recordMetric(
-    kind: "counter" | "histogram",
+    kind: "counter" | "histogram" | "gauge",
     name: string,
     value: number,
     attributes?: MetricAttributes,
@@ -162,6 +186,15 @@ export class OpenTelemetryInstrumentation implements OsvaInstrumentation {
           this.meter.createCounter(name, { description: name });
         this.counters.set(name, counter);
         counter.add(value, attributes);
+        return;
+      }
+
+      if (kind === "gauge") {
+        const gauge =
+          this.gauges.get(name) ??
+          this.meter.createGauge(name, { description: name });
+        this.gauges.set(name, gauge);
+        gauge.record(value, attributes);
         return;
       }
 

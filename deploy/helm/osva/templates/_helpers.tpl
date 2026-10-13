@@ -99,6 +99,42 @@ true
 {{- end }}
 {{- end -}}
 
+{{- define "osva.otelServiceName" -}}
+{{- if and .root.Values.telemetry .root.Values.telemetry.serviceNameOverride -}}
+{{- .root.Values.telemetry.serviceNameOverride -}}
+{{- else -}}
+{{- .default -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "osva.validateTelemetry" -}}
+{{- if and .Values.telemetry .Values.telemetry.enabled -}}
+{{- if not .Values.telemetry.otlpEndpoint -}}
+{{- fail "telemetry.otlpEndpoint is required when telemetry.enabled is true" -}}
+{{- end -}}
+{{- $sampler := .Values.telemetry.tracesSampler | default "parentbased_always_on" -}}
+{{- $allowed := dict "always_on" true "always_off" true "traceidratio" true "parentbased_always_on" true "parentbased_always_off" true "parentbased_traceidratio" true -}}
+{{- if not (index $allowed $sampler) -}}
+{{- fail "telemetry.tracesSampler must be one of always_on, always_off, traceidratio, parentbased_always_on, parentbased_always_off, parentbased_traceidratio" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "osva.containerEnvBlock" -}}
+{{- $root := .root -}}
+{{- $hasExtra := and $root.Values.extraEnv (gt (len $root.Values.extraEnv) 0) -}}
+{{- if or (and $root.Values.telemetry $root.Values.telemetry.enabled) $hasExtra }}
+env:
+{{- if and $root.Values.telemetry $root.Values.telemetry.enabled }}
+  - name: OTEL_SERVICE_NAME
+    value: {{ include "osva.otelServiceName" (dict "root" $root "default" .serviceName) | quote }}
+{{- end }}
+{{- with $root.Values.extraEnv }}
+{{ toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
 {{- define "osva.processProbes" -}}
 ports:
   - name: health

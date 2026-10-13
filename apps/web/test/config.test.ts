@@ -88,7 +88,10 @@ describe("postgresReadinessCheck", () => {
       ping: async () => undefined,
     });
 
-    await expect(check()).resolves.toBe(true);
+    await expect(check()).resolves.toEqual({
+      ready: true,
+      failedDependencies: [],
+    });
   });
 
   it("returns false when ping fails without exposing the driver error", async () => {
@@ -98,7 +101,10 @@ describe("postgresReadinessCheck", () => {
       },
     });
 
-    await expect(check()).resolves.toBe(false);
+    await expect(check()).resolves.toEqual({
+      ready: false,
+      failedDependencies: ["postgres"],
+    });
   });
 });
 
@@ -109,7 +115,10 @@ describe("postgresAndValkeyReadinessCheck", () => {
       { ping: async () => undefined },
     );
 
-    await expect(check()).resolves.toBe(true);
+    await expect(check()).resolves.toEqual({
+      ready: true,
+      failedDependencies: [],
+    });
   });
 
   it("returns false when Valkey ping fails", async () => {
@@ -122,6 +131,29 @@ describe("postgresAndValkeyReadinessCheck", () => {
       },
     );
 
-    await expect(check()).resolves.toBe(false);
+    await expect(check()).resolves.toEqual({
+      ready: false,
+      failedDependencies: ["valkey"],
+    });
+  });
+
+  it("reports both dependencies when PostgreSQL and Valkey fail", async () => {
+    const check = postgresAndValkeyReadinessCheck(
+      {
+        ping: async () => {
+          throw new Error("ECONNREFUSED postgres://secret@127.0.0.1/osva");
+        },
+      },
+      {
+        ping: async () => {
+          throw new Error("redis://secret@127.0.0.1");
+        },
+      },
+    );
+
+    await expect(check()).resolves.toEqual({
+      ready: false,
+      failedDependencies: ["postgres", "valkey"],
+    });
   });
 });

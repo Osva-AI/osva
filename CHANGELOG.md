@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Observability
+
+- Control-plane HTTP request spans, counters, duration histograms, and structured completion logs with bounded route families.
+- BullMQ queue process spans, time-to-start, job-count gauges, and stall/failure counters.
+- Execution recovery counters for CAS-won lease interruptions, transport repairs, and recovery errors.
+- Bounded security-event counters, including missing-Bearer authentication events.
+- Per-process OpenTelemetry service names (`osva-web`, `osva-worker`, `osva-scheduler`, `osva-workflow-orchestrator`) and optional `OTEL_TRACES_SAMPLER` support.
+- `osva.run_attempt.duration_ms` for attempt outcomes; `osva.run.duration_ms` remains a compatibility alias. Runtime duration is `osva.runtime.execute.duration_ms`.
+- Schema-integrity diagnostic (`pnpm db:migrations:integrity`) detects journal/schema drift, including missing 0023 lease columns and `run_attempts_expired_lease_idx`, without applying SQL.
+- Additive RunAttempt `execution` diagnostics for lease/recovery state. Raw `executionOwner` remains internal.
+- Console Run Detail shows execution diagnostics. Console request-guard rejections emit bounded security events.
+- `/ready` may name `postgres` and/or `valkey` as the failed dependency without leaking connection details.
+- MCP and knowledge-worker initialize the existing OpenTelemetry lifecycle (`osva-mcp`, `osva-knowledge-worker`).
+- `JobQueue.enqueue` reports `enqueued` vs `already_present`. `osva.recovery.transport_repaired` increments only for newly accepted deliveries.
+- Optional Compose observability overlay (`compose.observability.yml`) starts a pinned OpenTelemetry Collector, example Prometheus, and loopback Grafana. Default Compose stays no-op.
+- Helm `telemetry` values inject per-process OTEL settings when enabled. The application chart does not deploy a collector.
+- Example Grafana dashboards and Prometheus alerts query Prometheus names (`osva_http_requests_total`), not dotted OTEL instruments.
+
 ### Reliability
 
 - Execution leases, heartbeats, and fencing on RunAttempt. Expired ownership fails the same attempt with `EXECUTION_INTERRUPTED`; abandoned `RUNNING` attempts are never automatically re-executed.

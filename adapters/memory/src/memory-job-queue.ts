@@ -1,4 +1,5 @@
 import type {
+  JobEnqueueResult,
   JobQueue,
   JobQueueHandler,
   JobQueuePayload,
@@ -21,12 +22,13 @@ export class MemoryJobQueue implements JobQueue {
   private readonly pending: RunAttemptId[] = [];
   private closed = false;
 
-  async enqueue(runAttemptId: RunAttemptId): Promise<void> {
+  async enqueue(runAttemptId: RunAttemptId): Promise<JobEnqueueResult> {
     this.assertOpen("enqueue");
     if (this.pending.includes(runAttemptId)) {
-      return;
+      return { outcome: "already_present" };
     }
     this.pending.push(runAttemptId);
+    return { outcome: "enqueued" };
   }
 
   async cancel(runAttemptId: RunAttemptId): Promise<void> {

@@ -9,6 +9,7 @@ import type {
   WorkflowNodeRunId,
 } from "@osva-ai/contracts";
 import {
+  assertPostgresAndValkeyReady,
   checkDatabaseConnection,
   createDatabase,
   startProcessProbeServer,
@@ -66,7 +67,9 @@ export function createWorkflowOrchestratorProcess(
   dependencies: WorkflowOrchestratorProcessDependencies = {},
 ): WorkflowOrchestratorProcess {
   const config = loadWorkflowOrchestratorConfig(env);
-  const telemetryLifecycle = createOpenTelemetryLifecycle(env);
+  const telemetryLifecycle = createOpenTelemetryLifecycle(env, {
+    defaultServiceName: "osva-workflow-orchestrator",
+  });
   const instrumentation = telemetryLifecycle.instrumentation;
   const createDatabaseHandle = dependencies.databaseFactory ?? databaseFactory;
   const createQueue =
@@ -123,8 +126,11 @@ export function createWorkflowOrchestratorProcess(
   });
   let probeServer: ProcessProbeServer | undefined;
   const readinessCheck = async () => {
-    await checkDatabaseConnection(database);
-    await queue.ping();
+    await assertPostgresAndValkeyReady(
+      database,
+      queue,
+      checkDatabaseConnection,
+    );
   };
   const workflowTick = new WorkflowOrchestratorTick({
     workflowRuns,
