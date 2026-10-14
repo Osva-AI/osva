@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - "feat/**"
+      - "chore/**"
     paths:
       - "VERSION"
       - "packages/**"
@@ -51,6 +52,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ./sdks/python
+
+      - name: Release-readiness version alignment
+        run: node --test scripts/release/release-readiness-version.test.mjs
 
       - name: Version consistency
         run: node scripts/release/version-consistency.mjs
@@ -105,7 +109,6 @@ jobs:
     needs: verify-core
     env:
       OSVA_DEPLOY_ACCEPTANCE: "true"
-      OSVA_IMAGE: osva:1.0.0
     steps:
       - uses: actions/checkout@v4
 
@@ -121,8 +124,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Read OSVA release version from VERSION
+        run: |
+          VERSION="$(tr -d ' \n\r' < VERSION)"
+          echo "OSVA_RELEASE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "OSVA_IMAGE=osva:${VERSION}" >> "$GITHUB_ENV"
+
       - name: Build production OCI image
-        run: docker build -t osva:1.0.0 .
+        run: docker build -t "$OSVA_IMAGE" .
 
       - name: Runtime image verification
         run: node scripts/deployment/verify-runtime-image.mjs
@@ -139,7 +148,7 @@ jobs:
       - name: Helm package
         run: |
           docker run --rm -v "${{ github.workspace }}:/work" -w /work alpine/helm:3.16.4 \
-            package deploy/helm/osva --version 1.0.0 --app-version 1.0.0 -d /tmp
+            package deploy/helm/osva --version "$OSVA_RELEASE_VERSION" --app-version "$OSVA_RELEASE_VERSION" -d /tmp
 
   kind:
     runs-on: ubuntu-latest
@@ -147,7 +156,6 @@ jobs:
     needs: oci-compose-helm
     env:
       OSVA_KIND_ACCEPTANCE: "true"
-      OSVA_IMAGE: osva:1.0.0
     steps:
       - uses: actions/checkout@v4
 
@@ -159,6 +167,12 @@ jobs:
         run: |
           corepack enable
           corepack prepare pnpm@12.4.1 --activate
+
+      - name: Read OSVA release version from VERSION
+        run: |
+          VERSION="$(tr -d ' \n\r' < VERSION)"
+          echo "OSVA_RELEASE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "OSVA_IMAGE=osva:${VERSION}" >> "$GITHUB_ENV"
 
       - name: Install kind
         run: |

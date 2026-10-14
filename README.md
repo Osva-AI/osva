@@ -6,13 +6,11 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** **OSVA OSS 1.0** (`v1.0.0` source release; Stage 3 complete: 3.8.1–3.8.7 including Linux kind acceptance in release-readiness CI).
+> **Status:** **OSVA Community `1.1.0-rc.1`** (release candidate — unpublished). Builds on OSS 1.0 (`v1.0.0` tag) with M7 canonical demo, M8 Product Console, and M9 production hardening. **Not a GA announcement.** Registry installs (`npm`, PyPI, `ghcr.io`) remain unpublished until RC.3 verification and maintainer approval. Start with [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md). Historical 1.0 guide: [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
 > Community Edition includes authenticated `/v1`, workflows, scheduling, MCP client
 > and MCP server, knowledge/RAG, artifact storage, container/trusted/remote runtimes,
-> TypeScript/Python SDKs, CLI, self-hosted Compose, Helm/Kubernetes packaging, and
-> optional OpenTelemetry. Registry installs (`npm`, PyPI, `ghcr.io`) depend on
-> publication of the corresponding artifacts. Start with
-> [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
+> TypeScript/Python SDKs, CLI, self-hosted Compose, Helm/Kubernetes packaging, optional
+> OpenTelemetry, and loopback Product Console (local dev).
 
 ## Why OSVA?
 
@@ -98,7 +96,8 @@ See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
 | Path | Document |
 |------|----------|
-| Self-hosted Compose (recommended) | [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md) |
+| Self-hosted Compose (recommended) | [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md) |
+| Historical OSS 1.0 quickstart | [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md) |
 | Configuration reference | [`docs/deployment/CONFIGURATION.md`](docs/deployment/CONFIGURATION.md) |
 | Topologies (Compose vs Kubernetes) | [`docs/architecture/DEPLOYMENT_TOPOLOGIES.md`](docs/architecture/DEPLOYMENT_TOPOLOGIES.md) |
 | Helm chart | [`deploy/helm/osva/README.md`](deploy/helm/osva/README.md) |
@@ -110,7 +109,7 @@ See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
 **Authentication:** all `/v1/*` routes require API keys. Run bootstrap once per environment to mint the initial key.
 
-**Public SDKs (OSVA 1.0.0):** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`, and Python `osva-sdk` (registry availability depends on publication).
+**Public SDKs (aligned to root `VERSION`, currently `1.1.0-rc.1`):** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`, and Python `osva-sdk` (registry availability depends on publication).
 
 Historical Beta docs: [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) (legacy local dev path).
 
@@ -212,7 +211,7 @@ and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
 
 ### SDK and CLI
 
-Public packages at version **1.0.0** (build from this repository, or install from npm/PyPI once published):
+Public packages at version **`1.1.0-rc.1`** (read root `VERSION`; build from this repository, or install from npm/PyPI once published):
 
 - `@osva-ai/contracts`, `@osva-ai/runtime-protocol` — shared types/schemas
 - `@osva-ai/sdk` — TypeScript client (`OsvaClient`) and `@osva-ai/sdk/runtime`

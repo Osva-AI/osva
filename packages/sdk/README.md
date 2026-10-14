@@ -7,7 +7,7 @@ Requires Node.js 24 or newer.
 ## Installation
 
 ```bash
-npm install @osva-ai/sdk@1.0.0
+npm install @osva-ai/sdk@1.1.0-rc.1
 ```
 
 ## Usage
@@ -40,7 +40,7 @@ console.log(agents);
 ## Links
 
 - Repository: https://github.com/Osva-AI/osva
-- OSS 1.0 quickstart: https://github.com/Osva-AI/osva/blob/main/docs/OSS-1.0-QUICKSTART.md
+- Community quickstart: https://github.com/Osva-AI/osva/blob/main/docs/OSS-COMMUNITY-QUICKSTART.md
 
 ## License
 
