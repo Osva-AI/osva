@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import type { JobEnqueueResult } from "@osva-ai/contracts";
 import type { Queue } from "bullmq";
 
+import type { EnqueueClaimTestHooksInput } from "./enqueue-test-hooks.js";
+
 const ENQUEUE_CLAIM_TTL_SECONDS = 60;
 /** Remaining TTL above this threshold means another caller holds a fresh claim. */
 const ENQUEUE_CLAIM_IN_FLIGHT_PTTL_MS = 45_000;
@@ -37,13 +39,16 @@ export async function enqueueWithTransportClaim(
   queue: Queue,
   jobId: string,
   add: () => Promise<void>,
+  testHooks: EnqueueClaimTestHooksInput = undefined,
 ): Promise<EnqueueOutcomeKind> {
   await queue.waitUntilReady();
   const client = await queue.client;
   const claimKey = `${queue.toKey("osva-enqueue-claim")}:${jobId}`;
   const jobKey = `${queue.toKey("")}${jobId}`;
+  const hookContext = { jobId, claimKey, jobKey };
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
+    await testHooks?.beforeClaim?.(hookContext);
     const token = randomUUID();
     const result = (await client.eval(
       ACQUIRE_ENQUEUE_CLAIM,
@@ -68,7 +73,9 @@ export async function enqueueWithTransportClaim(
     }
 
     try {
+      await testHooks?.afterClaimBeforeAdd?.(hookContext);
       await add();
+      await testHooks?.afterAddBeforeReturn?.(hookContext);
       return "enqueued";
     } catch (error) {
       await client.del(claimKey).catch(() => undefined);

@@ -46,7 +46,9 @@
     "canonical:approve": "pnpm --filter @osva/example-canonical-dependency-adoption run approve",
     "canonical:emit-delivery-event": "pnpm --filter @osva/example-canonical-dependency-adoption run emit-delivery-event",
     "canonical:demo": "pnpm --filter @osva/example-canonical-dependency-adoption run demo",
-    "canonical:test:integration": "pnpm --filter @osva/example-canonical-dependency-adoption run test:integration"
+    "canonical:test:integration": "pnpm --filter @osva/example-canonical-dependency-adoption run test:integration",
+    "acceptance:m9-7b": "node scripts/acceptance/m9-7b/run.mjs",
+    "acceptance:m9-7b:test": "node --test scripts/acceptance/m9-7b/test/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",
