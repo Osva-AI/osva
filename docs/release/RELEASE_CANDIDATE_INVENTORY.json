@@ -1,43 +1,56 @@
 {
-  "releaseVersion": "1.0.0",
-  "status": "OSS 1.0 release-candidate acceptance inventory",
-  "ociImage": "osva:1.0.0",
+  "releaseVersion": "1.1.0-rc.1",
+  "status": "OSS Community release candidate (unpublished)",
+  "publicationStatus": "unpublished",
+  "sourceProvenance": {
+    "gitCommit": "65aae390bc057eec73a8883f9d6d407f0ac055f8",
+    "versionFile": "VERSION"
+  },
+  "pendingReleaseGates": [
+    "release-readiness verify-core on RC commit",
+    "release-readiness packages (npm/Python pack smoke)",
+    "release-readiness oci-compose-helm",
+    "release-readiness kind",
+    "RC.3 pnpm verify:ci:clean clean-room gate",
+    "maintainer authorization for tag and registry publish"
+  ],
+  "ociImage": "osva:1.1.0-rc.1",
   "helmChart": {
     "path": "deploy/helm/osva",
-    "chartVersion": "1.0.0",
-    "appVersion": "1.0.0",
-    "packageCommand": "helm package deploy/helm/osva --version 1.0.0 --app-version 1.0.0"
+    "chartVersion": "1.1.0-rc.1",
+    "appVersion": "1.1.0-rc.1",
+    "packageCommand": "helm package deploy/helm/osva --version 1.1.0-rc.1 --app-version 1.1.0-rc.1"
   },
   "npmPackages": [
     {
       "name": "@osva-ai/contracts",
-      "version": "1.0.0",
+      "version": "1.1.0-rc.1",
       "pack": "pnpm --filter @osva-ai/contracts pack"
     },
     {
       "name": "@osva-ai/runtime-protocol",
-      "version": "1.0.0",
+      "version": "1.1.0-rc.1",
       "pack": "pnpm --filter @osva-ai/runtime-protocol pack"
     },
     {
       "name": "@osva-ai/sdk",
-      "version": "1.0.0",
+      "version": "1.1.0-rc.1",
       "pack": "pnpm --filter @osva-ai/sdk pack"
     },
     {
       "name": "@osva-ai/cli",
-      "version": "1.0.0",
+      "version": "1.1.0-rc.1",
       "pack": "pnpm --filter @osva-ai/cli pack"
     },
     {
       "name": "@osva-ai/connector-sdk",
-      "version": "1.0.0",
+      "version": "1.1.0-rc.1",
       "pack": "pnpm --filter @osva-ai/connector-sdk pack"
     }
   ],
   "pythonPackage": {
     "name": "osva-sdk",
-    "version": "1.0.0",
+    "version": "1.1.0-rc.1",
     "path": "sdks/python"
   },
   "migrationHead": "0023_execution_lease_slice",
@@ -46,8 +59,13 @@
     "docs/release/THIRD_PARTY_LICENSES_NODE.md",
     "docs/release/THIRD_PARTY_LICENSES_PYTHON.md"
   ],
+  "supplyChainNotes": [
+    "Secrets scan and license inventory run in release-readiness CI",
+    "SBOM, container CVE scan, and artifact signing are not automated in-repo (RC.3 optional)"
+  ],
   "documentation": [
     "README.md",
+    "docs/OSS-COMMUNITY-QUICKSTART.md",
     "docs/OSS-1.0-QUICKSTART.md",
     "docs/deployment/CONFIGURATION.md",
     "docs/architecture/DEPLOYMENT_TOPOLOGIES.md",

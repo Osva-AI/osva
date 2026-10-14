@@ -2,9 +2,9 @@
 
 ## Status
 
-OSVA **OSS 1.0** Community Edition is intended for production-style self-hosting when operators follow deployment hardening guidance. It is still **not a arbitrary-code sandbox**: trusted and container runtimes require explicit operator configuration and isolation choices.
+OSVA **Community Edition** (`1.1.0-rc.1` release candidate in-tree) is intended for production-style self-hosting when operators follow deployment hardening guidance. It builds on OSS **1.0.0** with additional hardening; it is still **not an arbitrary-code sandbox**: trusted and container runtimes require explicit operator configuration and isolation choices.
 
-Release candidate builds are verified in CI but **not** publicly tagged until maintainers approve release publication.
+Release candidate builds are verified in CI but **not** publicly tagged or published to registries until RC.3 verification and maintainer approval.
 
 ## Reporting vulnerabilities
 

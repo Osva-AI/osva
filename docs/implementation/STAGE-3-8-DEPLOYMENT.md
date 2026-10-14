@@ -30,10 +30,10 @@ pnpm release:version:check
 node scripts/release/generate-license-inventory.mjs
 OSVA_RELEASE_ACCEPTANCE=true node scripts/release/npm-pack-smoke.mjs
 node scripts/release/python-pack-smoke.mjs
-OSVA_DEPLOY_ACCEPTANCE=true OSVA_IMAGE=osva:1.0.0 node scripts/deployment/docker-image-smoke.mjs
+OSVA_DEPLOY_ACCEPTANCE=true OSVA_IMAGE=osva:$(cat VERSION) node scripts/deployment/docker-image-smoke.mjs
 OSVA_DEPLOY_ACCEPTANCE=true node scripts/deployment/deploy-compose-acceptance.mjs
 node --test scripts/verification/helm-chart.test.mjs
-OSVA_KIND_ACCEPTANCE=true OSVA_IMAGE=osva:1.0.0 node scripts/deployment/kind-acceptance.mjs
+OSVA_KIND_ACCEPTANCE=true OSVA_IMAGE=osva:$(cat VERSION) node scripts/deployment/kind-acceptance.mjs
 pnpm db:migrations:verify
 pnpm release:acceptance   # orchestrates local RC checks (kind optional via OSVA_KIND_ACCEPTANCE)
 ```

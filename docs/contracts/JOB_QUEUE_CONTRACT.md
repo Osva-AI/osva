@@ -51,6 +51,10 @@ Execution state is loaded from OSVA storage.
 infrastructure details and are not OSVA identity. `MemoryJobQueue` remains the
 in-process test adapter.
 
+## Implementer migration (1.0 → 1.1)
+
+`enqueue` must resolve to `{ outcome: "enqueued" | "already_present" }`. Custom adapters compiled against `@osva-ai/contracts@1.0.x` require source updates to satisfy the 1.1 interface. Callers that ignore the return value remain valid.
+
 ## Required adapter tests
 
 - enqueue/consume;

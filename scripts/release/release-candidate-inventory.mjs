@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,11 +24,35 @@ function readMigrationHead() {
   return last.replace(/\.sql$/, "");
 }
 
+function readGitHead() {
+  const result = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    return null;
+  }
+  return result.stdout.trim() || null;
+}
+
 function main() {
   const version = readReleaseVersion();
   const inventory = {
     releaseVersion: version,
-    status: "OSS 1.0 release-candidate acceptance inventory",
+    status: "OSS Community release candidate (unpublished)",
+    publicationStatus: "unpublished",
+    sourceProvenance: {
+      gitCommit: readGitHead(),
+      versionFile: "VERSION",
+    },
+    pendingReleaseGates: [
+      "release-readiness verify-core on RC commit",
+      "release-readiness packages (npm/Python pack smoke)",
+      "release-readiness oci-compose-helm",
+      "release-readiness kind",
+      "RC.3 pnpm verify:ci:clean clean-room gate",
+      "maintainer authorization for tag and registry publish",
+    ],
     ociImage: `osva:${version}`,
     helmChart: {
       path: "deploy/helm/osva",
@@ -51,8 +76,13 @@ function main() {
       "docs/release/THIRD_PARTY_LICENSES_NODE.md",
       "docs/release/THIRD_PARTY_LICENSES_PYTHON.md",
     ],
+    supplyChainNotes: [
+      "Secrets scan and license inventory run in release-readiness CI",
+      "SBOM, container CVE scan, and artifact signing are not automated in-repo (RC.3 optional)",
+    ],
     documentation: [
       "README.md",
+      "docs/OSS-COMMUNITY-QUICKSTART.md",
       "docs/OSS-1.0-QUICKSTART.md",
       "docs/deployment/CONFIGURATION.md",
       "docs/architecture/DEPLOYMENT_TOPOLOGIES.md",

@@ -28,11 +28,38 @@ function run(command, args, options = {}) {
   return result.stdout ?? "";
 }
 
-function findWheel(distDir) {
-  const files = fs.readdirSync(distDir).filter((name) => name.endsWith(".whl"));
+/** Hatchling wheel filenames use PEP 440 (for example 1.1.0-rc.1 → 1.1.0rc1). */
+function pep440ArtifactVersion(version) {
+  const match = version.match(/^(\d+\.\d+\.\d+)-([a-zA-Z]+)\.(\d+)$/);
+  if (match) {
+    const [, base, label, num] = match;
+    return `${base}${label}${num}`;
+  }
+  return version;
+}
+
+function cleanDist(distDir) {
+  if (!fs.existsSync(distDir)) {
+    return;
+  }
+  for (const name of fs.readdirSync(distDir)) {
+    if (name.endsWith(".whl") || name.endsWith(".tar.gz")) {
+      fs.unlinkSync(path.join(distDir, name));
+    }
+  }
+}
+
+function findWheel(distDir, version) {
+  const artifactVersion = pep440ArtifactVersion(version);
+  const files = fs
+    .readdirSync(distDir)
+    .filter(
+      (name) => name.endsWith(".whl") && name.includes(`-${artifactVersion}-`),
+    );
   if (files.length !== 1) {
+    const all = fs.readdirSync(distDir).filter((name) => name.endsWith(".whl"));
     throw new Error(
-      `Expected one wheel in ${distDir}, found: ${files.join(", ")}`,
+      `Expected one wheel for ${artifactVersion} in ${distDir}, found: ${all.join(", ")}`,
     );
   }
   return path.join(distDir, files[0]);
@@ -45,18 +72,20 @@ function main() {
   run("python", ["-m", "pip", "install", "--upgrade", "pip", "build"], {
     stdio: "inherit",
   });
+  const distDir = path.join(PYTHON_ROOT, "dist");
+  cleanDist(distDir);
   run("python", ["-m", "build"], { stdio: "inherit" });
 
-  const distDir = path.join(PYTHON_ROOT, "dist");
-  const wheel = findWheel(distDir);
+  const artifactVersion = pep440ArtifactVersion(version);
+  const wheel = findWheel(distDir, version);
   const sdist = fs
     .readdirSync(distDir)
-    .find((name) => name.endsWith(".tar.gz"));
+    .find(
+      (name) =>
+        name.endsWith(".tar.gz") && name.includes(`-${artifactVersion}`),
+    );
   if (!sdist) {
-    throw new Error("sdist tarball missing");
-  }
-  if (!wheel.includes(`-${version}-`)) {
-    throw new Error(`Wheel file name does not include version ${version}`);
+    throw new Error(`sdist tarball missing for version ${artifactVersion}`);
   }
 
   const venvDir = fs.mkdtempSync(path.join(os.tmpdir(), "osva-py-venv-"));
@@ -74,7 +103,7 @@ function main() {
     python,
     [
       "-c",
-      "from osva import OSVAClient; assert OSVAClient is not None; print('python import smoke ok')",
+      `from importlib.metadata import version as pkg_version; from osva import OSVAClient; assert OSVAClient is not None; installed = pkg_version("osva-sdk"); expected = ${JSON.stringify(version)}; allowed = {expected, expected.replace("-rc.", "rc")}; assert installed in allowed, f"unexpected installed version {installed} (expected one of {sorted(allowed)})"; print(f"python import smoke ok ({installed})")`,
     ],
     { stdio: "inherit" },
   );

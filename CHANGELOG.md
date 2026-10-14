@@ -6,39 +6,64 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Observability
+## [1.1.0-rc.1] - 2026-10-14
 
-- Control-plane HTTP request spans, counters, duration histograms, and structured completion logs with bounded route families.
-- BullMQ queue process spans, time-to-start, job-count gauges, and stall/failure counters.
-- Execution recovery counters for CAS-won lease interruptions, transport repairs, and recovery errors.
-- Bounded security-event counters, including missing-Bearer authentication events.
-- Per-process OpenTelemetry service names (`osva-web`, `osva-worker`, `osva-scheduler`, `osva-workflow-orchestrator`) and optional `OTEL_TRACES_SAMPLER` support.
-- `osva.run_attempt.duration_ms` for attempt outcomes; `osva.run.duration_ms` remains a compatibility alias. Runtime duration is `osva.runtime.execute.duration_ms`.
-- Schema-integrity diagnostic (`pnpm db:migrations:integrity`) detects journal/schema drift, including missing 0023 lease columns and `run_attempts_expired_lease_idx`, without applying SQL.
-- Additive RunAttempt `execution` diagnostics for lease/recovery state. Raw `executionOwner` remains internal.
-- Console Run Detail shows execution diagnostics. Console request-guard rejections emit bounded security events.
-- `/ready` may name `postgres` and/or `valkey` as the failed dependency without leaking connection details.
-- MCP and knowledge-worker initialize the existing OpenTelemetry lifecycle (`osva-mcp`, `osva-knowledge-worker`).
-- `JobQueue.enqueue` reports `enqueued` vs `already_present`. `osva.recovery.transport_repaired` increments only for newly accepted deliveries.
-- Optional Compose observability overlay (`compose.observability.yml`) starts a pinned OpenTelemetry Collector, example Prometheus, and loopback Grafana. Default Compose stays no-op.
-- Helm `telemetry` values inject per-process OTEL settings when enabled. The application chart does not deploy a collector.
-- Example Grafana dashboards and Prometheus alerts query Prometheus names (`osva_http_requests_total`), not dotted OTEL instruments.
+Release candidate for Community Edition self-hosting. **Not a general availability (GA) announcement.** Registry artifacts and git tags remain unpublished until RC.3 verification and maintainer approval.
+
+### Community scope and boundaries
+
+- Self-hosted Compose and Helm on operator-managed PostgreSQL, Valkey, and artifact storage (filesystem or S3-compatible configuration).
+- Product Console is loopback-bound by default; not included in default Compose/Helm charts. Not a public internet admin UI without reverse-proxy hardening.
+- API-key RBAC only; no managed Team/Enterprise SSO, SCIM, or billing identity.
+- PostgreSQL is lifecycle authority; Valkey/BullMQ is transport. No general high-availability or zero-downtime guarantee.
+- Tool and workflow external side effects are not exactly-once. Idempotency keys identify logical effects per contracts.
+- Cross-store backup atomicity is not guaranteed. M9.7 validated filesystem independent restore; **S3-compatible independent restore is NOT acceptance-tested.**
+- Release-readiness **kind** job scope is narrower than full M9.7 B.4 (see [`docs/operations/M9_7_ACCEPTANCE_SUMMARY.md`](docs/operations/M9_7_ACCEPTANCE_SUMMARY.md)).
+- OpenTelemetry export is opt-in; collector outage does not stop execution (export may drop).
+
+### Product functionality
+
+- **M7:** Canonical dependency-adoption example (`examples/canonical-dependency-adoption`) and root `canonical:*` operator commands.
+- **M8:** Community Product Console — agents, onboarding, visual Workflow Definition V3 editor, publish review, workflow runs, run detail, artifact experience.
+- TypeScript SDK: `auth`, `runObservability`, `workflowEvents` resources; HTTP `requestId` on errors via `OsvaApiError.requestId`.
 
 ### Reliability
 
-- Execution leases, heartbeats, and fencing on RunAttempt. Expired ownership fails the same attempt with `EXECUTION_INTERRUPTED`; abandoned `RUNNING` attempts are never automatically re-executed.
-- Worker-hosted recovery ticker repairs lost `QUEUED`/`PENDING` BullMQ deliveries using the existing RunAttempt ID.
+- Execution leases, heartbeats, and fencing on RunAttempt (`0023_execution_lease_slice`).
+- Expired lease fails the **same** attempt with `EXECUTION_INTERRUPTED`; abandoned `RUNNING` attempts are never automatically re-executed.
+- Worker-hosted recovery ticker; transport repair for lost BullMQ deliveries reusing RunAttempt ID.
+- BullMQ enqueue-claim hardening and `JobQueue.enqueue` outcome reporting (`enqueued` vs `already_present`).
+
+### Security
+
+- Community API-key RBAC enforcement and workspace-scoped `/v1` stability pass extensions.
+- Abuse rate limiting (`429 RATE_LIMITED` with `Retry-After`); **503 SERVICE_UNAVAILABLE** when the rate-limit Valkey store is unavailable (fail-closed).
+- Console trust-boundary hardening; deprecated `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` does not enable public bind or authentication.
+
+### Operations
+
+- OpenTelemetry tracing and metrics across control plane and workers; optional Compose observability overlay and Helm `telemetry` values.
+- Example Prometheus alert rules and Grafana dashboard provisioning (query Prometheus export names, not raw OTEL dotted names).
+- Process `/health` and `/ready` probes for worker, scheduler, workflow-orchestrator, and knowledge-worker.
+- M9.7 production acceptance harness (`pnpm acceptance:m9-7b`) and sanitized evidence summary.
 
 ### Deployment
 
-- Helm omits PostgreSQL/Valkey URLs from ConfigMaps when `existingSecret` is set. `secretEnv` now renders an optional extra Secret.
-- Process `/health` and `/ready` probes for worker, scheduler, workflow-orchestrator, and knowledge-worker.
-- Optional authenticated Valkey in production Compose; local `docker-compose.yml` remains no-auth.
-- Community Console binds loopback only (`127.0.0.0/8`, `::1`, `localhost`). `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` is deprecated and does not enable public or LAN binding, authentication, or access control. Console remains off Compose/Helm.
+- Helm: omit Postgres/Valkey URLs from ConfigMaps when `existingSecret` is set; optional `secretEnv` Secret.
+- Optional authenticated Valkey in production Compose templates.
+
+### Upgrade compatibility (from published `v1.0.0`)
+
+- **Database:** Git tag **`v1.0.0`** ends at migration **`0022_api_security_slice`**. This release requires **`0023_execution_lease_slice`**. See [`docs/operations/UPGRADE.md`](docs/operations/UPGRADE.md).
+- **Runtime:** Legacy unleased `RUNNING` rows require operator review after upgrade. See [`docs/operations/EXECUTION_RECOVERY.md`](docs/operations/EXECUTION_RECOVERY.md).
+- **HTTP `/v1`:** Additive `429`/`503` error codes; optional `execution` diagnostics on RunAttempt resources.
+- **`@osva-ai/contracts`:** `JobQueue.enqueue` now returns `Promise<JobEnqueueResult>` instead of `Promise<void>`. Callers that ignore the result remain valid; **custom `JobQueue` implementers must update** (see [`docs/release/COMPATIBILITY.md`](docs/release/COMPATIBILITY.md)).
 
 ## [1.0.0] - 2026-09-22
 
 OSS 1.0 Community Edition baseline. Release implementation and release acceptance verified in-repository (including Linux kind CI).
+
+> **Migration note (2026-10):** The published git tag **`v1.0.0`** includes SQL through **`0022_api_security_slice`**. Migration **`0023_execution_lease_slice`** shipped in the **1.1.x** line. An earlier draft of this section incorrectly listed 0023 under 1.0.0.
 
 ### Workflow / runtime
 
@@ -91,5 +116,5 @@ OSS 1.0 Community Edition baseline. Release implementation and release acceptanc
 
 ### Migrations / compatibility
 
-- Append-only SQL migrations through `0023_execution_lease_slice` (no downgrade tooling).
+- Append-only SQL migrations through **`0022_api_security_slice`** at tag **`v1.0.0`** (no downgrade tooling).
 - `/v1` API compatibility expectations documented for OSS 1.0.

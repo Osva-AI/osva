@@ -2,9 +2,19 @@
 
 Sanitized matrix for M9.7A / M9.7B.1–B.4C sign-off preparation. Raw evidence lives under `.acceptance-evidence/<runId>/` (gitignored). Do not commit dumps, tokens, or local logs.
 
-**Branch:** `feat/m9-production-acceptance`
-**Base ancestry:** M9.5 merge `e5004eec` (PR #17)
-**OSS version read:** `1.0.0` (no version bump in this slice)
+**Evidence commit (M9.7 merge):** `65aae390bc057eec73a8883f9d6d407f0ac055f8` (PR #18)
+**Evidence OSS version read at test time:** **`1.0.0`** (M9.7 slice did not bump VERSION)
+**Current repository VERSION (RC.2 prep):** **`1.1.0-rc.1`** — M9.7 scenarios were **not** re-run on the version-bumped tree unless explicitly noted below.
+
+## RC verification status
+
+| Phase | Status |
+|-------|--------|
+| M9.7 local/operator evidence (B.1–B.4) | Recorded below (historical) |
+| RC.2 version/documentation alignment | In progress / complete per RC.2 PR |
+| Release-readiness CI on **`1.1.0-rc.1`** commit | **Pending** (required before RC.3) |
+| RC.3 clean-room (`pnpm verify:ci:clean`, full acceptance) | **Pending** |
+| Public tag / registry publish | **Not authorized** |
 
 ## How to run
 
@@ -62,7 +72,7 @@ Default `pnpm acceptance:m9-7b` runs **core (B.1) only**. It does **not** imply 
 | B.4 | `b4-distributed-trace-image` | Yes | PASS | Source-built image + OTLP capture | `55eb5c47-06bb-4f66-88fc-4dd2d2f67096` — **direct parent span chain** |
 | B.4 | `b4-release-docs` | Yes | PASS | npm/Python pack smoke, docker-image-smoke, Helm static test | `666839b8-4c94-46be-a4ec-87f74a6c561b` |
 | B.4 | `b4-cleanup` | Yes | PASS | | `5f01797e-…` |
-| CI | Release Readiness `kind` job | Yes | **PENDING** | Builds `osva:1.0.0`, runs `kind-acceptance.mjs` | Must pass on M9.7 RC commit after push |
+| CI | Release Readiness `kind` job | Yes | **PENDING** | Builds `osva:$(cat VERSION)` after RC.2 | Must pass on **`1.1.0-rc.1`** commit after push |
 | DR | S3-compatible independent restore | — | **NOT TESTED** | Product supports `s3` driver; drill used filesystem only | Follow-up before claiming S3 DR |
 
 ## Coverage gaps (explicit)
@@ -72,6 +82,7 @@ Default `pnpm acceptance:m9-7b` runs **core (B.1) only**. It does **not** imply 
 3. **S3/object-store restore:** NOT TESTED — do not treat filesystem restore as S3 proof.
 4. **Console/Grafana graphical acceptance:** NOT RUN in B.4 (optional).
 5. **Cross-store backup atomicity:** Not guaranteed between PostgreSQL and artifact store (documented in drill evidence).
+6. **RC.2 version bump:** Acceptance evidence above reflects **`1.0.0`**-era runs; re-validate packaging/CI on **`1.1.0-rc.1`** in RC.3.
 
 ## Disaster recovery scope (tested)
 
@@ -81,14 +92,14 @@ Default `pnpm acceptance:m9-7b` runs **core (B.1) only**. It does **not** imply 
 
 ## Release Readiness (GitHub)
 
-After the RC PR is opened, require green:
+After RC.2 is pushed, require green on the **`1.1.0-rc.1`** commit:
 
-- `verify-core` (includes `pnpm verify:ci`, migration verify, release static checks)
+- `verify-core` (includes `pnpm verify:ci`, migration verify, release static checks, release-readiness version test)
 - `packages` (npm/Python pack smoke)
-- `oci-compose-helm` (image build, compose acceptance, Helm template tests)
+- `oci-compose-helm` (image build tagged from `VERSION`, compose acceptance, Helm template tests)
 - **`kind`** (disposable cluster; `OSVA_KIND_ACCEPTANCE=true`)
 
-Do **not** declare general production readiness until these pass on the candidate commit.
+Do **not** declare general production readiness until these pass on the candidate commit and RC.3 clean-room verification completes.
 
 ## Community production support boundaries (M9.7)
 
@@ -117,3 +128,4 @@ Do **not** declare general production readiness until these pass on the candidat
 - [RUNBOOK.md](./RUNBOOK.md)
 - [../deployment/CONFIGURATION.md](../deployment/CONFIGURATION.md) — artifact `filesystem` vs `s3`
 - [../architecture/DEPLOYMENT_TOPOLOGIES.md](../architecture/DEPLOYMENT_TOPOLOGIES.md)
+- [../release/RC3_VERIFICATION.md](../release/RC3_VERIFICATION.md)

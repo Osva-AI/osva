@@ -2,6 +2,8 @@
 
 PostgreSQL remains the lifecycle authority. BullMQ is transport. Workers acquire an execution lease when they CAS a RunAttempt from `PENDING` to `RUNNING`. Expired ownership fails **the same** RunAttempt with `FAILED` + `EXECUTION_INTERRUPTED`. OSVA never automatically re-executes a `RUNNING` attempt and never creates a subsequent logical RunAttempt for crash recovery.
 
+**Upgrade note:** Lease columns and recovery behavior require migration **`0023_execution_lease_slice`**, introduced after git tag **`v1.0.0`** (which ends at **`0022_api_security_slice`**). See [`UPGRADE.md`](UPGRADE.md) before rolling 1.1.x workers.
+
 ## Lease fields
 
 | Column | Role |
