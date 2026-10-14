@@ -22,6 +22,7 @@ import {
 } from "./constants.js";
 import { JobQueueShutdownError, UnsupportedQueueJobError } from "./errors.js";
 import { enqueueWithTransportClaim } from "./enqueue-claim.js";
+import type { EnqueueClaimTestHooksInput } from "./enqueue-test-hooks.js";
 import { toBullMqJobId } from "./job-id.js";
 import { parseExecutionJobPayload } from "./payload.js";
 import type { PingableJobQueue } from "./pingable-job-queue.js";
@@ -46,6 +47,8 @@ export interface BullMqJobQueueOptions {
   readonly logger?: BullMqJobQueueLogger;
   readonly instrumentation?: OsvaInstrumentation;
   readonly metricsPollIntervalMs?: number;
+  /** Adapter tests only; never set in production bootstrap. */
+  readonly enqueueClaimTestHooks?: EnqueueClaimTestHooksInput;
 }
 
 export interface QueuedExecutionJob {
@@ -79,6 +82,7 @@ export class BullMqJobQueue implements PingableJobQueue {
   private closed = false;
   private metricsTimer: ReturnType<typeof setInterval> | undefined;
   private metricsPoll: Promise<void> | undefined;
+  private readonly enqueueClaimTestHooks: EnqueueClaimTestHooksInput;
 
   constructor(options: BullMqJobQueueOptions) {
     this.url = options.url;
@@ -89,6 +93,7 @@ export class BullMqJobQueue implements PingableJobQueue {
     this.instrumentation = options.instrumentation;
     this.metricsPollIntervalMs =
       options.metricsPollIntervalMs ?? DEFAULT_QUEUE_METRICS_POLL_MS;
+    this.enqueueClaimTestHooks = options.enqueueClaimTestHooks;
     this.queueLabel = queueMetricLabel(
       options.queueName ?? OSVA_EXECUTION_QUEUE_NAME,
     );
@@ -126,6 +131,7 @@ export class BullMqJobQueue implements PingableJobQueue {
             jobId,
           });
         },
+        this.enqueueClaimTestHooks,
       );
       return { outcome };
     } catch (error) {
@@ -142,11 +148,17 @@ export class BullMqJobQueue implements PingableJobQueue {
     }
 
     const jobId = toBullMqJobId(runAttemptId);
+    const claimKey = `${this.queue.toKey("osva-enqueue-claim")}:${jobId}`;
+    const cancelContext = { jobId, claimKey };
     const job = await this.queue.getJob(jobId);
     if (job !== undefined) {
       const state = await job.getState();
       if (state !== "completed" && state !== "failed" && state !== "active") {
+        await this.enqueueClaimTestHooks?.beforeCancelRemove?.(cancelContext);
         await job.remove();
+        await this.enqueueClaimTestHooks?.afterCancelRemoveBeforeClaimClear?.(
+          cancelContext,
+        );
       }
     }
 

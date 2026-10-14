@@ -1,0 +1,10 @@
+export const ACCEPTANCE_LABEL = "osva.acceptance.managed";
+export const ACCEPTANCE_RUN_LABEL = "osva.acceptance.run";
+export const POSTGRES_IMAGE = "pgvector/pgvector:pg17";
+export const VALKEY_IMAGE = "valkey/valkey:8.1.10-alpine";
+export const DEFAULT_SCENARIO_TIMEOUT_MS = 120_000;
+export const INFRA_READY_TIMEOUT_MS = 120_000;
+export const RUN_COMPLETE_TIMEOUT_MS = 90_000;
+export const READY_RECOVERY_TIMEOUT_MS = 60_000;
+export const HOST_VALKEY_READY_TIMEOUT_MS = 90_000;
+export const EVIDENCE_ROOT_DIR = ".acceptance-evidence";

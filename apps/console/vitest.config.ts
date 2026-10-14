@@ -8,5 +8,9 @@ export default defineConfig({
     include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
     exclude: ["test/integration/**"],
     setupFiles: ["test/setup.ts"],
+    pool: "threads",
+    maxWorkers: 4,
+    fileParallelism: 4,
+    testTimeout: 10_000,
   },
 });

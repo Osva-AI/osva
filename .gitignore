@@ -8,6 +8,7 @@ out/
 coverage/
 .turbo/
 .osva/
+.acceptance-evidence/
 
 .env
 .env.*
