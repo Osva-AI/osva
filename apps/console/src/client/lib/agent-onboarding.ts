@@ -76,7 +76,7 @@ export function firstAgentOnboardingSteps(
       id: "register",
       title: "Register Agent or choose an example",
       description:
-        "Create a workspace Agent (key + name) or continue with an existing row. The echo-input-agent fixture needs no paid model provider.",
+        "Create a workspace Agent (key + name) or continue with the supported hello-agent example (no paid model provider).",
       to: "/agents/new",
       actionLabel: "Register Agent",
       requiresWrite: true,

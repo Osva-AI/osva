@@ -148,8 +148,8 @@ describe("Agents UI", () => {
           name: string;
         };
         expect(body).toEqual({
-          key: "echo-input-agent",
-          name: "Echo Input Agent",
+          key: "hello-agent",
+          name: "Hello Agent",
         });
         return json({ ...agent, id: "agent-created" }, 201);
       }
@@ -166,7 +166,7 @@ describe("Agents UI", () => {
       expect(screen.getByLabelText("Key")).toBeTruthy();
     });
     await user.click(
-      screen.getByRole("button", { name: "Use echo-input example" }),
+      screen.getByRole("button", { name: "Use Hello Agent example" }),
     );
     await user.click(screen.getByRole("button", { name: "Register Agent" }));
     await waitFor(() => {

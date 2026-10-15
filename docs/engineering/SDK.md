@@ -1,10 +1,10 @@
 # OSVA SDK and CLI (Stage 2.5)
 
-Stage 2.5 adds publish-ready (but not yet published) developer packages:
+Stage 2.5 adds developer packages (published at **`1.1.0-rc.1`** alongside OSS **`1.0.0`** stable):
 
 - `@osva-ai/sdk` — TypeScript/JavaScript control-plane client and Runtime Protocol V1 runtime helpers
 - `@osva-ai/cli` — `osva` CLI built on `@osva-ai/sdk`
-- `osva-sdk` — Python package (`import osva`) with the same responsibilities
+- `osva-sdk` — Python package (`import osva` / `from osva import OSVAClient`) with the same responsibilities (published on PyPI at **`1.1.0-rc.1`**)
 
 Packages communicate only with OSVA public HTTP contracts. They do not access PostgreSQL, BullMQ, repositories, or internal application services.
 

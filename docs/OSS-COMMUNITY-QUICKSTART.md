@@ -2,7 +2,7 @@
 
 Authoritative path for a **self-hosted OSVA Community Edition** deployment using Docker Compose, authenticated `/v1`, TypeScript and Python SDKs, optional MCP, and the loopback Product Console.
 
-> **Current in-tree version:** **`1.1.0-rc.1`** (release candidate — not GA). Align npm, PyPI, container, and Helm tags with `VERSION` at the commit you deploy. Registry artifacts are **unpublished** until maintainers complete RC.3 verification.
+> **Current in-tree version:** **`1.1.0-rc.1`** (release candidate — **not GA**). **`1.1.0-rc.1`** npm/PyPI/GHCR artifacts are published for early adopters; **`v1.0.0`** remains the default stable release line. Align tags with root `VERSION` at the commit you deploy.
 >
 > **Upgrading from published `v1.0.0`?** Apply migration **`0023_execution_lease_slice`** and review [`operations/UPGRADE.md`](operations/UPGRADE.md) before rolling workers.
 >
@@ -46,7 +46,36 @@ docker compose --profile bootstrap run --rm bootstrap
 
 Copy the printed `osva_ak_…` token immediately. It is shown once.
 
-## 4. Call authenticated `/v1`
+## 4. Run the Hello Agent (first execution)
+
+Deterministic golden path — no paid model provider, no external calls during execution. From the repository clone on your **host** (not inside a container):
+
+**Compose worker** (trusted runtime copied into the `osva-trusted-runtime` volume):
+
+```powershell
+# PowerShell (host)
+$env:OSVA_BASE_URL = "http://127.0.0.1:8080"
+$env:OSVA_API_KEY = "osva_ak_…"
+$env:OSVA_WORKSPACE_ID = "ws-…"   # from bootstrap output
+$env:OSVA_HELLO_TRUSTED_RUNTIME_MODE = "compose"
+pnpm install
+pnpm example:hello
+```
+
+**Local dev worker** (`pnpm dev:web` + `pnpm dev:worker` on the host):
+
+```powershell
+$env:OSVA_BASE_URL = "http://127.0.0.1:3000"
+$env:OSVA_API_KEY = "osva_ak_…"
+$env:OSVA_WORKSPACE_ID = "ws-dev"
+$env:OSVA_TRUSTED_RUNTIME_ROOT = "$PWD\trusted-runtime"
+$env:OSVA_HELLO_TRUSTED_RUNTIME_MODE = "host"
+pnpm example:hello
+```
+
+Expect terminal Run status **`SUCCEEDED`** and output `{ "echoed": "Hello OSVA" }`. Details: [`../examples/hello-agent/README.md`](../examples/hello-agent/README.md).
+
+## 5. Call authenticated `/v1`
 
 ```bash
 export OSVA_API_KEY='osva_ak_…'   # from bootstrap output
@@ -56,7 +85,7 @@ curl -sS -H "Authorization: Bearer $OSVA_API_KEY" \
 
 (Adjust host/port if you changed `OSVA_PUBLISH_WEB_PORT` in `.env`.)
 
-## 5. TypeScript SDK
+## 6. TypeScript SDK
 
 ```bash
 cd /path/to/osva
@@ -72,9 +101,9 @@ node --input-type=module -e "
 "
 ```
 
-When published, install the matching RC: `npm install @osva-ai/sdk@1.1.0-rc.1` (dist-tag `rc` may apply).
+Install the matching RC from npm: `npm install @osva-ai/sdk@1.1.0-rc.1` (dist-tag `rc` may apply), or build from this repository.
 
-## 6. Python SDK
+## 7. Python SDK
 
 ```bash
 python -m pip install ./sdks/python   # or pip install osva-sdk==1.1.0-rc.1 when on PyPI
@@ -88,7 +117,7 @@ print(client.agents.list())
 "
 ```
 
-## 7. Optional MCP
+## 8. Optional MCP
 
 The Compose stack starts `mcp-server` on the published MCP port (default **3100**, override with `OSVA_PUBLISH_MCP_PORT`).
 
@@ -103,7 +132,7 @@ curl -sS http://127.0.0.1:3100/health
 
 Configure MCP clients to use an allowed Host (for example `127.0.0.1`) and the MCP URL documented in [`deployment/CONFIGURATION.md`](deployment/CONFIGURATION.md).
 
-## 8. Stop / cleanup
+## 9. Stop / cleanup
 
 ```bash
 docker compose down -v
@@ -119,8 +148,9 @@ docker compose down -v
 
 ## Next steps
 
+- Hello Agent golden path: [`../examples/hello-agent/README.md`](../examples/hello-agent/README.md)
 - Product Console: [`engineering/CONSOLE.md`](engineering/CONSOLE.md)
-- Canonical demo: [`../examples/canonical-dependency-adoption/README.md`](../examples/canonical-dependency-adoption/README.md)
+- Canonical M7 demo (completed): [`../examples/canonical-dependency-adoption/README.md`](../examples/canonical-dependency-adoption/README.md)
 - [`architecture/DEPLOYMENT_TOPOLOGIES.md`](architecture/DEPLOYMENT_TOPOLOGIES.md)
 - [`deployment/CONFIGURATION.md`](deployment/CONFIGURATION.md)
 - [`operations/RUNBOOK.md`](operations/RUNBOOK.md)

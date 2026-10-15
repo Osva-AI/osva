@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { echoAgentManifestTemplate } from "../src/client/lib/agent-example";
+import { helloAgentManifestTemplate } from "../src/client/lib/agent-example";
 import { describeManifestSubmitBlocker } from "../src/client/lib/agent-manifest-draft";
 import {
   firstAgentOnboardingSteps,
@@ -84,15 +84,15 @@ describe("agent onboarding helpers", () => {
   });
 
   it("does not embed executable agent source in the example template", () => {
-    const template = JSON.stringify(echoAgentManifestTemplate());
+    const template = JSON.stringify(helloAgentManifestTemplate());
     expect(template).toContain("TRUSTED_TYPESCRIPT");
-    expect(template).toContain("sha256:<hex-digest-of-echo-input-agent.ts>");
-    expect(template).toContain("echo-input-agent.ts");
+    expect(template).toContain("sha256:<hex-digest-of-hello-agent.ts>");
+    expect(template).toContain("hello-agent.ts");
     expect(template).not.toContain("export async function run");
     expect(template).not.toContain("OPENAI_API_KEY");
     expect(
       describeManifestSubmitBlocker(
-        JSON.stringify(echoAgentManifestTemplate()),
+        JSON.stringify(helloAgentManifestTemplate()),
       ),
     ).toMatch(/sha256:<64 hex chars>/);
   });

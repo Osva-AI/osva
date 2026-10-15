@@ -4,9 +4,11 @@ import { RuntimeReadinessPanel } from "../components/agent/runtime-readiness-pan
 import { useAgentVersionQuery } from "../hooks/use-agents";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
-  ECHO_AGENT_FIXTURE_PATH,
-  ECHO_AGENT_INPUT_EXAMPLE,
-  ECHO_AGENT_SETUP_COMMANDS,
+  HELLO_AGENT_GOLDEN_PATH_COMMAND,
+  HELLO_AGENT_INPUT_EXAMPLE,
+  HELLO_AGENT_OUTPUT_EXAMPLE,
+  HELLO_AGENT_SETUP_COMMANDS,
+  HELLO_AGENT_SOURCE_PATH,
 } from "../lib/agent-example";
 import {
   firstAgentOnboardingSteps,
@@ -54,22 +56,28 @@ export function OnboardingPage() {
       />
 
       <section className="panel">
-        <h2 className="panel-title">Deterministic example</h2>
+        <h2 className="panel-title">Hello Agent example</h2>
         <p>
-          Prefer the trusted TypeScript echo agent. It requires no paid model
-          provider, echoes the Run input, and is registered through the public
-          Agent Registry APIs.
+          Use the supported public example at{" "}
+          <span className="mono">examples/hello-agent</span>. It requires no
+          paid model provider, performs no external network calls during
+          execution, and uses normal Agent Registry APIs.
         </p>
         <p className="muted">
-          Copy <span className="mono">{ECHO_AGENT_FIXTURE_PATH}</span> under{" "}
-          <span className="mono">OSVA_TRUSTED_RUNTIME_ROOT</span>, compute
-          integrity, then register the Agent and append an AgentVersion. Example
-          input:{" "}
+          Golden path:{" "}
+          <span className="mono">{HELLO_AGENT_GOLDEN_PATH_COMMAND}</span>.
+          Source entrypoint:{" "}
+          <span className="mono">{HELLO_AGENT_SOURCE_PATH}</span>. Example
+          input/output:{" "}
           <span className="mono">
-            {JSON.stringify(ECHO_AGENT_INPUT_EXAMPLE)}
+            {JSON.stringify(HELLO_AGENT_INPUT_EXAMPLE)}
+          </span>{" "}
+          →{" "}
+          <span className="mono">
+            {JSON.stringify(HELLO_AGENT_OUTPUT_EXAMPLE)}
           </span>
         </p>
-        <pre className="json-view">{ECHO_AGENT_SETUP_COMMANDS.join("\n")}</pre>
+        <pre className="json-view">{HELLO_AGENT_SETUP_COMMANDS.join("\n")}</pre>
       </section>
 
       <section className="panel">
