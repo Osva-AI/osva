@@ -45,6 +45,8 @@
 - `platform/API_SDK_EXTENSION_MODEL.md`
 
 ## Engineering
+- `engineering/LOCAL_DEVELOPMENT.md`
+- `engineering/M10_3_SETUP_VERIFICATION.md`
 - `engineering/BUILD_VS_REUSE.md`
 - `engineering/NON_FUNCTIONAL_REQUIREMENTS.md`
 - `engineering/TESTING_STRATEGY.md`

@@ -2,10 +2,13 @@
 
 Production-oriented single-host topology for OSVA Community Edition. Uses one OSVA OCI image for every application process.
 
+This directory is the **external agent developer** journey (full stack in Docker). OSVA contributors run only PostgreSQL and Valkey from the repository root; see [`../../docs/engineering/LOCAL_DEVELOPMENT.md`](../../docs/engineering/LOCAL_DEVELOPMENT.md).
+
 ## Prerequisites
 
 - Docker Engine with Compose v2
 - Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`
+- **Shell exports beat env files:** host `OSVA_VALKEY_URL` overrides `.env` and `--env-file` during Compose interpolation. Keep **`OSVA_VALKEY_URL=redis://valkey:6379`** in `.env` **and** unset contributor host exports before `docker compose up`, or containers may target `127.0.0.1:6379` and `/ready` returns **503**.
 
 ## Start
 
