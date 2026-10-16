@@ -1,10 +1,10 @@
 # OSVA SDK and CLI (Stage 2.5)
 
-Stage 2.5 adds developer packages (published at **`1.1.0-rc.1`** alongside OSS **`1.0.0`** stable):
+Stage 2.5 adds developer packages (prepared at **`1.1.0-rc.2`** alongside OSS **`1.0.0`** stable):
 
 - `@osva-ai/sdk` — TypeScript/JavaScript control-plane client and Runtime Protocol V1 runtime helpers
 - `@osva-ai/cli` — `osva` CLI built on `@osva-ai/sdk`
-- `osva-sdk` — Python package (`import osva` / `from osva import OSVAClient`) with the same responsibilities (published on PyPI at **`1.1.0-rc.1`**)
+- `osva-sdk` — Python package (`import osva` / `from osva import OSVAClient`) with the same responsibilities (PyPI install **`osva-sdk==1.1.0rc2`** after RC2 publish)
 
 Packages communicate only with OSVA public HTTP contracts. They do not access PostgreSQL, BullMQ, repositories, or internal application services.
 
@@ -117,4 +117,4 @@ Language-neutral Runtime Protocol V1 fixtures live under `packages/runtime-proto
 
 ## Publication status
 
-`@osva-ai/sdk`, `@osva-ai/cli`, and related packages are published on the **`1.1.0-rc.1`** release candidate line for early adopters. Stable **`1.0.0`** remains the default production line for self-hosted OSS 1.0. See [`OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md) for install pins and upgrade notes.
+**`1.1.0-rc.2`** is prepared in-tree (**unpublished**). Published **`1.1.0-rc.1`** remains on registries; **`@osva-ai/cli@1.1.0-rc.1`** lacks M10.2 agent commands. Stable **`1.0.0`** remains npm/PyPI **`latest`**. See [`OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md) for install pins and upgrade notes.

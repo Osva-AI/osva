@@ -4,7 +4,7 @@ Sanitized matrix for M9.7A / M9.7B.1–B.4C sign-off preparation. Raw evidence l
 
 **Evidence commit (M9.7 merge):** `65aae390bc057eec73a8883f9d6d407f0ac055f8` (PR #18)
 **Evidence OSS version read at test time:** **`1.0.0`** (M9.7 slice did not bump VERSION)
-**Current repository VERSION (RC.2 prep):** **`1.1.0-rc.1`** — M9.7 scenarios were **not** re-run on the version-bumped tree unless explicitly noted below.
+**Current repository VERSION (RC.2 prepared):** **`1.1.0-rc.2`** — M9.7 scenarios were **not** re-run on the version-bumped tree unless explicitly noted below.
 
 ## RC verification status
 
@@ -12,7 +12,7 @@ Sanitized matrix for M9.7A / M9.7B.1–B.4C sign-off preparation. Raw evidence l
 |-------|--------|
 | M9.7 local/operator evidence (B.1–B.4) | Recorded below (historical) |
 | RC.2 version/documentation alignment | In progress / complete per RC.2 PR |
-| Release-readiness CI on **`1.1.0-rc.1`** commit | **Pending** (required before RC.3) |
+| Release-readiness CI on **`1.1.0-rc.2`** commit | **Pending** (required before RC.3) |
 | RC.3 clean-room (`pnpm verify:ci:clean`, full acceptance) | **Pending** |
 | Public tag / registry publish | **Not authorized** |
 

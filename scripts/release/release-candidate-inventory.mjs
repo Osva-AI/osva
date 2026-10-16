@@ -35,15 +35,32 @@ function readGitHead() {
   return result.stdout.trim() || null;
 }
 
+/** PEP 440 wheel/sdist filenames (for example 1.1.0-rc.2 → 1.1.0rc2). */
+function pep440ArtifactVersion(version) {
+  const match = version.match(/^(\d+\.\d+\.\d+)-([a-zA-Z]+)\.(\d+)$/);
+  if (match) {
+    const [, base, label, num] = match;
+    return `${base}${label}${num}`;
+  }
+  return version;
+}
+
 function main() {
   const version = readReleaseVersion();
   const inventory = {
     releaseVersion: version,
-    status: "OSS Community release candidate (unpublished)",
+    status: "OSS Community release candidate RC2 prepared (unpublished)",
     publicationStatus: "unpublished",
     sourceProvenance: {
       gitCommit: readGitHead(),
       versionFile: "VERSION",
+      note: "gitCommit identifies the committed release-content state at generation time. The inventory file may be recorded in a subsequent metadata-only commit.",
+    },
+    priorPublishedRelease: {
+      version: "1.1.0-rc.1",
+      publicationStatus: "published",
+      cliIncludesM10_2AgentWorkflow: false,
+      note: "npm @osva-ai/cli@1.1.0-rc.1 predates init/validate/deploy/run/status/doctor and bundled templates.",
     },
     pendingReleaseGates: [
       "release-readiness verify-core on RC commit",
@@ -54,6 +71,7 @@ function main() {
       "maintainer authorization for tag and registry publish",
     ],
     ociImage: `osva:${version}`,
+    ociImageGhcr: `ghcr.io/osva-ai/osva:${version}`,
     helmChart: {
       path: "deploy/helm/osva",
       chartVersion: version,
@@ -68,6 +86,8 @@ function main() {
     pythonPackage: {
       name: "osva-sdk",
       version,
+      pep440ArtifactVersion: pep440ArtifactVersion(version),
+      pipInstallExample: `pip install osva-sdk==${pep440ArtifactVersion(version)}`,
       path: "sdks/python",
     },
     migrationHead: readMigrationHead(),

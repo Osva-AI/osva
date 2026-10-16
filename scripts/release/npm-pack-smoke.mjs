@@ -37,7 +37,7 @@ function run(command, args, options = {}) {
       `${command} ${args.join(" ")} failed:\n${result.stderr || result.stdout}`,
     );
   }
-  return result.stdout ?? "";
+  return `${result.stdout ?? ""}${result.stderr ?? ""}`;
 }
 
 function main() {
@@ -85,8 +85,25 @@ function main() {
     const dry = run("npm", ["pack", "--dry-run"], {
       cwd: path.join(REPO_ROOT, "packages", dir),
     });
-    if (dry.includes("node_modules/typescript")) {
+    const dryOutput = dry;
+    if (dryOutput.includes("node_modules/typescript")) {
       throw new Error(`${name} pack dry-run includes dev tooling`);
+    }
+    if (name === "@osva-ai/cli") {
+      if (!dryOutput.includes("templates/agent-typescript")) {
+        throw new Error(
+          "@osva-ai/cli pack dry-run missing agent-typescript templates",
+        );
+      }
+      const cliPkg = JSON.parse(
+        fs.readFileSync(
+          path.join(REPO_ROOT, "packages", "cli", "package.json"),
+          "utf8",
+        ),
+      );
+      if (!cliPkg.dependencies?.ajv) {
+        throw new Error("@osva-ai/cli package.json missing ajv dependency");
+      }
     }
     console.log(`packed ${name} -> ${path.basename(tarballPath)}`);
   }
@@ -152,6 +169,37 @@ console.log("npm consumer import smoke ok");
   });
   if (!versionOut.includes(version)) {
     throw new Error(`CLI version expected ${version}, got: ${versionOut}`);
+  }
+
+  const cliRoot = path.join(consumerDir, "node_modules", "@osva-ai", "cli");
+  const templateRoot = path.join(
+    cliRoot,
+    "templates",
+    "agent-typescript",
+    "scripts",
+    "build-manifest.mjs",
+  );
+  if (!fs.existsSync(templateRoot)) {
+    throw new Error("CLI consumer install missing bundled templates");
+  }
+  const installedCliPkg = JSON.parse(
+    fs.readFileSync(path.join(cliRoot, "package.json"), "utf8"),
+  );
+  if (!installedCliPkg.dependencies?.ajv) {
+    throw new Error("Installed CLI package.json missing ajv dependency");
+  }
+
+  for (const command of [
+    "init",
+    "validate",
+    "deploy",
+    "run",
+    "status",
+    "doctor",
+  ]) {
+    if (!help.includes(command)) {
+      throw new Error(`CLI help missing M10.2 command: ${command}`);
+    }
   }
 
   console.log("npm pack smoke PASS");
