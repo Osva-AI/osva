@@ -52,6 +52,9 @@
     "example:hello:test:integration": "pnpm --filter @osva/example-hello-agent test:integration",
     "acceptance:m10-1a": "node scripts/acceptance/m10-1a/run.mjs",
     "acceptance:m10-1a:test": "node --test scripts/acceptance/m10-1a/test/*.test.mjs",
+    "acceptance:m10-2e": "node scripts/acceptance/m10-2e/run.mjs",
+    "acceptance:m10-2e:pack": "node scripts/acceptance/m10-2e/pack-acceptance.mjs",
+    "acceptance:m10-2e:test": "node --test scripts/acceptance/m10-2e/test/*.test.mjs",
     "canonical:test:integration": "pnpm --filter @osva/example-canonical-dependency-adoption run test:integration",
     "acceptance:m9-7b": "node scripts/acceptance/m9-7b/run.mjs",
     "acceptance:m9-7b:test": "node --test scripts/acceptance/m9-7b/test/*.test.mjs"

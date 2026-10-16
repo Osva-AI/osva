@@ -27,6 +27,12 @@
     },
     "@osva/console#test:integration": {
       "dependsOn": ["build"]
+    },
+    "@osva/example-canonical-dependency-adoption#test:integration": {
+      "dependsOn": ["build"]
+    },
+    "@osva-ai/cli#test": {
+      "dependsOn": ["build"]
     }
   }
 }

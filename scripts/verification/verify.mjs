@@ -450,6 +450,8 @@ async function ci(env) {
     },
   );
   const harnessMs = await runHarnessTests();
+  // `pnpm test` uses Turbo concurrency 2 (root package.json). Keep Docker/Valkey
+  // suites on `test:integration` (concurrency 1), not package unit vitest configs.
   const testMs =
     harnessMs +
     (await runPhase("TEST", pnpmSpec(env), ["test"], { env: envVars }));

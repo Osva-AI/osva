@@ -75,6 +75,32 @@ pnpm example:hello
 
 Expect terminal Run status **`SUCCEEDED`** and output `{ "echoed": "Hello OSVA" }`. Details: [`../examples/hello-agent/README.md`](../examples/hello-agent/README.md).
 
+## 4b. Standalone agent with `@osva-ai/cli` (M10.2)
+
+From any directory (install CLI from npm or build from this repository):
+
+```powershell
+npm install -g @osva-ai/cli@1.1.0-rc.1
+osva init my-first-agent
+cd my-first-agent
+npm install
+npm run build
+npm run manifest
+osva validate
+
+$env:OSVA_BASE_URL = "http://127.0.0.1:8080"   # or your publish port (e.g. 8082)
+$env:OSVA_API_KEY = "osva_ak_…"
+$env:OSVA_TRUSTED_RUNTIME_MODE = "compose"
+$env:OSVA_COMPOSE_DIR = "C:\path\to\osva\deploy\compose"
+
+osva deploy
+osva run --wait --input-file run-input.json   # recommended on PowerShell
+```
+
+Create `run-input.json` as UTF-8: `{ "message": "Hello OSVA" }`. Expect output `{ "greeting": "Hello, Hello OSVA!" }`. Repeat `osva deploy` to confirm AgentVersion reuse; repeat `osva run` to create new Runs.
+
+Full CLI reference: [`../packages/cli/README.md`](../packages/cli/README.md). Offline packaged CLI check: `pnpm acceptance:m10-2e:pack`. Live opt-in workflow: `OSVA_ACCEPTANCE_LIVE=1 pnpm acceptance:m10-2e`.
+
 ## 5. Call authenticated `/v1`
 
 ```bash
@@ -148,6 +174,7 @@ docker compose down -v
 
 ## Next steps
 
+- CLI agent workflow: [`../packages/cli/README.md`](../packages/cli/README.md)
 - Hello Agent golden path: [`../examples/hello-agent/README.md`](../examples/hello-agent/README.md)
 - Product Console: [`engineering/CONSOLE.md`](engineering/CONSOLE.md)
 - Canonical M7 demo (completed): [`../examples/canonical-dependency-adoption/README.md`](../examples/canonical-dependency-adoption/README.md)

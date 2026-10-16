@@ -1251,6 +1251,12 @@ importers:
       '@osva-ai/sdk':
         specifier: workspace:*
         version: link:../sdk
+      ajv:
+        specifier: ^8.17.1
+        version: 8.20.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

@@ -5,5 +5,6 @@ export default defineConfig({
     environment: "node",
     include: ["test/**/*.test.ts"],
     exclude: ["test/integration/**"],
+    // Unit tests must stay free of Docker/Valkey; see test/integration/.
   },
 });

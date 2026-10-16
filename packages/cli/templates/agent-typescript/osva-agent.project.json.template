@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1",
+  "key": "{{AGENT_KEY}}",
+  "name": "{{AGENT_NAME}}",
+  "runtime": {
+    "type": "TRUSTED_TYPESCRIPT",
+    "entrypoint": "{{ENTRYPOINT}}"
+  },
+  "execution": {
+    "timeoutMs": 30000,
+    "maxAttempts": 1
+  },
+  "capabilities": {
+    "model": false,
+    "tools": []
+  },
+  "contracts": {
+    "input": "contracts/input.v1.schema.json",
+    "output": "contracts/output.v1.schema.json"
+  }
+}

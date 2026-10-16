@@ -117,6 +117,28 @@ describe("OsvaClient", () => {
     });
   });
 
+  it("includes API code and message in OsvaApiError text", async () => {
+    const server = await startMockServer(servers, (_req, res) => {
+      res.writeHead(403, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          status: "error",
+          code: "FORBIDDEN",
+          message: "Insufficient role for this operation.",
+        }),
+      );
+    });
+    const client = new OsvaClient({
+      baseUrl: server.origin,
+      apiKey: TEST_API_KEY,
+    });
+
+    await expect(client.agents.list()).rejects.toMatchObject({
+      message:
+        "OSVA API request failed with HTTP 403 (error): code=FORBIDDEN: Insufficient role for this operation.",
+    });
+  });
+
   it("maps transport failures to OsvaTransportError", async () => {
     const client = new OsvaClient({
       baseUrl: "http://127.0.0.1:1",

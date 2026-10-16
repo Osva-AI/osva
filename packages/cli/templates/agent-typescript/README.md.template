@@ -1,0 +1,56 @@
+# {{AGENT_NAME}}
+
+Minimal OSVA **TRUSTED_TYPESCRIPT** agent scaffold.
+
+## Contract
+
+Input:
+
+```json
+{ "message": "world" }
+```
+
+Output:
+
+```json
+{ "greeting": "Hello, world!" }
+```
+
+## Build
+
+```bash
+npm install
+npm run build
+```
+
+Compiled JavaScript entrypoint (for the trusted runtime): `dist/agent/{{ENTRYPOINT}}`.
+
+## Manifest
+
+`osva-agent.project.json` holds manifest inputs. **Integrity** (`sha256:…`) is computed from the built entrypoint when you run:
+
+```bash
+npm run manifest
+```
+
+That writes `osva.manifest.json`, which matches the OSVA `AgentManifestV1` contract.
+
+## Deploy and run (OSVA CLI)
+
+Configure `OSVA_BASE_URL`, `OSVA_API_KEY`, and trusted-runtime settings (`OSVA_TRUSTED_RUNTIME_MODE`, `OSVA_TRUSTED_RUNTIME_ROOT` or `OSVA_COMPOSE_DIR`), then from this directory:
+
+```bash
+osva deploy
+osva run --wait --input '{"message":"Hello OSVA"}'
+osva status
+```
+
+Local deployment metadata is stored under `.osva/` (never API keys).
+
+## Local smoke test
+
+After `npm run build`, you can invoke the agent module from Node (outside OSVA):
+
+```bash
+node --input-type=module -e "import { run } from './dist/agent/{{ENTRYPOINT}}'; console.log(await run({ input: { message: 'OSVA' } }));"
+```

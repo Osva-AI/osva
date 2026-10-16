@@ -104,7 +104,34 @@ function forbiddenAdapterImport(specifier: string): string | undefined {
   return undefined;
 }
 
+const unitTestDir = path.join(repoRoot, "adapters", "bullmq", "test");
+
 describe("architecture import restrictions", () => {
+  it("keeps unit tests free of Valkey/Docker harness imports", () => {
+    const violations: string[] = [];
+
+    for (const file of walkTypeScriptFiles(unitTestDir)) {
+      if (file.includes(`${path.sep}integration${path.sep}`)) {
+        continue;
+      }
+      if (file.endsWith(`${path.sep}architecture.test.ts`)) {
+        continue;
+      }
+      for (const specifier of collectImportSpecifiers(
+        fs.readFileSync(file, "utf8"),
+      )) {
+        if (
+          specifier.includes("valkey-harness") ||
+          specifier.includes("startValkeyForTests")
+        ) {
+          violations.push(`${toRepoPath(file)} imports '${specifier}'`);
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
   it("keeps adapters/bullmq/src free of domain, orchestration, and apps", () => {
     const violations: string[] = [];
 

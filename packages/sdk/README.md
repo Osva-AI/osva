@@ -1,8 +1,8 @@
 # @osva-ai/sdk
 
-Official TypeScript and JavaScript SDK for OSVA.
+Official TypeScript and JavaScript SDK for the OSVA control plane and Runtime Protocol V1 helpers.
 
-Requires Node.js 24 or newer.
+**Node.js:** >= 24.
 
 ## Installation
 
@@ -10,19 +10,14 @@ Requires Node.js 24 or newer.
 npm install @osva-ai/sdk@1.1.0-rc.1
 ```
 
-## Usage
+Peer dependency `@osva-ai/contracts` is installed automatically.
 
-Set environment variables:
+## Control-plane client
 
-```bash
-export OSVA_BASE_URL=http://127.0.0.1:8080
-export OSVA_API_KEY=osva_ak_...
-```
-
-Example:
+Authentication is **API-key only**. The client does not accept `workspaceId` in constructor options; resolve the workspace with `client.auth.getContext()` when needed.
 
 ```js
-import { OsvaClient } from "@osva-ai/sdk";
+import { OsvaClient, OsvaApiError, OsvaTransportError } from "@osva-ai/sdk";
 
 const baseUrl = process.env.OSVA_BASE_URL;
 const apiKey = process.env.OSVA_API_KEY;
@@ -31,16 +26,80 @@ if (!baseUrl || !apiKey) {
   throw new Error("OSVA_BASE_URL and OSVA_API_KEY are required");
 }
 
-const client = new OsvaClient({ baseUrl, apiKey });
+const client = new OsvaClient({
+  baseUrl,
+  apiKey,
+  timeoutMs: 60_000, // optional, default 30s
+});
+
+const context = await client.auth.getContext();
+console.log(context.workspaceId);
 
 const agents = await client.agents.list();
-console.log(agents);
 ```
+
+### Agents and Runs
+
+```js
+const agent = await client.agents.create({
+  key: "my-agent",
+  name: "My Agent",
+});
+
+const version = await client.agents.createVersion(agent.id, {
+  manifest: {
+    /* AgentManifestV1 */
+  },
+});
+
+const created = await client.runs.create({
+  agentId: agent.id,
+  agentVersionId: version.id,
+  input: { message: "Hello OSVA" },
+});
+
+const run = await client.runs.get(created.run.id);
+const attempt = await client.runs.getAttempt(
+  created.run.id,
+  created.runAttempt.id,
+);
+console.log(attempt.status, attempt.output);
+```
+
+List versions and reuse an existing immutable version by comparing manifests (see `@osva-ai/cli` deploy logic for the same pattern).
+
+## Errors
+
+- **`OsvaApiError`** — non-2xx JSON error body (`status`, `code`, `message`, `requestId` when present). Message text includes HTTP status, domain status, code, and message when the API provides them.
+- **`OsvaTransportError`** — network failure, timeout, or non-JSON response.
+
+The SDK does not automatically retry mutations or HTTP 429 responses.
+
+```js
+try {
+  await client.agents.list();
+} catch (error) {
+  if (error instanceof OsvaApiError) {
+    console.error(error.status, error.body, error.requestId);
+  } else if (error instanceof OsvaTransportError) {
+    console.error(error.message);
+  }
+  throw error;
+}
+```
+
+## Runtime helpers
+
+Remote runtimes use `@osva-ai/sdk/runtime` (see [SDK engineering doc](../../docs/engineering/SDK.md)).
+
+## CLI
+
+Agent scaffolding and deploy/run workflows are provided by **`@osva-ai/cli`** (`osva init`, `validate`, `deploy`, `run`). The CLI uses this SDK internally.
 
 ## Links
 
-- Repository: https://github.com/Osva-AI/osva
-- Community quickstart: https://github.com/Osva-AI/osva/blob/main/docs/OSS-COMMUNITY-QUICKSTART.md
+- [Engineering SDK doc](../../docs/engineering/SDK.md)
+- [Community quickstart](../../docs/OSS-COMMUNITY-QUICKSTART.md)
 
 ## License
 
