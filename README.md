@@ -141,14 +141,16 @@ These are implementation choices, not permanent domain dependencies.
 
 ## Local development
 
-### Prerequisites
+Two journeys are documented in [`docs/engineering/LOCAL_DEVELOPMENT.md`](docs/engineering/LOCAL_DEVELOPMENT.md):
 
-- Node.js 24
-- pnpm 12.4.1 through Corepack (`corepack enable`)
-- Docker Compose for the normal local topology (PostgreSQL 17 plus Valkey)
+- **External agent developer** — full stack in [`deploy/compose`](deploy/compose) plus host CLI/SDK ([`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md)).
+- **OSVA contributor** — root [`docker-compose.yml`](docker-compose.yml) for PostgreSQL and Valkey only; run `apps/*` with `pnpm dev:*` from this repository.
 
-The Compose credentials (`osva` / `osva` / `osva`) are local-development defaults
-only. They are not production-safe.
+Processes **do not auto-load** `.env`; export variables in every terminal. When using `pnpm dev:web` / `pnpm dev:worker`, set **`OSVA_TRUSTED_RUNTIME_ROOT`** and **`OSVA_ARTIFACT_FILESYSTEM_ROOT`** to **absolute paths** shared by web and worker (see the guide).
+
+Contributor sequence: export env (including **`OSVA_KNOWLEDGE_EMBEDDING_*`** for web) → `pnpm infra:up` → `pnpm db:migrate` → `pnpm build` → `pnpm dev:*` → `pnpm db:bootstrap` → `pnpm example:hello` → Product Console ([`docs/engineering/CONSOLE.md`](docs/engineering/CONSOLE.md)). Details: [`docs/engineering/LOCAL_DEVELOPMENT.md`](docs/engineering/LOCAL_DEVELOPMENT.md).
+
+`pnpm dev:web` and `pnpm dev:worker` watch compiled **`dist/`**; after TypeScript edits, rebuild the affected app (for example `pnpm --filter @osva/worker build`).
 
 `pnpm test:integration` provisions ephemeral PostgreSQL via Docker
 (`pgvector/pgvector:pg17`) unless you set `OSVA_TEST_DATABASE_URL` to another
@@ -156,66 +158,12 @@ pgvector-capable database. Plain local PostgreSQL without the `vector` extension
 is not supported for integration tests. Valkey integration tests need a real URL
 via `OSVA_TEST_VALKEY_URL`.
 
-### Setup
-
-```text
-git clone <repository-url>
-cd osva
-corepack enable
-pnpm install
-```
-
-Copy `.env.example` to `.env` as a reference, or set the same variables in the
-environment. Processes do not auto-load `.env`. Required variables:
-
-- `OSVA_DATABASE_URL`
-- `OSVA_VALKEY_URL`
-- `OSVA_TRUSTED_RUNTIME_ROOT`
-- optional `OSVA_WEB_HOST` / `OSVA_WEB_PORT`
-- optional worker-only `OPENAI_API_KEY`
-- optional worker-only `OSVA_RUNTIME_CAPABILITY_SECRET` for Remote HTTP
-- optional worker-only `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS` (default off)
-- `OSVA_ARTIFACT_STORAGE_DRIVER` (`filesystem` default; use `s3` for multi-node production)
-- `OSVA_ARTIFACT_FILESYSTEM_ROOT` when using filesystem (web and worker must share the root on one host)
-- optional `OSVA_ARTIFACT_S3_*` when using S3-compatible blob storage
-
-Then start infrastructure, apply committed migrations, and run the apps:
-
-```text
-pnpm infra:up
-pnpm db:migrate
-pnpm build
-pnpm dev:web
-pnpm dev:worker
-pnpm dev:scheduler
-pnpm dev:workflow-orchestrator
-```
-
-After bootstrap (`pnpm db:bootstrap` in local dev), run the supported first agent:
-
-```text
-pnpm example:hello
-```
-
-See [`examples/hello-agent/README.md`](examples/hello-agent/README.md) for Compose vs host trusted-runtime modes.
-
-Required sequence:
-
-```text
-start PostgreSQL and Valkey
-    ↓
-apply committed migrations
-    ↓
-start applications
-```
-
 Do not auto-migrate during web or worker startup. Do not use `drizzle-kit push`
 as the normal workflow. The committed files under `packages/db/drizzle/` are
 authoritative. Generate new SQL with `pnpm --filter @osva/db db:generate` and
 commit the result.
 
-`pnpm infra:up` starts PostgreSQL 17 and Valkey 8.1.10. Web, worker, scheduler,
-and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
+Routine infrastructure shutdown preserves volumes: `pnpm infra:down` (contributor) or `docker compose down` in `deploy/compose`. Use `docker compose down -v` only for an intentional local data wipe (see the local development guide).
 
 ### SDK and CLI
 
@@ -231,10 +179,12 @@ See [`docs/engineering/SDK.md`](docs/engineering/SDK.md) and [`docs/release/COMP
 
 ```text
 export OSVA_BASE_URL=http://127.0.0.1:3000
-export OSVA_WORKSPACE_ID=ws-dev
+export OSVA_API_KEY='osva_ak_…'   # from bootstrap
 pnpm --filter @osva-ai/cli build
 node packages/cli/dist/bin/osva.js agents list
 ```
+
+`OSVA_WORKSPACE_ID` is optional for CLI commands that use the API key; omit it or set it to the **`Workspace ID:`** printed by bootstrap.
 
 Python checks from `sdks/python`:
 

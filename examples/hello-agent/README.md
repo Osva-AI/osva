@@ -35,22 +35,25 @@ PowerShell:
 ```powershell
 $env:OSVA_BASE_URL = "http://127.0.0.1:3000"
 $env:OSVA_API_KEY = "osva_ak_…"
-$env:OSVA_WORKSPACE_ID = "ws-dev"
-$env:OSVA_TRUSTED_RUNTIME_ROOT = "$PWD\trusted-runtime"
+$env:OSVA_WORKSPACE_ID = "<Workspace ID from bootstrap>"
+$RepoRoot = (Get-Location).Path
+$env:OSVA_TRUSTED_RUNTIME_ROOT = Join-Path $RepoRoot "trusted-runtime"
 $env:OSVA_HELLO_TRUSTED_RUNTIME_MODE = "host"
 pnpm example:hello
 ```
 
-bash:
+bash (run from repository root; use the same absolute trusted-runtime path the worker uses):
 
 ```bash
 export OSVA_BASE_URL=http://127.0.0.1:3000
 export OSVA_API_KEY='osva_ak_…'
-export OSVA_WORKSPACE_ID=ws-dev
-export OSVA_TRUSTED_RUNTIME_ROOT="$PWD/trusted-runtime"
+export OSVA_WORKSPACE_ID='<Workspace ID from bootstrap>'
+export OSVA_TRUSTED_RUNTIME_ROOT="$(pwd)/trusted-runtime"
 export OSVA_HELLO_TRUSTED_RUNTIME_MODE=host
 pnpm example:hello
 ```
+
+Contributor setup: [`../../docs/engineering/LOCAL_DEVELOPMENT.md`](../../docs/engineering/LOCAL_DEVELOPMENT.md).
 
 ### Docker Compose worker (`deploy/compose`)
 
@@ -61,7 +64,7 @@ PowerShell:
 ```powershell
 $env:OSVA_BASE_URL = "http://127.0.0.1:8080"
 $env:OSVA_API_KEY = "osva_ak_…"
-$env:OSVA_WORKSPACE_ID = "ws-…"   # printed by bootstrap
+$env:OSVA_WORKSPACE_ID = "<Workspace ID from bootstrap>"
 $env:OSVA_HELLO_TRUSTED_RUNTIME_MODE = "compose"
 # Optional if you started Compose with a custom project name:
 # $env:OSVA_COMPOSE_PROJECT = "my-project"

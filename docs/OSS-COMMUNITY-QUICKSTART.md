@@ -8,6 +8,17 @@ Authoritative path for a **self-hosted OSVA Community Edition** deployment using
 >
 > **Historical OSS 1.0 guide:** [`OSS-1.0-QUICKSTART.md`](OSS-1.0-QUICKSTART.md) (documents the **`v1.0.0`** tag baseline).
 
+## Which local journey?
+
+| Journey | Use this guide | Also read |
+| --- | --- | --- |
+| **External agent developer** — run OSVA in Docker, build agents on the host | Sections below (`deploy/compose`) | [`../packages/cli/README.md`](../packages/cli/README.md) |
+| **OSVA contributor** — change OSVA source; infra in Docker, apps on the host | [`engineering/LOCAL_DEVELOPMENT.md`](engineering/LOCAL_DEVELOPMENT.md) (journey B) | Root [`README.md`](../README.md) |
+
+Compose `.env` is loaded by Docker Compose only. Host CLI, examples, and Console still need **`OSVA_BASE_URL`**, **`OSVA_API_KEY`**, and related variables exported in each shell ([`engineering/LOCAL_DEVELOPMENT.md`](engineering/LOCAL_DEVELOPMENT.md)).
+
+If you also develop against host Postgres/Valkey, keep **`OSVA_VALKEY_URL=redis://valkey:6379`** in `deploy/compose/.env` **and** unset host exports before `docker compose up` — shell variables override `--env-file` during Compose interpolation. Verification status: [`engineering/M10_3_SETUP_VERIFICATION.md`](engineering/M10_3_SETUP_VERIFICATION.md).
+
 ## Prerequisites
 
 - Docker with Compose v2
@@ -44,7 +55,15 @@ Bootstrap is a deliberate operator action:
 docker compose --profile bootstrap run --rm bootstrap
 ```
 
-Copy the printed `osva_ak_…` token immediately. It is shown once.
+Copy the printed `osva_ak_…` token immediately. It is shown once. Note the printed **`Workspace ID:`** for examples that require `OSVA_WORKSPACE_ID`.
+
+Optional readiness check with the CLI (`OSVA_WORKSPACE_ID` not required):
+
+```bash
+export OSVA_BASE_URL=http://127.0.0.1:8080
+export OSVA_API_KEY='osva_ak_…'
+osva doctor   # npm install -g @osva-ai/cli@1.1.0-rc.1, or build from this repo
+```
 
 ## 4. Run the Hello Agent (first execution)
 
@@ -56,19 +75,20 @@ Deterministic golden path — no paid model provider, no external calls during e
 # PowerShell (host)
 $env:OSVA_BASE_URL = "http://127.0.0.1:8080"
 $env:OSVA_API_KEY = "osva_ak_…"
-$env:OSVA_WORKSPACE_ID = "ws-…"   # from bootstrap output
+$env:OSVA_WORKSPACE_ID = "<Workspace ID from bootstrap>"
 $env:OSVA_HELLO_TRUSTED_RUNTIME_MODE = "compose"
 pnpm install
 pnpm example:hello
 ```
 
-**Local dev worker** (`pnpm dev:web` + `pnpm dev:worker` on the host):
+**Local dev worker** (`pnpm dev:web` + `pnpm dev:worker` on the host) — see journey B in [`engineering/LOCAL_DEVELOPMENT.md`](engineering/LOCAL_DEVELOPMENT.md):
 
 ```powershell
 $env:OSVA_BASE_URL = "http://127.0.0.1:3000"
 $env:OSVA_API_KEY = "osva_ak_…"
-$env:OSVA_WORKSPACE_ID = "ws-dev"
-$env:OSVA_TRUSTED_RUNTIME_ROOT = "$PWD\trusted-runtime"
+$env:OSVA_WORKSPACE_ID = "<Workspace ID from bootstrap>"
+$RepoRoot = (Get-Location).Path
+$env:OSVA_TRUSTED_RUNTIME_ROOT = Join-Path $RepoRoot "trusted-runtime"
 $env:OSVA_HELLO_TRUSTED_RUNTIME_MODE = "host"
 pnpm example:hello
 ```
@@ -160,9 +180,29 @@ Configure MCP clients to use an allowed Host (for example `127.0.0.1`) and the M
 
 ## 9. Stop / cleanup
 
+Routine shutdown from `deploy/compose` (**keeps** PostgreSQL, Valkey, artifact, and trusted-runtime volumes):
+
+```bash
+docker compose down
+```
+
+**Destructive reset** — deletes all Compose volumes and workspace data; bootstrap again afterward:
+
 ```bash
 docker compose down -v
 ```
+
+## 10. Product Console (optional)
+
+Console is not started by Compose. Export bootstrap credentials, point at the published web port, then run from a repository clone:
+
+```powershell
+$env:OSVA_BASE_URL = "http://127.0.0.1:8080"
+$env:OSVA_CONSOLE_API_KEY = "osva_ak_…"
+pnpm dev:console
+```
+
+Open **`http://127.0.0.1:5173`** (dev). After `pnpm --filter @osva/console build` and `start`, open **`http://127.0.0.1:4174`**. See [`engineering/CONSOLE.md`](engineering/CONSOLE.md).
 
 ## Community boundaries
 
@@ -176,6 +216,7 @@ docker compose down -v
 
 - CLI agent workflow: [`../packages/cli/README.md`](../packages/cli/README.md)
 - Hello Agent golden path: [`../examples/hello-agent/README.md`](../examples/hello-agent/README.md)
+- Local development journeys: [`engineering/LOCAL_DEVELOPMENT.md`](engineering/LOCAL_DEVELOPMENT.md)
 - Product Console: [`engineering/CONSOLE.md`](engineering/CONSOLE.md)
 - Canonical M7 demo (completed): [`../examples/canonical-dependency-adoption/README.md`](../examples/canonical-dependency-adoption/README.md)
 - [`architecture/DEPLOYMENT_TOPOLOGIES.md`](architecture/DEPLOYMENT_TOPOLOGIES.md)

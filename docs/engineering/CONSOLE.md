@@ -11,7 +11,8 @@ The console never connects to PostgreSQL directly and never exposes the workspac
 | `OSVA_CONSOLE_API_KEY` | Workspace API key used server-side only |
 | `OSVA_BASE_URL` | Control plane base URL (default `http://127.0.0.1:3000`) |
 | `OSVA_CONSOLE_HOST` | Console bind host (default `127.0.0.1`). Must be loopback (`127.0.0.0/8`, `::1`, or `localhost`). |
-| `OSVA_CONSOLE_PORT` | Console bind port (default `4174`) |
+| `OSVA_CONSOLE_PORT` | Console BFF bind port (default `4174`). Vite proxies `/api` here in dev. |
+| `OSVA_CONSOLE_VITE_PORT` | Vite dev server port (default `5173`, `strictPort: true`) |
 | `OSVA_CONSOLE_ALLOWED_ORIGINS` | Optional comma-separated http(s) origins for browser mutations through an operator-controlled proxy. Not CORS. Not authentication. No wildcards. |
 | `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` | **Deprecated.** Does not enable public binding, authentication, or access control. Non-loopback binds are always rejected. |
 
@@ -19,7 +20,14 @@ The console never connects to PostgreSQL directly and never exposes the workspac
 
 ## Run locally
 
-1. Start infrastructure and the control plane (`apps/web`) with a valid API key.
+| Stack | `OSVA_BASE_URL` | Browser (dev `pnpm dev:console`) | Browser (`build` + `start`) |
+| --- | --- | --- | --- |
+| Contributor host (`pnpm dev:web`) | `http://127.0.0.1:3000` | `http://127.0.0.1:5173` (Vite) | `http://127.0.0.1:4174` |
+| Self-hosted Compose (default publish port) | `http://127.0.0.1:8080` | `http://127.0.0.1:5173` | `http://127.0.0.1:4174` |
+
+**Prerequisites:** running control plane (`GET /ready` succeeds), bootstrap **`osva_ak_…`**, and **`OSVA_CONSOLE_API_KEY`** set to that key in the console server process (never in the browser). Full journeys: [`LOCAL_DEVELOPMENT.md`](LOCAL_DEVELOPMENT.md).
+
+1. Start infrastructure and the control plane (`apps/web` or Compose `web`) with a valid API key.
 2. Build or run the console:
 
 ```bash
@@ -27,13 +35,19 @@ pnpm --filter @osva/console build
 OSVA_CONSOLE_API_KEY=<key> pnpm --filter @osva/console start
 ```
 
-Development (Vite + console API server):
+Development (Vite + console BFF):
+
+From the **repository root** (runs `tsc` for the server, then `apps/console/scripts/dev.mjs`):
 
 ```bash
 OSVA_CONSOLE_API_KEY=<key> pnpm dev:console
 ```
 
-Open the Vite dev URL (default `http://127.0.0.1:5173`). API calls are proxied to the console server.
+Open the Vite dev URL (default `http://127.0.0.1:5173`, or `http://localhost:5173` if loopback binding differs on Windows). API calls are proxied to the BFF (default `http://127.0.0.1:4174`).
+
+If **5173** or **4174** are already in use, set **`OSVA_CONSOLE_VITE_PORT`** and **`OSVA_CONSOLE_PORT`** to free loopback ports before `pnpm dev:console`. Do **not** run `node apps/console/scripts/dev.mjs` directly unless `apps/console/dist/server/main.js` already exists from `pnpm --filter @osva/console exec tsc -p tsconfig.server.json`.
+
+**Isolated Compose example** (custom publish port / project): point **`OSVA_BASE_URL`** at the published web URL (for example `http://127.0.0.1:8083` for project `osva-m103c`). Verification notes: [`M10_3_SETUP_VERIFICATION.md`](M10_3_SETUP_VERIFICATION.md).
 
 ## Security model
 

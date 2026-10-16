@@ -26,8 +26,9 @@ For large features or contract changes, open an issue or discussion first.
 
 ## Local setup
 
-See the Stage 0 Development section in `README.md` for clone, install,
-infrastructure, migrate, and quality commands.
+OSVA contributors use journey **B** in [`docs/engineering/LOCAL_DEVELOPMENT.md`](docs/engineering/LOCAL_DEVELOPMENT.md) (root infrastructure Compose + host `pnpm dev:*`). External agent developers use [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md) instead.
+
+See also the **Local development** section in `README.md` for quality commands and migration rules.
 
 ## Development rules
 

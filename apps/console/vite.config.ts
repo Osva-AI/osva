@@ -2,6 +2,10 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const consoleApiPort = process.env.OSVA_CONSOLE_PORT?.trim() || "4174";
+const vitePort = Number.parseInt(
+  process.env.OSVA_CONSOLE_VITE_PORT?.trim() || "5173",
+  10,
+);
 
 export default defineConfig({
   plugins: [react()],
@@ -11,7 +15,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port: 5173,
+    port: Number.isFinite(vitePort) ? vitePort : 5173,
     strictPort: true,
     proxy: {
       "/api": {
