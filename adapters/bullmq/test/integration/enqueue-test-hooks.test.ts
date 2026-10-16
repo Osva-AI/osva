@@ -1,14 +1,14 @@
 import { Queue } from "bullmq";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { BullMqJobQueue } from "../src/bullmq-job-queue.js";
-import type { EnqueueClaimTestHooks } from "../src/enqueue-test-hooks.js";
+import { BullMqJobQueue } from "../../src/bullmq-job-queue.js";
+import type { EnqueueClaimTestHooks } from "../../src/enqueue-test-hooks.js";
 import type { RunAttemptId } from "@osva-ai/contracts";
 import {
   startValkeyForTests,
   stopValkeyForTests,
   type ValkeyTestContext,
-} from "./integration/valkey-harness.js";
+} from "./valkey-harness.js";
 
 const RUN_ATTEMPT = "hooks-run-attempt" as RunAttemptId;
 

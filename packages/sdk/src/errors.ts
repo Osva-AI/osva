@@ -27,5 +27,24 @@ export class OsvaTransportError extends Error {
 
 function formatApiErrorMessage(status: number, body: OsvaApiErrorBody): string {
   const domain = typeof body.status === "string" ? body.status : "error";
-  return `OSVA API request failed with HTTP ${String(status)} (${domain}).`;
+  const code =
+    typeof body.code === "string" && body.code.length > 0
+      ? body.code
+      : undefined;
+  const detail =
+    typeof body.message === "string" && body.message.length > 0
+      ? body.message
+      : undefined;
+
+  const parts = [
+    `OSVA API request failed with HTTP ${String(status)} (${domain})`,
+  ];
+  if (code !== undefined) {
+    parts.push(`code=${code}`);
+  }
+  if (detail !== undefined) {
+    parts.push(detail);
+  }
+  const sentence = parts.join(": ");
+  return sentence.endsWith(".") ? sentence : `${sentence}.`;
 }

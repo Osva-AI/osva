@@ -1,0 +1,4 @@
+node_modules/
+dist/
+osva.manifest.json
+.osva/

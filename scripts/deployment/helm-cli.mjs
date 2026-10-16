@@ -28,24 +28,17 @@ export function runHelm(args, options = {}) {
   const normalizedArgs = args.map((arg) =>
     typeof arg === "string" ? arg.replaceAll("\\", "/") : arg,
   );
-  const result = spawnSync(
-    "docker",
-    [
-      "run",
-      "--rm",
-      "-v",
-      `${mount}:/work`,
-      "-w",
-      "/work",
-      HELM_DOCKER_IMAGE,
-      ...normalizedArgs,
-    ],
-    {
-      encoding: "utf8",
-      stdio: options.stdio ?? "pipe",
-      cwd: options.cwd,
-    },
-  );
+  const dockerArgs = ["run", "--rm", "-v", `${mount}:/work`, "-w", "/work"];
+  if (options.valuesMount !== undefined) {
+    dockerArgs.push("-v", `${options.valuesMount}:/values:ro`);
+  }
+  dockerArgs.push(HELM_DOCKER_IMAGE, ...normalizedArgs);
+
+  const result = spawnSync("docker", dockerArgs, {
+    encoding: "utf8",
+    stdio: options.stdio ?? "pipe",
+    cwd: options.cwd,
+  });
   if (result.status !== 0) {
     throw new Error(
       `helm ${args.join(" ")} failed: ${result.stderr || result.stdout}`,

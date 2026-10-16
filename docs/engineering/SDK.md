@@ -14,9 +14,11 @@ Packages communicate only with OSVA public HTTP contracts. They do not access Po
 import { OsvaClient } from "@osva-ai/sdk";
 
 const client = new OsvaClient({
-  baseUrl: "http://127.0.0.1:3000",
-  workspaceId: "ws-dev",
+  baseUrl: process.env.OSVA_BASE_URL!,
+  apiKey: process.env.OSVA_API_KEY!,
 });
+
+const { workspaceId } = await client.auth.getContext();
 
 const agents = await client.agents.list();
 const created = await client.runs.create({
@@ -52,7 +54,7 @@ Requires Python >= 3.11.
 ```python
 from osva import OSVAClient
 
-client = OSVAClient(base_url="http://127.0.0.1:3000", workspace_id="ws-dev")
+client = OSVAClient(base_url="http://127.0.0.1:8080", api_key=os.environ["OSVA_API_KEY"])
 agents = client.agents.list()
 ```
 
@@ -87,8 +89,13 @@ Capability tokens, workspace IDs, Run objects, provider credentials, and ToolVer
 ## CLI
 
 ```bash
-export OSVA_BASE_URL=http://127.0.0.1:3000
-export OSVA_WORKSPACE_ID=ws-dev
+export OSVA_BASE_URL=http://127.0.0.1:8080
+export OSVA_API_KEY=osva_ak_...
+
+osva init my-agent && cd my-agent && npm install && npm run build && npm run manifest
+osva validate
+osva deploy
+osva run --wait --input '{"message":"Hello OSVA"}'
 
 osva agents list
 osva runs create --agent-id agent-1 --agent-version-id av-1 --input '{"prompt":"hi"}'
@@ -98,7 +105,11 @@ osva --json agents list
 
 Precedence: CLI flag > environment variable.
 
-There is no `osva login` or persistent credential storage in Slice 2.5.
+Optional `OSVA_WORKSPACE_ID` is cross-checked against `GET /v1/auth/context` when set.
+
+There is no `osva login` or persistent credential storage. API keys are read from `OSVA_API_KEY` only (no `--api-key` flag).
+
+Agent project workflow details: [`packages/cli/README.md`](../../packages/cli/README.md).
 
 ## Shared protocol fixtures
 
@@ -106,4 +117,4 @@ Language-neutral Runtime Protocol V1 fixtures live under `packages/runtime-proto
 
 ## Publication status
 
-Packages are structured for publication but are **not** published to npm or PyPI in Stage 2.5.
+`@osva-ai/sdk`, `@osva-ai/cli`, and related packages are published on the **`1.1.0-rc.1`** release candidate line for early adopters. Stable **`1.0.0`** remains the default production line for self-hosted OSS 1.0. See [`OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md) for install pins and upgrade notes.

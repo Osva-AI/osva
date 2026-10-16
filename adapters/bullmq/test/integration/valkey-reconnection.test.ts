@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { BullMqJobQueue } from "../src/bullmq-job-queue.js";
-import { checkValkeyConnection } from "../src/check-valkey-connection.js";
+import { BullMqJobQueue } from "../../src/bullmq-job-queue.js";
+import { checkValkeyConnection } from "../../src/check-valkey-connection.js";
 import type { RunAttemptId } from "@osva-ai/contracts";
 import {
   startValkeyForTests,
   stopValkeyForTests,
   type ValkeyTestContext,
-} from "./integration/valkey-harness.js";
+} from "./valkey-harness.js";
 
 const RUN_ATTEMPT = "reconnect-run-attempt" as RunAttemptId;
 const SECOND_RUN_ATTEMPT = "reconnect-run-attempt-2" as RunAttemptId;

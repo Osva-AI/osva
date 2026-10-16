@@ -2,15 +2,15 @@ import type { RunAttemptId } from "@osva-ai/contracts";
 import { Queue } from "bullmq";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { BullMqJobQueue } from "../src/bullmq-job-queue.js";
-import type { EnqueueClaimTestHooks } from "../src/enqueue-test-hooks.js";
-import { OSVA_EXECUTION_QUEUE_NAME } from "../src/constants.js";
-import { toBullMqJobId } from "../src/job-id.js";
+import { BullMqJobQueue } from "../../src/bullmq-job-queue.js";
+import type { EnqueueClaimTestHooks } from "../../src/enqueue-test-hooks.js";
+import { OSVA_EXECUTION_QUEUE_NAME } from "../../src/constants.js";
+import { toBullMqJobId } from "../../src/job-id.js";
 import {
   startValkeyForTests,
   stopValkeyForTests,
   type ValkeyTestContext,
-} from "./integration/valkey-harness.js";
+} from "./valkey-harness.js";
 
 const ATTEMPT = "matrix-run-attempt" as RunAttemptId;
 

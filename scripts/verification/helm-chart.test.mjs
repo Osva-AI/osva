@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,22 +14,37 @@ const REPO_ROOT = path.resolve(
 );
 const CHART_DIR = path.join("deploy", "helm", "osva");
 
-const DEFAULT_VALUES = path.join(
+/** Values fixtures are mounted here (outside the repo bind mount). */
+const VALUES_MOUNT_PREFIX = "/values";
+
+const LEGACY_REPO_FIXTURE = path.join(
   REPO_ROOT,
   "scripts",
   "verification",
   "helm-default-values.yaml",
 );
-const PRODUCTION_VALUES = path.join(
-  REPO_ROOT,
-  "scripts",
-  "verification",
-  "helm-production-values.yaml",
-);
 
-function writeDefaultValues() {
+function createValuesWorkspace() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "osva-helm-values-"));
+}
+
+function cleanupValuesWorkspace(dir) {
+  fs.rmSync(dir, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 200,
+  });
+}
+
+function helmOptions(valuesDir) {
+  return { valuesMount: valuesDir };
+}
+
+function writeDefaultValues(valuesDir) {
+  const fileName = "default-values.yaml";
   fs.writeFileSync(
-    DEFAULT_VALUES,
+    path.join(valuesDir, fileName),
     [
       "database:",
       "  url: postgres://osva:example@postgres.example.invalid:5432/osva",
@@ -43,11 +59,13 @@ function writeDefaultValues() {
     ].join("\n"),
     "utf8",
   );
+  return `${VALUES_MOUNT_PREFIX}/${fileName}`;
 }
 
-function writeProductionValues() {
+function writeProductionValues(valuesDir) {
+  const fileName = "production-values.yaml";
   fs.writeFileSync(
-    PRODUCTION_VALUES,
+    path.join(valuesDir, fileName),
     [
       "database:",
       "  url: postgres://osva:example@postgres.example.invalid:5432/osva",
@@ -82,6 +100,7 @@ function writeProductionValues() {
     ].join("\n"),
     "utf8",
   );
+  return `${VALUES_MOUNT_PREFIX}/${fileName}`;
 }
 
 function extractMigrationJobManifest(output) {
@@ -175,6 +194,24 @@ function assertProductionTemplate(output) {
 }
 
 describe("helm chart packaging", () => {
+  it("writes values fixtures outside the repository bind mount", () => {
+    const valuesDir = createValuesWorkspace();
+    try {
+      assert.ok(
+        valuesDir.startsWith(os.tmpdir()),
+        "values workspace must live under the OS temp directory",
+      );
+      writeDefaultValues(valuesDir);
+      assert.equal(
+        fs.existsSync(LEGACY_REPO_FIXTURE),
+        false,
+        "must not recreate legacy repo-scoped helm-default-values.yaml",
+      );
+    } finally {
+      cleanupValuesWorkspace(valuesDir);
+    }
+  });
+
   it("lints and templates default and production value sets via Docker Helm", () => {
     const version = helmVersion();
     console.log(`Helm via Docker: ${version}`);
@@ -182,128 +219,149 @@ describe("helm chart packaging", () => {
     runHelm(["lint", CHART_DIR]);
     // lint uses chart values.yaml placeholders (no real credentials).
 
-    writeDefaultValues();
-    writeProductionValues();
+    const valuesDir = createValuesWorkspace();
+    try {
+      const defaultValuesFile = writeDefaultValues(valuesDir);
+      const productionValuesFile = writeProductionValues(valuesDir);
 
-    const defaultRender = runHelm([
-      "template",
-      "osva-default",
-      CHART_DIR,
-      "-f",
-      path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
-    ]);
-    assertDefaultTemplate(defaultRender);
+      const defaultRender = runHelm(
+        ["template", "osva-default", CHART_DIR, "-f", defaultValuesFile],
+        helmOptions(valuesDir),
+      );
+      assertDefaultTemplate(defaultRender);
 
-    const productionRender = runHelm([
-      "template",
-      "osva-prod",
-      CHART_DIR,
-      "-f",
-      path.relative(REPO_ROOT, PRODUCTION_VALUES).replaceAll("\\", "/"),
-    ]);
-    assertProductionTemplate(productionRender);
-
-    fs.rmSync(DEFAULT_VALUES, { force: true });
-    fs.rmSync(PRODUCTION_VALUES, { force: true });
+      const productionRender = runHelm(
+        ["template", "osva-prod", CHART_DIR, "-f", productionValuesFile],
+        helmOptions(valuesDir),
+      );
+      assertProductionTemplate(productionRender);
+    } finally {
+      cleanupValuesWorkspace(valuesDir);
+    }
   });
 
   it("omits OTEL export when telemetry is disabled", () => {
     helmVersion();
-    writeDefaultValues();
-    const output = runHelm([
-      "template",
-      "osva-default",
-      CHART_DIR,
-      "-f",
-      path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
-    ]);
-    const configMap = extractConfigMapManifest(output);
-    assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_ENDPOINT/);
-    assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_HEADERS/);
-    assert.doesNotMatch(output, /OTEL_SERVICE_NAME/);
-    fs.rmSync(DEFAULT_VALUES, { force: true });
+    const valuesDir = createValuesWorkspace();
+    try {
+      const defaultValuesFile = writeDefaultValues(valuesDir);
+      const output = runHelm(
+        ["template", "osva-default", CHART_DIR, "-f", defaultValuesFile],
+        helmOptions(valuesDir),
+      );
+      const configMap = extractConfigMapManifest(output);
+      assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_ENDPOINT/);
+      assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_HEADERS/);
+      assert.doesNotMatch(output, /OTEL_SERVICE_NAME/);
+    } finally {
+      cleanupValuesWorkspace(valuesDir);
+    }
   });
 
   it("injects per-process OTEL settings when telemetry is enabled", () => {
     helmVersion();
-    writeDefaultValues();
-    const output = runHelm([
-      "template",
-      "osva-otel",
-      CHART_DIR,
-      "-f",
-      path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
-      "--set",
-      "telemetry.enabled=true",
-      "--set",
-      "telemetry.otlpEndpoint=http://otel-collector.observability.svc:4318",
-    ]);
-    const configMap = extractConfigMapManifest(output);
-    assert.match(
-      configMap,
-      /OTEL_EXPORTER_OTLP_ENDPOINT: "http:\/\/otel-collector\.observability\.svc:4318"/,
-    );
-    assert.match(configMap, /OTEL_TRACES_SAMPLER: "parentbased_always_on"/);
-    assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_HEADERS/);
-    assert.match(output, /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-web"/);
-    assert.match(output, /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-worker"/);
-    assert.match(
-      output,
-      /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-scheduler"/,
-    );
-    assert.match(
-      output,
-      /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-workflow-orchestrator"/,
-    );
-    assert.match(
-      output,
-      /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-knowledge-worker"/,
-    );
-    assert.match(output, /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-mcp"/);
-    fs.rmSync(DEFAULT_VALUES, { force: true });
+    const valuesDir = createValuesWorkspace();
+    try {
+      const defaultValuesFile = writeDefaultValues(valuesDir);
+      const output = runHelm(
+        [
+          "template",
+          "osva-otel",
+          CHART_DIR,
+          "-f",
+          defaultValuesFile,
+          "--set",
+          "telemetry.enabled=true",
+          "--set",
+          "telemetry.otlpEndpoint=http://otel-collector.observability.svc:4318",
+        ],
+        helmOptions(valuesDir),
+      );
+      const configMap = extractConfigMapManifest(output);
+      assert.match(
+        configMap,
+        /OTEL_EXPORTER_OTLP_ENDPOINT: "http:\/\/otel-collector\.observability\.svc:4318"/,
+      );
+      assert.match(configMap, /OTEL_TRACES_SAMPLER: "parentbased_always_on"/);
+      assert.doesNotMatch(configMap, /OTEL_EXPORTER_OTLP_HEADERS/);
+      assert.match(output, /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-web"/);
+      assert.match(
+        output,
+        /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-worker"/,
+      );
+      assert.match(
+        output,
+        /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-scheduler"/,
+      );
+      assert.match(
+        output,
+        /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-workflow-orchestrator"/,
+      );
+      assert.match(
+        output,
+        /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-knowledge-worker"/,
+      );
+      assert.match(output, /name: OTEL_SERVICE_NAME\s*\n\s*value: "osva-mcp"/);
+    } finally {
+      cleanupValuesWorkspace(valuesDir);
+    }
   });
 
   it("rejects enabled telemetry without an OTLP endpoint", () => {
     helmVersion();
-    writeDefaultValues();
+    const valuesDir = createValuesWorkspace();
     try {
-      runHelm([
-        "template",
-        "osva-otel-invalid",
-        CHART_DIR,
-        "-f",
-        path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
-        "--set",
-        "telemetry.enabled=true",
-      ]);
-      assert.fail("expected helm template to fail");
-    } catch (error) {
-      assert.match(String(error), /telemetry.otlpEndpoint/);
+      const defaultValuesFile = writeDefaultValues(valuesDir);
+      try {
+        runHelm(
+          [
+            "template",
+            "osva-otel-invalid",
+            CHART_DIR,
+            "-f",
+            defaultValuesFile,
+            "--set",
+            "telemetry.enabled=true",
+          ],
+          helmOptions(valuesDir),
+        );
+        assert.fail("expected helm template to fail");
+      } catch (error) {
+        assert.match(String(error), /telemetry.otlpEndpoint/);
+      }
+    } finally {
+      cleanupValuesWorkspace(valuesDir);
     }
-    fs.rmSync(DEFAULT_VALUES, { force: true });
   });
 
   it("rejects an unsupported traces sampler", () => {
     helmVersion();
-    writeDefaultValues();
+    const valuesDir = createValuesWorkspace();
     try {
-      runHelm([
-        "template",
-        "osva-otel-sampler",
-        CHART_DIR,
-        "-f",
-        path.relative(REPO_ROOT, DEFAULT_VALUES).replaceAll("\\", "/"),
-        "--set",
-        "telemetry.enabled=true",
-        "--set",
-        "telemetry.otlpEndpoint=http://collector:4318",
-        "--set",
-        "telemetry.tracesSampler=not-a-sampler",
-      ]);
-      assert.fail("expected helm template to fail");
-    } catch (error) {
-      assert.match(String(error), /telemetry.tracesSampler must be one of/);
+      const defaultValuesFile = writeDefaultValues(valuesDir);
+      try {
+        runHelm(
+          [
+            "template",
+            "osva-otel-sampler",
+            CHART_DIR,
+            "-f",
+            defaultValuesFile,
+            "--set",
+            "telemetry.enabled=true",
+            "--set",
+            "telemetry.otlpEndpoint=http://collector:4318",
+            "--set",
+            "telemetry.tracesSampler=not-a-sampler",
+          ],
+          helmOptions(valuesDir),
+        );
+        assert.fail("expected helm template to fail");
+      } catch (error) {
+        assert.match(String(error), /telemetry.tracesSampler must be one of/);
+      }
+    } finally {
+      cleanupValuesWorkspace(valuesDir);
     }
-    fs.rmSync(DEFAULT_VALUES, { force: true });
   });
 });

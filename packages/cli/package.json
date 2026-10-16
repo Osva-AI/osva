@@ -18,6 +18,7 @@
   },
   "files": [
     "dist",
+    "templates",
     "README.md"
   ],
   "scripts": {
@@ -28,7 +29,9 @@
   },
   "dependencies": {
     "@osva-ai/contracts": "workspace:*",
-    "@osva-ai/sdk": "workspace:*"
+    "@osva-ai/sdk": "workspace:*",
+    "ajv": "^8.17.1",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

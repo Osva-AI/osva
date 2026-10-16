@@ -248,11 +248,23 @@ Commands:
   approvals approve <approvalRequestId> [--comment TEXT]
   approvals reject <approvalRequestId> [--comment TEXT]
   schedules list
+  init <project-name> [--yes] [--json]
+  validate [--project DIR] [--json]
+  deploy [--project DIR] [--json]
+  run [--project DIR] --input JSON | --input-file PATH [--wait] [--json]
+  status [--project DIR] [--json]
+  doctor [--json]
   version
   help
 
 Environment:
   OSVA_BASE_URL
-  OSVA_WORKSPACE_ID
+  OSVA_API_KEY
+  OSVA_WORKSPACE_ID (optional; verified against API key workspace)
+  OSVA_TRUSTED_RUNTIME_MODE (host | compose)
+  OSVA_TRUSTED_RUNTIME_ROOT (required for host mode)
+  OSVA_COMPOSE_DIR (required for compose mode)
+  OSVA_COMPOSE_PROJECT / COMPOSE_PROJECT_NAME (optional)
+  OSVA_RUN_POLL_INTERVAL_MS / OSVA_RUN_POLL_TIMEOUT_MS (optional)
 `);
 }

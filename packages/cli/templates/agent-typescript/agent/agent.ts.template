@@ -1,0 +1,25 @@
+export interface AgentInput {
+  readonly message: string;
+}
+
+export interface AgentOutput {
+  readonly greeting: string;
+}
+
+function parseInput(input: unknown): AgentInput {
+  if (typeof input !== "object" || input === null) {
+    throw new Error("input must be an object");
+  }
+  const message = (input as { message?: unknown }).message;
+  if (typeof message !== "string" || message.length === 0) {
+    throw new Error("input.message must be a non-empty string");
+  }
+  return { message };
+}
+
+export async function run(context: {
+  readonly input: unknown;
+}): Promise<AgentOutput> {
+  const { message } = parseInput(context.input);
+  return { greeting: `Hello, ${message}!` };
+}
