@@ -7,9 +7,9 @@ import {
 } from "@osva-ai/contracts";
 
 import {
-  ECHO_AGENT_ENTRYPOINT,
-  ECHO_AGENT_INTEGRITY_PLACEHOLDER,
-  echoAgentManifestTemplate,
+  HELLO_AGENT_ENTRYPOINT,
+  HELLO_AGENT_INTEGRITY_PLACEHOLDER,
+  helloAgentManifestTemplate,
 } from "./agent-example";
 import { parseWorkflowRunInputJson } from "./workflow-run-input";
 
@@ -31,7 +31,7 @@ export function defaultGuidedManifestFields(options?: {
   readonly key?: string;
   readonly name?: string;
 }): GuidedManifestFields {
-  const template = echoAgentManifestTemplate({
+  const template = helloAgentManifestTemplate({
     key: options?.key,
     name: options?.name,
   });
@@ -39,7 +39,7 @@ export function defaultGuidedManifestFields(options?: {
 }
 
 export function asManifestRecord(value: unknown): Record<string, unknown> {
-  return isRecord(value) ? value : echoAgentManifestTemplate();
+  return isRecord(value) ? value : helloAgentManifestTemplate();
 }
 
 export function extractGuidedManifestFields(
@@ -52,11 +52,14 @@ export function extractGuidedManifestFields(
     ? runtime.type
     : "TRUSTED_TYPESCRIPT";
   return {
-    key: stringField(record.key, "echo-input-agent"),
-    name: stringField(record.name, "Echo Input Agent"),
+    key: stringField(record.key, "hello-agent"),
+    name: stringField(record.name, "Hello Agent"),
     runtimeType,
-    entrypoint: stringField(runtime.entrypoint, ECHO_AGENT_ENTRYPOINT),
-    integrity: stringField(runtime.integrity, ECHO_AGENT_INTEGRITY_PLACEHOLDER),
+    entrypoint: stringField(runtime.entrypoint, HELLO_AGENT_ENTRYPOINT),
+    integrity: stringField(
+      runtime.integrity,
+      HELLO_AGENT_INTEGRITY_PLACEHOLDER,
+    ),
     remoteEndpoint: stringField(
       runtime.endpoint,
       "http://127.0.0.1:8787/execute",
@@ -77,15 +80,15 @@ export function applyGuidedManifestFields(
   const parsed = parseWorkflowRunInputJson(currentText);
   const base = parsed.ok
     ? { ...asManifestRecord(parsed.value) }
-    : echoAgentManifestTemplate({ key: fields.key, name: fields.name });
+    : helloAgentManifestTemplate({ key: fields.key, name: fields.name });
   const timeoutMs = Number.parseInt(fields.timeoutMs, 10);
   const execution = isRecord(base.execution) ? { ...base.execution } : {};
   return JSON.stringify(
     {
       ...base,
       schemaVersion: "1",
-      key: fields.key.trim() || "echo-input-agent",
-      name: fields.name.trim() || "Echo Input Agent",
+      key: fields.key.trim() || "hello-agent",
+      name: fields.name.trim() || "Hello Agent",
       runtime: runtimeFromFields(fields),
       execution: {
         ...execution,
@@ -190,8 +193,8 @@ function runtimeFromFields(
     case "TRUSTED_TYPESCRIPT":
       return {
         type: "TRUSTED_TYPESCRIPT",
-        entrypoint: fields.entrypoint.trim() || ECHO_AGENT_ENTRYPOINT,
-        integrity: fields.integrity.trim() || ECHO_AGENT_INTEGRITY_PLACEHOLDER,
+        entrypoint: fields.entrypoint.trim() || HELLO_AGENT_ENTRYPOINT,
+        integrity: fields.integrity.trim() || HELLO_AGENT_INTEGRITY_PLACEHOLDER,
       };
     case "REMOTE_HTTP":
       return {

@@ -1,0 +1,27 @@
+{
+  "name": "@osva/example-hello-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.agent.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.build.agent.json --noEmit && tsc -p tsconfig.test.json --noEmit && pnpm run typecheck:integration",
+    "typecheck:integration": "tsc -p tsconfig.integration.json --noEmit",
+    "test": "pnpm --filter @osva/adapters-runtime-typescript build && pnpm run build && vitest run --config vitest.config.ts",
+    "test:integration": "pnpm run build && vitest run --config vitest.integration.config.ts",
+    "hello": "node dist/scripts/run.js",
+    "status": "node dist/scripts/status.js"
+  },
+  "dependencies": {
+    "@osva-ai/contracts": "workspace:*",
+    "@osva-ai/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@osva/adapters-runtime-typescript": "workspace:*",
+    "@osva/db": "workspace:*",
+    "@osva/web": "workspace:*",
+    "@osva/worker": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

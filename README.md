@@ -6,7 +6,7 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** **OSVA Community `1.1.0-rc.1`** (release candidate — unpublished). Builds on OSS 1.0 (`v1.0.0` tag) with M7 canonical demo, M8 Product Console, and M9 production hardening. **Not a GA announcement.** Registry installs (`npm`, PyPI, `ghcr.io`) remain unpublished until RC.3 verification and maintainer approval. Start with [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md). Historical 1.0 guide: [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
+> **Status:** **OSVA Community `1.1.0-rc.1`** (release candidate — **not GA**). Builds on OSS 1.0 (**`v1.0.0`** remains the default stable release) with completed M7 canonical demo, M8 Product Console, and M9 production hardening. **`1.1.0-rc.1`** registry artifacts (`npm`, PyPI, `ghcr.io`) are published for RC adopters. First agent: [`examples/hello-agent/README.md`](examples/hello-agent/README.md) or `pnpm example:hello`. Start with [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md). Historical 1.0 guide: [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
 > Community Edition includes authenticated `/v1`, workflows, scheduling, MCP client
 > and MCP server, knowledge/RAG, artifact storage, container/trusted/remote runtimes,
 > TypeScript/Python SDKs, CLI, self-hosted Compose, Helm/Kubernetes packaging, optional
@@ -191,6 +191,14 @@ pnpm dev:scheduler
 pnpm dev:workflow-orchestrator
 ```
 
+After bootstrap (`pnpm db:bootstrap` in local dev), run the supported first agent:
+
+```text
+pnpm example:hello
+```
+
+See [`examples/hello-agent/README.md`](examples/hello-agent/README.md) for Compose vs host trusted-runtime modes.
+
 Required sequence:
 
 ```text
@@ -211,7 +219,7 @@ and workflow-orchestrator all require `OSVA_DATABASE_URL` and `OSVA_VALKEY_URL`.
 
 ### SDK and CLI
 
-Public packages at version **`1.1.0-rc.1`** (read root `VERSION`; build from this repository, or install from npm/PyPI once published):
+Public packages at version **`1.1.0-rc.1`** (read root `VERSION`; build from this repository or install from npm/PyPI):
 
 - `@osva-ai/contracts`, `@osva-ai/runtime-protocol` — shared types/schemas
 - `@osva-ai/sdk` — TypeScript client (`OsvaClient`) and `@osva-ai/sdk/runtime`

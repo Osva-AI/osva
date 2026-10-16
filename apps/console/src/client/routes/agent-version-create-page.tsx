@@ -10,9 +10,10 @@ import {
 } from "../hooks/use-agents";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
-  ECHO_AGENT_FIXTURE_PATH,
-  ECHO_AGENT_SETUP_COMMANDS,
-  echoAgentManifestJson,
+  HELLO_AGENT_GOLDEN_PATH_COMMAND,
+  HELLO_AGENT_SETUP_COMMANDS,
+  HELLO_AGENT_SOURCE_PATH,
+  helloAgentManifestJson,
 } from "../lib/agent-example";
 import {
   applyGuidedManifestFields,
@@ -36,7 +37,7 @@ export function AgentVersionCreatePage() {
   const mutation = useCreateAgentVersionMutation();
   const submittingRef = useRef(false);
   const [manifestText, setManifestText] = useState(() =>
-    echoAgentManifestJson(),
+    helloAgentManifestJson(),
   );
   const [feedback, setFeedback] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
@@ -57,13 +58,10 @@ export function AgentVersionCreatePage() {
         return current;
       }
       const fields = extractGuidedManifestFields(parsedCurrent.value);
-      if (
-        fields.key !== "echo-input-agent" ||
-        fields.name !== "Echo Input Agent"
-      ) {
+      if (fields.key !== "hello-agent" || fields.name !== "Hello Agent") {
         return current;
       }
-      return echoAgentManifestJson({
+      return helloAgentManifestJson({
         key: agent.key,
         name: agent.name,
       });
@@ -181,10 +179,12 @@ export function AgentVersionCreatePage() {
           Manifest v1 document — they are not a second format.
         </p>
         <p className="muted">
-          Example fixture:{" "}
-          <span className="mono">{ECHO_AGENT_FIXTURE_PATH}</span>
+          Hello Agent source:{" "}
+          <span className="mono">{HELLO_AGENT_SOURCE_PATH}</span> — run{" "}
+          <span className="mono">{HELLO_AGENT_GOLDEN_PATH_COMMAND}</span> to
+          install trusted runtime bytes and compute integrity automatically.
         </p>
-        <pre className="json-view">{ECHO_AGENT_SETUP_COMMANDS.join("\n")}</pre>
+        <pre className="json-view">{HELLO_AGENT_SETUP_COMMANDS.join("\n")}</pre>
 
         <h2 className="panel-title">Guided fields</h2>
         <p className="muted">

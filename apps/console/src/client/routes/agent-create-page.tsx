@@ -5,7 +5,7 @@ import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { useCreateAgentMutation } from "../hooks/use-agents";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
-import { ECHO_AGENT_KEY, ECHO_AGENT_NAME } from "../lib/agent-example";
+import { HELLO_AGENT_KEY, HELLO_AGENT_NAME } from "../lib/agent-example";
 import { describeRegistryWriteFailure } from "../lib/agent-manifest-draft";
 import { ConsoleApiError } from "../lib/console-api";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
@@ -126,14 +126,14 @@ export function AgentCreatePage() {
             type="button"
             className="button"
             onClick={() => {
-              setKey(ECHO_AGENT_KEY);
-              setName(ECHO_AGENT_NAME);
+              setKey(HELLO_AGENT_KEY);
+              setName(HELLO_AGENT_NAME);
               setFeedback(undefined);
               setErrorStatus(undefined);
             }}
             disabled={!canWrite || mutation.isPending}
           >
-            Use echo-input example
+            Use Hello Agent example
           </button>
           <button
             type="button"

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["agent/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
+  "exclude": ["test/integration/**"]
+}
