@@ -31,6 +31,7 @@ import {
   stopValkeyForTests,
   type ValkeyTestContext,
 } from "../../../../adapters/bullmq/test/integration/valkey-harness.js";
+import { pollUntil } from "../poll-until.js";
 
 const WORKSPACE_ID = "ws-scheduler-e2e" as WorkspaceId;
 const FIXTURE_DIR = path.join(
@@ -137,13 +138,31 @@ describe("scheduler end-to-end", () => {
       await scheduler.tickOnce();
 
       const runs = new PostgresRunRepository(database);
-      await waitUntil(async () => {
-        const listed = await runs.listRuns({
-          workspaceId: WORKSPACE_ID,
-          limit: 10,
-        });
-        return listed.runs.some((run) => run.status === "SUCCEEDED");
-      });
+      await pollUntil(
+        async () => {
+          const listed = await runs.listRuns({
+            workspaceId: WORKSPACE_ID,
+            limit: 10,
+          });
+          return listed.runs.some((run) => run.status === "SUCCEEDED");
+        },
+        {
+          label: "scheduler run success",
+          onTimeout: async () => {
+            const listed = await runs.listRuns({
+              workspaceId: WORKSPACE_ID,
+              limit: 10,
+            });
+            return {
+              runStatuses: listed.runs.map((run) => ({
+                id: run.id,
+                status: run.status,
+              })),
+              activeQueueJobs: await queue.countActiveJobs(),
+            };
+          },
+        },
+      );
 
       const listedRuns = await runs.listRuns({
         workspaceId: WORKSPACE_ID,
@@ -267,10 +286,28 @@ describe("scheduler end-to-end", () => {
       gatedQueue.enableEnqueue();
       await scheduler.tickOnce();
 
-      await waitUntil(async () => {
-        const run = await runs.findRunById(persistedRun.id);
-        return run?.status === "SUCCEEDED";
-      });
+      await pollUntil(
+        async () => {
+          const run = await runs.findRunById(persistedRun.id);
+          return run?.status === "SUCCEEDED";
+        },
+        {
+          label: "scheduler execution after enqueue recovery",
+          onTimeout: async () => {
+            const run = await runs.findRunById(persistedRun.id);
+            const attempts = await runs.listRunAttempts(persistedRun.id);
+            return {
+              runId: persistedRun.id,
+              runStatus: run?.status ?? "missing",
+              attemptStatuses: attempts.map((attempt) => ({
+                id: attempt.id,
+                status: attempt.status,
+              })),
+              activeQueueJobs: await gatedQueue.countActiveJobs(),
+            };
+          },
+        },
+      );
 
       const attempts = await runs.listRunAttempts(persistedRun.id);
       expect(attempts).toHaveLength(1);
@@ -373,20 +410,4 @@ async function createEchoSchedule(
     agentVersionId,
     nextRunAt: new Date(scheduleBody.nextRunAt),
   };
-}
-
-async function waitUntil(check: () => Promise<boolean>): Promise<void> {
-  for (let attempt = 0; attempt < 300; attempt += 1) {
-    if (await check()) {
-      return;
-    }
-    await yieldToEventLoop();
-  }
-  throw new Error("Timed out waiting for scheduler execution.");
-}
-
-function yieldToEventLoop(): Promise<void> {
-  return new Promise((resolve) => {
-    setImmediate(resolve);
-  });
 }
