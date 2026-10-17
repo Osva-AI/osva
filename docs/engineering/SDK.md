@@ -1,10 +1,10 @@
 # OSVA SDK and CLI (Stage 2.5)
 
-Stage 2.5 adds developer packages (prepared at **`1.1.0-rc.2`** alongside OSS **`1.0.0`** stable):
+Stage 2.5 adds developer packages at **`1.1.0-rc.2`** (published to registries; npm/PyPI **`latest`** remains **`1.0.0`**) alongside OSS **`1.0.0`** stable:
 
 - `@osva-ai/sdk` — TypeScript/JavaScript control-plane client and Runtime Protocol V1 runtime helpers
 - `@osva-ai/cli` — `osva` CLI built on `@osva-ai/sdk`
-- `osva-sdk` — Python package (`import osva` / `from osva import OSVAClient`) with the same responsibilities (PyPI install **`osva-sdk==1.1.0rc2`** after RC2 publish)
+- `osva-sdk` — Python package (`import osva` / `from osva import OSVAClient`) with the same responsibilities (PyPI **`pip install osva-sdk==1.1.0rc2`**)
 
 Packages communicate only with OSVA public HTTP contracts. They do not access PostgreSQL, BullMQ, repositories, or internal application services.
 
@@ -51,11 +51,19 @@ createNodeHttpServer(runtime).listen(8080);
 
 Requires Python >= 3.11.
 
+The Python SDK does **not** expose a TypeScript-style `client.auth` resource. Use an authenticated control-plane call (for example **`client.agents.list()`**) to verify connectivity.
+
 ```python
+import os
+
 from osva import OSVAClient
 
-client = OSVAClient(base_url="http://127.0.0.1:8080", api_key=os.environ["OSVA_API_KEY"])
+client = OSVAClient(
+    base_url=os.environ["OSVA_BASE_URL"],
+    api_key=os.environ["OSVA_API_KEY"],
+)
 agents = client.agents.list()
+print(len(agents.get("agents", agents.get("items", []))))
 ```
 
 Runtime helpers:
@@ -117,4 +125,4 @@ Language-neutral Runtime Protocol V1 fixtures live under `packages/runtime-proto
 
 ## Publication status
 
-**`1.1.0-rc.2`** is prepared in-tree (**unpublished**). Published **`1.1.0-rc.1`** remains on registries; **`@osva-ai/cli@1.1.0-rc.1`** lacks M10.2 agent commands. Stable **`1.0.0`** remains npm/PyPI **`latest`**. See [`OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md) for install pins and upgrade notes.
+**`1.1.0-rc.2`** is **published** on npm (dist-tag **`rc`**), PyPI, GHCR, and GitHub Releases (tag **`v1.1.0-rc.2`**). Registry acceptance: [`M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](../release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md). Published **`1.1.0-rc.1`** remains on registries; **`@osva-ai/cli@1.1.0-rc.1`** lacks M10.2 agent commands. Stable **`1.0.0`** remains npm/PyPI **`latest`**. See [`OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md) for install pins and upgrade notes.

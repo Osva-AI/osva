@@ -6,7 +6,7 @@ Official OSVA command-line interface for local agent development and control-pla
 
 ## Installation
 
-From npm (after **`1.1.0-rc.2`** is published):
+From npm:
 
 ```bash
 npm install -g @osva-ai/cli@1.1.0-rc.2

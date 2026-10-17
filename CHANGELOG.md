@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.1.0-rc.2] - 2026-10-17
 
-Corrected release candidate prepared in-repo (**not published** until maintainer release gates pass). Supersedes incomplete **`1.1.0-rc.1`** npm CLI packaging for the M10.2 agent developer workflow.
+Corrected release candidate published to npm, PyPI, GHCR, and GitHub Releases (tag **`v1.1.0-rc.2`**; registry acceptance in [`docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md)). Supersedes incomplete **`1.1.0-rc.1`** npm CLI packaging for the M10.2 agent developer workflow.
 
 ### Fixed
 

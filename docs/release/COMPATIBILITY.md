@@ -1,8 +1,8 @@
 # OSVA Community compatibility and release policy
 
-Target release version: **`1.1.0-rc.2`** (release candidate **prepared in-repo**; **`publicationStatus`: unpublished** until maintainer tag/registry publish completes).
+Target release version: **`1.1.0-rc.2`** (release candidate **published and registry-verified**; see [`M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md)).
 
-Published **`1.1.0-rc.1`** npm/PyPI/GHCR artifacts remain on registries for existing pins. **`@osva-ai/cli@1.1.0-rc.1`** is the pre-M10.2 SDK wrapper only (no `init`, `validate`, `deploy`, `run`, `status`, `doctor`, or bundled templates). Use **`1.1.0-rc.2`** after publish or build from this repository for the agent developer CLI.
+Published **`1.1.0-rc.1`** npm/PyPI/GHCR artifacts remain on registries for existing pins. **`@osva-ai/cli@1.1.0-rc.1`** is the pre-M10.2 SDK wrapper only (no `init`, `validate`, `deploy`, `run`, `status`, `doctor`, or bundled templates). Use **`1.1.0-rc.2`** from registries (or build from this repository for unreleased commits) for the agent developer CLI.
 
 Historical OSS **1.0.0** policy and package versions remain documented in git tag **`v1.0.0`** and [`CHANGELOG.md`](../../CHANGELOG.md). npm/PyPI **`latest`** dist-tags remain **`1.0.0`**.
 
@@ -20,7 +20,7 @@ Versioned documents under `docs/contracts/` define manifests, runtime protocol m
 
 ## Public SDKs and CLI
 
-| Artifact | Package | Prepared RC2 version | PyPI / notes |
+| Artifact | Package | Published RC2 version | PyPI / notes |
 |----------|---------|----------------------|--------------|
 | Contracts | `@osva-ai/contracts` | 1.1.0-rc.2 | — |
 | Runtime protocol | `@osva-ai/runtime-protocol` | 1.1.0-rc.2 | — |

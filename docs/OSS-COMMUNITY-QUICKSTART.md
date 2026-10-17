@@ -2,7 +2,7 @@
 
 Authoritative path for a **self-hosted OSVA Community Edition** deployment using Docker Compose, authenticated `/v1`, TypeScript and Python SDKs, optional MCP, and the loopback Product Console.
 
-> **Current in-tree version:** **`1.1.0-rc.2`** (release candidate — **not GA**). **`1.1.0-rc.2`** is **prepared in this repository** and is **not yet published** to npm, PyPI, GHCR, or GitHub Releases until maintainer release gates pass. **`v1.0.0`** remains the default stable release line on npm/PyPI **`latest`**. Published **`1.1.0-rc.1`** registry artifacts remain available for early adopters who already pinned them; **`@osva-ai/cli@1.1.0-rc.1` does not include M10.2 agent commands** (`init`, `validate`, `deploy`, `run`, `status`, `doctor`, templates). Use **`1.1.0-rc.2`** (after publish) or build from this repository for the agent CLI workflow.
+> **Current release candidate:** **`1.1.0-rc.2`** (**not GA**). **`1.1.0-rc.2`** is **published** on npm (dist-tag **`rc`**), PyPI, GHCR, and GitHub Releases (tag **`v1.1.0-rc.2`**). **`v1.0.0`** remains the default stable release line on npm/PyPI **`latest`**. Published **`1.1.0-rc.1`** registry artifacts remain available for early adopters who already pinned them; **`@osva-ai/cli@1.1.0-rc.1` does not include M10.2 agent commands** (`init`, `validate`, `deploy`, `run`, `status`, `doctor`, templates). Use **`1.1.0-rc.2`** from registries or build from this repository for unreleased commits. Registry acceptance summary: [`release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md).
 >
 > **Upgrading from published `v1.0.0`?** Apply migration **`0023_execution_lease_slice`** and review [`operations/UPGRADE.md`](operations/UPGRADE.md) before rolling workers.
 >
@@ -27,7 +27,7 @@ If you also develop against host Postgres/Valkey, keep **`OSVA_VALKEY_URL=redis:
 
 ## 1. Start OSVA (Compose)
 
-**Pre-built GHCR image** (after **`1.1.0-rc.2`** is published to GHCR):
+**Pre-built GHCR image** (**`1.1.0-rc.2`** on GHCR):
 
 ```bash
 cd deploy/compose
@@ -73,7 +73,7 @@ Optional readiness check with the CLI (`OSVA_WORKSPACE_ID` not required):
 ```bash
 export OSVA_BASE_URL=http://127.0.0.1:8080
 export OSVA_API_KEY='osva_ak_…'
-osva doctor   # npm install -g @osva-ai/cli@1.1.0-rc.2 after RC2 publish, or build from this repo
+osva doctor   # npm install -g @osva-ai/cli@1.1.0-rc.2, or build from this repo
 ```
 
 ## 4. Run the Hello Agent (first execution)
@@ -108,7 +108,7 @@ Expect terminal Run status **`SUCCEEDED`** and output `{ "echoed": "Hello OSVA" 
 
 ## 4b. Standalone agent with `@osva-ai/cli` (M10.2)
 
-From any directory — after **`@osva-ai/cli@1.1.0-rc.2`** is published to npm, or by building from this repository (**not** `@1.1.0-rc.1`):
+From any directory — install **`@osva-ai/cli@1.1.0-rc.2`** from npm, or build from this repository (**not** `@1.1.0-rc.1`):
 
 ```powershell
 npm install -g @osva-ai/cli@1.1.0-rc.2
@@ -158,12 +158,12 @@ node --input-type=module -e "
 "
 ```
 
-Install the matching RC from npm after publish: `npm install @osva-ai/sdk@1.1.0-rc.2` (dist-tag `rc` may apply), or build from this repository.
+Install the matching RC from npm: `npm install @osva-ai/sdk@1.1.0-rc.2` (dist-tag **`rc`**), or build from this repository.
 
 ## 7. Python SDK
 
 ```bash
-python -m pip install ./sdks/python   # or pip install osva-sdk==1.1.0rc2 when on PyPI
+python -m pip install osva-sdk==1.1.0rc2   # or pip install ./sdks/python from a clone
 export OSVA_BASE_URL=http://127.0.0.1:8080
 export OSVA_API_KEY='osva_ak_…'
 python -c "
