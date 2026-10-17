@@ -7,4 +7,5 @@ export interface WorkspaceRepository {
   findById(id: WorkspaceId): Promise<Workspace | null>;
   countAll(): Promise<number>;
   listIds(): Promise<readonly WorkspaceId[]>;
+  listUnlinkedIds(): Promise<readonly WorkspaceId[]>;
 }

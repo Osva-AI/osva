@@ -13,6 +13,9 @@ export interface WebConfig {
   readonly unauthenticatedRateLimitPerMinute: number;
   readonly authenticatedRateLimitPerMinute: number;
   readonly trustedProxies: readonly string[];
+  readonly authSecret: string;
+  readonly authBaseUrl: string;
+  readonly authTrustedOrigins: readonly string[];
 }
 
 const DEFAULT_HOST = "127.0.0.1";
@@ -24,11 +27,26 @@ export function loadWebConfig(env: NodeJS.ProcessEnv = process.env): WebConfig {
   const host = readOptional(env.OSVA_WEB_HOST) ?? DEFAULT_HOST;
   const port = parsePort(env.OSVA_WEB_PORT, DEFAULT_PORT);
 
+  const authSecret = readRequired(env.OSVA_AUTH_SECRET, "OSVA_AUTH_SECRET");
+  if (authSecret.length < 32) {
+    throw new Error("OSVA_AUTH_SECRET must be at least 32 characters.");
+  }
+
+  const authBaseUrl =
+    readOptional(env.OSVA_AUTH_BASE_URL) ?? `http://${host}:${String(port)}`;
+  const authTrustedOrigins = parseTrustedOrigins(
+    env.OSVA_AUTH_TRUSTED_ORIGINS,
+    authBaseUrl,
+  );
+
   return {
     databaseUrl,
     valkeyUrl,
     host,
     port,
+    authSecret,
+    authBaseUrl,
+    authTrustedOrigins,
     unauthenticatedRateLimitPerMinute: parsePositiveInt(
       env.OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE,
       OSVA_UNAUTHENTICATED_RATE_LIMIT_PER_MINUTE,
@@ -74,6 +92,25 @@ function parsePositiveInt(
     throw new Error(`${name} must be a positive integer.`);
   }
   return parsed;
+}
+
+function parseTrustedOrigins(
+  value: string | undefined,
+  authBaseUrl: string,
+): readonly string[] {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.length === 0) {
+    try {
+      return [new URL(authBaseUrl).origin];
+    } catch {
+      return [];
+    }
+  }
+
+  return trimmed
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
 }
 
 function parsePort(value: string | undefined, fallback: number): number {

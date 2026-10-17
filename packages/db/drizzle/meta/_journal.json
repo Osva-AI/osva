@@ -169,6 +169,27 @@
       "when": 1789600000000,
       "tag": "0023_execution_lease_slice",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789700000000,
+      "tag": "0024_identity_foundation_slice",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789800000000,
+      "tag": "0025_human_authentication_slice",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789900000000,
+      "tag": "0026_better_auth_user_image",
+      "breakpoints": true
     }
   ]
 }

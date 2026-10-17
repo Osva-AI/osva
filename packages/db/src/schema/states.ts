@@ -140,3 +140,23 @@ export const PERSISTED_COMMUNITY_EDITION_ROLES = [
   "EDITOR",
   "ADMIN",
 ] as const;
+
+export const PERSISTED_HUMAN_WORKSPACE_ROLES = [
+  "OWNER",
+  "ADMIN",
+  "DEVELOPER",
+  "OPERATOR",
+  "VIEWER",
+] as const;
+
+export const PERSISTED_ORGANIZATION_MEMBERSHIP_ROLES = [
+  "OWNER",
+  "ADMIN",
+  "MEMBER",
+] as const;
+
+export const PERSISTED_USER_STATUSES = [
+  "PENDING_SETUP",
+  "ACTIVE",
+  "DISABLED",
+] as const;

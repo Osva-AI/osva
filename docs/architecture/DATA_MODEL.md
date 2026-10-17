@@ -156,3 +156,25 @@ JobQueue payload.
 
 A RunAttempt owns optional JSON-compatible `output` JSONB. The value is
 null until the attempt succeeds, then remains immutable for that attempt.
+
+## M11 Slice 2 human authentication tables
+
+Migration **`0025_human_authentication_slice`** adds Better Auth persistence:
+
+- `auth_sessions`, `auth_accounts`, `auth_verifications`
+- `users.email_verified`, `users.updated_at`, and `PENDING_SETUP` user status
+
+## M11 Slice 1 identity tables
+
+Migration **`0024_identity_foundation_slice`** adds human identity persistence:
+
+```text
+organizations
+users
+organization_memberships
+workspace_memberships
+security_audit_events
+workspaces.organization_id (nullable)
+```
+
+Existing workspaces remain valid with `organization_id = null` until an explicit identity-bootstrap operation links them to organizations. Human workspace roles are distinct from API-key `CommunityEditionRole` values and from AI Office organizational `roles`.

@@ -24,7 +24,10 @@ import type {
   EvaluationSuiteVersion,
 } from "@osva/domain";
 
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -110,7 +113,7 @@ async function dispatchEvaluationRoute(
         scope,
         {
           ...parsed.data,
-          workspaceId: scope.principal.workspaceId,
+          workspaceId: requireControlPlaneWorkspaceId(),
         },
       );
       sendJson(response, 201, toEvaluationSuiteResource(created));
@@ -226,7 +229,7 @@ async function dispatchEvaluationRoute(
 
     const launched = await services.runs.launchEvaluationRun.execute(scope, {
       ...parsed.data,
-      workspaceId: scope.principal.workspaceId,
+      workspaceId: requireControlPlaneWorkspaceId(),
     });
     const detail = await services.runs.getEvaluationRun.execute(
       scope,

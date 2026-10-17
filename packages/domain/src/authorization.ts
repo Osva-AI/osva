@@ -1,12 +1,14 @@
 import type {
+  ApiKeyRequestPrincipal,
   AuthorizationAction,
   CommunityEditionRole,
-  RequestPrincipal,
   WorkspaceId,
 } from "@osva-ai/contracts";
 import {
   AUTHORIZATION_ACTIONS,
   COMMUNITY_EDITION_ROLES,
+  isApiKeyRequestPrincipal,
+  type RequestPrincipal,
 } from "@osva-ai/contracts";
 
 import { PermissionDeniedError } from "./security-errors.js";
@@ -51,6 +53,19 @@ export function rolePermitsAction(
 
 export function authorize(
   subject: RequestPrincipal,
+  action: AuthorizationAction,
+  _resource: AuthorizationResource,
+  context: AuthorizationContext,
+): void {
+  if (!isApiKeyRequestPrincipal(subject)) {
+    throw new PermissionDeniedError();
+  }
+
+  authorizeApiKeyPrincipal(subject, action, _resource, context);
+}
+
+export function authorizeApiKeyPrincipal(
+  subject: ApiKeyRequestPrincipal,
   action: AuthorizationAction,
   _resource: AuthorizationResource,
   context: AuthorizationContext,

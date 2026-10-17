@@ -92,6 +92,12 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
   async listIds(): Promise<readonly WorkspaceId[]> {
     return this.workspaces.map((workspace) => workspace.id);
   }
+
+  async listUnlinkedIds(): Promise<readonly WorkspaceId[]> {
+    return this.workspaces
+      .filter((workspace) => workspace.organizationId === undefined)
+      .map((workspace) => workspace.id);
+  }
 }
 
 describe("workspace API-key application authorization", () => {

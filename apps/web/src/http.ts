@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import http from "node:http";
 import {
+  isApiKeyRequestPrincipal,
+  isHumanSessionRequestPrincipal,
   OSVA_REQUEST_ID_HEADER,
   PUBLIC_API_ERROR_CODES,
 } from "@osva-ai/contracts";
@@ -8,6 +10,11 @@ import {
   readinessFailureBody,
   type DependencyReadinessSnapshot,
 } from "@osva/db";
+import {
+  AuthenticationRequiredError,
+  PermissionDeniedError,
+  WorkspaceSelectionRequiredError,
+} from "@osva/domain";
 import type {
   AgentApplication,
   ArtifactApplication,
@@ -56,6 +63,11 @@ import {
   type KnowledgeHttpServices,
 } from "./knowledge-http.js";
 import { handleAuthContextRequest } from "./auth-http.js";
+import {
+  handleHumanAuthRequest,
+  isHumanAuthRoutePath,
+  type HumanAuthHttpServices,
+} from "./human-auth-http.js";
 import { handleApiKeyRequest } from "./api-key-http.js";
 import {
   authenticateRequest,
@@ -64,10 +76,12 @@ import {
 import {
   createRequestId,
   getRequestPrincipal,
+  hasInvalidBearerAuthentication,
   runWithSecurityRequestContext,
   resolveRequestId,
 } from "./security-request-context.js";
 import { sendV1Error } from "./v1-api-error.js";
+import { authorizeHumanControlPlaneRequest } from "./v1-control-plane-access.js";
 import {
   consumeHttpRateLimit,
   type HttpRateLimitContext,
@@ -101,6 +115,7 @@ export interface CreateWebApplicationOptions {
   readonly office: OfficeHttpServices;
   readonly knowledge: KnowledgeHttpServices;
   readonly security: WebSecurityServices;
+  readonly humanAuth?: HumanAuthHttpServices;
   readonly apiKeys: ApiKeyApplication;
   readonly rateLimit?: HttpRateLimitContext;
   readonly instrumentation?: OsvaInstrumentation;
@@ -140,12 +155,16 @@ async function handleRequest(
       },
       async () => {
         await runWithSecurityRequestContext({ requestId }, async () => {
-          const principal = await authenticateRequest(
+          const authResult = await authenticateRequest(
             request,
             options.security,
           );
           await runWithSecurityRequestContext(
-            { requestId, principal },
+            {
+              requestId,
+              principal: authResult.principal,
+              invalidBearer: authResult.invalidBearer === true,
+            },
             async () => {
               await handleRequestWithContext(
                 request,
@@ -168,6 +187,7 @@ async function handleRequest(
                 options.knowledge,
                 options.apiKeys,
                 options.rateLimit,
+                options.humanAuth,
               );
             },
           );
@@ -202,6 +222,7 @@ async function handleRequestWithContext(
   knowledge: KnowledgeHttpServices,
   apiKeys: ApiKeyApplication,
   rateLimit: HttpRateLimitContext | undefined,
+  humanAuth: HumanAuthHttpServices | undefined,
 ): Promise<void> {
   const method = request.method ?? "GET";
   const url = requestUrl(request);
@@ -265,8 +286,18 @@ async function handleRequestWithContext(
       emitSecurityEvent({
         event: SECURITY_EVENT_NAMES.RATE_LIMIT_THROTTLED,
         requestId: resolveRequestId(),
-        workspaceId: getRequestPrincipal()?.workspaceId,
-        subjectId: getRequestPrincipal()?.subjectId,
+        workspaceId: (() => {
+          const principal = getRequestPrincipal();
+          return principal !== undefined && isApiKeyRequestPrincipal(principal)
+            ? principal.workspaceId
+            : undefined;
+        })(),
+        subjectId: (() => {
+          const principal = getRequestPrincipal();
+          return principal !== undefined && isApiKeyRequestPrincipal(principal)
+            ? principal.subjectId
+            : undefined;
+        })(),
         outcome: "DENIED",
         reasonCode:
           getRequestPrincipal() === undefined
@@ -299,8 +330,32 @@ async function handleRequestWithContext(
     }
   }
 
-  if (path.startsWith("/v1")) {
-    if (getRequestPrincipal() === undefined) {
+  if (hasInvalidBearerAuthentication()) {
+    sendV1Error(
+      response,
+      401,
+      PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
+      resolveRequestId(),
+    );
+    return;
+  }
+
+  if (humanAuth !== undefined) {
+    const handledHumanAuth = await handleHumanAuthRequest(
+      request,
+      response,
+      method,
+      path,
+      humanAuth,
+    );
+    if (handledHumanAuth) {
+      return;
+    }
+  }
+
+  if (path.startsWith("/v1") && !isHumanAuthRoutePath(path)) {
+    const principal = getRequestPrincipal();
+    if (principal === undefined) {
       if (
         parseBearerAuthorization(request.headers.authorization) === undefined
       ) {
@@ -319,8 +374,141 @@ async function handleRequestWithContext(
       );
       return;
     }
+
+    if (isHumanSessionRequestPrincipal(principal)) {
+      if (humanAuth === undefined) {
+        sendV1Error(
+          response,
+          403,
+          PUBLIC_API_ERROR_CODES.PERMISSION_DENIED,
+          resolveRequestId(),
+        );
+        return;
+      }
+      try {
+        const enriched = await authorizeHumanControlPlaneRequest(
+          request,
+          method,
+          path,
+          humanAuth,
+          principal,
+        );
+        return await runWithSecurityRequestContext(
+          {
+            requestId: resolveRequestId(),
+            principal: enriched,
+            invalidBearer: false,
+          },
+          async () =>
+            dispatchV1ControlPlaneRequest(
+              request,
+              response,
+              method,
+              path,
+              url,
+              agents,
+              connectors,
+              memory,
+              artifacts,
+              artifactMaxBytes,
+              evaluations,
+              modelProfiles,
+              tools,
+              runs,
+              runObservability,
+              schedules,
+              workflows,
+              workflowEvents,
+              office,
+              knowledge,
+              apiKeys,
+            ),
+        );
+      } catch (error) {
+        if (error instanceof WorkspaceSelectionRequiredError) {
+          sendV1Error(
+            response,
+            400,
+            PUBLIC_API_ERROR_CODES.WORKSPACE_SELECTION_REQUIRED,
+            resolveRequestId(),
+          );
+          return;
+        }
+        if (
+          error instanceof PermissionDeniedError ||
+          error instanceof AuthenticationRequiredError
+        ) {
+          sendV1Error(
+            response,
+            403,
+            PUBLIC_API_ERROR_CODES.PERMISSION_DENIED,
+            resolveRequestId(),
+          );
+          return;
+        }
+        throw error;
+      }
+    }
+
+    if (!isApiKeyRequestPrincipal(principal)) {
+      sendV1Error(
+        response,
+        401,
+        PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
+        resolveRequestId(),
+      );
+      return;
+    }
   }
 
+  await dispatchV1ControlPlaneRequest(
+    request,
+    response,
+    method,
+    path,
+    url,
+    agents,
+    connectors,
+    memory,
+    artifacts,
+    artifactMaxBytes,
+    evaluations,
+    modelProfiles,
+    tools,
+    runs,
+    runObservability,
+    schedules,
+    workflows,
+    workflowEvents,
+    office,
+    knowledge,
+    apiKeys,
+  );
+}
+
+async function dispatchV1ControlPlaneRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  method: string,
+  path: string,
+  url: URL,
+  agents: AgentApplication,
+  connectors: ConnectorApplication,
+  memory: MemoryApplication,
+  artifacts: ArtifactApplication,
+  artifactMaxBytes: number,
+  evaluations: EvaluationHttpServices,
+  modelProfiles: ModelProfileApplication,
+  tools: ToolApplication,
+  runs: RunHttpServices,
+  runObservability: RunObservabilityHttpServices,
+  schedules: ScheduleHttpServices,
+  workflows: WorkflowApplication,
+  workflowEvents: WorkflowEventHttpServices | undefined,
+  office: OfficeHttpServices,
+  knowledge: KnowledgeHttpServices,
+  apiKeys: ApiKeyApplication,
+): Promise<void> {
   const handledAuthContext = await handleAuthContextRequest(
     request,
     response,

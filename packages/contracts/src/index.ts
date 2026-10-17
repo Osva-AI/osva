@@ -39,6 +39,11 @@ export type {
   KnowledgeIndexId,
   KnowledgeChunkId,
   ApiKeyId,
+  OrganizationId,
+  UserId,
+  OrganizationMembershipId,
+  WorkspaceMembershipId,
+  SecurityAuditEventId,
 } from "./ids.js";
 
 export type { JsonSchemaRecord } from "./json-schema.js";
@@ -164,17 +169,77 @@ export {
   OSVA_RATE_LIMIT_WINDOW_SECONDS,
   OSVA_REQUEST_ID_HEADER,
   OSVA_UNAUTHENTICATED_RATE_LIMIT_PER_MINUTE,
+  OSVA_WORKSPACE_ID_HEADER,
   PUBLIC_API_ERROR_CODES,
+  isApiKeyRequestPrincipal,
+  isHumanSessionRequestPrincipal,
+  isSystemRequestPrincipal,
+  requestPrincipalRateLimitKey,
 } from "./security.js";
 export type {
+  ApiKeyRequestPrincipal,
   AuthenticationFailureReason,
   AuthenticationMethod,
   AuthContextResourceV1,
   AuthorizationAction,
   CommunityEditionRole,
+  HumanSessionRequestPrincipal,
   PublicApiErrorCode,
   RequestPrincipal,
+  SystemRequestPrincipal,
 } from "./security.js";
+
+export {
+  HUMAN_AUTH_ROUTE_IDS,
+  HUMAN_ROUTE_PERMISSIONS,
+  humanAuthRouteRequiresWorkspace,
+} from "./human-auth.js";
+export {
+  MANAGEABLE_HUMAN_WORKSPACE_ROLES,
+  addWorkspaceMembershipRequestSchema,
+  changeWorkspaceMembershipRoleRequestSchema,
+  isManageableHumanWorkspaceRole,
+  provisionWorkspaceMemberRequestSchema,
+  transferWorkspaceOwnershipRequestSchema,
+} from "./human-membership-api.js";
+export type {
+  AddWorkspaceMembershipRequestV1,
+  ChangeWorkspaceMembershipRoleRequestV1,
+  ManageableHumanWorkspaceRole,
+  ProvisionWorkspaceMemberRequestV1,
+  TransferWorkspaceOwnershipRequestV1,
+} from "./human-membership-api.js";
+export {
+  V1_ROUTE_ACCESS_CLASSES,
+  authorizationActionToHumanPermission,
+  isHumanPermittedControlPlaneAccessClass,
+  isV1RouteAccessClass,
+} from "./v1-control-plane-human-access.js";
+export type { V1RouteAccessClass } from "./v1-control-plane-human-access.js";
+export type { V1RouteAccessRecord } from "./v1-route-access.js";
+export type { HumanAuthRouteId } from "./human-auth.js";
+
+export {
+  HUMAN_WORKSPACE_PERMISSIONS,
+  HUMAN_WORKSPACE_ROLES,
+  ORGANIZATION_MEMBERSHIP_ROLES,
+  ORGANIZATION_NAME_MAX_LENGTH,
+  SECURITY_AUDIT_EVENT_DETAILS_MAX_BYTES,
+  SECURITY_AUDIT_EVENT_TYPES,
+  USER_DISPLAY_NAME_MAX_LENGTH,
+  USER_EMAIL_MAX_LENGTH,
+  USER_STATUSES,
+  humanWorkspaceRolePermitsAuthorizationAction,
+  humanWorkspaceRolePermitsPermission,
+  normalizeUserEmail,
+} from "./human-identity.js";
+export type {
+  HumanWorkspacePermission,
+  HumanWorkspaceRole,
+  OrganizationMembershipRole,
+  SecurityAuditEventType,
+  UserStatus,
+} from "./human-identity.js";
 
 export type {
   McpPrincipal,

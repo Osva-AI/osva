@@ -22,7 +22,10 @@ import {
   decodeKnowledgeListCursor,
   encodeKnowledgeListCursor,
 } from "./knowledge-cursor.js";
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -98,7 +101,7 @@ async function dispatchKnowledgeRoute(
           ? undefined
           : decodeKnowledgeListCursor(parsed.data.cursor);
       const page = await services.knowledge.listSources.execute(scope, {
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
         limit,
         cursor:
           decodedCursor === undefined
@@ -128,7 +131,7 @@ async function dispatchKnowledgeRoute(
       }
       const created = await services.knowledge.createSource.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toKnowledgeSourceResource(created));
       return;
@@ -155,7 +158,7 @@ async function dispatchKnowledgeRoute(
     }
     const source = await services.knowledge.getSource.execute(
       scope,
-      scope.principal.workspaceId,
+      requireControlPlaneWorkspaceId(),
       route.sourceId,
     );
     sendJson(response, 200, toKnowledgeSourceResource(source));
@@ -174,7 +177,7 @@ async function dispatchKnowledgeRoute(
           ? undefined
           : decodeKnowledgeListCursor(cursorParam);
       const page = await services.knowledge.listIndexes.execute(scope, {
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
         knowledgeSourceId: route.sourceId,
         limit,
         cursor:
@@ -204,7 +207,7 @@ async function dispatchKnowledgeRoute(
         return;
       }
       const created = await services.knowledge.createIndex.execute(scope, {
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
         knowledgeSourceId: route.sourceId,
         idempotencyKey: parsed.data.idempotencyKey,
       });
@@ -233,7 +236,7 @@ async function dispatchKnowledgeRoute(
     }
     const index = await services.knowledge.getIndex.execute(
       scope,
-      scope.principal.workspaceId,
+      requireControlPlaneWorkspaceId(),
       route.indexId,
     );
     sendJson(response, 200, toKnowledgeIndexResource(index));
@@ -259,7 +262,7 @@ async function dispatchKnowledgeRoute(
     }
     const retried = await services.knowledge.retryIndex.execute(
       scope,
-      scope.principal.workspaceId,
+      requireControlPlaneWorkspaceId(),
       route.indexId,
     );
     sendJson(response, 200, toKnowledgeIndexResource(retried));
@@ -285,7 +288,7 @@ async function dispatchKnowledgeRoute(
     }
     const hits = await services.retriever.retrieve({
       ...parsed.data,
-      workspaceId: scope.principal.workspaceId,
+      workspaceId: requireControlPlaneWorkspaceId(),
     });
     sendJson(response, 200, { hits });
     return;

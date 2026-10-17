@@ -49,3 +49,11 @@ export const assignmentIdSchema = osvaIdSchema<"AssignmentId">();
 export const knowledgeSourceIdSchema = osvaIdSchema<"KnowledgeSourceId">();
 export const knowledgeIndexIdSchema = osvaIdSchema<"KnowledgeIndexId">();
 export const knowledgeChunkIdSchema = osvaIdSchema<"KnowledgeChunkId">();
+export const organizationIdSchema = osvaIdSchema<"OrganizationId">();
+export const userIdSchema = osvaIdSchema<"UserId">();
+export const organizationMembershipIdSchema =
+  osvaIdSchema<"OrganizationMembershipId">();
+export const workspaceMembershipIdSchema =
+  osvaIdSchema<"WorkspaceMembershipId">();
+export const securityAuditEventIdSchema =
+  osvaIdSchema<"SecurityAuditEventId">();

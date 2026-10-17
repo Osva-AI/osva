@@ -9,6 +9,7 @@ import type { IngestWorkflowEvent } from "@osva/orchestration";
 import {
   authorizeControlPlaneExecute,
   requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
 } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
@@ -65,7 +66,7 @@ export async function handleWorkflowEventRequest(
     const body = parsed.data;
     const persisted = await services.ingest.execute({
       submission: {
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
         source: body.source,
         eventType: body.eventType,
         correlationKey: body.correlationKey,

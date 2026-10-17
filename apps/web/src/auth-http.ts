@@ -1,6 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { PUBLIC_API_ERROR_CODES } from "@osva-ai/contracts";
+import {
+  isApiKeyRequestPrincipal,
+  PUBLIC_API_ERROR_CODES,
+} from "@osva-ai/contracts";
 import {
   AuthenticationRequiredError,
   PermissionDeniedError,
@@ -42,6 +45,15 @@ export async function handleAuthContextRequest(
     const scope = requireControlPlaneScope();
     authorizeControlPlaneRead(scope, "auth_context");
     const principal = scope.principal;
+    if (!isApiKeyRequestPrincipal(principal)) {
+      sendV1Error(
+        response,
+        401,
+        PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
+        requestId,
+      );
+      return true;
+    }
 
     sendJson(
       response,

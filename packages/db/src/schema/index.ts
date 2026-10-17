@@ -1,3 +1,11 @@
+export { organizations } from "./organizations.js";
+export { users } from "./users.js";
+export { authSessions } from "./auth-sessions.js";
+export { authAccounts } from "./auth-accounts.js";
+export { authVerifications } from "./auth-verifications.js";
+export { organizationMemberships } from "./organization-memberships.js";
+export { workspaceMemberships } from "./workspace-memberships.js";
+export { securityAuditEvents } from "./security-audit-events.js";
 export { workspaces } from "./workspaces.js";
 export { apiKeys } from "./api-keys.js";
 export { agents } from "./agents.js";
@@ -61,4 +69,7 @@ export {
   PERSISTED_ASSIGNMENT_STATES,
   PERSISTED_ASSIGNMENT_TARGET_TYPES,
   PERSISTED_KNOWLEDGE_INDEX_STATES,
+  PERSISTED_HUMAN_WORKSPACE_ROLES,
+  PERSISTED_ORGANIZATION_MEMBERSHIP_ROLES,
+  PERSISTED_USER_STATUSES,
 } from "./states.js";

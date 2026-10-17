@@ -22,6 +22,11 @@ import {
   type OpenTelemetryLifecycle,
 } from "@osva/adapters-opentelemetry";
 import {
+  BetterAuthHumanAuthenticationService,
+  BetterAuthOperatorPasswordTokenService,
+  createOsvaBetterAuth,
+} from "@osva/adapters-auth";
+import {
   createDatabase,
   PostgresAgentRepository,
   PostgresConnectorRepository,
@@ -42,6 +47,11 @@ import {
   PostgresOfficeRepository,
   PostgresWorkspaceRepository,
   PostgresApiKeyRepository,
+  PostgresIdentityLifecycleRepository,
+  PostgresOrganizationMembershipRepository,
+  PostgresSecurityAuditEventRepository,
+  PostgresUserRepository,
+  PostgresWorkspaceMembershipRepository,
   type Database,
 } from "@osva/db";
 import {
@@ -63,6 +73,7 @@ import {
   KnowledgeRetriever,
   AuthenticateApiKey,
   createApiKeyApplication,
+  IdentityApplication,
 } from "@osva/domain";
 import { PostgresEvaluationRepository } from "@osva/db";
 import { createMcpClientPool } from "@osva/adapters-mcp-client";
@@ -79,6 +90,7 @@ import { loadWebConfig, type WebConfig } from "./config.js";
 import { createWebApplication } from "./http.js";
 import { defaultHttpRateLimitContext } from "./http-rate-limit.js";
 import { logEvent } from "./log.js";
+import { resolveHumanSessionPrincipal } from "./human-auth-http.js";
 import { createWebSecurityServices } from "./web-security-services.js";
 import { postgresAndValkeyReadinessCheck } from "./readiness.js";
 import { closeHttpServer, listenHttpServer } from "./server.js";
@@ -148,6 +160,54 @@ export function createWebProcess(
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
   const authenticateApiKey = new AuthenticateApiKey({ apiKeys, clock });
+  const identityUsers = new PostgresUserRepository(database);
+  const identityWorkspaceMemberships =
+    new PostgresWorkspaceMembershipRepository(database);
+  const identityWorkspaces = new PostgresWorkspaceRepository(database);
+  const identityLifecycle = new PostgresIdentityLifecycleRepository(database);
+  const identitySecurityAuditEvents = new PostgresSecurityAuditEventRepository(
+    database,
+  );
+  const identityOrganizationMemberships =
+    new PostgresOrganizationMembershipRepository(database);
+  const identityApplication = new IdentityApplication({
+    users: identityUsers,
+    workspaceMemberships: identityWorkspaceMemberships,
+    workspaces: identityWorkspaces,
+    lifecycle: identityLifecycle,
+    organizationMemberships: identityOrganizationMemberships,
+    clock,
+    ids,
+  });
+  const osvaAuth = createOsvaBetterAuth({
+    database,
+    secret: config.authSecret,
+    baseURL: config.authBaseUrl,
+    trustedOrigins: config.authTrustedOrigins,
+  });
+  const humanAuthentication = new BetterAuthHumanAuthenticationService({
+    auth: osvaAuth,
+    database,
+    users: identityUsers,
+  });
+  const passwordTokens = new BetterAuthOperatorPasswordTokenService({
+    database,
+    secret: config.authSecret,
+    baseURL: config.authBaseUrl,
+    trustedOrigins: config.authTrustedOrigins,
+  });
+  const humanAuthServices = {
+    auth: osvaAuth,
+    humanAuthentication,
+    identity: identityApplication,
+    users: identityUsers,
+    workspaces: identityWorkspaces,
+    workspaceMemberships: identityWorkspaceMemberships,
+    securityAuditEvents: identitySecurityAuditEvents,
+    passwordTokens,
+    setupCompleteRedirectUrl: `${config.authBaseUrl}/v1/auth/setup/complete`,
+    trustedOrigins: config.authTrustedOrigins,
+  } as const;
   const apiKeyApplication = createApiKeyApplication({
     apiKeys,
     workspaces,
@@ -353,7 +413,12 @@ export function createWebProcess(
       retriever: knowledgeRetriever,
     },
     apiKeys: apiKeyApplication,
-    security: createWebSecurityServices(authenticateApiKey),
+    humanAuth: humanAuthServices,
+    security: {
+      ...createWebSecurityServices(authenticateApiKey),
+      authenticateHumanSession: (request) =>
+        resolveHumanSessionPrincipal(request, humanAuthServices),
+    },
     instrumentation,
     logEvent,
     rateLimit: defaultHttpRateLimitContext(rateLimiter, {

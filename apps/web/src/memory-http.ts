@@ -14,7 +14,10 @@ import {
   type MemoryRecord,
 } from "@osva/domain";
 
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -79,7 +82,7 @@ async function dispatchMemoryRoute(
 
       const created = await memory.createMemoryNamespace.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toMemoryNamespaceResource(created));
       return;

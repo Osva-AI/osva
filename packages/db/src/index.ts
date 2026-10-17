@@ -70,6 +70,21 @@ export { PostgresOfficeRepository } from "./repositories/postgres-office-reposit
 export { PostgresArtifactRepository } from "./repositories/postgres-artifact-repository.js";
 export { PostgresKnowledgeRepository } from "./repositories/postgres-knowledge-repository.js";
 export {
+  authAccounts,
+  authSessions,
+  authVerifications,
+  users,
+} from "./schema/index.js";
+export {
+  PostgresIdentityLifecycleRepository,
+  PostgresOrganizationMembershipRepository,
+  PostgresOrganizationRepository,
+  PostgresSecurityAuditEventRepository,
+  PostgresUserRepository,
+  PostgresWorkspaceMembershipRepository,
+} from "./repositories/postgres-identity-repositories.js";
+export { PostgresAuthSessionRepository } from "./repositories/postgres-auth-session-repository.js";
+export {
   readProcessProbeBind,
   startProcessProbeServer,
   type ProcessProbeBind,

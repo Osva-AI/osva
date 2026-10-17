@@ -1,9 +1,11 @@
 import type { IncomingMessage } from "node:http";
 import type { RequestPrincipal } from "@osva-ai/contracts";
 import {
+  isApiKeyRequestPrincipal,
   OSVA_AUTHENTICATED_RATE_LIMIT_PER_MINUTE,
   OSVA_RATE_LIMIT_WINDOW_SECONDS,
   OSVA_UNAUTHENTICATED_RATE_LIMIT_PER_MINUTE,
+  requestPrincipalRateLimitKey,
 } from "@osva-ai/contracts";
 import type { RateLimitConsumeResult } from "@osva/adapters-bullmq";
 import { ValkeyUnavailableError } from "@osva/adapters-bullmq";
@@ -60,13 +62,13 @@ export async function consumeHttpRateLimit(
 ): Promise<HttpRateLimitDecision> {
   const sourceIp = resolveRequestSourceIp(request, context.trustedProxies);
   const bucket =
-    principal === undefined
+    principal === undefined || !isApiKeyRequestPrincipal(principal)
       ? {
           key: `osva:rl:unauth:v1:${sourceIp}`,
           limit: context.unauthenticatedPerMinute,
         }
       : {
-          key: `osva:rl:key:v1:${principal.workspaceId}:${principal.subjectId}`,
+          key: `osva:rl:key:v1:${requestPrincipalRateLimitKey(principal)}`,
           limit: context.authenticatedPerMinute,
         };
 

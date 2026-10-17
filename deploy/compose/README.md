@@ -34,6 +34,27 @@ docker compose --profile bootstrap run --rm bootstrap
 
 Copy the printed `osva_ak_…` token immediately.
 
+## Human identity bootstrap (one-time)
+
+After migrations, link workspaces to a human owner and print a one-time password setup token (requires `OSVA_AUTH_SECRET` and `OSVA_AUTH_BASE_URL` in the environment):
+
+```bash
+docker compose run --rm -e OSVA_PROCESS=identity-bootstrap identity-bootstrap -- \
+  --email owner@example.com \
+  --name "Initial Owner" \
+  --organization-name "Default Organization" \
+  --workspace-id <workspace-id>
+```
+
+Operator password recovery (revokes sessions, prints recovery token):
+
+```bash
+docker compose run --rm -e OSVA_PROCESS=identity-recover identity-recover -- \
+  --email owner@example.com
+```
+
+Add a Compose service definition for these one-off runs if your deployment wraps `OSVA_PROCESS`; the entrypoint supports `identity-bootstrap` and `identity-recover`.
+
 ## Health
 
 - Web: `http://localhost:${OSVA_PUBLISH_WEB_PORT:-8080}/health` and `/ready`

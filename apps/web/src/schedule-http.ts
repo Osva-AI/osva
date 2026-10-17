@@ -18,7 +18,10 @@ import {
   type ScheduleApplication,
   type ScheduleOccurrence,
 } from "@osva/domain";
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 import {
@@ -101,7 +104,7 @@ async function dispatchScheduleRoute(
       }
 
       const created = await services.schedules.createSchedule.execute(scope, {
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
         key: parsed.data.key,
         name: parsed.data.name,
         agentId: parsed.data.agentId,
