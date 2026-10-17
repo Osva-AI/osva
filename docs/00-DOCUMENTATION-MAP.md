@@ -64,6 +64,8 @@
 - `operations/UPGRADE.md`
 - `operations/BACKUP_AND_RECOVERY.md`
 - `release/COMPATIBILITY.md`
+- `release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`
+- `release/RC3_VERIFICATION.md`
 - `release/THIRD_PARTY_LICENSES_NODE.md` (generated)
 - `release/THIRD_PARTY_LICENSES_PYTHON.md` (generated)
 

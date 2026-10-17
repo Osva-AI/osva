@@ -7,7 +7,7 @@ Two supported local topologies share the same product sequence but differ in **w
 | **A. External agent developer** | Build agents against a self-hosted stack without running OSVA from source | Docker (`deploy/compose/compose.yml`) | Bundled in `deploy/compose` (PostgreSQL, Valkey, migrate, web, worker, …) | `deploy/compose` for Compose; any directory for `@osva-ai/cli` projects |
 | **B. OSVA contributor** | Change OSVA itself in this repository | Host (`pnpm dev:*` from the monorepo) | Root [`docker-compose.yml`](../../docker-compose.yml) (PostgreSQL and Valkey only) | Repository root for `pnpm infra:*`, `pnpm db:*`, and `pnpm build`; separate terminals for each app |
 
-Historical guides ([`OSS-1.0-QUICKSTART.md`](../OSS-1.0-QUICKSTART.md), [`COMMUNITY-BETA-QUICKSTART.md`](../COMMUNITY-BETA-QUICKSTART.md)) describe earlier release lines. **`1.1.0-rc.2`** is prepared in-tree (**unpublished**). **Published `1.1.0-rc.1`** registries remain available; **`@osva-ai/cli@1.1.0-rc.1`** does not include M10.2 agent commands — use **`1.1.0-rc.2`** after publish or build from this repository.
+Historical guides ([`OSS-1.0-QUICKSTART.md`](../OSS-1.0-QUICKSTART.md), [`COMMUNITY-BETA-QUICKSTART.md`](../COMMUNITY-BETA-QUICKSTART.md)) describe earlier release lines. **`1.1.0-rc.2`** is **published** on registries (npm/PyPI **`latest`** remains **`1.0.0`**). **Published `1.1.0-rc.1`** registries remain available; **`@osva-ai/cli@1.1.0-rc.1`** does not include M10.2 agent commands — use **`1.1.0-rc.2`** from registries or build from this repository.
 
 Authoritative self-hosted operator path for journey **A**: [`OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md). CLI details: [`../../packages/cli/README.md`](../../packages/cli/README.md).
 
