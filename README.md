@@ -6,7 +6,7 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** **OSVA Community `1.1.0-rc.1`** (release candidate — **not GA**). Builds on OSS 1.0 (**`v1.0.0`** remains the default stable release) with completed M7 canonical demo, M8 Product Console, and M9 production hardening. **`1.1.0-rc.1`** registry artifacts (`npm`, PyPI, `ghcr.io`) are published for RC adopters. First agent: [`examples/hello-agent/README.md`](examples/hello-agent/README.md) or `pnpm example:hello`. Start with [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md). Historical 1.0 guide: [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
+> **Status:** **OSVA Community `1.1.0-rc.2`** (release candidate — **not GA**). **`1.1.0-rc.2`** is prepared in-tree and **not yet published** to registries. Builds on OSS 1.0 (**`v1.0.0`** remains npm/PyPI **`latest`**) with M7–M10 developer experience work. Published **`1.1.0-rc.1`** artifacts remain on registries; **`@osva-ai/cli@1.1.0-rc.1`** lacks M10.2 agent commands — use RC2 after publish or build from this repository. First agent: [`examples/hello-agent/README.md`](examples/hello-agent/README.md) or `pnpm example:hello`. Start with [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md). Historical 1.0 guide: [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
 > Community Edition includes authenticated `/v1`, workflows, scheduling, MCP client
 > and MCP server, knowledge/RAG, artifact storage, container/trusted/remote runtimes,
 > TypeScript/Python SDKs, CLI, self-hosted Compose, Helm/Kubernetes packaging, optional
@@ -109,7 +109,7 @@ See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
 **Authentication:** all `/v1/*` routes require API keys. Run bootstrap once per environment to mint the initial key.
 
-**Public SDKs (aligned to root `VERSION`, currently `1.1.0-rc.1`):** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`, and Python `osva-sdk` (registry availability depends on publication).
+**Public SDKs (aligned to root `VERSION`, currently `1.1.0-rc.2` prepared):** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`, and Python `osva-sdk` (registry availability depends on publication).
 
 Historical Beta docs: [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) (legacy local dev path).
 
@@ -167,7 +167,7 @@ Routine infrastructure shutdown preserves volumes: `pnpm infra:down` (contributo
 
 ### SDK and CLI
 
-Public packages at version **`1.1.0-rc.1`** (read root `VERSION`; build from this repository or install from npm/PyPI):
+Public packages at version **`1.1.0-rc.2`** when published (read root `VERSION`; build from this repository until RC2 publish completes):
 
 - `@osva-ai/contracts`, `@osva-ai/runtime-protocol` — shared types/schemas
 - `@osva-ai/sdk` — TypeScript client (`OsvaClient`) and `@osva-ai/sdk/runtime`

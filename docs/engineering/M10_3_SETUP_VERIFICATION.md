@@ -8,7 +8,7 @@ Snapshot of what was exercised on a Windows developer machine during M10.3A–M1
 | --- | --- | --- |
 | **Documentation (M10.3A)** | Prettier, docs link check, hello-agent onboarding test | Two journeys documented in [`LOCAL_DEVELOPMENT.md`](LOCAL_DEVELOPMENT.md) |
 | **Isolated Compose + source CLI (M10.3C)** | Compose project **`osva-m103c`**, temp env under `%TEMP%\osva-m103c-isolated\`, web port **8083** | Fresh DB bootstrap, migrations **current**, integrity **applied_and_matches** |
-| **CLI golden path** | init → validate → deploy ×2 (reuse) → run ×2 **`SUCCEEDED`**, greeting **`Hello, Hello OSVA!`** | CLI/SDK **built from this repository** (`@osva-ai/cli` reports `1.1.0-rc.1` version string) |
+| **CLI golden path** | init → validate → deploy ×2 (reuse) → run ×2 **`SUCCEEDED`**, greeting **`Hello, Hello OSVA!`** | CLI/SDK **built from this repository** (`@osva-ai/cli` reports **`1.1.0-rc.1`** version string) |
 | **Persistence** | `docker compose down` (no `-v`) → `up --wait` → same API key auth, agent readable, third run **SUCCEEDED** | Volumes retained as **`osva-m103c_osva-*`** |
 | **Compose env precedence (M10.3C/D)** | Host **`OSVA_VALKEY_URL`** overrode `--env-file` until unset; containers recovered after **`redis://valkey:6379`** in temp env | See [`../../deploy/compose/.env.example`](../../deploy/compose/.env.example) |
 

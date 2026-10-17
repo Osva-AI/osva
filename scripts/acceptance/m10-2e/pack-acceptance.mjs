@@ -49,6 +49,8 @@ async function main() {
 
     const contracts = await packPackage("@osva-ai/contracts");
     packDirs.push(contracts.packDir);
+    const runtimeProtocol = await packPackage("@osva-ai/runtime-protocol");
+    packDirs.push(runtimeProtocol.packDir);
     const sdk = await packPackage("@osva-ai/sdk");
     packDirs.push(sdk.packDir);
     const cli = await packPackage("@osva-ai/cli");
@@ -58,7 +60,15 @@ async function main() {
     run(npmCmd, ["init", "-y"], { cwd: installRoot });
     run(
       npmCmd,
-      ["install", contracts.tgz, sdk.tgz, cli.tgz, "--no-fund", "--no-audit"],
+      [
+        "install",
+        contracts.tgz,
+        runtimeProtocol.tgz,
+        sdk.tgz,
+        cli.tgz,
+        "--no-fund",
+        "--no-audit",
+      ],
       { cwd: installRoot },
     );
 

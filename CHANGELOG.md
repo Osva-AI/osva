@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0-rc.2] - 2026-10-17
+
+Corrected release candidate prepared in-repo (**not published** until maintainer release gates pass). Supersedes incomplete **`1.1.0-rc.1`** npm CLI packaging for the M10.2 agent developer workflow.
+
+### Fixed
+
+- **`@osva-ai/cli`:** npm pack now includes agent scaffold **templates**, **`ajv`**, and M10.2 commands (`init`, `validate`, `deploy`, `run`, `status`, `doctor`). Published **`@osva-ai/cli@1.1.0-rc.1`** on npm remains the pre-M10.2 SDK wrapper only.
+- **Documentation:** Community quickstart uses GHCR image coordinates, omits `--build` for pre-built images, and documents PyPI install as **`osva-sdk==1.1.0rc2`**.
+
 ## [1.1.0-rc.1] - 2026-10-14
 
 Release candidate for Community Edition self-hosting. **Not a general availability (GA) announcement.** Registry artifacts and git tags remain unpublished until RC.3 verification and maintainer approval.

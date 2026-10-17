@@ -1,8 +1,10 @@
 # OSVA Community compatibility and release policy
 
-Target release version: **`1.1.0-rc.1`** (release candidate prepared in-repo; public tag/publish is a separate maintainer action).
+Target release version: **`1.1.0-rc.2`** (release candidate **prepared in-repo**; **`publicationStatus`: unpublished** until maintainer tag/registry publish completes).
 
-Historical OSS **1.0.0** policy and package versions remain documented in git tag **`v1.0.0`** and [`CHANGELOG.md`](../../CHANGELOG.md).
+Published **`1.1.0-rc.1`** npm/PyPI/GHCR artifacts remain on registries for existing pins. **`@osva-ai/cli@1.1.0-rc.1`** is the pre-M10.2 SDK wrapper only (no `init`, `validate`, `deploy`, `run`, `status`, `doctor`, or bundled templates). Use **`1.1.0-rc.2`** after publish or build from this repository for the agent developer CLI.
+
+Historical OSS **1.0.0** policy and package versions remain documented in git tag **`v1.0.0`** and [`CHANGELOG.md`](../../CHANGELOG.md). npm/PyPI **`latest`** dist-tags remain **`1.0.0`**.
 
 ## HTTP API
 
@@ -18,14 +20,14 @@ Versioned documents under `docs/contracts/` define manifests, runtime protocol m
 
 ## Public SDKs and CLI
 
-| Artifact | Package | Version at RC |
-|----------|---------|----------------|
-| Contracts | `@osva-ai/contracts` | 1.1.0-rc.1 |
-| Runtime protocol | `@osva-ai/runtime-protocol` | 1.1.0-rc.1 |
-| TypeScript SDK | `@osva-ai/sdk` | 1.1.0-rc.1 |
-| CLI | `@osva-ai/cli` | 1.1.0-rc.1 |
-| Connector SDK | `@osva-ai/connector-sdk` | 1.1.0-rc.1 |
-| Python SDK | `osva-sdk` | 1.1.0-rc.1 |
+| Artifact | Package | Prepared RC2 version | PyPI / notes |
+|----------|---------|----------------------|--------------|
+| Contracts | `@osva-ai/contracts` | 1.1.0-rc.2 | — |
+| Runtime protocol | `@osva-ai/runtime-protocol` | 1.1.0-rc.2 | — |
+| TypeScript SDK | `@osva-ai/sdk` | 1.1.0-rc.2 | — |
+| CLI | `@osva-ai/cli` | 1.1.0-rc.2 | Includes M10.2 agent workflow (not in RC1 npm CLI) |
+| Connector SDK | `@osva-ai/connector-sdk` | 1.1.0-rc.2 | — |
+| Python SDK | `osva-sdk` | 1.1.0-rc.2 | **`pip install osva-sdk==1.1.0rc2`** (PEP 440) |
 
 Semver applies to published packages. **Minor** releases (1.0 → 1.1) may include additive `/v1` behavior, new optional fields, and documented adapter-interface changes below.
 
@@ -37,7 +39,7 @@ Monorepo consumers use `workspace:*` for `@osva-ai/*` dependencies; published in
 
 ### Change in 1.1.x
 
-| Method | 1.0.0 | 1.1.0-rc.1 |
+| Method | 1.0.0 | 1.1.0-rc.2 |
 |--------|-------|------------|
 | `enqueue(runAttemptId)` | `Promise<void>` | `Promise<JobEnqueueResult>` with `{ outcome: "enqueued" \| "already_present" }` |
 
@@ -53,7 +55,7 @@ This is a **TypeScript source-breaking change for implementers**, not an HTTP `/
 ## Database migrations
 
 - Migrations are forward-only.
-- Tag **`v1.0.0`** ends at **`0022_api_security_slice`**. **`1.1.0-rc.1`** requires **`0023_execution_lease_slice`**. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md).
+- Tag **`v1.0.0`** ends at **`0022_api_security_slice`**. **`1.1.0-rc.2`** requires **`0023_execution_lease_slice`**. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md).
 - Downgrading application images without a matching schema is unsupported.
 
 ## Support windows

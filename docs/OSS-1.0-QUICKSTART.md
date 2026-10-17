@@ -2,7 +2,7 @@
 
 Authoritative path for a **self-hosted OSVA OSS 1.0** deployment using Docker Compose, authenticated `/v1`, TypeScript and Python SDKs, and optional MCP.
 
-> **Historical guide** for git tag **`v1.0.0`** and npm/PyPI **`1.0.0`** artifacts. For the current Community release candidate, use [`OSS-COMMUNITY-QUICKSTART.md`](OSS-COMMUNITY-QUICKSTART.md) (**`1.1.0-rc.1`** in-tree).
+> **Historical guide** for git tag **`v1.0.0`** and npm/PyPI **`1.0.0`** artifacts. For the current Community release candidate, use [`OSS-COMMUNITY-QUICKSTART.md`](OSS-COMMUNITY-QUICKSTART.md) (**`1.1.0-rc.2`** prepared in-tree).
 >
 > **OSVA 1.0.0** source release. This quickstart matches the self-hosted Compose distribution at the 1.0 tag. npm, PyPI, and container registry installs use the same versions once those artifacts are published.
 

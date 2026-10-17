@@ -7,7 +7,7 @@ Official TypeScript and JavaScript SDK for the OSVA control plane and Runtime Pr
 ## Installation
 
 ```bash
-npm install @osva-ai/sdk@1.1.0-rc.1
+npm install @osva-ai/sdk@1.1.0-rc.2
 ```
 
 Peer dependency `@osva-ai/contracts` is installed automatically.

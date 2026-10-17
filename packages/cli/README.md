@@ -6,21 +6,23 @@ Official OSVA command-line interface for local agent development and control-pla
 
 ## Installation
 
-From npm (release candidate line):
+From npm (after **`1.1.0-rc.2`** is published):
 
 ```bash
-npm install -g @osva-ai/cli@1.1.0-rc.1
+npm install -g @osva-ai/cli@1.1.0-rc.2
 ```
 
 Or use `npx`:
 
 ```bash
-npx @osva-ai/cli@1.1.0-rc.1 help
+npx @osva-ai/cli@1.1.0-rc.2 help
 ```
+
+**Do not use `@1.1.0-rc.1` for M10.2 agent commands** — that npm tarball predates `init`, `validate`, `deploy`, `run`, `status`, and `doctor`.
 
 From a git checkout, build then invoke `dist/bin/osva.js` or link the package locally.
 
-`@osva-ai/cli` depends on `@osva-ai/sdk` and `@osva-ai/contracts`; npm installs them automatically.
+`@osva-ai/cli` depends on `@osva-ai/sdk`, `@osva-ai/contracts`, and `ajv`; npm installs them automatically when published with aligned dependency versions.
 
 ## Quick start (standalone agent project)
 

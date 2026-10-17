@@ -6,8 +6,8 @@ Supported upgrade path for self-hosted Compose and Kubernetes deployments.
 
 | From | To | SQL migrations |
 |------|-----|----------------|
-| Published git tag **`v1.0.0`** | **`1.1.0-rc.1`** (and 1.1.x) | Requires **`0023_execution_lease_slice`** (tag `v1.0.0` ends at **`0022_api_security_slice`**) |
-| Already on **`1.1.0-rc.1`** schema head | Later 1.1.x RC/GA | Apply any new append-only migrations after **`0023`** |
+| Published git tag **`v1.0.0`** | **`1.1.0-rc.2`** (and 1.1.x) | Requires **`0023_execution_lease_slice`** (tag `v1.0.0` ends at **`0022_api_security_slice`**) |
+| Already on **`1.1.0-rc.1`** or **`1.1.0-rc.2`** schema head | Later 1.1.x RC/GA | Apply any new append-only migrations after **`0023`** |
 
 See [`../release/COMPATIBILITY.md`](../release/COMPATIBILITY.md) and [`CHANGELOG.md`](../../CHANGELOG.md).
 
@@ -60,14 +60,14 @@ Introduced after tag **`v1.0.0`**. Adds:
 
 ## Helm
 
-1. Update chart `version` / `appVersion` and image tag to the target release (for example **`1.1.0-rc.1`** from root `VERSION`).
+1. Update chart `version` / `appVersion` and image tag to the target release (for example **`1.1.0-rc.2`** from root `VERSION`).
 2. Run `helm upgrade` — the chart migration Job hook runs before workloads when enabled.
 3. Run bootstrap only for **new** environments (not on every upgrade).
 4. Roll Deployments if hook jobs do not restart apps automatically.
 
 ## Compose
 
-1. Pull/build the new image tag (`OSVA_IMAGE`, for example `osva:1.1.0-rc.1`).
+1. Pull the new image tag (`OSVA_IMAGE`, for example `ghcr.io/osva-ai/osva:1.1.0-rc.2`).
 2. `docker compose run --rm migrate`
 3. `docker compose up -d` to recreate app services.
 
