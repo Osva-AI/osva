@@ -1,4 +1,4 @@
-export const EXPECTED_MIGRATION_HEAD = "0026_better_auth_user_image";
+export const EXPECTED_MIGRATION_HEAD = "0027_model_provider_connections";
 
 const DEFAULT_POSTGRES_PASSWORD = "compose-acceptance-password";
 const DEFAULT_WEB_PORT = "18080";
