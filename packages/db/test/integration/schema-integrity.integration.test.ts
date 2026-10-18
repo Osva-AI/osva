@@ -154,16 +154,21 @@ describe("schema integrity against disposable PostgreSQL", () => {
     await withRolledBackMutation(
       postgresContext.connectionString,
       async (sql) => {
+        // Drop the two newest journal rows so pending includes 0026 while the
+        // physical schema still has users.image (and 0027 objects).
         await sql.unsafe(`
         DELETE FROM drizzle.__drizzle_migrations
         WHERE hash IN (
           SELECT hash FROM drizzle.__drizzle_migrations
           ORDER BY id DESC
-          LIMIT 1
+          LIMIT 2
         )
       `);
         const report = await verifySchemaIntegrity(sql);
         expect(report.outcome).toBe("schema_ahead");
+        expect(report.journal.pendingMigrations).toContain(
+          "0026_better_auth_user_image",
+        );
       },
     );
   });
