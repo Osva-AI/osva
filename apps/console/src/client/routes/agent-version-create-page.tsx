@@ -28,6 +28,7 @@ import {
 import { ConsoleApiError } from "../lib/console-api";
 import { parseWorkflowRunInputJson } from "../lib/workflow-run-input";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { ModelProfileVersionSelector } from "../components/agent/model-profile-version-selector";
 
 export function AgentVersionCreatePage() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -42,6 +43,7 @@ export function AgentVersionCreatePage() {
   const [feedback, setFeedback] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
   const [errorStatus, setErrorStatus] = useState<number | undefined>();
+  const [primaryModelVersionId, setPrimaryModelVersionId] = useState("");
 
   const canWrite =
     authQuery.data !== undefined &&
@@ -116,6 +118,19 @@ export function AgentVersionCreatePage() {
     );
     setFeedback(undefined);
     setErrorStatus(undefined);
+  }
+
+  function applyPrimaryModelBinding(modelProfileVersionId: string) {
+    const parsedManifest = parseWorkflowRunInputJson(manifestText);
+    if (!parsedManifest.ok) {
+      return;
+    }
+    const record = { ...(parsedManifest.value as Record<string, unknown>) };
+    record.models = {
+      primary: { modelProfileVersionId },
+    };
+    setManifestText(JSON.stringify(record, null, 2));
+    setPrimaryModelVersionId(modelProfileVersionId);
   }
 
   async function submit() {
@@ -300,6 +315,18 @@ export function AgentVersionCreatePage() {
             />
           </div>
         ) : null}
+
+        <ModelProfileVersionSelector
+          value={primaryModelVersionId}
+          disabled={!canWrite || mutation.isPending}
+          onChange={(selection) => {
+            if (selection === undefined) {
+              setPrimaryModelVersionId("");
+              return;
+            }
+            applyPrimaryModelBinding(selection.modelProfileVersionId);
+          }}
+        />
 
         {guided.runtimeType === "BUILTIN_PACKAGE" ? (
           <div className="field">

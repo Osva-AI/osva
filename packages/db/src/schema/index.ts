@@ -17,6 +17,8 @@ export { runSteps } from "./run-steps.js";
 export { evaluations } from "./evaluations.js";
 export { modelProfiles } from "./model-profiles.js";
 export { modelProfileVersions } from "./model-profile-versions.js";
+export { modelProviderConnections } from "./model-provider-connections.js";
+export { modelProviderConnectionVersions } from "./model-provider-connection-versions.js";
 export { connectors } from "./connectors.js";
 export { connectorVersions } from "./connector-versions.js";
 export { tools } from "./tools.js";

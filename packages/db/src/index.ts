@@ -52,6 +52,7 @@ export { PostgresWorkspaceRepository } from "./repositories/postgres-workspace-r
 export { PostgresApiKeyRepository } from "./repositories/postgres-api-key-repository.js";
 export { PostgresAgentRepository } from "./repositories/postgres-agent-repository.js";
 export { PostgresModelProfileRepository } from "./repositories/postgres-model-profile-repository.js";
+export { PostgresModelProviderConnectionRepository } from "./repositories/postgres-model-provider-connection-repository.js";
 export { PostgresConnectorRepository } from "./repositories/postgres-connector-repository.js";
 export { PostgresToolRepository } from "./repositories/postgres-tool-repository.js";
 export { PostgresRunRepository } from "./repositories/postgres-run-repository.js";

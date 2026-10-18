@@ -233,6 +233,58 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/model-provider-connections") {
+        const body = await readJsonBody(request);
+        const created = await client.createModelProviderConnection(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const connectionVersionPostMatch = pathname.match(
+        /^\/api\/v1\/model-provider-connections\/([^/]+)\/versions$/,
+      );
+      if (connectionVersionPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await client.appendModelProviderConnectionVersion(
+          connectionVersionPostMatch[1] ?? "",
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const connectionTestMatch = pathname.match(
+        /^\/api\/v1\/model-provider-connections\/([^/]+)\/versions\/([^/]+)\/test$/,
+      );
+      if (connectionTestMatch !== null) {
+        const body = await readJsonBody(request);
+        const result = await client.testModelProviderConnectionVersion(
+          connectionTestMatch[1] ?? "",
+          connectionTestMatch[2] ?? "",
+          body,
+        );
+        sendJson(
+          response,
+          200,
+          result.data,
+          upstreamRequestIdHeaders(result.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       const agentVersionPostMatch = pathname.match(
         /^\/api\/v1\/agents\/([^/]+)\/versions$/,
       );
@@ -412,6 +464,64 @@ export async function handleConsoleApiRequest(
         200,
         listed.data,
         upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/model-profiles") {
+      const listed = await client.listModelProfiles();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const modelProfileVersionsMatch = pathname.match(
+      /^\/api\/v1\/model-profiles\/([^/]+)\/versions$/,
+    );
+    if (modelProfileVersionsMatch !== null) {
+      const versions = await client.listModelProfileVersions(
+        modelProfileVersionsMatch[1] ?? "",
+      );
+      sendJson(
+        response,
+        200,
+        versions.data,
+        upstreamRequestIdHeaders(versions.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/model-provider-connections") {
+      const listed = await client.listModelProviderConnections();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const connectionVersionsMatch = pathname.match(
+      /^\/api\/v1\/model-provider-connections\/([^/]+)\/versions$/,
+    );
+    if (connectionVersionsMatch !== null) {
+      const versions = await client.listModelProviderConnectionVersions(
+        connectionVersionsMatch[1] ?? "",
+      );
+      sendJson(
+        response,
+        200,
+        versions.data,
+        upstreamRequestIdHeaders(versions.requestId),
         deps.security,
       );
       return true;

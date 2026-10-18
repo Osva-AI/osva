@@ -25,6 +25,9 @@ export type ConnectorId = OsvaId<"ConnectorId">;
 export type ConnectorVersionId = OsvaId<"ConnectorVersionId">;
 export type ModelProfileId = OsvaId<"ModelProfileId">;
 export type ModelProfileVersionId = OsvaId<"ModelProfileVersionId">;
+export type ModelProviderConnectionId = OsvaId<"ModelProviderConnectionId">;
+export type ModelProviderConnectionVersionId =
+  OsvaId<"ModelProviderConnectionVersionId">;
 export type EvaluationId = OsvaId<"EvaluationId">;
 export type MemoryNamespaceId = OsvaId<"MemoryNamespaceId">;
 export type EvaluationSuiteId = OsvaId<"EvaluationSuiteId">;

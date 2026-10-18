@@ -3,6 +3,7 @@ import type {
   ModelProfileVersionId,
   ModelProfileVersionPricing,
   ModelProvider,
+  ModelProviderConnectionVersionId,
   WorkspaceId,
 } from "@osva-ai/contracts";
 
@@ -18,6 +19,7 @@ export interface AppendModelProfileVersionInput {
   readonly modelProfileId: ModelProfileId;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly modelProviderConnectionVersionId?: ModelProviderConnectionVersionId;
   readonly pricing?: ModelProfileVersionPricing;
   readonly createdAt: Date;
 }

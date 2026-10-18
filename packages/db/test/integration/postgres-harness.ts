@@ -57,6 +57,8 @@ const STAGE0_TABLES = [
   "agent_versions",
   "agents",
   "model_profile_versions",
+  "model_provider_connection_versions",
+  "model_provider_connections",
   "model_profiles",
   "tool_versions",
   "tools",

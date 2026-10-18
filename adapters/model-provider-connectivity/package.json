@@ -1,0 +1,33 @@
+{
+  "name": "@osva/adapters-model-provider-connectivity",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@osva/adapters-model-anthropic": "workspace:*",
+    "@osva/adapters-model-gemini": "workspace:*",
+    "@osva/adapters-model-openai": "workspace:*",
+    "@osva-ai/contracts": "workspace:*",
+    "@osva/domain": "workspace:*",
+    "@osva/model-gateway": "workspace:*",
+    "@osva/outbound-network": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

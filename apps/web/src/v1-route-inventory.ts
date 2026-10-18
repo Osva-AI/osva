@@ -2,6 +2,7 @@ import { V1_HTTP_ROUTES as authHttpRoutes } from "./auth-http.js";
 import { V1_HTTP_ROUTES as apiKeyHttpRoutes } from "./api-key-http.js";
 import { V1_HTTP_ROUTES as agentHttpRoutes } from "./agent-http.js";
 import { V1_HTTP_ROUTES as modelProfileHttpRoutes } from "./model-profile-http.js";
+import { V1_HTTP_ROUTES as modelProviderConnectionHttpRoutes } from "./model-provider-connection-http.js";
 import { V1_HTTP_ROUTES as connectorHttpRoutes } from "./connector-http.js";
 import { V1_HTTP_ROUTES as memoryHttpRoutes } from "./memory-http.js";
 import { V1_HTTP_ROUTES as artifactHttpRoutes } from "./artifact-http.js";
@@ -28,6 +29,10 @@ export const V1_ROUTE_INVENTORY = [
   ...withModule("api-key-http", apiKeyHttpRoutes),
   ...withModule("agent-http", agentHttpRoutes),
   ...withModule("model-profile-http", modelProfileHttpRoutes),
+  ...withModule(
+    "model-provider-connection-http",
+    modelProviderConnectionHttpRoutes,
+  ),
   ...withModule("connector-http", connectorHttpRoutes),
   ...withModule("memory-http", memoryHttpRoutes),
   ...withModule("artifact-http", artifactHttpRoutes),
@@ -47,6 +52,7 @@ export const V1_HANDLER_MODULES = [
   "api-key-http",
   "agent-http",
   "model-profile-http",
+  "model-provider-connection-http",
   "connector-http",
   "memory-http",
   "artifact-http",

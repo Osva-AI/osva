@@ -15,7 +15,7 @@ const navItems = [
   { label: "Artifacts", disabled: true },
   { label: "Knowledge", disabled: true },
   { label: "Tools", disabled: true },
-  { label: "Models", disabled: true },
+  { label: "Models", to: "/models", disabled: false },
   { label: "Settings", disabled: true },
 ] as const;
 

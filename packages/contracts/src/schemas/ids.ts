@@ -30,6 +30,10 @@ export const connectorVersionIdSchema = osvaIdSchema<"ConnectorVersionId">();
 export const modelProfileIdSchema = osvaIdSchema<"ModelProfileId">();
 export const modelProfileVersionIdSchema =
   osvaIdSchema<"ModelProfileVersionId">();
+export const modelProviderConnectionIdSchema =
+  osvaIdSchema<"ModelProviderConnectionId">();
+export const modelProviderConnectionVersionIdSchema =
+  osvaIdSchema<"ModelProviderConnectionVersionId">();
 export const evaluationIdSchema = osvaIdSchema<"EvaluationId">();
 export const memoryNamespaceIdSchema = osvaIdSchema<"MemoryNamespaceId">();
 export const evaluationSuiteIdSchema = osvaIdSchema<"EvaluationSuiteId">();

@@ -1,6 +1,7 @@
 import type {
   ModelProfileId,
   ModelProfileVersionId,
+  ModelProviderConnectionVersionId,
   WorkspaceId,
 } from "./ids.js";
 import type { ModelProvider } from "./model-gateway.js";
@@ -18,6 +19,7 @@ export interface UpdateModelProfileRequestV1 {
 export interface CreateModelProfileVersionRequestV1 {
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly modelProviderConnectionVersionId?: ModelProviderConnectionVersionId;
 }
 
 export interface ModelProfileResourceV1 {
@@ -34,6 +36,7 @@ export interface ModelProfileVersionResourceV1 {
   readonly version: number;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly modelProviderConnectionVersionId?: ModelProviderConnectionVersionId;
   readonly createdAt: string;
 }
 

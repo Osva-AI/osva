@@ -536,6 +536,43 @@ importers:
         specifier: 'catalog:'
         version: 5.0.0(@opentelemetry/api@1.9.0)(@types/node@24.13.4)(jsdom@26.1.0)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
 
+  adapters/model-provider-connectivity:
+    dependencies:
+      '@osva-ai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@osva/adapters-model-anthropic':
+        specifier: workspace:*
+        version: link:../model-anthropic
+      '@osva/adapters-model-gemini':
+        specifier: workspace:*
+        version: link:../model-gemini
+      '@osva/adapters-model-openai':
+        specifier: workspace:*
+        version: link:../model-openai
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@osva/model-gateway':
+        specifier: workspace:*
+        version: link:../../packages/model-gateway
+      '@osva/outbound-network':
+        specifier: workspace:*
+        version: link:../../packages/outbound-network
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.4
+      eslint:
+        specifier: 'catalog:'
+        version: 10.10.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.0(@opentelemetry/api@1.9.0)(@types/node@24.13.4)(jsdom@26.1.0)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
+
   adapters/opentelemetry:
     dependencies:
       '@opentelemetry/api':
@@ -1019,6 +1056,18 @@ importers:
       '@osva/adapters-mcp-client':
         specifier: workspace:*
         version: link:../../adapters/mcp-client
+      '@osva/adapters-model-anthropic':
+        specifier: workspace:*
+        version: link:../../adapters/model-anthropic
+      '@osva/adapters-model-gemini':
+        specifier: workspace:*
+        version: link:../../adapters/model-gemini
+      '@osva/adapters-model-openai':
+        specifier: workspace:*
+        version: link:../../adapters/model-openai
+      '@osva/adapters-model-provider-connectivity':
+        specifier: workspace:*
+        version: link:../../adapters/model-provider-connectivity
       '@osva/adapters-opentelemetry':
         specifier: workspace:*
         version: link:../../adapters/opentelemetry
@@ -1037,12 +1086,18 @@ importers:
       '@osva/embedding-gateway':
         specifier: workspace:*
         version: link:../../packages/embedding-gateway
+      '@osva/model-gateway':
+        specifier: workspace:*
+        version: link:../../packages/model-gateway
       '@osva/observability':
         specifier: workspace:*
         version: link:../../packages/observability
       '@osva/orchestration':
         specifier: workspace:*
         version: link:../../packages/orchestration
+      '@osva/outbound-network':
+        specifier: workspace:*
+        version: link:../../packages/outbound-network
       busboy:
         specifier: 1.6.0
         version: 1.6.0
@@ -1095,6 +1150,9 @@ importers:
       '@osva/adapters-model-openai':
         specifier: workspace:*
         version: link:../../adapters/model-openai
+      '@osva/adapters-model-provider-connectivity':
+        specifier: workspace:*
+        version: link:../../adapters/model-provider-connectivity
       '@osva/adapters-opentelemetry':
         specifier: workspace:*
         version: link:../../adapters/opentelemetry
@@ -1131,6 +1189,9 @@ importers:
       '@osva/orchestration':
         specifier: workspace:*
         version: link:../../packages/orchestration
+      '@osva/outbound-network':
+        specifier: workspace:*
+        version: link:../../packages/outbound-network
       '@osva/runtime-core':
         specifier: workspace:*
         version: link:../../packages/runtime-core

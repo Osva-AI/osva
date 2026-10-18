@@ -15,6 +15,8 @@ import type {
   MemoryNamespaceId,
   ModelProfileId,
   ModelProfileVersionId,
+  ModelProviderConnectionId,
+  ModelProviderConnectionVersionId,
   RunAttemptId,
   RunAttemptState,
   RunId,
@@ -208,6 +210,45 @@ export class DuplicateConnectorKeyError extends DomainInvariantError {
     );
     this.workspaceId = workspaceId;
     this.key = key;
+  }
+}
+
+export class ModelProviderConnectionNotFoundError extends DomainError {
+  readonly connectionId: ModelProviderConnectionId;
+
+  constructor(connectionId: ModelProviderConnectionId) {
+    super(`ModelProviderConnection ${connectionId} was not found.`);
+    this.connectionId = connectionId;
+  }
+}
+
+export class ModelProviderConnectionVersionNotFoundError extends DomainError {
+  readonly connectionVersionId: ModelProviderConnectionVersionId;
+
+  constructor(connectionVersionId: ModelProviderConnectionVersionId) {
+    super(
+      `ModelProviderConnectionVersion ${connectionVersionId} was not found.`,
+    );
+    this.connectionVersionId = connectionVersionId;
+  }
+}
+
+export class DuplicateModelProviderConnectionKeyError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly key: string;
+
+  constructor(workspaceId: WorkspaceId, key: string) {
+    super(
+      `Model provider connection key '${key}' already exists in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.key = key;
+  }
+}
+
+export class ModelProviderConnectionBindingError extends DomainInvariantError {
+  constructor(message: string) {
+    super(message);
   }
 }
 

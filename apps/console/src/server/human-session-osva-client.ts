@@ -173,6 +173,66 @@ export function createHumanSessionOsvaClient(
         })
         .then(toDataOnly),
 
+    listModelProfiles: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/model-profiles" })
+        .then(toDataOnly),
+
+    listModelProfileVersions: (modelProfileId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/model-profiles/${encodeURIComponent(modelProfileId)}/versions`,
+        })
+        .then(toDataOnly),
+
+    listModelProviderConnections: () =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: "/v1/model-provider-connections",
+        })
+        .then(toDataOnly),
+
+    listModelProviderConnectionVersions: (connectionId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions`,
+        })
+        .then(toDataOnly),
+
+    createModelProviderConnection: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/model-provider-connections",
+          body,
+        })
+        .then(toDataOnly),
+
+    appendModelProviderConnectionVersion: (connectionId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions`,
+          body,
+        })
+        .then(toDataOnly),
+
+    testModelProviderConnectionVersion: (
+      connectionId,
+      connectionVersionId,
+      body,
+    ) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions/${encodeURIComponent(connectionVersionId)}/test`,
+          body,
+        })
+        .then(toDataOnly),
+
     createRun: (body) =>
       upstream
         .requestJson(ctx, { method: "POST", path: "/v1/runs", body })

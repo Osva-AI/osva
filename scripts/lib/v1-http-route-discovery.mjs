@@ -13,6 +13,8 @@ const STATIC_V1_SEGMENTS = new Set([
   "agents",
   "versions",
   "model-profiles",
+  "model-provider-connections",
+  "test",
   "connectors",
   "discover",
   "import-mcp-tools",

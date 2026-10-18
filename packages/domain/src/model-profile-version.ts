@@ -3,6 +3,7 @@ import type {
   ModelProfileVersionId,
   ModelProfileVersionPricing,
   ModelProvider,
+  ModelProviderConnectionVersionId,
 } from "@osva-ai/contracts";
 import {
   isModelPricingCurrency,
@@ -25,6 +26,7 @@ export interface ModelProfileVersionProps {
   readonly version: number;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly modelProviderConnectionVersionId?: ModelProviderConnectionVersionId;
   readonly pricing?: ModelProfileVersionPricing;
   readonly createdAt: Date;
 }
@@ -35,6 +37,8 @@ export class ModelProfileVersion {
   readonly version: number;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly modelProviderConnectionVersionId:
+    ModelProviderConnectionVersionId | undefined;
   readonly pricing: ModelProfileVersionPricing | undefined;
   readonly createdAt: Date;
 
@@ -44,6 +48,8 @@ export class ModelProfileVersion {
     this.version = props.version;
     this.provider = props.provider;
     this.model = props.model;
+    this.modelProviderConnectionVersionId =
+      props.modelProviderConnectionVersionId;
     this.pricing = props.pricing;
     this.createdAt = props.createdAt;
   }
@@ -78,6 +84,8 @@ export class ModelProfileVersion {
         ),
         provider: props.provider,
         model: requireNonEmptyString(props.model, "ModelProfileVersion.model"),
+        modelProviderConnectionVersionId:
+          props.modelProviderConnectionVersionId,
         pricing,
         createdAt: copyInstant(props.createdAt),
       }),

@@ -8,6 +8,8 @@ export type {
   EventId,
   ModelProfileId,
   ModelProfileVersionId,
+  ModelProviderConnectionId,
+  ModelProviderConnectionVersionId,
   OsvaId,
   RunAttemptId,
   RunId,
@@ -82,6 +84,32 @@ export type {
   ModelProfileVersionResourceV1,
   UpdateModelProfileRequestV1,
 } from "./model-profile-registry.js";
+
+export type {
+  CreateModelProviderConnectionRequestV1,
+  CreateModelProviderConnectionVersionRequestV1,
+  ModelProviderConnectionListResourceV1,
+  ModelProviderConnectionResourceV1,
+  ModelProviderConnectionTestResourceV1,
+  ModelProviderConnectionVersionListResourceV1,
+  ModelProviderConnectionVersionResourceV1,
+  UpdateModelProviderConnectionRequestV1,
+} from "./model-provider-connection-registry.js";
+
+export {
+  MODEL_PROVIDER_CONNECTION_TEST_STATUSES,
+  connectionProviderSupportsCustomEndpoint,
+  isModelProviderConnectionTestStatus,
+  mapModelProviderConnectionVersionToPublicConfig,
+} from "./model-provider-connection.js";
+export type {
+  ModelProviderConnectionEndpoint,
+  ModelProviderConnectionTestResult,
+  ModelProviderConnectionTestStatus,
+  ModelProviderConnectionVersionConfig,
+  PublicModelProviderConnectionEndpointV1,
+  PublicModelProviderCredentialV1,
+} from "./model-provider-connection.js";
 
 export type {
   CreateToolRequestV1,

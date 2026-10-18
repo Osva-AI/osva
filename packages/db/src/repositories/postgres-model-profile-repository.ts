@@ -217,6 +217,8 @@ export class PostgresModelProfileRepository implements ModelProfileRepository {
         version: nextVersion,
         provider: input.provider,
         model: input.model,
+        modelProviderConnectionVersionId:
+          input.modelProviderConnectionVersionId,
         pricing: input.pricing,
         createdAt: input.createdAt,
       });

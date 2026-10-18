@@ -13,6 +13,15 @@ import type {
   ModelGatewayGenerateTextOptions,
   ModelProviderAdapter,
 } from "./provider-adapter.js";
+
+export interface ModelProviderConnectionResolverPort {
+  resolveForModelProfileVersion(input: {
+    readonly modelProfileId: import("@osva-ai/contracts").ModelProfileId;
+    readonly modelProviderConnectionVersionId:
+      import("@osva-ai/contracts").ModelProviderConnectionVersionId | undefined;
+    readonly provider: ModelProvider;
+  }): Promise<ModelProviderAdapter>;
+}
 import type { ProviderGenerateTextResult } from "./usage.js";
 
 export interface ModelGatewayDependencies {
@@ -20,6 +29,7 @@ export interface ModelGatewayDependencies {
   readonly providers: Readonly<
     Partial<Record<ModelProvider, ModelProviderAdapter>>
   >;
+  readonly connectionResolver?: ModelProviderConnectionResolverPort;
 }
 
 /**
@@ -72,7 +82,16 @@ export class ModelGateway implements ModelGatewayPort {
       );
     }
 
-    const adapter = this.deps.providers[version.provider];
+    const adapter =
+      this.deps.connectionResolver === undefined
+        ? this.deps.providers[version.provider]
+        : await this.deps.connectionResolver.resolveForModelProfileVersion({
+            modelProfileId: version.modelProfileId,
+            modelProviderConnectionVersionId:
+              version.modelProviderConnectionVersionId,
+            provider: version.provider,
+          });
+
     if (adapter === undefined) {
       throw new ModelGatewayError(
         MODEL_ERROR_CODES.MODEL_PROVIDER_UNAVAILABLE,

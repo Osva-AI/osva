@@ -21,6 +21,7 @@ import type {
   ConnectorApplication,
   MemoryApplication,
   ModelProfileApplication,
+  ModelProviderConnectionApplication,
   ToolApplication,
   WorkflowApplication,
   ApiKeyApplication,
@@ -42,6 +43,7 @@ import {
 import { sendJson } from "./json.js";
 import { handleMemoryRegistryRequest } from "./memory-http.js";
 import { handleModelProfileRegistryRequest } from "./model-profile-http.js";
+import { handleModelProviderConnectionRegistryRequest } from "./model-provider-connection-http.js";
 import { handleToolRegistryRequest } from "./tool-http.js";
 import {
   handleRunObservabilityRequest,
@@ -106,6 +108,7 @@ export interface CreateWebApplicationOptions {
   readonly artifactMaxBytes: number;
   readonly evaluations: EvaluationHttpServices;
   readonly modelProfiles: ModelProfileApplication;
+  readonly modelProviderConnections: ModelProviderConnectionApplication;
   readonly tools: ToolApplication;
   readonly runs: RunHttpServices;
   readonly runObservability: RunObservabilityHttpServices;
@@ -177,6 +180,7 @@ async function handleRequest(
                 options.artifactMaxBytes,
                 options.evaluations,
                 options.modelProfiles,
+                options.modelProviderConnections,
                 options.tools,
                 options.runs,
                 options.runObservability,
@@ -212,6 +216,7 @@ async function handleRequestWithContext(
   artifactMaxBytes: number,
   evaluations: EvaluationHttpServices,
   modelProfiles: ModelProfileApplication,
+  modelProviderConnections: ModelProviderConnectionApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
   runObservability: RunObservabilityHttpServices,
@@ -413,6 +418,7 @@ async function handleRequestWithContext(
               artifactMaxBytes,
               evaluations,
               modelProfiles,
+              modelProviderConnections,
               tools,
               runs,
               runObservability,
@@ -474,6 +480,7 @@ async function handleRequestWithContext(
     artifactMaxBytes,
     evaluations,
     modelProfiles,
+    modelProviderConnections,
     tools,
     runs,
     runObservability,
@@ -499,6 +506,7 @@ async function dispatchV1ControlPlaneRequest(
   artifactMaxBytes: number,
   evaluations: EvaluationHttpServices,
   modelProfiles: ModelProfileApplication,
+  modelProviderConnections: ModelProviderConnectionApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
   runObservability: RunObservabilityHttpServices,
@@ -549,6 +557,18 @@ async function dispatchV1ControlPlaneRequest(
     modelProfiles,
   );
   if (handledModelProfiles) {
+    return;
+  }
+
+  const handledModelProviderConnections =
+    await handleModelProviderConnectionRegistryRequest(
+      request,
+      response,
+      method,
+      path,
+      modelProviderConnections,
+    );
+  if (handledModelProviderConnections) {
     return;
   }
 

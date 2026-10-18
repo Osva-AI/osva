@@ -14,6 +14,8 @@ export {
   memoryNamespaceIdSchema,
   modelProfileIdSchema,
   modelProfileVersionIdSchema,
+  modelProviderConnectionIdSchema,
+  modelProviderConnectionVersionIdSchema,
   runAttemptIdSchema,
   runIdSchema,
   runStepIdSchema,
@@ -59,6 +61,19 @@ export {
   modelProfileVersionResourceSchema,
   updateModelProfileRequestSchema,
 } from "./model-profile-registry.js";
+
+export {
+  createModelProviderConnectionRequestSchema,
+  createModelProviderConnectionVersionRequestSchema,
+  modelProviderConnectionEndpointSchema,
+  modelProviderConnectionListResourceSchema,
+  modelProviderConnectionResourceSchema,
+  modelProviderConnectionTestRequestSchema,
+  modelProviderConnectionTestResourceSchema,
+  modelProviderConnectionVersionListResourceSchema,
+  modelProviderConnectionVersionResourceSchema,
+  updateModelProviderConnectionRequestSchema,
+} from "./model-provider-connection-registry.js";
 
 export { modelProfileVersionPricingSchema } from "./model-pricing.js";
 

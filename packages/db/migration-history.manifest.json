@@ -163,6 +163,12 @@
       "tag": "0026_better_auth_user_image",
       "file": "0026_better_auth_user_image.sql",
       "sha256": "64ba1671f6fcd834f70ad6e786415f1bef75f1379d507d32d1df170f9066c3cc"
+    },
+    {
+      "idx": 27,
+      "tag": "0027_model_provider_connections",
+      "file": "0027_model_provider_connections.sql",
+      "sha256": "13243ca49e1d0174b70e3ad87e9f31233d99e612768bf50ee102f37f1f08b9cd"
     }
   ]
 }
