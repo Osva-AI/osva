@@ -1,3 +1,5 @@
+import { getSelectedWorkspaceId } from "./workspace-selection.js";
+
 export interface ConsoleApiErrorBody {
   readonly error: string;
   readonly code?: string;
@@ -16,17 +18,31 @@ export class ConsoleApiError extends Error {
   }
 }
 
+function buildHeaders(init?: HeadersInit): Headers {
+  const headers = new Headers(init);
+  if (!headers.has("accept")) {
+    headers.set("accept", "application/json");
+  }
+  const workspaceId = getSelectedWorkspaceId();
+  if (workspaceId !== undefined) {
+    headers.set("x-osva-workspace-id", workspaceId);
+  }
+  return headers;
+}
+
 export async function consoleFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
   const response = await fetch(path, {
     ...init,
-    headers: {
-      accept: "application/json",
-      ...init?.headers,
-    },
+    credentials: "include",
+    headers: buildHeaders(init?.headers),
   });
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
 
   let body: unknown;
   try {
@@ -58,15 +74,15 @@ export interface ConsoleDownloadResult {
   readonly body: ReadableStream<Uint8Array> | null;
 }
 
-/**
- * Binary download helper. Do not use `consoleFetch` for artifact bytes —
- * that helper always parses JSON.
- */
 export async function consoleDownload(
   path: string,
   init?: RequestInit,
 ): Promise<ConsoleDownloadResult> {
-  const response = await fetch(path, init);
+  const response = await fetch(path, {
+    ...init,
+    credentials: "include",
+    headers: buildHeaders(init?.headers),
+  });
 
   if (!response.ok) {
     let body: unknown;

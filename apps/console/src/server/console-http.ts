@@ -2,6 +2,7 @@ import type { ServerResponse } from "node:http";
 
 import { OsvaApiError, OsvaTransportError } from "@osva-ai/sdk";
 
+import { ConsoleUpstreamHttpError } from "./human-session-upstream.js";
 import {
   ConsoleInvalidJsonBodyError,
   ConsoleRequestBodyTooLargeError,
@@ -59,6 +60,24 @@ export function mapOsvaError(error: unknown): {
     };
   }
 
+  if (error instanceof ConsoleUpstreamHttpError) {
+    const code =
+      typeof error.body.status === "string" ? error.body.status : undefined;
+    const message =
+      typeof error.body.message === "string"
+        ? error.body.message
+        : humanizeUpstreamStatus(error.status);
+    return {
+      status: error.status,
+      body: {
+        error: message,
+        code,
+        requestId: error.requestId,
+      },
+      requestId: error.requestId,
+    };
+  }
+
   if (error instanceof OsvaApiError) {
     const requestId =
       error.requestId ??
@@ -95,12 +114,31 @@ export function mapOsvaError(error: unknown): {
   };
 }
 
+function humanizeUpstreamStatus(status: number): string {
+  if (status === 401) {
+    return "Authentication required.";
+  }
+  if (status === 403) {
+    return "Permission denied.";
+  }
+  if (status === 404) {
+    return "Resource not found.";
+  }
+  if (status === 429) {
+    return "Control plane rate limit exceeded. Wait before retrying.";
+  }
+  if (status === 503) {
+    return "Requested resource is unavailable.";
+  }
+  return `OSVA API error (${status}).`;
+}
+
 function humanizeApiError(error: OsvaApiError): string {
   if (error.status === 401) {
-    return "Authentication required. Check OSVA_CONSOLE_API_KEY.";
+    return "Authentication required.";
   }
   if (error.status === 403) {
-    return "Permission denied for this workspace API key.";
+    return "Permission denied.";
   }
   if (error.status === 404) {
     return "Resource not found.";

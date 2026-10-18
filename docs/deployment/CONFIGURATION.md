@@ -29,7 +29,8 @@ Public routes: `/health`, `/ready` (not rate-limited as API traffic). All `/v1/*
 
 | Variable | Processes | Required | Default | Sensitive | Notes |
 |----------|-----------|----------|---------|-----------|-------|
-| `OSVA_CONSOLE_API_KEY` | console | yes | — | yes | Server-held workspace API key. Never sent to the browser. |
+| `OSVA_CONSOLE_API_KEY` | console | no* | — | legacy only | *Required only when `OSVA_CONSOLE_LEGACY_API_KEY_MODE=true`. Default Console uses human sessions; never send keys to the browser. |
+| `OSVA_CONSOLE_LEGACY_API_KEY_MODE` | console | no | `false` | no | Deprecated opt-in API-key BFF. Requires `OSVA_CONSOLE_API_KEY` when enabled. |
 | `OSVA_CONSOLE_HOST` | console | no | `127.0.0.1` | no | Loopback only (`127.0.0.0/8`, `::1`, `localhost`). |
 | `OSVA_CONSOLE_PORT` | console | no | `4174` | no | Console HTTP port. |
 | `OSVA_CONSOLE_ALLOWED_ORIGINS` | console | no | (none) | no | Explicit browser origins when using an operator proxy. Not CORS or auth. |

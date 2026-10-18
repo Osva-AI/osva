@@ -3,11 +3,17 @@ import { Link } from "react-router-dom";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
 import { useWorkflowsListQuery } from "../hooks/use-workflows";
 import { formatTimestamp } from "../lib/formatting";
+import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
 export function WorkflowsPage() {
   const workflowsQuery = useWorkflowsListQuery();
+  const authQuery = useAuthContextQuery();
+  const canWrite =
+    authQuery.data !== undefined &&
+    roleCanWriteControlPlaneResources(authQuery.data.role);
 
   return (
     <>
@@ -19,9 +25,11 @@ export function WorkflowsPage() {
           </p>
         </div>
         <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
-          <Link className="button primary" to="/workflows/new">
-            Create workflow
-          </Link>
+          {canWrite ? (
+            <Link className="button primary" to="/workflows/new">
+              Create workflow
+            </Link>
+          ) : null}
           <button
             type="button"
             className="button"

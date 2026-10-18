@@ -43,6 +43,7 @@ describe("console production SPA routing", () => {
     const config: ConsoleConfig = {
       osvaBaseUrl: "http://127.0.0.1:3000",
       osvaApiKey: "test-key",
+      legacyApiKeyMode: true,
       host: "127.0.0.1",
       port: 0,
       clientDistDir: tempDir,
@@ -95,7 +96,7 @@ describe("console production SPA routing", () => {
     const workflowRunDetail = await fetch(`${origin}/workflow-runs/wr-1`);
     expect(workflowRunDetail.status).toBe(200);
 
-    const apiRoute = await fetch(`${origin}/api/v1/auth/context`);
+    const apiRoute = await fetch(`${origin}/api/v1/agents`);
     expect(apiRoute.status).toBe(503);
     expect(await apiRoute.text()).not.toContain('id="root"');
   });

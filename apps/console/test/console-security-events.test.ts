@@ -15,6 +15,7 @@ import { createConsoleServer } from "../src/server/server.js";
 const testConfig: ConsoleConfig = {
   osvaBaseUrl: "http://127.0.0.1:3000",
   osvaApiKey: "super-secret-console-key",
+  legacyApiKeyMode: true,
   host: "127.0.0.1",
   port: 4174,
   clientDistDir: "/tmp/unused",

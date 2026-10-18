@@ -161,13 +161,14 @@ Console is **not** in Compose. On the host, point the console server at the **pu
 | Variable | Compose stack |
 | --- | --- |
 | `OSVA_BASE_URL` | `http://127.0.0.1:8080` (or your `OSVA_PUBLISH_WEB_PORT`) |
-| `OSVA_CONSOLE_API_KEY` | Bootstrap `osva_ak_…` (server-side only; never in the browser) |
+| `OSVA_AUTH_SECRET` | Same value as the web process (required for human login) |
+| `OSVA_CONSOLE_API_KEY` | **Legacy BFF only** — set with `OSVA_CONSOLE_LEGACY_API_KEY_MODE=true` |
 
-Development (Vite + BFF):
+Development (Vite + BFF, human session default):
 
 ```powershell
 $env:OSVA_BASE_URL = "http://127.0.0.1:8080"
-$env:OSVA_CONSOLE_API_KEY = "osva_ak_…"
+$env:OSVA_AUTH_SECRET = "<same-as-web>"
 cd C:\path\to\osva
 pnpm dev:console
 ```
@@ -178,7 +179,7 @@ Production-style console server after build:
 
 ```bash
 pnpm --filter @osva/console build
-OSVA_BASE_URL=http://127.0.0.1:8080 OSVA_CONSOLE_API_KEY='osva_ak_…' pnpm --filter @osva/console start
+OSVA_BASE_URL=http://127.0.0.1:8080 pnpm --filter @osva/console start
 ```
 
 Open **`http://127.0.0.1:4174`** (default `OSVA_CONSOLE_PORT`).

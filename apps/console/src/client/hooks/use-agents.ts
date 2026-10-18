@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { consoleFetch } from "../lib/console-api";
+import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface AgentResource {
   readonly id: string;
@@ -67,16 +68,20 @@ export interface AgentVersionCatalogResource {
 }
 
 export function useAgentsListQuery() {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["agents", "list"],
+    queryKey: ["agents", workspaceId, "list"],
+    enabled: workspaceId !== undefined,
     queryFn: () => consoleFetch<AgentListResource>("/api/v1/agents"),
   });
 }
 
 export function useAgentQuery(agentId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["agents", agentId],
-    enabled: agentId !== undefined && agentId.length > 0,
+    queryKey: ["agents", workspaceId, agentId],
+    enabled:
+      workspaceId !== undefined && agentId !== undefined && agentId.length > 0,
     queryFn: () =>
       consoleFetch<AgentResource>(
         `/api/v1/agents/${encodeURIComponent(agentId!)}`,
@@ -85,9 +90,11 @@ export function useAgentQuery(agentId: string | undefined) {
 }
 
 export function useAgentVersionsQuery(agentId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["agents", agentId, "versions"],
-    enabled: agentId !== undefined && agentId.length > 0,
+    queryKey: ["agents", workspaceId, agentId, "versions"],
+    enabled:
+      workspaceId !== undefined && agentId !== undefined && agentId.length > 0,
     queryFn: () =>
       consoleFetch<AgentVersionListResource>(
         `/api/v1/agents/${encodeURIComponent(agentId!)}/versions`,
@@ -99,9 +106,11 @@ export function useAgentVersionQuery(
   agentId: string | undefined,
   agentVersionId: string | undefined,
 ) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["agents", agentId, "versions", agentVersionId],
+    queryKey: ["agents", workspaceId, agentId, "versions", agentVersionId],
     enabled:
+      workspaceId !== undefined &&
       agentId !== undefined &&
       agentId.length > 0 &&
       agentVersionId !== undefined &&
@@ -114,9 +123,10 @@ export function useAgentVersionQuery(
 }
 
 export function useAgentVersionCatalogQuery(enabled = true) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["agents", "version-catalog"],
-    enabled,
+    queryKey: ["agents", workspaceId, "version-catalog"],
+    enabled: enabled && workspaceId !== undefined,
     queryFn: async (): Promise<AgentVersionCatalogResource> => {
       const listed = await consoleFetch<AgentListResource>("/api/v1/agents");
       const entries: Array<{

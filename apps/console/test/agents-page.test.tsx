@@ -10,7 +10,9 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { AuthProvider } from "../src/client/context/auth-context";
 import { AgentCreatePage } from "../src/client/routes/agent-create-page";
+import { stubHumanSessionFetch, json } from "./human-auth-fetch-stub";
 import { AgentDetailPage } from "../src/client/routes/agent-detail-page";
 import { AgentVersionCreatePage } from "../src/client/routes/agent-version-create-page";
 import { AgentVersionPage } from "../src/client/routes/agent-version-page";
@@ -30,30 +32,28 @@ function renderAgents(path: string) {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/agents" element={<AgentsPage />} />
-          <Route path="/agents/new" element={<AgentCreatePage />} />
-          <Route path="/agents/:agentId" element={<AgentDetailPage />} />
-          <Route
-            path="/agents/:agentId/versions/new"
-            element={<AgentVersionCreatePage />}
-          />
-          <Route
-            path="/agents/:agentId/versions/:agentVersionId"
-            element={<AgentVersionPage />}
-          />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/workflows/new" element={<WorkflowCreatePage />} />
-          <Route path="/runs/:runId" element={<div>Opened Run</div>} />
-        </Routes>
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/agents" element={<AgentsPage />} />
+            <Route path="/agents/new" element={<AgentCreatePage />} />
+            <Route path="/agents/:agentId" element={<AgentDetailPage />} />
+            <Route
+              path="/agents/:agentId/versions/new"
+              element={<AgentVersionCreatePage />}
+            />
+            <Route
+              path="/agents/:agentId/versions/:agentVersionId"
+              element={<AgentVersionPage />}
+            />
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/workflows/new" element={<WorkflowCreatePage />} />
+            <Route path="/runs/:runId" element={<div>Opened Run</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
     </QueryClientProvider>,
   );
-}
-
-function json(body: unknown, status = 200): Response {
-  return Response.json(body, { status });
 }
 
 const agent = {
@@ -81,19 +81,11 @@ function stubConsole(
   role: string,
   extra?: (url: string, init?: RequestInit) => Response | undefined,
 ) {
-  const fetchMock = vi.fn(async (input: RequestInfo, init?: RequestInit) => {
-    const url = String(input);
+  const fetchMock = stubHumanSessionFetch(role, "ws-1", (url, init) => {
     const method = init?.method ?? "GET";
     const extraResponse = extra?.(url, init);
     if (extraResponse !== undefined) {
       return extraResponse;
-    }
-    if (url.includes("/api/v1/auth/context")) {
-      return json({
-        subjectId: "sub-1",
-        workspaceId: "ws-1",
-        role,
-      });
     }
     if (url === "/api/v1/agents" && method === "GET") {
       return json({ agents: [agent] });
@@ -107,9 +99,8 @@ function stubConsole(
     if (url === "/api/v1/agents/agent-echo" && method === "GET") {
       return json(agent);
     }
-    return json({ error: "not found" }, 404);
+    return undefined;
   });
-  vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
@@ -125,9 +116,9 @@ describe("Agents UI", () => {
     renderAgents("/agents");
     await waitFor(() => {
       expect(screen.getByText("Echo Agent")).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Register Agent" })).toBeTruthy();
     });
     expect(screen.getByRole("link", { name: "agent-echo" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Register Agent" })).toBeTruthy();
   });
 
   it("hides register for VIEWER", async () => {
@@ -141,7 +132,7 @@ describe("Agents UI", () => {
 
   it("registers an agent and navigates to the persisted id", async () => {
     const user = userEvent.setup();
-    const fetchMock = stubConsole("EDITOR", (url, init) => {
+    const fetchMock = stubConsole("DEVELOPER", (url, init) => {
       if (url === "/api/v1/agents" && init?.method === "POST") {
         const body = JSON.parse(String(init.body)) as {
           key: string;

@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { stubHumanSessionFetch } from "./human-auth-fetch-stub.js";
+
 import { WorkflowCreatePage } from "../src/client/routes/workflow-create-page";
 import {
   addAgentNode,
@@ -50,77 +52,66 @@ describe("Workflow create page", () => {
     let createCalls = 0;
     let versionCalls = 0;
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? "GET";
-        if (url.includes("/api/v1/auth/context")) {
-          return Response.json({
-            subjectId: "sub-1",
-            workspaceId: "ws-1",
-            role: "ADMIN",
-          });
-        }
-        if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
-          return Response.json({
-            agents: [
-              {
-                id: "agent-1",
-                workspaceId: "ws-1",
-                key: "demo",
-                name: "Demo Agent",
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        if (url.includes("/api/v1/agents/agent-1/versions")) {
-          return Response.json({
-            versions: [
-              {
-                id: "av-1",
-                agentId: "agent-1",
-                version: 1,
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        if (url.endsWith("/api/v1/workflows") && method === "POST") {
-          createCalls += 1;
-          return Response.json(
+    stubHumanSessionFetch("ADMIN", "ws-1", (url, init) => {
+      const method = init?.method ?? "GET";
+      if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
+        return Response.json({
+          agents: [
             {
-              id: "wf-1",
+              id: "agent-1",
               workspaceId: "ws-1",
-              key: "demo-wf",
-              name: "Demo WF",
+              key: "demo",
+              name: "Demo Agent",
               createdAt: "2026-01-01T00:00:00.000Z",
-              updatedAt: "2026-01-01T00:00:00.000Z",
             },
-            { status: 201 },
-          );
-        }
-        if (
-          url.includes("/api/v1/workflows/wf-1/versions") &&
-          method === "POST"
-        ) {
-          versionCalls += 1;
-          return Response.json(
+          ],
+        });
+      }
+      if (url.includes("/api/v1/agents/agent-1/versions")) {
+        return Response.json({
+          versions: [
             {
-              id: "wv-1",
-              workflowId: "wf-1",
-              workspaceId: "ws-1",
+              id: "av-1",
+              agentId: "agent-1",
               version: 1,
-              definition: { schemaVersion: "3", nodes: [], edges: [] },
               createdAt: "2026-01-01T00:00:00.000Z",
             },
-            { status: 201 },
-          );
-        }
-        return Response.json({}, { status: 404 });
-      }),
-    );
+          ],
+        });
+      }
+      if (url.endsWith("/api/v1/workflows") && method === "POST") {
+        createCalls += 1;
+        return Response.json(
+          {
+            id: "wf-1",
+            workspaceId: "ws-1",
+            key: "demo-wf",
+            name: "Demo WF",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+          { status: 201 },
+        );
+      }
+      if (
+        url.includes("/api/v1/workflows/wf-1/versions") &&
+        method === "POST"
+      ) {
+        versionCalls += 1;
+        return Response.json(
+          {
+            id: "wv-1",
+            workflowId: "wf-1",
+            workspaceId: "ws-1",
+            version: 1,
+            definition: { schemaVersion: "3", nodes: [], edges: [] },
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+          { status: 201 },
+        );
+      }
+      return undefined;
+    });
 
     renderCreatePage();
     await waitFor(() => {
@@ -158,83 +149,72 @@ describe("Workflow create page", () => {
     let createCalls = 0;
     let versionCalls = 0;
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo, init?: RequestInit) => {
-        const url = String(input);
-        const method = init?.method ?? "GET";
-        if (url.includes("/api/v1/auth/context")) {
-          return Response.json({
-            subjectId: "sub-1",
-            workspaceId: "ws-1",
-            role: "ADMIN",
-          });
-        }
-        if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
-          return Response.json({
-            agents: [
-              {
-                id: "agent-1",
-                workspaceId: "ws-1",
-                key: "demo",
-                name: "Demo Agent",
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        if (url.includes("/api/v1/agents/agent-1/versions")) {
-          return Response.json({
-            versions: [
-              {
-                id: "av-1",
-                agentId: "agent-1",
-                version: 1,
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        if (url.endsWith("/api/v1/workflows") && method === "POST") {
-          createCalls += 1;
-          return Response.json(
+    stubHumanSessionFetch("ADMIN", "ws-1", (url, init) => {
+      const method = init?.method ?? "GET";
+      if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
+        return Response.json({
+          agents: [
             {
-              id: "wf-partial",
+              id: "agent-1",
               workspaceId: "ws-1",
-              key: "partial",
-              name: "Partial",
+              key: "demo",
+              name: "Demo Agent",
               createdAt: "2026-01-01T00:00:00.000Z",
-              updatedAt: "2026-01-01T00:00:00.000Z",
             },
-            { status: 201 },
-          );
-        }
-        if (
-          url.includes("/api/v1/workflows/wf-partial/versions") &&
-          method === "POST"
-        ) {
-          versionCalls += 1;
-          if (versionCalls === 1) {
-            return Response.json(
-              { error: "Invalid definition.", code: "invalid_request" },
-              { status: 400, headers: { "x-osva-request-id": "req-fail-1" } },
-            );
-          }
-          return Response.json(
+          ],
+        });
+      }
+      if (url.includes("/api/v1/agents/agent-1/versions")) {
+        return Response.json({
+          versions: [
             {
-              id: "wv-2",
-              workflowId: "wf-partial",
-              workspaceId: "ws-1",
+              id: "av-1",
+              agentId: "agent-1",
               version: 1,
-              definition: { schemaVersion: "3", nodes: [], edges: [] },
               createdAt: "2026-01-01T00:00:00.000Z",
             },
-            { status: 201 },
+          ],
+        });
+      }
+      if (url.endsWith("/api/v1/workflows") && method === "POST") {
+        createCalls += 1;
+        return Response.json(
+          {
+            id: "wf-partial",
+            workspaceId: "ws-1",
+            key: "partial",
+            name: "Partial",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+          { status: 201 },
+        );
+      }
+      if (
+        url.includes("/api/v1/workflows/wf-partial/versions") &&
+        method === "POST"
+      ) {
+        versionCalls += 1;
+        if (versionCalls === 1) {
+          return Response.json(
+            { error: "Invalid definition.", code: "invalid_request" },
+            { status: 400, headers: { "x-osva-request-id": "req-fail-1" } },
           );
         }
-        return Response.json({}, { status: 404 });
-      }),
-    );
+        return Response.json(
+          {
+            id: "wv-2",
+            workflowId: "wf-partial",
+            workspaceId: "ws-1",
+            version: 1,
+            definition: { schemaVersion: "3", nodes: [], edges: [] },
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+          { status: 201 },
+        );
+      }
+      return undefined;
+    });
 
     renderCreatePage();
     await waitFor(() => {
@@ -289,45 +269,34 @@ describe("Workflow create page", () => {
     );
     writeStoredWorkflowBuilderDraft(storedDraft);
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo) => {
-        const url = String(input);
-        if (url.includes("/api/v1/auth/context")) {
-          return Response.json({
-            subjectId: "sub-1",
-            workspaceId: "ws-1",
-            role: "ADMIN",
-          });
-        }
-        if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
-          return Response.json({
-            agents: [
-              {
-                id: "agent-1",
-                workspaceId: "ws-1",
-                key: "demo",
-                name: "Demo Agent",
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        if (url.includes("/api/v1/agents/agent-1/versions")) {
-          return Response.json({
-            versions: [
-              {
-                id: "av-1",
-                agentId: "agent-1",
-                version: 1,
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        return Response.json({}, { status: 404 });
-      }),
-    );
+    stubHumanSessionFetch("ADMIN", "ws-1", (url) => {
+      if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
+        return Response.json({
+          agents: [
+            {
+              id: "agent-1",
+              workspaceId: "ws-1",
+              key: "demo",
+              name: "Demo Agent",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/agents/agent-1/versions")) {
+        return Response.json({
+          versions: [
+            {
+              id: "av-1",
+              agentId: "agent-1",
+              version: 1,
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      return undefined;
+    });
 
     renderCreatePage();
     await waitFor(() => {
@@ -368,45 +337,34 @@ describe("Workflow create page", () => {
     );
     writeStoredWorkflowBuilderDraft(storedDraft);
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo) => {
-        const url = String(input);
-        if (url.includes("/api/v1/auth/context")) {
-          return Response.json({
-            subjectId: "sub-1",
-            workspaceId: "ws-1",
-            role: "ADMIN",
-          });
-        }
-        if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
-          return Response.json({
-            agents: [
-              {
-                id: "agent-1",
-                workspaceId: "ws-1",
-                key: "demo",
-                name: "Demo Agent",
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        if (url.includes("/api/v1/agents/agent-1/versions")) {
-          return Response.json({
-            versions: [
-              {
-                id: "av-1",
-                agentId: "agent-1",
-                version: 1,
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        return Response.json({}, { status: 404 });
-      }),
-    );
+    stubHumanSessionFetch("ADMIN", "ws-1", (url) => {
+      if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
+        return Response.json({
+          agents: [
+            {
+              id: "agent-1",
+              workspaceId: "ws-1",
+              key: "demo",
+              name: "Demo Agent",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/agents/agent-1/versions")) {
+        return Response.json({
+          versions: [
+            {
+              id: "av-1",
+              agentId: "agent-1",
+              version: 1,
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      return undefined;
+    });
 
     renderCreatePage();
     await waitFor(() => {
@@ -435,45 +393,34 @@ describe("Workflow create page", () => {
 
   it("selects a node from the validation panel and keeps review blocked until valid", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo) => {
-        const url = String(input);
-        if (url.includes("/api/v1/auth/context")) {
-          return Response.json({
-            subjectId: "sub-1",
-            workspaceId: "ws-1",
-            role: "ADMIN",
-          });
-        }
-        if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
-          return Response.json({
-            agents: [
-              {
-                id: "agent-1",
-                workspaceId: "ws-1",
-                key: "demo",
-                name: "Demo Agent",
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        if (url.includes("/api/v1/agents/agent-1/versions")) {
-          return Response.json({
-            versions: [
-              {
-                id: "av-1",
-                agentId: "agent-1",
-                version: 1,
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        return Response.json({}, { status: 404 });
-      }),
-    );
+    stubHumanSessionFetch("ADMIN", "ws-1", (url) => {
+      if (url.includes("/api/v1/agents") && !url.includes("/versions")) {
+        return Response.json({
+          agents: [
+            {
+              id: "agent-1",
+              workspaceId: "ws-1",
+              key: "demo",
+              name: "Demo Agent",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/agents/agent-1/versions")) {
+        return Response.json({
+          versions: [
+            {
+              id: "av-1",
+              agentId: "agent-1",
+              version: 1,
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      return undefined;
+    });
 
     renderCreatePage();
     await waitFor(() => {

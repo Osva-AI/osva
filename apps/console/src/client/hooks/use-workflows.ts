@@ -4,6 +4,7 @@ import type { WorkflowDefinitionV3 } from "@osva-ai/contracts";
 
 import { consoleFetch } from "../lib/console-api";
 import type { WorkflowDefinitionView } from "../lib/workflow-definition";
+import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface WorkflowResource {
   readonly id: string;
@@ -33,25 +34,29 @@ export interface WorkflowVersionListResource {
 }
 
 export function useWorkflowsListQuery() {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["workflows", "list"],
+    queryKey: ["workflows", workspaceId, "list"],
+    enabled: workspaceId !== undefined,
     queryFn: () => consoleFetch<WorkflowListResource>("/api/v1/workflows"),
   });
 }
 
 export function useWorkflowQuery(workflowId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["workflows", workflowId],
-    enabled: workflowId !== undefined,
+    queryKey: ["workflows", workspaceId, workflowId],
+    enabled: workspaceId !== undefined && workflowId !== undefined,
     queryFn: () =>
       consoleFetch<WorkflowResource>(`/api/v1/workflows/${workflowId}`),
   });
 }
 
 export function useWorkflowVersionsQuery(workflowId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["workflows", workflowId, "versions"],
-    enabled: workflowId !== undefined,
+    queryKey: ["workflows", workspaceId, workflowId, "versions"],
+    enabled: workspaceId !== undefined && workflowId !== undefined,
     queryFn: () =>
       consoleFetch<WorkflowVersionListResource>(
         `/api/v1/workflows/${workflowId}/versions`,
@@ -63,9 +68,19 @@ export function useWorkflowVersionQuery(
   workflowId: string | undefined,
   workflowVersionId: string | undefined,
 ) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["workflows", workflowId, "versions", workflowVersionId],
-    enabled: workflowId !== undefined && workflowVersionId !== undefined,
+    queryKey: [
+      "workflows",
+      workspaceId,
+      workflowId,
+      "versions",
+      workflowVersionId,
+    ],
+    enabled:
+      workspaceId !== undefined &&
+      workflowId !== undefined &&
+      workflowVersionId !== undefined,
     queryFn: () =>
       consoleFetch<WorkflowVersionResource>(
         `/api/v1/workflows/${workflowId}/versions/${workflowVersionId}`,

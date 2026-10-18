@@ -126,6 +126,7 @@ describe("console real control-plane stack", () => {
         config: {
           osvaBaseUrl: webOrigin,
           osvaApiKey: integrationAuth.token,
+          legacyApiKeyMode: true,
           host: "127.0.0.1",
           port: 0,
           clientDistDir: consoleClientDistDir,
@@ -296,6 +297,7 @@ describe("console real control-plane stack", () => {
         config: {
           osvaBaseUrl: webOrigin,
           osvaApiKey: integrationAuth.token,
+          legacyApiKeyMode: true,
           host: "127.0.0.1",
           port: 0,
           clientDistDir: consoleClientDistDir,

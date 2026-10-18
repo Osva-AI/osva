@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { consoleFetch } from "../lib/console-api";
 import { ACTIVE_RUN_POLL_MS } from "../lib/query-client";
 import { isAttemptLive, isRunLive } from "../lib/statuses";
+import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface RunResource {
   readonly id: string;
@@ -109,6 +110,7 @@ export interface ListRunsFilters {
 }
 
 export function useRunsListQuery(filters: ListRunsFilters) {
+  const workspaceId = useWorkspaceQueryScope();
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
   if (filters.agentId) params.set("agentId", filters.agentId);
@@ -122,15 +124,17 @@ export function useRunsListQuery(filters: ListRunsFilters) {
     queryString.length > 0 ? `/api/v1/runs?${queryString}` : "/api/v1/runs";
 
   return useQuery({
-    queryKey: ["runs", "list", filters],
+    queryKey: ["runs", workspaceId, "list", filters],
+    enabled: workspaceId !== undefined,
     queryFn: () => consoleFetch<RunListResource>(path),
   });
 }
 
 export function useRunQuery(runId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["runs", runId],
-    enabled: runId !== undefined,
+    queryKey: ["runs", workspaceId, runId],
+    enabled: workspaceId !== undefined && runId !== undefined,
     queryFn: () => consoleFetch<RunResource>(`/api/v1/runs/${runId}`),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -145,9 +149,10 @@ export function useRunAttemptsQuery(
   runId: string | undefined,
   runStatus?: string,
 ) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["runs", runId, "attempts"],
-    enabled: runId !== undefined,
+    queryKey: ["runs", workspaceId, runId, "attempts"],
+    enabled: workspaceId !== undefined && runId !== undefined,
     queryFn: () =>
       consoleFetch<RunAttemptListResource>(`/api/v1/runs/${runId}/attempts`),
     refetchInterval:
@@ -162,9 +167,13 @@ export function useRunAttemptQuery(
   runAttemptId: string | undefined,
   attemptStatus?: string,
 ) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["runs", runId, "attempts", runAttemptId],
-    enabled: runId !== undefined && runAttemptId !== undefined,
+    queryKey: ["runs", workspaceId, runId, "attempts", runAttemptId],
+    enabled:
+      workspaceId !== undefined &&
+      runId !== undefined &&
+      runAttemptId !== undefined,
     queryFn: () =>
       consoleFetch<RunAttemptResource>(
         `/api/v1/runs/${runId}/attempts/${runAttemptId}`,
@@ -181,9 +190,13 @@ export function useRunStepsQuery(
   runAttemptId: string | undefined,
   attemptStatus?: string,
 ) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["runs", runId, "attempts", runAttemptId, "steps"],
-    enabled: runId !== undefined && runAttemptId !== undefined,
+    queryKey: ["runs", workspaceId, runId, "attempts", runAttemptId, "steps"],
+    enabled:
+      workspaceId !== undefined &&
+      runId !== undefined &&
+      runAttemptId !== undefined,
     queryFn: () =>
       consoleFetch<RunStepListResource>(
         `/api/v1/runs/${runId}/attempts/${runAttemptId}/steps`,
@@ -200,9 +213,13 @@ export function useRunUsageQuery(
   runAttemptId: string | undefined,
   attemptStatus?: string,
 ) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["runs", runId, "attempts", runAttemptId, "usage"],
-    enabled: runId !== undefined && runAttemptId !== undefined,
+    queryKey: ["runs", workspaceId, runId, "attempts", runAttemptId, "usage"],
+    enabled:
+      workspaceId !== undefined &&
+      runId !== undefined &&
+      runAttemptId !== undefined,
     queryFn: () =>
       consoleFetch<RunAttemptUsageResource>(
         `/api/v1/runs/${runId}/attempts/${runAttemptId}/usage`,
@@ -249,6 +266,7 @@ export function useArtifactsQuery(params: {
   readonly runAttemptId?: string;
   readonly live?: boolean;
 }) {
+  const workspaceId = useWorkspaceQueryScope();
   const search = new URLSearchParams();
   if (params.runId) search.set("runId", params.runId);
   if (params.runAttemptId) search.set("runAttemptId", params.runAttemptId);
@@ -256,8 +274,10 @@ export function useArtifactsQuery(params: {
   const path = qs.length > 0 ? `/api/v1/artifacts?${qs}` : "/api/v1/artifacts";
 
   return useQuery({
-    queryKey: ["artifacts", params],
-    enabled: params.runId !== undefined || params.runAttemptId !== undefined,
+    queryKey: ["artifacts", workspaceId, params],
+    enabled:
+      workspaceId !== undefined &&
+      (params.runId !== undefined || params.runAttemptId !== undefined),
     queryFn: () => consoleFetch<ArtifactListResource>(path),
     refetchInterval: params.live ? ACTIVE_RUN_POLL_MS : false,
   });

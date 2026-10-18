@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WorkflowDetailPage } from "../src/client/routes/workflow-detail-page";
 import { WorkflowsPage } from "../src/client/routes/workflows-page";
+import { stubHumanSessionFetch } from "./human-auth-fetch-stub";
 
 function renderApp(initialPath: string) {
   const queryClient = new QueryClient({
@@ -32,33 +33,23 @@ describe("Workflows UI", () => {
   });
 
   it("renders workflows list", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo) => {
-        const url = String(input);
-        if (url.includes("/api/v1/workflows") && !url.includes("/versions")) {
-          return new Response(
-            JSON.stringify({
-              workflows: [
-                {
-                  id: "wf-1",
-                  workspaceId: "ws-1",
-                  key: "demo",
-                  name: "Demo Workflow",
-                  createdAt: "2026-01-01T00:00:00.000Z",
-                  updatedAt: "2026-01-01T00:00:00.000Z",
-                },
-              ],
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        return new Response(JSON.stringify({ workflows: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
+    stubHumanSessionFetch("DEVELOPER", "ws-1", (url) => {
+      if (url.includes("/api/v1/workflows") && !url.includes("/versions")) {
+        return Response.json({
+          workflows: [
+            {
+              id: "wf-1",
+              workspaceId: "ws-1",
+              key: "demo",
+              name: "Demo Workflow",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
         });
-      }),
-    );
+      }
+      return undefined;
+    });
 
     renderApp("/workflows");
     await waitFor(() => {
@@ -66,6 +57,20 @@ describe("Workflows UI", () => {
     });
     expect(screen.getByRole("link", { name: "wf-1" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Create workflow" })).toBeTruthy();
+  });
+
+  it("hides Create workflow for VIEWER", async () => {
+    stubHumanSessionFetch("VIEWER", "ws-1", (url) => {
+      if (url.includes("/api/v1/workflows") && !url.includes("/versions")) {
+        return Response.json({ workflows: [] });
+      }
+      return undefined;
+    });
+    renderApp("/workflows");
+    await waitFor(() => {
+      expect(screen.getByText("Workflows")).toBeTruthy();
+    });
+    expect(screen.queryByRole("link", { name: "Create workflow" })).toBeNull();
   });
 
   it("opens workflow detail with versions and recent runs", async () => {

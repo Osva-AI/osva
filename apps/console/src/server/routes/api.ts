@@ -23,15 +23,22 @@ import {
   emitConsoleRequestGuardDenial,
   emitConsoleRequestTooLarge,
 } from "../console-security-events.js";
+import type { ConsoleConfig } from "../config.js";
 import { mapOsvaError, sendJson } from "../console-http.js";
+import { ConsoleUpstreamHttpError } from "../human-session-upstream.js";
 import type { ConsoleOsvaClient } from "../osva-client.js";
 import { readJsonBody } from "../read-json-body.js";
 import { evaluateConsoleApiRequestGuard } from "../request-guard.js";
+import { resolveConsoleClient } from "../resolve-console-client.js";
 import type { ResponseSecurityOptions } from "../response-security.js";
+import { appendSessionSetCookieLines } from "../session-cookie.js";
 import { upstreamRequestIdHeaders } from "../upstream-response.js";
+import { tryHandleConsoleAuthApiRequest } from "./auth-api.js";
 
 export interface ConsoleApiDependencies {
-  readonly client: ConsoleOsvaClient | undefined;
+  readonly config: ConsoleConfig | undefined;
+  readonly legacyClient: ConsoleOsvaClient | undefined;
+  readonly testClient: ConsoleOsvaClient | undefined;
   readonly security: ResponseSecurityOptions;
   readonly allowedOrigins?: readonly string[];
 }
@@ -64,13 +71,68 @@ export async function handleConsoleApiRequest(
 
   const method = request.method ?? "GET";
 
-  if (deps.client === undefined) {
+  if (browserAuthorizationPresent(request)) {
+    sendJson(
+      response,
+      403,
+      {
+        error: "Browser Authorization headers are not accepted by the Console.",
+        code: "invalid_request",
+      },
+      {},
+      deps.security,
+    );
+    return true;
+  }
+
+  if (
+    deps.config !== undefined &&
+    !deps.config.legacyApiKeyMode &&
+    (pathname.startsWith("/api/v1/auth/") ||
+      pathname === "/api/v1/me/workspaces")
+  ) {
+    try {
+      const authHandled = await tryHandleConsoleAuthApiRequest(
+        request,
+        response,
+        pathname,
+        method,
+        {
+          config: deps.config,
+          security: deps.security,
+          ctx: { incoming: request },
+        },
+      );
+      if (authHandled) {
+        return true;
+      }
+    } catch (error) {
+      forwardUpstreamErrorCookies(response, error);
+      const mapped = mapOsvaError(error);
+      sendJson(
+        response,
+        mapped.status,
+        mapped.body,
+        upstreamRequestIdHeaders(mapped.requestId ?? mapped.body.requestId),
+        deps.security,
+      );
+      return true;
+    }
+  }
+
+  const { client } = resolveConsoleClient(request, {
+    config: deps.config,
+    legacyClient: deps.legacyClient,
+    testClient: deps.testClient,
+  });
+
+  if (client === undefined) {
     sendJson(
       response,
       503,
       {
         error:
-          "Console is not configured. Set OSVA_CONSOLE_API_KEY and restart.",
+          "Console is not configured. Set OSVA_BASE_URL and ensure the control plane is reachable.",
         code: "console_not_configured",
       },
       {},
@@ -86,7 +148,7 @@ export async function handleConsoleApiRequest(
       );
       if (approvalDecisionMatch !== null) {
         const body = await readJsonBody(request);
-        const decided = await deps.client.decideApprovalRequest(
+        const decided = await client.decideApprovalRequest(
           approvalDecisionMatch[1] as ApprovalRequestId,
           body,
         );
@@ -102,7 +164,7 @@ export async function handleConsoleApiRequest(
 
       if (pathname === "/api/v1/workflow-events") {
         const body = await readJsonBody(request);
-        const ingested = await deps.client.ingestWorkflowEvent(body);
+        const ingested = await client.ingestWorkflowEvent(body);
         sendJson(
           response,
           201,
@@ -115,7 +177,7 @@ export async function handleConsoleApiRequest(
 
       if (pathname === "/api/v1/workflows") {
         const body = await readJsonBody(request);
-        const created = await deps.client.createWorkflow(body);
+        const created = await client.createWorkflow(body);
         sendJson(
           response,
           201,
@@ -131,7 +193,7 @@ export async function handleConsoleApiRequest(
       );
       if (workflowVersionPostMatch !== null) {
         const body = await readJsonBody(request);
-        const created = await deps.client.appendWorkflowVersion(
+        const created = await client.appendWorkflowVersion(
           workflowVersionPostMatch[1] as WorkflowId,
           body,
         );
@@ -147,7 +209,7 @@ export async function handleConsoleApiRequest(
 
       if (pathname === "/api/v1/workflow-runs") {
         const body = await readJsonBody(request);
-        const created = await deps.client.createWorkflowRun(body);
+        const created = await client.createWorkflowRun(body);
         sendJson(
           response,
           201,
@@ -160,7 +222,7 @@ export async function handleConsoleApiRequest(
 
       if (pathname === "/api/v1/agents") {
         const body = await readJsonBody(request);
-        const created = await deps.client.createAgent(body);
+        const created = await client.createAgent(body);
         sendJson(
           response,
           201,
@@ -176,7 +238,7 @@ export async function handleConsoleApiRequest(
       );
       if (agentVersionPostMatch !== null) {
         const body = await readJsonBody(request);
-        const created = await deps.client.createAgentVersion(
+        const created = await client.createAgentVersion(
           agentVersionPostMatch[1] as AgentId,
           body,
         );
@@ -192,7 +254,7 @@ export async function handleConsoleApiRequest(
 
       if (pathname === "/api/v1/runs") {
         const body = await readJsonBody(request);
-        const created = await deps.client.createRun(body);
+        const created = await client.createRun(body);
         sendJson(
           response,
           201,
@@ -224,20 +286,8 @@ export async function handleConsoleApiRequest(
       return true;
     }
 
-    if (pathname === "/api/v1/auth/context") {
-      const context = await deps.client.getAuthContext();
-      sendJson(
-        response,
-        200,
-        context.data,
-        upstreamRequestIdHeaders(context.requestId),
-        deps.security,
-      );
-      return true;
-    }
-
     if (pathname === "/api/v1/runs") {
-      const listed = await deps.client.listRuns({
+      const listed = await client.listRuns({
         agentId: searchParams.get("agentId") ?? undefined,
         agentVersionId: searchParams.get("agentVersionId") ?? undefined,
         status: searchParams.get("status") ?? undefined,
@@ -256,7 +306,7 @@ export async function handleConsoleApiRequest(
 
     const runMatch = pathname.match(/^\/api\/v1\/runs\/([^/]+)$/);
     if (runMatch !== null) {
-      const run = await deps.client.getRun(runMatch[1] as RunId);
+      const run = await client.getRun(runMatch[1] as RunId);
       sendJson(
         response,
         200,
@@ -271,9 +321,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/runs\/([^/]+)\/attempts$/,
     );
     if (attemptsMatch !== null) {
-      const attempts = await deps.client.listAttempts(
-        attemptsMatch[1] as RunId,
-      );
+      const attempts = await client.listAttempts(attemptsMatch[1] as RunId);
       sendJson(
         response,
         200,
@@ -288,7 +336,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/runs\/([^/]+)\/attempts\/([^/]+)$/,
     );
     if (attemptMatch !== null) {
-      const attempt = await deps.client.getAttempt(
+      const attempt = await client.getAttempt(
         attemptMatch[1] as RunId,
         attemptMatch[2] as RunAttemptId,
       );
@@ -306,7 +354,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/runs\/([^/]+)\/attempts\/([^/]+)\/steps$/,
     );
     if (stepsMatch !== null) {
-      const steps = await deps.client.listAllSteps(
+      const steps = await client.listAllSteps(
         stepsMatch[1] as RunId,
         stepsMatch[2] as RunAttemptId,
       );
@@ -324,7 +372,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/runs\/([^/]+)\/attempts\/([^/]+)\/steps\/([^/]+)$/,
     );
     if (stepMatch !== null) {
-      const step = await deps.client.getStep(
+      const step = await client.getStep(
         stepMatch[1] as RunId,
         stepMatch[2] as RunAttemptId,
         stepMatch[3] as RunStepId,
@@ -343,7 +391,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/runs\/([^/]+)\/attempts\/([^/]+)\/usage$/,
     );
     if (usageMatch !== null) {
-      const usage = await deps.client.getUsage(
+      const usage = await client.getUsage(
         usageMatch[1] as RunId,
         usageMatch[2] as RunAttemptId,
       );
@@ -358,7 +406,7 @@ export async function handleConsoleApiRequest(
     }
 
     if (pathname === "/api/v1/agents") {
-      const listed = await deps.client.listAgents();
+      const listed = await client.listAgents();
       sendJson(
         response,
         200,
@@ -373,7 +421,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/agents\/([^/]+)\/versions\/([^/]+)$/,
     );
     if (agentVersionItemMatch !== null) {
-      const version = await deps.client.getAgentVersion(
+      const version = await client.getAgentVersion(
         agentVersionItemMatch[1] as AgentId,
         agentVersionItemMatch[2] as AgentVersionId,
       );
@@ -391,7 +439,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/agents\/([^/]+)\/versions$/,
     );
     if (agentVersionsMatch !== null) {
-      const versions = await deps.client.listAgentVersions(
+      const versions = await client.listAgentVersions(
         agentVersionsMatch[1] as AgentId,
       );
       sendJson(
@@ -406,7 +454,7 @@ export async function handleConsoleApiRequest(
 
     const agentItemMatch = pathname.match(/^\/api\/v1\/agents\/([^/]+)$/);
     if (agentItemMatch !== null) {
-      const agent = await deps.client.getAgent(agentItemMatch[1] as AgentId);
+      const agent = await client.getAgent(agentItemMatch[1] as AgentId);
       sendJson(
         response,
         200,
@@ -418,7 +466,7 @@ export async function handleConsoleApiRequest(
     }
 
     if (pathname === "/api/v1/workflows") {
-      const listed = await deps.client.listWorkflows();
+      const listed = await client.listWorkflows();
       sendJson(
         response,
         200,
@@ -431,9 +479,7 @@ export async function handleConsoleApiRequest(
 
     const workflowMatch = pathname.match(/^\/api\/v1\/workflows\/([^/]+)$/);
     if (workflowMatch !== null) {
-      const workflow = await deps.client.getWorkflow(
-        workflowMatch[1] as WorkflowId,
-      );
+      const workflow = await client.getWorkflow(workflowMatch[1] as WorkflowId);
       sendJson(
         response,
         200,
@@ -448,7 +494,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/workflows\/([^/]+)\/versions$/,
     );
     if (workflowVersionsMatch !== null) {
-      const versions = await deps.client.listWorkflowVersions(
+      const versions = await client.listWorkflowVersions(
         workflowVersionsMatch[1] as WorkflowId,
       );
       sendJson(
@@ -465,7 +511,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/workflows\/([^/]+)\/versions\/([^/]+)$/,
     );
     if (workflowVersionMatch !== null) {
-      const version = await deps.client.getWorkflowVersion(
+      const version = await client.getWorkflowVersion(
         workflowVersionMatch[1] as WorkflowId,
         workflowVersionMatch[2] as WorkflowVersionId,
       );
@@ -480,7 +526,7 @@ export async function handleConsoleApiRequest(
     }
 
     if (pathname === "/api/v1/workflow-runs") {
-      const listed = await deps.client.listWorkflowRuns({
+      const listed = await client.listWorkflowRuns({
         workflowId: searchParams.get("workflowId") ?? undefined,
         workflowVersionId: searchParams.get("workflowVersionId") ?? undefined,
         status: searchParams.get("status") ?? undefined,
@@ -501,7 +547,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/workflow-runs\/([^/]+)$/,
     );
     if (workflowRunMatch !== null) {
-      const workflowRun = await deps.client.getWorkflowRun(
+      const workflowRun = await client.getWorkflowRun(
         workflowRunMatch[1] as WorkflowRunId,
       );
       sendJson(
@@ -518,7 +564,7 @@ export async function handleConsoleApiRequest(
       /^\/api\/v1\/approval-requests\/([^/]+)$/,
     );
     if (approvalMatch !== null) {
-      const approval = await deps.client.getApprovalRequest(
+      const approval = await client.getApprovalRequest(
         approvalMatch[1] as ApprovalRequestId,
       );
       sendJson(
@@ -534,7 +580,7 @@ export async function handleConsoleApiRequest(
     if (pathname === "/api/v1/artifacts") {
       const runIdParam = searchParams.get("runId");
       const runAttemptIdParam = searchParams.get("runAttemptId");
-      const listed = await deps.client.listArtifacts({
+      const listed = await client.listArtifacts({
         runId:
           runIdParam === null || runIdParam.length === 0
             ? undefined
@@ -572,7 +618,7 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
-      const downloaded = await deps.client.downloadArtifact(artifactId);
+      const downloaded = await client.downloadArtifact(artifactId);
       if (downloaded.body === null) {
         sendJson(
           response,
@@ -626,7 +672,7 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
-      const artifact = await deps.client.getArtifact(artifactId);
+      const artifact = await client.getArtifact(artifactId);
       sendJson(
         response,
         200,
@@ -646,6 +692,7 @@ export async function handleConsoleApiRequest(
     );
     return true;
   } catch (error) {
+    forwardUpstreamErrorCookies(response, error);
     if (error instanceof ConsoleConfigurationError) {
       sendJson(
         response,
@@ -668,6 +715,24 @@ export async function handleConsoleApiRequest(
       deps.security,
     );
     return true;
+  }
+}
+
+function browserAuthorizationPresent(request: IncomingMessage): boolean {
+  const raw = request.headers.authorization;
+  if (raw === undefined) {
+    return false;
+  }
+  const value = typeof raw === "string" ? raw : raw[0];
+  return (value?.trim().length ?? 0) > 0;
+}
+
+function forwardUpstreamErrorCookies(
+  response: ServerResponse,
+  error: unknown,
+): void {
+  if (error instanceof ConsoleUpstreamHttpError) {
+    appendSessionSetCookieLines(response, error.setCookie);
   }
 }
 
