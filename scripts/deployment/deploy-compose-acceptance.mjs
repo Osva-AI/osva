@@ -3,6 +3,10 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  EXPECTED_MIGRATION_HEAD,
+  buildComposeAcceptanceEnv,
+} from "./deploy-compose-acceptance-env.mjs";
 import { httpGetWithHost } from "./mcp-http-check.mjs";
 
 const REPO_ROOT = path.resolve(
@@ -63,9 +67,9 @@ async function waitHttp(url, attempts = 90) {
   throw new Error(`Timed out waiting for ${url}`);
 }
 
-function assertServicesRunning(password) {
+function assertServicesRunning(composeEnv) {
   const output = runCapture("docker", ["compose", "ps", "--format", "json"], {
-    env: { POSTGRES_PASSWORD: password },
+    env: composeEnv,
   });
   const lines = output
     .split(/\r?\n/)
@@ -85,7 +89,7 @@ function assertServicesRunning(password) {
   }
 }
 
-function assertStartupLogs(password) {
+function assertStartupLogs(composeEnv) {
   const patterns = {
     worker: '"event":"worker.started"',
     scheduler: '"event":"scheduler.started"',
@@ -95,7 +99,7 @@ function assertStartupLogs(password) {
   };
   for (const [service, pattern] of Object.entries(patterns)) {
     const logs = runCapture("docker", ["compose", "logs", service], {
-      env: { POSTGRES_PASSWORD: password },
+      env: composeEnv,
     });
     if (!logs.includes(pattern)) {
       throw new Error(
@@ -132,10 +136,8 @@ async function assertMcpHostBehavior(mcpPort) {
   }
 }
 
-const EXPECTED_MIGRATION_HEAD = "0023_execution_lease_slice";
-
-function assertMigrationStatus(password, composeEnv) {
-  const databaseUrl = `postgres://osva:${password}@postgres:5432/osva`;
+function assertMigrationStatus(composeEnv) {
+  const databaseUrl = `postgres://osva:${composeEnv.POSTGRES_PASSWORD}@postgres:5432/osva`;
   const output = runCapture(
     "docker",
     [
@@ -184,25 +186,9 @@ async function fetchWithRetry(url, options, attempts = 10) {
 }
 
 async function main() {
-  const password =
-    process.env.POSTGRES_PASSWORD ?? "compose-acceptance-password";
-  const webPort = process.env.OSVA_PUBLISH_WEB_PORT ?? "18080";
-  const mcpPort = Number.parseInt(
-    process.env.OSVA_PUBLISH_MCP_PORT ?? "13100",
-    10,
-  );
-  const webOrigin = `http://127.0.0.1:${webPort}`;
-  const composeEnv = {
-    POSTGRES_PASSWORD: password,
-    OSVA_PUBLISH_WEB_PORT: webPort,
-    OSVA_PUBLISH_MCP_PORT: String(mcpPort),
-    OSVA_AUTH_SECRET:
-      process.env.OSVA_AUTH_SECRET ??
-      "compose-acceptance-test-osva-auth-secret-32",
-    OSVA_AUTH_BASE_URL: process.env.OSVA_AUTH_BASE_URL ?? webOrigin,
-    OSVA_AUTH_TRUSTED_ORIGINS:
-      process.env.OSVA_AUTH_TRUSTED_ORIGINS ?? webOrigin,
-  };
+  const composeEnv = buildComposeAcceptanceEnv(process.env);
+  const webPort = composeEnv.OSVA_PUBLISH_WEB_PORT;
+  const mcpPort = Number.parseInt(composeEnv.OSVA_PUBLISH_MCP_PORT, 10);
 
   const tearDown = () => {
     try {
@@ -243,10 +229,10 @@ async function main() {
     throw new Error("Valkey did not respond to PING.");
   }
 
-  assertServicesRunning(password);
-  assertStartupLogs(password);
+  assertServicesRunning(composeEnv);
+  assertStartupLogs(composeEnv);
 
-  assertMigrationStatus(password, composeEnv);
+  assertMigrationStatus(composeEnv);
 
   await waitHttp(`http://127.0.0.1:${webPort}/health`);
   await waitHttp(`http://127.0.0.1:${webPort}/ready`);
@@ -287,7 +273,7 @@ async function main() {
   }
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
-  assertServicesRunning(password);
+  assertServicesRunning(composeEnv);
 
   run("docker", ["compose", "down", "-v"], { env: composeEnv });
   console.log("deploy compose acceptance PASS");
@@ -296,14 +282,8 @@ async function main() {
 main().catch((error) => {
   console.error(error);
   try {
-    const password =
-      process.env.POSTGRES_PASSWORD ?? "compose-acceptance-password";
     run("docker", ["compose", "down", "-v"], {
-      env: {
-        POSTGRES_PASSWORD: password,
-        OSVA_PUBLISH_WEB_PORT: process.env.OSVA_PUBLISH_WEB_PORT ?? "18080",
-        OSVA_PUBLISH_MCP_PORT: process.env.OSVA_PUBLISH_MCP_PORT ?? "13100",
-      },
+      env: buildComposeAcceptanceEnv(process.env),
     });
   } catch {
     // ignore teardown errors
