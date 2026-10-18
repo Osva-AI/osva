@@ -168,6 +168,9 @@ async function createGateway(options?: {
     async listIds() {
       return [WORKSPACE_ID, "ws-other" as WorkspaceId];
     },
+    async listUnlinkedIds() {
+      return [];
+    },
   };
   const memoryNamespaces = new MemoryMemoryNamespaceRepository();
   let namespaceCounter = 0;

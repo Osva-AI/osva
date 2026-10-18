@@ -6,6 +6,7 @@ import { CONTROL_PLANE_RESOURCE_KINDS } from "@osva/domain";
 
 import {
   authorizeControlPlaneAdmin,
+  controlPlaneAuditActor,
   requireControlPlaneScope,
 } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
@@ -93,11 +94,12 @@ async function dispatchApiKeyRoute(
             : new Date(parsed.data.expiresAt),
       });
 
+      const auditActor = controlPlaneAuditActor(scope);
       emitSecurityEvent({
         event: SECURITY_EVENT_NAMES.API_KEY_CREATED,
         requestId,
-        workspaceId: scope.principal.workspaceId,
-        subjectId: scope.principal.subjectId,
+        workspaceId: auditActor.workspaceId,
+        subjectId: auditActor.subjectId,
         resourceType: CONTROL_PLANE_RESOURCE_KINDS.apiKey,
         resourceId: created.apiKey.id,
         role: created.apiKey.role,
@@ -140,11 +142,12 @@ async function dispatchApiKeyRoute(
     scope,
     route.apiKeyId,
   );
+  const auditActor = controlPlaneAuditActor(scope);
   emitSecurityEvent({
     event: SECURITY_EVENT_NAMES.API_KEY_REVOKED,
     requestId,
-    workspaceId: scope.principal.workspaceId,
-    subjectId: scope.principal.subjectId,
+    workspaceId: auditActor.workspaceId,
+    subjectId: auditActor.subjectId,
     resourceType: CONTROL_PLANE_RESOURCE_KINDS.apiKey,
     resourceId: revoked.id,
     role: revoked.role,

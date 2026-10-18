@@ -265,6 +265,8 @@ function webEnv(databaseUrl: string, valkeyUrl: string): NodeJS.ProcessEnv {
     OSVA_VALKEY_URL: valkeyUrl,
     OSVA_WEB_HOST: "127.0.0.1",
     OSVA_WEB_PORT: "0",
+    OSVA_AUTH_SECRET: "integration-test-auth-secret-with-length-32",
+    OSVA_KNOWLEDGE_EMBEDDING_PROVIDER: "DETERMINISTIC",
     OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE: "2",
     OSVA_RATE_LIMIT_AUTH_PER_MINUTE: "2",
   };

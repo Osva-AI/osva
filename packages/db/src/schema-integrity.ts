@@ -8,6 +8,24 @@ import {
 import { readDrizzleJournal } from "./migration-history.js";
 
 export const LEASE_SLICE_MIGRATION_TAG = "0023_execution_lease_slice";
+export const IDENTITY_FOUNDATION_MIGRATION_TAG =
+  "0024_identity_foundation_slice";
+export const HUMAN_AUTH_MIGRATION_TAG = "0025_human_authentication_slice";
+export const BETTER_AUTH_USER_IMAGE_MIGRATION_TAG =
+  "0026_better_auth_user_image";
+
+const PENDING_MIGRATION_TABLE_PROBES: Readonly<
+  Record<string, readonly string[]>
+> = {
+  [IDENTITY_FOUNDATION_MIGRATION_TAG]: ["organizations"],
+  [HUMAN_AUTH_MIGRATION_TAG]: ["auth_sessions"],
+};
+
+const PENDING_MIGRATION_COLUMN_PROBES: Readonly<
+  Record<string, readonly { readonly table: string; readonly column: string }[]>
+> = {
+  [BETTER_AUTH_USER_IMAGE_MIGRATION_TAG]: [{ table: "users", column: "image" }],
+};
 
 export type SchemaIntegrityOutcome =
   | "not_migrated"
@@ -252,10 +270,24 @@ export async function verifySchemaIntegrity(
     journalSnapshot.databaseAppliedCount,
     LEASE_SLICE_MIGRATION_TAG,
   );
-  const outcome = classifySchemaIntegrity({
+  let outcome = classifySchemaIntegrity({
     journalClaimsLeaseSlice,
     checks,
   });
+
+  if (
+    outcome === "applied_and_matches" &&
+    journalSnapshot.status === "behind" &&
+    journalSnapshot.pendingMigrations.length > 0
+  ) {
+    const schemaAheadOfJournal = await schemaContainsPendingMigrationArtifacts(
+      sql,
+      journalSnapshot.pendingMigrations,
+    );
+    if (schemaAheadOfJournal) {
+      outcome = "schema_ahead";
+    }
+  }
 
   return {
     outcome,
@@ -303,6 +335,49 @@ function toIntegrityJournal(
 
 async function readJournalSnapshot(sql: Sql): Promise<MigrationStatusSnapshot> {
   return readMigrationStatus(sql);
+}
+
+export async function schemaContainsPendingMigrationArtifacts(
+  sql: Sql,
+  pendingMigrations: readonly string[],
+): Promise<boolean> {
+  for (const tag of pendingMigrations) {
+    const tables = PENDING_MIGRATION_TABLE_PROBES[tag];
+    if (tables !== undefined) {
+      for (const table of tables) {
+        const rows = await sql<{ exists: boolean }[]>`
+          SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name = ${table}
+          ) AS exists
+        `;
+        if (rows[0]?.exists === true) {
+          return true;
+        }
+      }
+    }
+
+    const columns = PENDING_MIGRATION_COLUMN_PROBES[tag];
+    if (columns !== undefined) {
+      for (const { table, column } of columns) {
+        const rows = await sql<{ exists: boolean }[]>`
+          SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = ${table}
+              AND column_name = ${column}
+          ) AS exists
+        `;
+        if (rows[0]?.exists === true) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 async function inspectLeaseSliceSchema(sql: Sql): Promise<SchemaObjectCheck[]> {

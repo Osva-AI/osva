@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,13 +84,15 @@ describe("connector-sdk MCP compatibility", () => {
       const endpointUrl = `http://127.0.0.1:${String(address.port)}/mcp`;
 
       const trustedRuntimeRoot = await copyAgentFixtures("mcp-echo-agent.ts");
-      const web = createWebProcess({
-        OSVA_DATABASE_URL: postgres.connectionString,
-        OSVA_VALKEY_URL: valkey.url,
-        OSVA_WEB_HOST: "127.0.0.1",
-        OSVA_WEB_PORT: "0",
-        OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
-      });
+      const web = createWebProcess(
+        withTestAuthEnv({
+          OSVA_DATABASE_URL: postgres.connectionString,
+          OSVA_VALKEY_URL: valkey.url,
+          OSVA_WEB_HOST: "127.0.0.1",
+          OSVA_WEB_PORT: "0",
+          OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
+        }),
+      );
       const worker = createWorkerProcess({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,

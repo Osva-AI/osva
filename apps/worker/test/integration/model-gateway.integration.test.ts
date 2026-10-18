@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -84,12 +85,14 @@ describe("model gateway end-to-end", () => {
     );
     const fakeOpenAI = await startFakeOpenAIResponsesServer();
 
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess(
       {
         OSVA_DATABASE_URL: postgres.connectionString,
@@ -382,12 +385,14 @@ describe("model gateway end-to-end", () => {
     );
     const fakeGemini = await startFakeGeminiGenerateContentServer();
 
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess(
       {
         OSVA_DATABASE_URL: postgres.connectionString,
@@ -515,12 +520,14 @@ describe("model gateway end-to-end", () => {
       await fs.readFile(path.join(trustedRuntimeRoot, "model-text-agent.ts")),
     );
 
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,
@@ -652,12 +659,14 @@ async function runProviderEndToEnd(
   );
   const fakeProvider = await options.startFakeProvider();
 
-  const web = createWebProcess({
-    OSVA_DATABASE_URL: postgres.connectionString,
-    OSVA_VALKEY_URL: valkey.url,
-    OSVA_WEB_HOST: "127.0.0.1",
-    OSVA_WEB_PORT: "0",
-  });
+  const web = createWebProcess(
+    withTestAuthEnv({
+      OSVA_DATABASE_URL: postgres.connectionString,
+      OSVA_VALKEY_URL: valkey.url,
+      OSVA_WEB_HOST: "127.0.0.1",
+      OSVA_WEB_PORT: "0",
+    }),
+  );
   const worker = createWorkerProcess(
     {
       OSVA_DATABASE_URL: postgres.connectionString,

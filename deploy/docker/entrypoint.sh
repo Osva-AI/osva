@@ -36,8 +36,14 @@ case "$process" in
   bootstrap)
     exec node /app/packages/db/dist/bootstrap-cli.js "$@"
     ;;
+  identity-bootstrap)
+    exec node /app/apps/identity/dist/bootstrap-cli.js "$@"
+    ;;
+  identity-recover)
+    exec node /app/apps/identity/dist/recover-cli.js "$@"
+    ;;
   "")
-    echo "OSVA_PROCESS is required (web, worker, scheduler, workflow-orchestrator, knowledge-worker, mcp-server, migrate, bootstrap)." >&2
+    echo "OSVA_PROCESS is required (web, worker, scheduler, workflow-orchestrator, knowledge-worker, mcp-server, migrate, bootstrap, identity-bootstrap, identity-recover)." >&2
     exit 1
     ;;
   *)

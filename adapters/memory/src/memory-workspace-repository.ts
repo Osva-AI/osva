@@ -19,4 +19,11 @@ export class MemoryWorkspaceRepository implements WorkspaceRepository {
   async listIds(): Promise<readonly WorkspaceId[]> {
     return [...this.workspaces.keys()].sort();
   }
+
+  async listUnlinkedIds(): Promise<readonly WorkspaceId[]> {
+    return [...this.workspaces.values()]
+      .filter((workspace) => workspace.organizationId === undefined)
+      .map((workspace) => workspace.id)
+      .sort();
+  }
 }

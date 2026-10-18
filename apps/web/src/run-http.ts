@@ -23,6 +23,7 @@ import type { CreateRun } from "@osva/orchestration";
 import {
   authorizeControlPlaneExecute,
   requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
 } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
@@ -110,7 +111,7 @@ async function dispatchRunRoute(
       const created = await services.createRun.execute({
         runId: services.ids.createId() as RunId,
         runAttemptId: services.ids.createId() as RunAttemptId,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
         agentId: parsed.data.agentId,
         agentVersionId: parsed.data.agentVersionId,
         input: parsed.data.input,

@@ -66,6 +66,13 @@ class TestWorkspaceRepository implements WorkspaceRepository {
   async listIds(): Promise<readonly WorkspaceId[]> {
     return [...this.items.keys()].sort();
   }
+
+  async listUnlinkedIds(): Promise<readonly WorkspaceId[]> {
+    return [...this.items.values()]
+      .filter((workspace) => workspace.organizationId === undefined)
+      .map((workspace) => workspace.id)
+      .sort();
+  }
 }
 
 class TestAgentRepository implements AgentRepository {

@@ -31,11 +31,13 @@ describe("self-hosted compose distribution", () => {
         env: {
           ...process.env,
           POSTGRES_PASSWORD: "compose-config-test-password",
+          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
         },
       },
     );
     assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.match(result.stdout, /osva-self-hosted/);
+    assert.match(result.stdout, /OSVA_AUTH_SECRET:/);
     assert.match(result.stdout, /OSVA_CONTAINER_ENABLED: "false"/);
     assert.match(result.stdout, /OSVA_HEALTH_PORT: "8081"/);
     assert.doesNotMatch(result.stdout, /console:/);
@@ -61,6 +63,7 @@ describe("self-hosted compose distribution", () => {
         env: {
           ...process.env,
           POSTGRES_PASSWORD: "compose-config-test-password",
+          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
         },
       },
     );
@@ -93,6 +96,7 @@ describe("self-hosted compose distribution", () => {
         env: {
           ...process.env,
           POSTGRES_PASSWORD: "compose-config-test-password",
+          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
         },
       },
     );
@@ -134,6 +138,7 @@ describe("self-hosted compose distribution", () => {
         env: {
           ...process.env,
           POSTGRES_PASSWORD: "compose-config-test-password",
+          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
         },
       },
     );
@@ -158,6 +163,7 @@ describe("self-hosted compose distribution", () => {
           POSTGRES_PASSWORD: "compose-config-test-password",
           VALKEY_PASSWORD: "compose-valkey-secret",
           OSVA_VALKEY_URL: "redis://:compose-valkey-secret@valkey:6379",
+          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
         },
       },
     );

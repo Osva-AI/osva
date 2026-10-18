@@ -1,6 +1,6 @@
 import type { WorkspaceId } from "@osva-ai/contracts";
 import type { Workspace, WorkspaceRepository } from "@osva/domain";
-import { count, eq } from "drizzle-orm";
+import { count, eq, isNull } from "drizzle-orm";
 
 import type { Database } from "../database.js";
 import {
@@ -25,6 +25,7 @@ export class PostgresWorkspaceRepository implements WorkspaceRepository {
           set: {
             name: row.name,
             createdAt: row.createdAt,
+            organizationId: row.organizationId,
           },
         }),
     );
@@ -52,6 +53,16 @@ export class PostgresWorkspaceRepository implements WorkspaceRepository {
     const rows = await this.database.db
       .select({ id: workspaces.id })
       .from(workspaces)
+      .orderBy(workspaces.id);
+
+    return rows.map((row) => row.id as WorkspaceId);
+  }
+
+  async listUnlinkedIds(): Promise<readonly WorkspaceId[]> {
+    const rows = await this.database.db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(isNull(workspaces.organizationId))
       .orderBy(workspaces.id);
 
     return rows.map((row) => row.id as WorkspaceId);

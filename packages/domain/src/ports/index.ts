@@ -55,6 +55,36 @@ export {
   MAX_SCHEDULE_OCCURRENCE_LIST_LIMIT,
 } from "./schedule-repository.js";
 export type { WorkspaceRepository } from "./workspace-repository.js";
+export type { OrganizationRepository } from "./organization-repository.js";
+export type { UserRepository } from "./user-repository.js";
+export type { OrganizationMembershipRepository } from "./organization-membership-repository.js";
+export type { WorkspaceMembershipRepository } from "./workspace-membership-repository.js";
+export type { SecurityAuditEventRepository } from "./security-audit-event-repository.js";
+export type {
+  HumanAuthenticationService,
+  HumanSessionSnapshot,
+  HumanSignInResult,
+  HumanSignInWithEmailCommand,
+} from "./human-authentication-service.js";
+export type {
+  HumanOperatorPasswordToken,
+  HumanOperatorPasswordTokenService,
+} from "./human-operator-password-token-service.js";
+export type { HumanSessionRevocationRepository } from "./human-session-revocation-repository.js";
+export type {
+  HumanSessionRecord,
+  HumanSessionRepository,
+} from "./human-session-repository.js";
+export type {
+  IdentityLifecycleRepository,
+  AssignWorkspaceOwnerMembershipInput,
+  ChangeWorkspaceMembershipRoleInput,
+  CreateOrganizationWithOwnerInput,
+  CreateWorkspaceMembershipInput,
+  RegisterUserInput,
+  RemoveWorkspaceMembershipInput,
+  TransferWorkspaceOwnershipInput,
+} from "./identity-lifecycle-repository.js";
 export type {
   ApiKeyCreateRecord,
   ApiKeyPersistedRecord,

@@ -13,6 +13,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@osva/adapters-auth": "workspace:*",
     "@osva/adapters-artifact-storage": "workspace:*",
     "@osva/adapters-bullmq": "workspace:*",
     "@osva/adapters-embedding-openai-compatible": "workspace:*",

@@ -10,7 +10,10 @@ import {
   updateToolRequestSchema,
 } from "@osva-ai/contracts/schemas";
 import type { Tool, ToolApplication, ToolVersion } from "@osva/domain";
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -71,7 +74,7 @@ async function dispatchToolRoute(
 
       const created = await tools.createTool.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toToolResource(created));
       return;

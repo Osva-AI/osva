@@ -14,7 +14,10 @@ import type {
   ModelProfileApplication,
   ModelProfileVersion,
 } from "@osva/domain";
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -81,7 +84,7 @@ async function dispatchModelProfileRoute(
 
       const created = await modelProfiles.createModelProfile.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toModelProfileResource(created));
       return;

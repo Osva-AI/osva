@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Database } from "@osva/db";
 
 import { createWebProcess } from "../src/process.js";
+import { withTestAuthEnv } from "./support/auth-env.js";
 import { createFakePingableQueue } from "./fake-queue.js";
 
 function fakeDatabase(onClose: () => void): Database {
@@ -34,13 +35,13 @@ describe("createWebProcess", () => {
     };
 
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
         OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
         OSVA_KNOWLEDGE_EMBEDDING_PROVIDER: "DETERMINISTIC",
-      },
+      }),
       () =>
         fakeDatabase(() => {
           closeCalls += 1;

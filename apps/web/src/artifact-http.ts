@@ -17,7 +17,10 @@ import {
   decodeArtifactListCursor,
   encodeArtifactListCursor,
 } from "./artifact-cursor.js";
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { sendJson } from "./json.js";
 import {
@@ -215,7 +218,7 @@ async function handleCreateArtifact(
           readHeader(request, "x-expected-digest") ?? fields.expectedDigest;
 
         uploadPromise = artifacts.createArtifact.execute(scope, {
-          workspaceId: scope.principal.workspaceId,
+          workspaceId: requireControlPlaneWorkspaceId(),
           name: fields.name,
           mediaType:
             fields.mediaType ?? fileMediaType ?? "application/octet-stream",

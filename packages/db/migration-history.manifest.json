@@ -145,6 +145,24 @@
       "tag": "0023_execution_lease_slice",
       "file": "0023_execution_lease_slice.sql",
       "sha256": "699ddea260974f14cceb5f27b2dfdf8d3602db66360ec411b9b881d5d7a9a687"
+    },
+    {
+      "idx": 24,
+      "tag": "0024_identity_foundation_slice",
+      "file": "0024_identity_foundation_slice.sql",
+      "sha256": "0ba6b432517867335972838af1113ae000f74ac4a9d0400b7475494902e3f6bf"
+    },
+    {
+      "idx": 25,
+      "tag": "0025_human_authentication_slice",
+      "file": "0025_human_authentication_slice.sql",
+      "sha256": "4fd7110fbc283cc091b40fdeda55c0e61b1d54ec6014a614c5d43e00dd0fef81"
+    },
+    {
+      "idx": 26,
+      "tag": "0026_better_auth_user_image",
+      "file": "0026_better_auth_user_image.sql",
+      "sha256": "64ba1671f6fcd834f70ad6e786415f1bef75f1379d507d32d1df170f9066c3cc"
     }
   ]
 }

@@ -1,4 +1,4 @@
-import type { WorkspaceId } from "@osva-ai/contracts";
+import type { OrganizationId, WorkspaceId } from "@osva-ai/contracts";
 import { Workspace } from "@osva/domain";
 
 import type { workspaces } from "../schema/workspaces.js";
@@ -10,6 +10,7 @@ export function workspaceToRow(workspace: Workspace) {
   return {
     id: workspace.id,
     name: workspace.name,
+    organizationId: workspace.organizationId ?? null,
     createdAt: workspace.createdAt,
   };
 }
@@ -19,5 +20,9 @@ export function workspaceFromRow(row: WorkspaceRow): Workspace {
     id: row.id as WorkspaceId,
     name: row.name,
     createdAt: toDomainDate(row.createdAt),
+    organizationId:
+      row.organizationId === null || row.organizationId === undefined
+        ? undefined
+        : (row.organizationId as OrganizationId),
   });
 }

@@ -4,7 +4,7 @@ import {
   type ApiKeyId,
   type AuthenticationFailureReason,
   type CommunityEditionRole,
-  type RequestPrincipal,
+  type ApiKeyRequestPrincipal,
   type WorkspaceId,
 } from "@osva-ai/contracts";
 
@@ -23,7 +23,7 @@ export interface AuthenticateApiKeyDependencies {
 export class AuthenticateApiKey {
   constructor(private readonly deps: AuthenticateApiKeyDependencies) {}
 
-  async execute(bearerToken: string): Promise<RequestPrincipal | null> {
+  async execute(bearerToken: string): Promise<ApiKeyRequestPrincipal | null> {
     const result = await this.executeDetailed(bearerToken);
     return result.outcome === "authenticated" ? result.principal : null;
   }
@@ -77,7 +77,10 @@ export class AuthenticateApiKey {
 }
 
 export type AuthenticateApiKeyResult =
-  | { readonly outcome: "authenticated"; readonly principal: RequestPrincipal }
+  | {
+      readonly outcome: "authenticated";
+      readonly principal: ApiKeyRequestPrincipal;
+    }
   | {
       readonly outcome: "failed";
       readonly reason: AuthenticationFailureReason;
@@ -87,12 +90,12 @@ export function toRequestPrincipal(
   subjectId: ApiKeyId,
   workspaceId: WorkspaceId,
   role: CommunityEditionRole,
-): RequestPrincipal {
+): ApiKeyRequestPrincipal {
   return {
+    authenticationMethod: AUTHENTICATION_METHODS.API_KEY,
     subjectId,
     workspaceId,
     role,
-    authenticationMethod: AUTHENTICATION_METHODS.API_KEY,
   };
 }
 

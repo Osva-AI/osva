@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import type { WorkspaceId } from "@osva-ai/contracts";
 import { BullMqJobQueue, toBullMqJobId } from "@osva/adapters-bullmq";
 import {
@@ -94,13 +95,16 @@ describe("web CreateRun BullMQ integration", () => {
   });
 
   it("enqueues exactly { runAttemptId } through real BullMQ", async () => {
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-      OSVA_ALLOW_DETERMINISTIC_EMBEDDINGS: "true",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+        OSVA_ALLOW_DETERMINISTIC_EMBEDDINGS: "true",
+        OSVA_KNOWLEDGE_EMBEDDING_PROVIDER: "DETERMINISTIC",
+      }),
+    );
     const inspector = new BullMqJobQueue({ url: valkey.url });
 
     try {

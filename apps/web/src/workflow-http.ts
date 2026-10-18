@@ -33,7 +33,10 @@ import {
   DEFAULT_WORKFLOW_RUN_LIST_LIMIT,
   MAX_WORKFLOW_RUN_LIST_LIMIT,
 } from "@osva/domain";
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 import {
@@ -117,7 +120,7 @@ async function dispatchWorkflowRoute(
 
       const created = await workflows.createWorkflow.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toWorkflowResource(created));
       return;
@@ -213,7 +216,7 @@ async function dispatchWorkflowRoute(
 
       const created = await workflows.createWorkflowRun.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(
         response,
@@ -241,7 +244,7 @@ async function dispatchWorkflowRoute(
       const approvalRequest = await workflows.getApprovalRequest.execute(
         scope,
         {
-          workspaceId: scope.principal.workspaceId,
+          workspaceId: requireControlPlaneWorkspaceId(),
           approvalRequestId: route.approvalRequestId,
         },
       );
@@ -264,7 +267,7 @@ async function dispatchWorkflowRoute(
       }
 
       const decided = await workflows.decideApprovalRequest.execute(scope, {
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
         approvalRequestId: route.approvalRequestId,
         decision: parsed.data.decision,
         comment: parsed.data.comment,

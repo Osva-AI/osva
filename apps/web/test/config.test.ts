@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { loadWebConfig } from "../src/config.js";
+import { TEST_AUTH_SECRET, withTestAuthEnv } from "./support/auth-env.js";
 import {
   postgresAndValkeyReadinessCheck,
   postgresReadinessCheck,
@@ -13,17 +14,40 @@ describe("loadWebConfig", () => {
 
   it("requires OSVA_VALKEY_URL", () => {
     expect(() =>
-      loadWebConfig({
-        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
-      }),
+      loadWebConfig(
+        withTestAuthEnv({
+          OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        }),
+      ),
     ).toThrow("OSVA_VALKEY_URL is required.");
   });
 
+  it("requires OSVA_AUTH_SECRET", () => {
+    expect(() =>
+      loadWebConfig({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+      }),
+    ).toThrow("OSVA_AUTH_SECRET is required.");
+  });
+
+  it("rejects OSVA_AUTH_SECRET shorter than 32 characters", () => {
+    expect(() =>
+      loadWebConfig({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+        OSVA_AUTH_SECRET: "too-short",
+      }),
+    ).toThrow("OSVA_AUTH_SECRET must be at least 32 characters.");
+  });
+
   it("uses local host and port defaults", () => {
-    const config = loadWebConfig({
-      OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
-      OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
-    });
+    const config = loadWebConfig(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+      }),
+    );
 
     expect(config.host).toBe("127.0.0.1");
     expect(config.port).toBe(3000);
@@ -32,16 +56,20 @@ describe("loadWebConfig", () => {
     expect(config.unauthenticatedRateLimitPerMinute).toBe(60);
     expect(config.authenticatedRateLimitPerMinute).toBe(600);
     expect(config.trustedProxies).toEqual([]);
+    expect(config.authSecret).toBe(TEST_AUTH_SECRET);
+    expect(config.authBaseUrl).toBe("http://127.0.0.1:3000");
   });
 
   it("reads rate-limit and trusted-proxy overrides", () => {
-    const config = loadWebConfig({
-      OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
-      OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
-      OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE: "5",
-      OSVA_RATE_LIMIT_AUTH_PER_MINUTE: "50",
-      OSVA_TRUSTED_PROXIES: "10.0.0.0/8, 192.168.1.1",
-    });
+    const config = loadWebConfig(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+        OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE: "5",
+        OSVA_RATE_LIMIT_AUTH_PER_MINUTE: "50",
+        OSVA_TRUSTED_PROXIES: "10.0.0.0/8, 192.168.1.1",
+      }),
+    );
 
     expect(config.unauthenticatedRateLimitPerMinute).toBe(5);
     expect(config.authenticatedRateLimitPerMinute).toBe(50);
@@ -49,12 +77,14 @@ describe("loadWebConfig", () => {
   });
 
   it("reads host and port overrides", () => {
-    const config = loadWebConfig({
-      OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
-      OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
-      OSVA_WEB_HOST: "0.0.0.0",
-      OSVA_WEB_PORT: "8080",
-    });
+    const config = loadWebConfig(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+        OSVA_WEB_HOST: "0.0.0.0",
+        OSVA_WEB_PORT: "8080",
+      }),
+    );
 
     expect(config.host).toBe("0.0.0.0");
     expect(config.port).toBe(8080);
@@ -62,19 +92,23 @@ describe("loadWebConfig", () => {
 
   it("rejects an invalid port without including the database URL", () => {
     expect(() =>
-      loadWebConfig({
-        OSVA_DATABASE_URL: "postgres://secret@127.0.0.1:5432/osva",
-        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
-        OSVA_WEB_PORT: "not-a-port",
-      }),
+      loadWebConfig(
+        withTestAuthEnv({
+          OSVA_DATABASE_URL: "postgres://secret@127.0.0.1:5432/osva",
+          OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+          OSVA_WEB_PORT: "not-a-port",
+        }),
+      ),
     ).toThrow("OSVA_WEB_PORT must be an integer between 0 and 65535.");
 
     try {
-      loadWebConfig({
-        OSVA_DATABASE_URL: "postgres://secret@127.0.0.1:5432/osva",
-        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
-        OSVA_WEB_PORT: "not-a-port",
-      });
+      loadWebConfig(
+        withTestAuthEnv({
+          OSVA_DATABASE_URL: "postgres://secret@127.0.0.1:5432/osva",
+          OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+          OSVA_WEB_PORT: "not-a-port",
+        }),
+      );
     } catch (error) {
       expect(String(error)).not.toContain("secret");
       expect(String(error)).not.toContain("postgres://");

@@ -156,7 +156,11 @@ describe("schema integrity against disposable PostgreSQL", () => {
       async (sql) => {
         await sql.unsafe(`
         DELETE FROM drizzle.__drizzle_migrations
-        WHERE id = (SELECT max(id) FROM drizzle.__drizzle_migrations)
+        WHERE hash IN (
+          SELECT hash FROM drizzle.__drizzle_migrations
+          ORDER BY id DESC
+          LIMIT 1
+        )
       `);
         const report = await verifySchemaIntegrity(sql);
         expect(report.outcome).toBe("schema_ahead");

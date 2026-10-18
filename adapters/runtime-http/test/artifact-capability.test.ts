@@ -316,6 +316,9 @@ async function seedExecution() {
     async listIds() {
       return [workspaceId];
     },
+    async listUnlinkedIds() {
+      return [];
+    },
   };
 
   const artifactApplication = createArtifactApplication({
@@ -422,6 +425,9 @@ async function seedCrossWorkspaceExecution(options: {
     },
     async listIds() {
       return [options.workspaceA, options.workspaceB];
+    },
+    async listUnlinkedIds() {
+      return [];
     },
   };
 

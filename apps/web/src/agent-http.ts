@@ -20,6 +20,7 @@ import {
   authorizeControlPlaneRead,
   authorizeControlPlaneWrite,
   requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
 } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
@@ -83,7 +84,7 @@ async function dispatchAgentRoute(
       authorizeControlPlaneWrite(scope, CONTROL_PLANE_RESOURCE_KINDS.agent);
       const created = await agents.createAgent.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toAgentResource(created));
       return;

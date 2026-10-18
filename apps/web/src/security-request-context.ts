@@ -1,12 +1,21 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 
-import type { RequestPrincipal } from "@osva-ai/contracts";
+import type {
+  ApiKeyRequestPrincipal,
+  RequestPrincipal,
+} from "@osva-ai/contracts";
+import { isApiKeyRequestPrincipal } from "@osva-ai/contracts";
 import { AuthenticationRequiredError } from "@osva/domain";
 
 export interface SecurityRequestContext {
   readonly requestId: string;
   readonly principal?: RequestPrincipal;
+  readonly invalidBearer?: boolean;
+}
+
+export function hasInvalidBearerAuthentication(): boolean {
+  return getSecurityRequestContext()?.invalidBearer === true;
 }
 
 const requestContextStorage = new AsyncLocalStorage<SecurityRequestContext>();
@@ -27,9 +36,9 @@ export function getRequestPrincipal(): RequestPrincipal | undefined {
   return requestContextStorage.getStore()?.principal;
 }
 
-export function requireRequestPrincipal(): RequestPrincipal {
+export function requireRequestPrincipal(): ApiKeyRequestPrincipal {
   const principal = getRequestPrincipal();
-  if (principal === undefined) {
+  if (principal === undefined || !isApiKeyRequestPrincipal(principal)) {
     throw new AuthenticationRequiredError();
   }
 

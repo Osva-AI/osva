@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import { createDatabase, migrateDatabase, type Database } from "@osva/db";
@@ -135,11 +136,11 @@ export async function startCanonicalStack(
   };
 
   const web = createWebProcess(
-    {
+    withTestAuthEnv({
       ...sharedEnv,
       OSVA_WEB_HOST: "127.0.0.1",
       OSVA_WEB_PORT: "0",
-    },
+    }),
     (connectionString) => createDatabase({ connectionString, max: 5 }),
     () => queue,
   );

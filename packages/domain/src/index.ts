@@ -875,6 +875,7 @@ export {
   controlPlaneWorkspaceId,
   requireControlPlaneAuthorization,
   runtimeControlPlaneScope,
+  type ControlPlanePrincipal,
   type ControlPlaneScope,
 } from "./control-plane.js";
 export {
@@ -899,3 +900,76 @@ export {
   BootstrapExistingWorkspaceStateError,
   PermissionDeniedError,
 } from "./security-errors.js";
+export { Organization } from "./organization.js";
+export { User } from "./user.js";
+export { OrganizationMembership } from "./organization-membership.js";
+export { WorkspaceMembership } from "./workspace-membership.js";
+export { SecurityAuditEvent } from "./security-audit-event.js";
+export {
+  IdentityApplication,
+  type AddWorkspaceMembershipCommand,
+  type ChangeWorkspaceMembershipRoleCommand,
+  type CreateOrganizationCommand,
+  type IdentityApplicationClock,
+  type IdentityApplicationDependencies,
+  type IdentityApplicationIds,
+  type RegisterUserCommand,
+  type RemoveWorkspaceMembershipCommand,
+  type TransferWorkspaceOwnershipCommand,
+} from "./identity-application.js";
+export {
+  resolveWorkspaceAccess,
+  type ResolvedWorkspaceAccess,
+  type WorkspaceAccessResolverDependencies,
+} from "./resolve-workspace-access.js";
+export { resolveHumanControlPlaneWorkspace } from "./resolve-human-control-plane-workspace.js";
+export {
+  authorizeHumanRoute,
+  WorkspaceSelectionRequiredError,
+  type HumanRouteAuthorizationContext,
+} from "./human-authorization.js";
+export {
+  IdentityBootstrapApplication,
+  type IdentityBootstrapCommand,
+  type IdentityBootstrapResult,
+  type IdentityBootstrapApplicationClock,
+  type IdentityBootstrapApplicationDependencies,
+  type IdentityBootstrapApplicationIds,
+} from "./identity-bootstrap-application.js";
+export type {
+  HumanAuthenticationService,
+  HumanSessionSnapshot,
+  HumanSignInResult,
+  HumanSignInWithEmailCommand,
+  HumanSessionRecord,
+  HumanSessionRepository,
+  HumanOperatorPasswordToken,
+  HumanOperatorPasswordTokenService,
+  HumanSessionRevocationRepository,
+} from "./ports/index.js";
+export { authorizeApiKeyPrincipal } from "./authorization.js";
+export {
+  DuplicateOrganizationMembershipError,
+  DuplicateUserEmailError,
+  DuplicateWorkspaceMembershipError,
+  OrganizationMembershipNotFoundError,
+  OrganizationNotFoundError,
+  UserNotFoundError,
+  WorkspaceMembershipNotFoundError,
+  WorkspaceOwnerInvariantError,
+} from "./identity-errors.js";
+export type {
+  OrganizationRepository,
+  UserRepository,
+  OrganizationMembershipRepository,
+  WorkspaceMembershipRepository,
+  SecurityAuditEventRepository,
+  IdentityLifecycleRepository,
+  RegisterUserInput,
+  CreateOrganizationWithOwnerInput,
+  CreateWorkspaceMembershipInput,
+  AssignWorkspaceOwnerMembershipInput,
+  TransferWorkspaceOwnershipInput,
+  ChangeWorkspaceMembershipRoleInput,
+  RemoveWorkspaceMembershipInput,
+} from "./ports/index.js";

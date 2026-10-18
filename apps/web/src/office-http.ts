@@ -45,7 +45,10 @@ import type {
   ReconcileAssignment,
 } from "@osva/orchestration";
 
-import { requireControlPlaneScope } from "./control-plane-http.js";
+import {
+  requireControlPlaneScope,
+  requireControlPlaneWorkspaceId,
+} from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -142,7 +145,7 @@ async function dispatchOfficeRoute(
 
       const created = await services.office.createOfficeWorker.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toOfficeWorkerResource(created));
       return;
@@ -211,7 +214,7 @@ async function dispatchOfficeRoute(
 
       const created = await services.office.createRole.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toRoleResource(created));
       return;
@@ -277,7 +280,7 @@ async function dispatchOfficeRoute(
 
       const created = await services.office.createTeam.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toTeamResource(created));
       return;
@@ -379,7 +382,7 @@ async function dispatchOfficeRoute(
 
       const created = await services.office.createGoal.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toGoalResource(created));
       return;
@@ -445,7 +448,7 @@ async function dispatchOfficeRoute(
 
       const created = await services.office.createAssignment.execute(scope, {
         ...parsed.data,
-        workspaceId: scope.principal.workspaceId,
+        workspaceId: requireControlPlaneWorkspaceId(),
       });
       sendJson(response, 201, toAssignmentResource(created));
       return;

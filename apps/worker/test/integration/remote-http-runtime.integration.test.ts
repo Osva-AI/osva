@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -68,12 +69,14 @@ describe("remote HTTP runtime end-to-end", () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-remote-e2e-"),
     );
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,
@@ -128,12 +131,14 @@ describe("remote HTTP runtime end-to-end", () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-remote-ssrf-"),
     );
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,
@@ -180,12 +185,14 @@ describe("remote HTTP runtime end-to-end", () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-remote-model-"),
     );
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess(
       {
         OSVA_DATABASE_URL: postgres.connectionString,
@@ -272,12 +279,14 @@ describe("remote HTTP runtime end-to-end", () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-remote-tool-"),
     );
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,
@@ -345,13 +354,15 @@ describe("remote HTTP runtime end-to-end", () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-remote-artifact-e2e-"),
     );
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-      OSVA_ARTIFACT_FILESYSTEM_ROOT: artifactRoot,
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+        OSVA_ARTIFACT_FILESYSTEM_ROOT: artifactRoot,
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,

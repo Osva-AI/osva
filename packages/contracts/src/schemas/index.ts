@@ -38,6 +38,11 @@ export {
   knowledgeSourceIdSchema,
   knowledgeIndexIdSchema,
   knowledgeChunkIdSchema,
+  organizationIdSchema,
+  userIdSchema,
+  organizationMembershipIdSchema,
+  workspaceMembershipIdSchema,
+  securityAuditEventIdSchema,
 } from "./ids.js";
 
 export { jsonSchemaRecordSchema } from "./json-schema.js";

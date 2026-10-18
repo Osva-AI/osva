@@ -101,6 +101,13 @@ class MemoryWorkspaceRepository implements WorkspaceRepository {
   async listIds(): Promise<readonly WorkspaceId[]> {
     return this.saved === undefined ? [] : [this.saved.id];
   }
+
+  async listUnlinkedIds(): Promise<readonly WorkspaceId[]> {
+    if (this.saved === undefined || this.saved.organizationId !== undefined) {
+      return [];
+    }
+    return [this.saved.id];
+  }
 }
 
 describe("GET /v1/auth/context", () => {
