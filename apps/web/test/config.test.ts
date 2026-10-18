@@ -22,6 +22,25 @@ describe("loadWebConfig", () => {
     ).toThrow("OSVA_VALKEY_URL is required.");
   });
 
+  it("requires OSVA_AUTH_SECRET", () => {
+    expect(() =>
+      loadWebConfig({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+      }),
+    ).toThrow("OSVA_AUTH_SECRET is required.");
+  });
+
+  it("rejects OSVA_AUTH_SECRET shorter than 32 characters", () => {
+    expect(() =>
+      loadWebConfig({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+        OSVA_AUTH_SECRET: "too-short",
+      }),
+    ).toThrow("OSVA_AUTH_SECRET must be at least 32 characters.");
+  });
+
   it("uses local host and port defaults", () => {
     const config = loadWebConfig(
       withTestAuthEnv({

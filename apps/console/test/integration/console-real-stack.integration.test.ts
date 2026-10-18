@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -90,12 +91,14 @@ describe("console real control-plane stack", () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-console-real-stack-"),
     );
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,

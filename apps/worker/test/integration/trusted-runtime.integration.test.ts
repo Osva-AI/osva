@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,12 +84,14 @@ describe("trusted TypeScript runtime end-to-end", () => {
       await fs.readFile(path.join(trustedRuntimeRoot, "echo-agent.ts")),
     );
 
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,
@@ -185,12 +188,14 @@ describe("trusted TypeScript runtime end-to-end", () => {
     const inner = new TrustedTypeScriptRuntimeAdapter({
       trustedRuntimeRoot,
     });
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const producer = new BullMqJobQueue({ url: valkey.url });
     const worker = createWorkerProcess(
       {
@@ -269,11 +274,13 @@ describe("trusted TypeScript runtime end-to-end", () => {
       OSVA_ARTIFACT_FILESYSTEM_ROOT: artifactRoot,
     };
 
-    const web = createWebProcess({
-      ...sharedEnv,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        ...sharedEnv,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       ...sharedEnv,
       OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
@@ -337,12 +344,14 @@ describe("trusted TypeScript runtime end-to-end", () => {
       await fs.readFile(path.join(trustedRuntimeRoot, "throw-agent.ts")),
     );
 
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,

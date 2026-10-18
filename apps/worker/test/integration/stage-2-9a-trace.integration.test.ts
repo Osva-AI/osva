@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -94,12 +95,12 @@ describe("Stage 2.9A trace continuity integration", () => {
     };
 
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
-      },
+      }),
       (connectionString) =>
         createDatabase({ connectionString, max: 5, connectTimeoutSeconds: 10 }),
       () => queue,

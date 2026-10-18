@@ -1,5 +1,6 @@
 ﻿import fs from "node:fs/promises";
 import os from "node:os";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -260,12 +261,12 @@ describe("workflow orchestrator V3 WAIT end-to-end", () => {
 
   async function startStack(trustedRuntimeRoot: string, queue: BullMqJobQueue) {
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
-      },
+      }),
       (connectionString) => createDatabase({ connectionString, max: 5 }),
       () => queue,
     );

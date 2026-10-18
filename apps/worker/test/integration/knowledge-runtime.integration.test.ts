@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -136,7 +137,7 @@ describe("knowledge runtime end-to-end", () => {
       OSVA_KNOWLEDGE_EMBEDDING_MODEL: TEST_EMBEDDING_DEFAULTS.model,
     };
 
-    const web = createWebProcess(env);
+    const web = createWebProcess(withTestAuthEnv(env));
     const worker = createWorkerProcess(env);
     const inspector = new BullMqJobQueue({ url: valkey.url });
 

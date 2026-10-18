@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -96,12 +97,12 @@ describe("scheduler end-to-end", () => {
     const trustedRuntimeRoot = await prepareEchoAgentFixture();
     const queue = new BullMqJobQueue({ url: valkey.url });
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
-      },
+      }),
       (connectionString) => createDatabase({ connectionString, max: 5 }),
       () => queue,
     );
@@ -223,12 +224,12 @@ describe("scheduler end-to-end", () => {
     const runs = new PostgresRunRepository(database);
     const schedules = new PostgresScheduleRepository(database);
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
-      },
+      }),
       (connectionString) => createDatabase({ connectionString, max: 5 }),
       () => gatedQueue,
     );

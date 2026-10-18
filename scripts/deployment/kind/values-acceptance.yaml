@@ -28,5 +28,8 @@ mcp:
 migration:
   enabled: true
 
+secretEnv:
+  OSVA_AUTH_SECRET: kind-acceptance-test-osva-auth-secret-32-chars
+
 worker:
   containerEnabled: false

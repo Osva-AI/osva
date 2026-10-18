@@ -1,5 +1,6 @@
 ﻿import fs from "node:fs/promises";
 import os from "node:os";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -79,12 +80,12 @@ describe("workflow-orchestrator end-to-end", () => {
     const trustedRuntimeRoot = await prepareEchoAgentFixture();
     const queue = new BullMqJobQueue({ url: valkey.url });
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
-      },
+      }),
       (connectionString) => createDatabase({ connectionString, max: 5 }),
       () => queue,
     );
@@ -175,12 +176,12 @@ describe("workflow-orchestrator end-to-end", () => {
     const trustedRuntimeRoot = await prepareEchoAgentFixture();
     const queue = new BullMqJobQueue({ url: valkey.url });
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
-      },
+      }),
       (connectionString) => createDatabase({ connectionString, max: 5 }),
       () => queue,
     );
@@ -316,12 +317,12 @@ describe("workflow-orchestrator end-to-end", () => {
     const remote = await startFakeRemoteRuntime();
     const queue = new BullMqJobQueue({ url: valkey.url });
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
-      },
+      }),
       (connectionString) => createDatabase({ connectionString, max: 5 }),
       () => queue,
     );
@@ -408,12 +409,12 @@ describe("workflow-orchestrator end-to-end", () => {
     const remote = await startFakeRemoteRuntime();
     const queue = new BullMqJobQueue({ url: valkey.url });
     const web = createWebProcess(
-      {
+      withTestAuthEnv({
         OSVA_DATABASE_URL: postgres.connectionString,
         OSVA_VALKEY_URL: valkey.url,
         OSVA_WEB_HOST: "127.0.0.1",
         OSVA_WEB_PORT: "0",
-      },
+      }),
       (connectionString) => createDatabase({ connectionString, max: 5 }),
       () => queue,
     );

@@ -191,10 +191,17 @@ async function main() {
     process.env.OSVA_PUBLISH_MCP_PORT ?? "13100",
     10,
   );
+  const webOrigin = `http://127.0.0.1:${webPort}`;
   const composeEnv = {
     POSTGRES_PASSWORD: password,
     OSVA_PUBLISH_WEB_PORT: webPort,
     OSVA_PUBLISH_MCP_PORT: String(mcpPort),
+    OSVA_AUTH_SECRET:
+      process.env.OSVA_AUTH_SECRET ??
+      "compose-acceptance-test-osva-auth-secret-32",
+    OSVA_AUTH_BASE_URL: process.env.OSVA_AUTH_BASE_URL ?? webOrigin,
+    OSVA_AUTH_TRUSTED_ORIGINS:
+      process.env.OSVA_AUTH_TRUSTED_ORIGINS ?? webOrigin,
   };
 
   const tearDown = () => {
