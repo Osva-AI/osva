@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { withTestAuthEnv } from "../../../../packages/db/test/integration/web-auth-env.js";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { RunId, WorkspaceId } from "@osva-ai/contracts";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
@@ -79,12 +80,14 @@ describe("Hello Agent end-to-end", () => {
     const integrity = sha256IntegrityOf(await fs.readFile(entrypointPath));
     const manifest = await buildHelloAgentManifest({ integrity });
 
-    const web = createWebProcess({
-      OSVA_DATABASE_URL: postgres.connectionString,
-      OSVA_VALKEY_URL: valkey.url,
-      OSVA_WEB_HOST: "127.0.0.1",
-      OSVA_WEB_PORT: "0",
-    });
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
     const worker = createWorkerProcess({
       OSVA_DATABASE_URL: postgres.connectionString,
       OSVA_VALKEY_URL: valkey.url,
