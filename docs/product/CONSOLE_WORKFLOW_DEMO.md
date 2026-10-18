@@ -13,8 +13,8 @@ OSVA is a control plane for agents and workflows. Operators register Agents and 
 - PostgreSQL (pgvector) and Valkey via `pnpm infra:up` (or equivalent)
 - Control plane `apps/web` on `OSVA_BASE_URL` (local default `http://127.0.0.1:3000`)
 - `apps/worker` and `apps/workflow-orchestrator`
-- Workspace API key with **ADMIN** or **EDITOR** (publish) and **OPERATOR+** (execute)
-- Console: `OSVA_CONSOLE_API_KEY` set server-side only — never paste the key into the browser or this document
+- Human Console user with **EDITOR** or **ADMIN** (publish) and **OPERATOR+** (execute), or legacy API-key BFF with matching workspace role
+- Web: `OSVA_AUTH_SECRET` configured; human bootstrapped (`pnpm identity:bootstrap` + Console `/setup`) **or** legacy `OSVA_CONSOLE_LEGACY_API_KEY_MODE` with server-side `OSVA_CONSOLE_API_KEY` only — never paste keys into the browser
 - Canonical example built and bootstrapped (`pnpm run canonical:setup`)
 
 Optional for live model calls: provider credentials on the worker. The M6 deterministic suite can seed the same architecture without OpenAI credits; a product demo that launches Research/Analysis/Report needs a working model binding.
@@ -28,7 +28,7 @@ pnpm --filter @osva/worker dev
 pnpm --filter @osva/workflow-orchestrator dev
 pnpm --filter @osva/example-canonical-dependency-adoption build
 pnpm run canonical:setup
-OSVA_CONSOLE_API_KEY=<workspace-api-key> pnpm dev:console
+OSVA_BASE_URL=http://127.0.0.1:3000 OSVA_AUTH_SECRET=<same-as-web> pnpm dev:console
 ```
 
 Open the Vite URL printed by `dev:console` (default `http://localhost:5173`). API calls proxy to the console BFF.
@@ -37,10 +37,10 @@ If only a production console build is running, rebuild first so M8.5 source is s
 
 ```bash
 pnpm --filter @osva/console build
-OSVA_CONSOLE_API_KEY=<workspace-api-key> pnpm --filter @osva/console start
+OSVA_BASE_URL=http://127.0.0.1:3000 OSVA_AUTH_SECRET=<same-as-web> pnpm --filter @osva/console start
 ```
 
-Confirm the shell shows **Role ADMIN** (or EDITOR/OPERATOR as appropriate). Do not commit `.env` files or keys.
+Sign in and select the workspace. Confirm the shell shows the expected human role (for example **ADMIN** or **EDITOR**). Do not commit `.env` files, setup tokens, or keys.
 
 ## Presentation flow
 
@@ -91,7 +91,7 @@ After the Report AGENT succeeds:
 6. Open the producing child Run. The same artifact appears with digest, producer Run/RunAttempt, and optional metadata. Attempts stay on this page.
 7. Artifact bytes remain readable after the worker/container that produced them has exited. Persistence is OSVA artifact storage, not the runtime process.
 
-Do not paste API keys into the browser. The Console server holds `OSVA_CONSOLE_API_KEY`.
+Do not paste API keys or setup tokens into the browser. Default Console uses human sessions; legacy API-key mode keeps the key server-side only.
 
 ## Optional topology fixtures
 
@@ -115,7 +115,7 @@ Do not mark unselected BRANCH paths as FAILED. Missing WorkflowNodeRun records m
 
 ## Known limitations
 
-- Console is bound to one workspace API key. VIEWER vs OPERATOR must be demonstrated with a second key or accepted from unit coverage.
+- Console selects one workspace at a time (human session). VIEWER vs OPERATOR must be demonstrated with a second human user or accepted from unit coverage.
 - WorkflowRun Detail lists artifacts produced by AGENT child Runs. It does not provide a workspace-wide Artifact Explorer.
 - Automatic RunAttempt retry is not a product feature. Multiple WorkflowNodeRun rows for one key are historical node records, not retries.
 - The M7 `canonical:demo` UI (port 4173) is a separate read-model example. Use this Console demo for product evaluation.

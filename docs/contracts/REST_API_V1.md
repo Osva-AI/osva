@@ -4,10 +4,18 @@
 
 ## Authentication
 
-- All `/v1/*` routes require `Authorization: Bearer <osva_ak_…>`.
+Two **Community Edition** planes (M11):
+
+| Plane | Routes | Credential |
+| --- | --- | --- |
+| **Machine** | Product `/v1/*` (except human auth routes) | `Authorization: Bearer <osva_ak_…>` |
+| **Human** | `/v1/auth/*` and human-authorized product routes | HttpOnly session cookie (`osva.session_token`); mutating auth routes require trusted browser `Origin` |
+
 - Public probes: `GET /health`, `GET /ready` only.
-- Workspace identity is derived from the authenticated `RequestPrincipal`.
-- Client-supplied workspace IDs in bodies or query strings are not authoritative.
+- Machine workspace identity is derived from the API-key `RequestPrincipal`.
+- Human workspace context uses membership plus `x-osva-workspace-id` where required (must match path workspace id).
+- Client-supplied workspace IDs in bodies or query strings are not authoritative for either plane.
+- Invalid Bearer credentials do **not** fall back to a session cookie.
 
 ## Authorization and tenancy
 
@@ -38,7 +46,7 @@ Clients must key on HTTP status and stable `code` values, not message text.
 
 `429 RATE_LIMITED` includes `Retry-After` (seconds) and `x-osva-request-id`. It is abuse protection, not a billing quota. Official TypeScript/Python SDKs and the CLI (via the Node SDK) do not automatically retry `429`. `503 SERVICE_UNAVAILABLE` is used when the Valkey rate-limit store is down; it is not a throttle signal.
 
-Workspace identity remains the authenticated `RequestPrincipal` (`subjectId`, `workspaceId`, `role`, `authenticationMethod: API_KEY`). Community `/v1` does not introduce member, organization, invitation, or billing fields.
+Machine callers remain the API-key `RequestPrincipal` (`subjectId`, `workspaceId`, `role`, `authenticationMethod: API_KEY`). Human sessions use separate principal types and fixed workspace roles; public product JSON does not expose organization billing or invitation fields.
 
 ## Compatibility within `/v1`
 

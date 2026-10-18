@@ -367,11 +367,13 @@ pnpm example:hello
 | Variable | Contributor host stack |
 | --- | --- |
 | `OSVA_BASE_URL` | `http://127.0.0.1:3000` |
-| `OSVA_CONSOLE_API_KEY` | Bootstrap API key |
+| `OSVA_AUTH_SECRET` | Same as web (required for human login) |
+| `OSVA_CONSOLE_API_KEY` | Legacy BFF only (`OSVA_CONSOLE_LEGACY_API_KEY_MODE=true`) |
 
 ```powershell
 $env:OSVA_BASE_URL = "http://127.0.0.1:3000"
-$env:OSVA_CONSOLE_API_KEY = "osva_ak_…"
+$env:OSVA_AUTH_SECRET = "<same-as-web>"
+pnpm identity:bootstrap   # once per fresh DB
 pnpm dev:console
 ```
 

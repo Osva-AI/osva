@@ -207,19 +207,23 @@ docker compose down -v
 
 ## 10. Product Console (optional)
 
-Console is not started by Compose. Export bootstrap credentials, point at the published web port, then run from a repository clone:
+Console is not started by Compose. Default mode uses **human sessions** (no Console API key). Ensure `apps/web` has **`OSVA_AUTH_SECRET`** (same as Compose `.env`) and trusted origins include the Console URL.
 
 ```powershell
 $env:OSVA_BASE_URL = "http://127.0.0.1:8080"
-$env:OSVA_CONSOLE_API_KEY = "osva_ak_…"
+$env:OSVA_AUTH_SECRET = "<same-as-web>"
+pnpm identity:bootstrap   # once: save setup token from stdout
 pnpm dev:console
 ```
 
-Open **`http://127.0.0.1:5173`** (dev). After `pnpm --filter @osva/console build` and `start`, open **`http://127.0.0.1:4174`**. See [`engineering/CONSOLE.md`](engineering/CONSOLE.md).
+Open **`http://127.0.0.1:5173`**, complete **`/setup`** with the bootstrap token, then sign in. After `pnpm --filter @osva/console build` and `start`, open **`http://127.0.0.1:4174`**.
+
+Legacy API-key BFF (deprecated): `OSVA_CONSOLE_LEGACY_API_KEY_MODE=true` and `OSVA_CONSOLE_API_KEY`. See [`engineering/CONSOLE.md`](engineering/CONSOLE.md).
 
 ## Community boundaries
 
-- API-key identity and RBAC only; no Enterprise SSO/SCIM.
+- **Machine access:** API keys and API-key RBAC (CLI, SDK, MCP).
+- **Human access:** local password sessions and fixed workspace roles (M11); **OIDC** is future Community work; **SAML/SCIM** are Teams/Enterprise.
 - Console loopback trust boundary; not a substitute for ingress auth on the public internet.
 - No guaranteed HA or exactly-once external side effects.
 - S3-compatible artifact storage is supported by configuration; independent S3 disaster-recovery restore is **not** M9.7 acceptance-tested.

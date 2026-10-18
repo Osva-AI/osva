@@ -59,3 +59,11 @@ Status is recorded after locally verifiable checks for each slice.
 
 **Community Beta:** complete
 **OSS 1.0:** OSVA 1.0.0 release (33/33 slices; in-repo gates and Linux release-readiness CI verified; registry artifact availability depends on publication)
+
+## Post-1.0 Community (in-repository)
+
+- ✅ M7 Canonical dependency-adoption example and operator commands
+- ✅ M8 Product Console (agents, workflow builder, runs, artifacts)
+- ✅ M9.7 Production acceptance harness and sanitized evidence matrix
+- ✅ M10 Developer experience and release packaging (through M10.4 published **`1.1.0-rc.2`**)
+- ✅ M11 Human identity, authentication, and Console human sessions (Slices 1–3) — [`../operations/M11_CLOSEOUT_SUMMARY.md`](../operations/M11_CLOSEOUT_SUMMARY.md)

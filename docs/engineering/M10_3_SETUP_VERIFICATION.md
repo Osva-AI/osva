@@ -2,6 +2,8 @@
 
 Snapshot of what was exercised on a Windows developer machine during M10.3A–M10.3D. This is **not** a substitute for `pnpm verify:ci:clean` or release acceptance.
 
+> **Superseded for Console auth (M11):** Default Console no longer requires `OSVA_CONSOLE_API_KEY`. Use human bootstrap and [`CONSOLE.md`](CONSOLE.md). Rows below describe pre-M11 verification only.
+
 ## What is verified
 
 | Area | Evidence | Notes |

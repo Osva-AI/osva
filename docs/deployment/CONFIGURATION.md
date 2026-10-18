@@ -23,7 +23,17 @@ Sensitive values must be supplied by the operator. Examples below use placeholde
 | `OSVA_RATE_LIMIT_AUTH_PER_MINUTE` | web | no | `600` | no | Authenticated `/v1` requests per API key per minute. |
 | `OSVA_TRUSTED_PROXIES` | web | no | (none) | no | Comma-separated proxy IPs/CIDRs allowed to supply `X-Forwarded-For` / `Forwarded`. Default uses the peer socket address. |
 
-Public routes: `/health`, `/ready` (not rate-limited as API traffic). All `/v1/*` require API key authentication and share the Valkey rate-limit store. Store outage fails closed with `503 SERVICE_UNAVAILABLE`.
+Public routes: `/health`, `/ready` (not rate-limited as API traffic). Product `/v1/*` routes require authentication (API key and/or human session per route inventory). Machine callers use Bearer API keys. Human browser routes under `/v1/auth/*` use session cookies and CSRF/trusted-origin checks. Valkey rate-limit store outage fails closed with `503 SERVICE_UNAVAILABLE`.
+
+## Human authentication (`apps/web`)
+
+| Variable | Processes | Required | Default | Sensitive | Notes |
+|----------|-----------|----------|---------|-----------|-------|
+| `OSVA_AUTH_SECRET` | web | yes (human auth) | — | yes | ≥ 32 characters. Better Auth signing secret. |
+| `OSVA_AUTH_BASE_URL` | web | no | derived from web bind | no | Public base URL for auth (for example `http://127.0.0.1:8080` in Compose). |
+| `OSVA_AUTH_TRUSTED_ORIGINS` | web | yes for Console mutations | — | no | Comma-separated browser origins (include Console dev `http://127.0.0.1:5173` and BFF `http://127.0.0.1:4174` when used). |
+
+Bootstrap and recovery CLIs (`pnpm identity:bootstrap`, `pnpm identity:recover`) require the same `OSVA_AUTH_SECRET` and `OSVA_DATABASE_URL`. See [`../architecture/HUMAN_AUTHENTICATION.md`](../architecture/HUMAN_AUTHENTICATION.md).
 
 ## Console (local operator UI)
 

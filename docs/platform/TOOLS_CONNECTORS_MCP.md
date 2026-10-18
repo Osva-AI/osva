@@ -97,6 +97,6 @@ stdio transport supports `secretEnvironment` SecretReferences (resolved at proce
 ## Still not supported
 
 - MCP prompts, sampling, roots, elicitation, MCP Tasks, subscriptions on inbound OSVA MCP
-- OAuth/OIDC inbound MCP auth (deferred to Stage 3.7)
+- OAuth/OIDC inbound MCP auth (future Community; not M11 — MCP continues to use OSVA API keys)
 - Raw ToolVersion execution via inbound MCP
 - Provider-specific bundled connectors

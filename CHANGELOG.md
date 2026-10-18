@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **M11 (documentation closeout):** Human identity, Better Auth password sessions, fixed workspace roles, Console login and membership administration. Migration head **`0026_better_auth_user_image`**. See [`docs/operations/M11_CLOSEOUT_SUMMARY.md`](docs/operations/M11_CLOSEOUT_SUMMARY.md).
+
 ## [1.1.0-rc.2] - 2026-10-17
 
 Corrected release candidate published to npm, PyPI, GHCR, and GitHub Releases (tag **`v1.1.0-rc.2`**; registry acceptance in [`docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md)). Supersedes incomplete **`1.1.0-rc.1`** npm CLI packaging for the M10.2 agent developer workflow.

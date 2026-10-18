@@ -80,8 +80,7 @@ Enum additions are not automatically safe for exhaustive clients.
 
 ### Authentication
 
-Workspace identity is derived from the authenticated principal. Client-provided
-workspace IDs in request bodies or query parameters are not authoritative in stable `/v1`.
+Community Edition has **machine** (API key) and **human** (session cookie) planes. Workspace identity is derived from the authenticated principal for that plane. Client-provided workspace IDs in request bodies or query parameters are not authoritative in stable `/v1`. See [`HUMAN_AUTHENTICATION.md`](HUMAN_AUTHENTICATION.md) and [`../contracts/REST_API_V1.md`](../contracts/REST_API_V1.md).
 
 ### Errors
 

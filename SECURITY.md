@@ -47,9 +47,18 @@ Secrets must be supplied via environment/secret stores (`OSVA_DATABASE_URL`, pro
 
 ## Community identity
 
-Community Edition identity is the API-key `RequestPrincipal`: `subjectId`, `workspaceId`, `role` (`VIEWER` / `OPERATOR` / `EDITOR` / `ADMIN`), and `authenticationMethod: API_KEY`. There are no native member accounts, login sessions, invitations, SSO, SCIM, custom RBAC, billing, or license enforcement.
+Community Edition uses **two authentication planes** (see [ADR-008](docs/adr/ADR-008-human-identity-and-workspace-access.md)):
 
-Future Team or Enterprise management can map an individual identity onto this same principal (a workspace-scoped subject and role) without changing the execution engine. Organizational `Team` / Office `Role` metadata is not security RBAC.
+| Plane | Callers | Mechanism | Authorization |
+| --- | --- | --- | --- |
+| **Machine** | CLI, SDK, MCP, automation | Workspace API key (`Authorization: Bearer`) | API-key `RequestPrincipal`: `VIEWER` / `OPERATOR` / `EDITOR` / `ADMIN`, `authenticationMethod: API_KEY` |
+| **Human** | Console browser | HttpOnly session cookie (`osva.session_token`) | Fixed human workspace roles and permissions on `/v1` (membership required) |
+
+Human sessions and API keys are distinct. Machine `ADMIN` does not grant human `OWNER`. Session tokens must not appear in JSON responses or browser storage.
+
+**Not in Community Edition:** OIDC/SAML/SCIM (OIDC is future Community scope; SAML/SCIM are Teams/Enterprise), email invitations, MFA, custom RBAC, billing, or license enforcement.
+
+Organizational `Team` / Office `Role` metadata is not security RBAC.
 
 ## API keys and RBAC
 

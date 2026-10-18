@@ -1,6 +1,8 @@
 # M11 human authentication and Console acceptance summary
 
-Evidence-oriented checklist for M11 Slice 3 closeout. Items are **PASS** only when linked automated coverage exists or a manual step is explicitly recorded.
+M11 is **complete** (Slices 1–3). Narrative closeout: [`M11_CLOSEOUT_SUMMARY.md`](M11_CLOSEOUT_SUMMARY.md).
+
+Evidence-oriented checklist for automated acceptance. Items are **PASS** only when linked automated coverage exists or a manual step is explicitly recorded.
 
 ## Migration and bootstrap
 
@@ -63,7 +65,12 @@ Evidence-oriented checklist for M11 Slice 3 closeout. Items are **PASS** only wh
 
 ## Deferred (post-M11)
 
-OIDC, MFA, email delivery, SAML, SCIM, custom roles, and enterprise policy packs remain out of scope for M11 Slice 3. Track under future milestones; do not treat absence here as PASS.
+| Scope | Items |
+| --- | --- |
+| **Future Community** | OIDC and other external IdPs, MFA, email delivery, invitations, custom roles |
+| **Teams / Enterprise** | SAML, SCIM, enterprise policy packs, billing identity, impersonation |
+
+Do not treat absence here as PASS.
 
 ## Verification commands (focused)
 

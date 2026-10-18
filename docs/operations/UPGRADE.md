@@ -8,6 +8,7 @@ Supported upgrade path for self-hosted Compose and Kubernetes deployments.
 |------|-----|----------------|
 | Published git tag **`v1.0.0`** | **`1.1.0-rc.2`** (and 1.1.x) | Requires **`0023_execution_lease_slice`** (tag `v1.0.0` ends at **`0022_api_security_slice`**) |
 | Already on **`1.1.0-rc.1`** or **`1.1.0-rc.2`** schema head | Later 1.1.x RC/GA | Apply any new append-only migrations after **`0023`** |
+| Any **`0023`** database | Current repository head (M11) | Through **`0026_better_auth_user_image`** (`0024` identity, `0025` human auth, `0026` user image) |
 
 See [`../release/COMPATIBILITY.md`](../release/COMPATIBILITY.md) and [`CHANGELOG.md`](../../CHANGELOG.md).
 
@@ -51,6 +52,26 @@ Introduced after tag **`v1.0.0`**. Adds:
 4. Confirm no worker still owns each attempt; fail settled rows with an operator UPDATE or accept manual settlement. See [`EXECUTION_RECOVERY.md`](EXECUTION_RECOVERY.md).
 5. Expect **`EXECUTION_INTERRUPTED`** on attempts whose lease expires while workers crash or stall — OSVA does **not** auto-start a new logical RunAttempt for crash recovery.
 
+### Migrations `0024`–`0026` (M11 human identity and authentication)
+
+Append-only migrations after **`0023`**. They do not remove or rewrite API keys, Runs, or workflow data.
+
+| Migration | Operator note |
+| --- | --- |
+| **`0024_identity_foundation_slice`** | Adds organizations, users, memberships, audit; nullable `workspaces.organization_id` |
+| **`0025_human_authentication_slice`** | Better Auth session/account tables; `PENDING_SETUP` user status |
+| **`0026_better_auth_user_image`** | Nullable `users.image` |
+
+**After migrate to head:**
+
+1. Set **`OSVA_AUTH_SECRET`** (≥ 32 characters) on **`apps/web`** before enabling human login.
+2. Set **`OSVA_AUTH_BASE_URL`** to the public web URL and **`OSVA_AUTH_TRUSTED_ORIGINS`** to include Console browser origins (see [`.env.example`](../../.env.example)).
+3. Run **`pnpm identity:bootstrap`** once per environment (or `OSVA_PROCESS=identity-bootstrap` in the OCI image). Save the one-time setup token from stdout.
+4. Complete setup via **`POST /v1/auth/setup/complete`** or Console **`/setup`**.
+5. Start Console in default human-session mode (**no** `OSVA_CONSOLE_API_KEY`). Optional legacy BFF: `OSVA_CONSOLE_LEGACY_API_KEY_MODE=true`.
+
+Existing workspace API keys remain valid for CLI, SDK, and MCP. See [`M11_CLOSEOUT_SUMMARY.md`](M11_CLOSEOUT_SUMMARY.md).
+
 ## Runtime behavior changes (1.1.x)
 
 - Execution leases and fencing on RunAttempt; heartbeats renew leases in PostgreSQL time.
@@ -75,7 +96,8 @@ Introduced after tag **`v1.0.0`**. Adds:
 
 - `GET /ready` returns `200` on web (may name `postgres` and/or `valkey` on failure without leaking secrets).
 - Worker logs show queue consumption and recovery ticker activity.
-- Authenticated `/v1` request succeeds with a valid API key.
+- Authenticated `/v1` request succeeds with a valid API key (machine plane unchanged).
+- Optional: human login via Console or `POST /v1/auth/login` after bootstrap and setup.
 - Optional: `pnpm release:acceptance` on a disposable environment (kind optional via `OSVA_KIND_ACCEPTANCE=true`).
 
 ## Rollback limitations
