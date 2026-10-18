@@ -769,6 +769,9 @@ importers:
         specifier: ^7.9.1
         version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
     devDependencies:
+      '@osva/adapters-auth':
+        specifier: workspace:*
+        version: link:../../adapters/auth
       '@osva/adapters-bullmq':
         specifier: workspace:*
         version: link:../../adapters/bullmq

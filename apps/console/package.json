@@ -24,6 +24,7 @@
     "react-router-dom": "^7.9.1"
   },
   "devDependencies": {
+    "@osva/adapters-auth": "workspace:*",
     "@osva/adapters-bullmq": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/web": "workspace:*",

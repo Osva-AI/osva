@@ -10,6 +10,7 @@ import { createConsoleServer } from "../src/server/server.js";
 const testConfig: ConsoleConfig = {
   osvaBaseUrl: "http://127.0.0.1:3000",
   osvaApiKey: "super-secret-console-key",
+  legacyApiKeyMode: true,
   host: "127.0.0.1",
   port: 4174,
   clientDistDir: "/tmp/unused",
@@ -20,14 +21,6 @@ function createMockClient(
   overrides: Partial<ConsoleOsvaClient> = {},
 ): ConsoleOsvaClient {
   return {
-    getAuthContext: async () => ({
-      data: {
-        subjectId: "subject-1",
-        workspaceId: "workspace-1",
-        role: "admin",
-      },
-      requestId: "req-auth-success",
-    }),
     listRuns: async () => ({ data: { runs: [] } }),
     getRun: async () => {
       throw new Error("not implemented");
@@ -166,7 +159,7 @@ describe("console server API", () => {
     }
   });
 
-  it("returns safe auth context without exposing the API key", async () => {
+  it("returns safe agent list without exposing the API key", async () => {
     server = createConsoleServer({
       config: testConfig,
       client: createMockClient(),
@@ -178,12 +171,13 @@ describe("console server API", () => {
     }
 
     const response = await fetch(
-      `http://127.0.0.1:${address.port}/api/v1/auth/context`,
+      `http://127.0.0.1:${address.port}/api/v1/agents`,
+      { headers: { "x-osva-workspace-id": "workspace-1" } },
     );
     const body = await response.text();
     expect(response.status).toBe(200);
-    expect(response.headers.get("x-osva-request-id")).toBe("req-auth-success");
-    expect(body).toContain("workspace-1");
+    expect(response.headers.get("x-osva-request-id")).toBe("req-agents-list");
+    expect(body).toContain("agents");
     expect(body).not.toContain("super-secret-console-key");
     expect(body).not.toContain("Bearer");
   });
@@ -1030,7 +1024,7 @@ describe("console server API", () => {
     }
 
     const response = await fetch(
-      `http://127.0.0.1:${address.port}/api/v1/auth/context`,
+      `http://127.0.0.1:${address.port}/api/v1/agents`,
     );
     expect(response.status).toBe(503);
   });

@@ -2,14 +2,15 @@
 
 `apps/web` is the OSVA public control-plane API. `apps/console` is the browser-based developer/operator product console.
 
-The console never connects to PostgreSQL directly and never exposes the workspace API key to the browser. The browser talks only to the console origin; the console server holds `OSVA_CONSOLE_API_KEY` and calls `apps/web` `/v1` endpoints through `@osva-ai/sdk`.
+The console never connects to PostgreSQL directly and never exposes OSVA API keys or session tokens to the browser. The browser talks only to the console origin; the console BFF forwards the human `osva.session_token` HttpOnly cookie to `apps/web` for interactive `/v1` calls. Machine automation continues to use Bearer API keys directly against `apps/web`, not through the Console.
 
 ## Required environment
 
 | Variable | Purpose |
 | --- | --- |
-| `OSVA_CONSOLE_API_KEY` | Workspace API key used server-side only |
 | `OSVA_BASE_URL` | Control plane base URL (default `http://127.0.0.1:3000`) |
+| `OSVA_CONSOLE_LEGACY_API_KEY_MODE` | Deprecated opt-in API-key BFF mode (`true` + `OSVA_CONSOLE_API_KEY`) |
+| `OSVA_CONSOLE_API_KEY` | Only when legacy API-key mode is enabled |
 | `OSVA_CONSOLE_HOST` | Console bind host (default `127.0.0.1`). Must be loopback (`127.0.0.0/8`, `::1`, or `localhost`). |
 | `OSVA_CONSOLE_PORT` | Console BFF bind port (default `4174`). Vite proxies `/api` here in dev. |
 | `OSVA_CONSOLE_VITE_PORT` | Vite dev server port (default `5173`, `strictPort: true`) |
@@ -25,14 +26,14 @@ The console never connects to PostgreSQL directly and never exposes the workspac
 | Contributor host (`pnpm dev:web`) | `http://127.0.0.1:3000` | `http://127.0.0.1:5173` (Vite) | `http://127.0.0.1:4174` |
 | Self-hosted Compose (default publish port) | `http://127.0.0.1:8080` | `http://127.0.0.1:5173` | `http://127.0.0.1:4174` |
 
-**Prerequisites:** running control plane (`GET /ready` succeeds), bootstrap **`osva_ak_…`**, and **`OSVA_CONSOLE_API_KEY`** set to that key in the console server process (never in the browser). Full journeys: [`LOCAL_DEVELOPMENT.md`](LOCAL_DEVELOPMENT.md).
+**Prerequisites:** running control plane (`GET /ready` succeeds), `OSVA_AUTH_SECRET` configured on `apps/web`, and a human user bootstrapped via `pnpm identity:bootstrap` / Console `/setup`. API keys remain for CLI/SDK only. Full journeys: [`LOCAL_DEVELOPMENT.md`](LOCAL_DEVELOPMENT.md).
 
 1. Start infrastructure and the control plane (`apps/web` or Compose `web`) with a valid API key.
 2. Build or run the console:
 
 ```bash
 pnpm --filter @osva/console build
-OSVA_CONSOLE_API_KEY=<key> pnpm --filter @osva/console start
+pnpm --filter @osva/console start
 ```
 
 Development (Vite + console BFF):
@@ -40,7 +41,7 @@ Development (Vite + console BFF):
 From the **repository root** (runs `tsc` for the server, then `apps/console/scripts/dev.mjs`):
 
 ```bash
-OSVA_CONSOLE_API_KEY=<key> pnpm dev:console
+pnpm dev:console
 ```
 
 Open the Vite dev URL (default `http://127.0.0.1:5173`, or `http://localhost:5173` if loopback binding differs on Windows). API calls are proxied to the BFF (default `http://127.0.0.1:4174`).
@@ -51,7 +52,7 @@ If **5173** or **4174** are already in use, set **`OSVA_CONSOLE_VITE_PORT`** and
 
 ## Security model
 
-Community Console is a **local trusted-operator application**, not a multi-user identity product. It is not packaged in Compose or Helm. There is no native Console login, session, invitation, SSO, or SCIM.
+Community Console (M11 Slice 3+) is a **human-session operator application** for workspace-scoped control-plane work. Users sign in through the Console BFF; the browser never receives API keys or session tokens in JSON. UI permission hiding is not authorization—the API remains authoritative. Console is not packaged in Compose or Helm by default. Email invitations, SSO, and SCIM remain deferred.
 
 **Default bind is loopback** (`127.0.0.1`). `OSVA_CONSOLE_HOST` may be `127.0.0.0/8`, `::1`, or `localhost`. Wildcard and non-loopback binds (`0.0.0.0`, `::`, `*`, LAN/public addresses) are rejected. `OSVA_CONSOLE_ALLOW_PUBLIC_BIND` is deprecated and **does not provide access control**.
 
@@ -59,7 +60,10 @@ Remote operators must use a secure tunnel (for example SSH) or an authenticating
 
 State-changing BFF methods require a loopback `Host` and a same-origin, loopback, or explicitly listed `OSVA_CONSOLE_ALLOWED_ORIGINS` browser `Origin`. Cross-site `Sec-Fetch-Site` mutations are rejected before any upstream `/v1` call. Missing `Origin` is allowed for legitimate non-browser operator clients. This is request validation, not permissive CORS.
 
-- API key stays on the console server process and is never echoed to the browser.
+- Human sessions use HttpOnly cookies on the Console origin; the BFF forwards `osva.session_token` to `apps/web` and strips upstream `Domain` from `Set-Cookie`.
+- Browser `Authorization` headers are rejected by the BFF.
+- Selected workspace is stored in `sessionStorage` and sent as `x-osva-workspace-id`; possession of the ID is not authorization.
+- Legacy `OSVA_CONSOLE_LEGACY_API_KEY_MODE` is deprecated and disabled by default.
 - Console API routes are an explicit allowlist (no generic HTTP proxy).
 - JSON BFF request bodies are capped at the same 1 MiB default as control-plane `/v1` (`OSVA_DEFAULT_JSON_BODY_MAX_BYTES`). Oversized bodies return 413; invalid JSON returns 400; rejected payloads are not forwarded upstream. Rejected Host, Origin, cross-site mutation, and oversized-body requests emit one bounded security event each. Events do not include raw Host/Origin strings or `OSVA_CONSOLE_API_KEY`.
 - Control-plane `429 RATE_LIMITED` is surfaced as a wait-and-retry operator error; the Console does not retry in a loop.

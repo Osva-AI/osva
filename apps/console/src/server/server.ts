@@ -23,14 +23,18 @@ export function createConsoleServer(
   options: ConsoleServerOptions = {},
 ): http.Server {
   const config = options.config ?? tryLoadConsoleConfig();
-  const client =
-    "client" in options
-      ? options.client
-      : config === undefined
-        ? undefined
-        : createConsoleOsvaClient(config);
+  const testClient = "client" in options ? options.client : undefined;
+  const legacyClient =
+    config !== undefined &&
+    config.legacyApiKeyMode &&
+    config.osvaApiKey !== undefined
+      ? createConsoleOsvaClient({
+          ...config,
+          osvaApiKey: config.osvaApiKey,
+        })
+      : undefined;
   const security =
-    config === undefined
+    config?.osvaApiKey === undefined
       ? {}
       : { forbiddenLiteralSubstrings: [config.osvaApiKey] };
   const clientDistDir = config?.clientDistDir ?? defaultClientDistDir();
@@ -45,7 +49,13 @@ export function createConsoleServer(
       response,
       pathname,
       url.searchParams,
-      { client, security, allowedOrigins: config?.allowedOrigins ?? [] },
+      {
+        config,
+        legacyClient,
+        testClient,
+        security,
+        allowedOrigins: config?.allowedOrigins ?? [],
+      },
     );
     if (handledApi) {
       return;

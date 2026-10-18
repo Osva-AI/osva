@@ -58,6 +58,7 @@ describe("console OSVA proxy integration", () => {
     const config: ConsoleConfig = {
       osvaBaseUrl: `http://127.0.0.1:${upstreamAddress.port}`,
       osvaApiKey: "integration-console-key",
+      legacyApiKeyMode: true,
       host: "127.0.0.1",
       port: 0,
       clientDistDir: "/tmp/unused",
@@ -70,16 +71,6 @@ describe("console OSVA proxy integration", () => {
     if (consoleAddress === null || typeof consoleAddress === "string") {
       throw new Error("expected console address");
     }
-
-    const authResponse = await fetch(
-      `http://127.0.0.1:${consoleAddress.port}/api/v1/auth/context`,
-    );
-    const authBody = await authResponse.text();
-    expect(authResponse.status).toBe(200);
-    expect(JSON.parse(authBody)).toMatchObject({
-      workspaceId: "workspace-int",
-    });
-    expect(authBody).not.toContain("integration-console-key");
 
     const runsResponse = await fetch(
       `http://127.0.0.1:${consoleAddress.port}/api/v1/runs`,
@@ -152,6 +143,7 @@ describe("console OSVA proxy integration", () => {
     const config: ConsoleConfig = {
       osvaBaseUrl: `http://127.0.0.1:${upstreamAddress.port}`,
       osvaApiKey: "integration-console-key",
+      legacyApiKeyMode: true,
       host: "127.0.0.1",
       port: 0,
       clientDistDir: "/tmp/unused",

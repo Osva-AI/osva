@@ -19,23 +19,61 @@ describe("console config", () => {
     );
   });
 
+  it("starts without OSVA_CONSOLE_API_KEY in human session mode", () => {
+    expect(
+      loadConsoleConfig({
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
+      }).legacyApiKeyMode,
+    ).toBe(false);
+    expect(
+      loadConsoleConfig({
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
+      }).osvaApiKey,
+    ).toBeUndefined();
+  });
+
+  it("does not enable legacy mode from OSVA_CONSOLE_API_KEY alone", () => {
+    const config = loadConsoleConfig({
+      OSVA_BASE_URL: "http://127.0.0.1:3000",
+      OSVA_CONSOLE_API_KEY: "osva_ak_test_only",
+    });
+    expect(config.legacyApiKeyMode).toBe(false);
+    expect(config.osvaApiKey).toBe("osva_ak_test_only");
+  });
+
+  it("requires legacy flag and key together for legacy mode", () => {
+    expect(() =>
+      loadConsoleConfig({
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
+        OSVA_CONSOLE_LEGACY_API_KEY_MODE: "true",
+      }),
+    ).toThrow(/requires OSVA_CONSOLE_API_KEY/);
+    expect(
+      loadConsoleConfig({
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
+        OSVA_CONSOLE_LEGACY_API_KEY_MODE: "true",
+        OSVA_CONSOLE_API_KEY: "osva_ak_legacy",
+      }).legacyApiKeyMode,
+    ).toBe(true);
+  });
+
   it("defaults to IPv4 loopback and allows IPv6 loopback and localhost", () => {
     expect(
       loadConsoleConfig({
-        OSVA_CONSOLE_API_KEY: "osva_ak_test",
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
       }).host,
     ).toBe("127.0.0.1");
 
     expect(
       loadConsoleConfig({
-        OSVA_CONSOLE_API_KEY: "osva_ak_test",
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
         OSVA_CONSOLE_HOST: "::1",
       }).host,
     ).toBe("::1");
 
     expect(
       loadConsoleConfig({
-        OSVA_CONSOLE_API_KEY: "osva_ak_test",
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
         OSVA_CONSOLE_HOST: "localhost",
       }).host,
     ).toBe("localhost");
@@ -45,14 +83,14 @@ describe("console config", () => {
     for (const host of ["0.0.0.0", "::", "*", "192.168.1.10", "10.0.0.5"]) {
       expect(() =>
         loadConsoleConfig({
-          OSVA_CONSOLE_API_KEY: "osva_ak_test",
+          OSVA_BASE_URL: "http://127.0.0.1:3000",
           OSVA_CONSOLE_HOST: host,
         }),
       ).toThrow(ConsoleConfigurationError);
 
       expect(() =>
         loadConsoleConfig({
-          OSVA_CONSOLE_API_KEY: "osva_ak_test",
+          OSVA_BASE_URL: "http://127.0.0.1:3000",
           OSVA_CONSOLE_HOST: host,
           OSVA_CONSOLE_ALLOW_PUBLIC_BIND: "true",
         }),
@@ -63,7 +101,7 @@ describe("console config", () => {
   it("does not treat lookalike hostnames as loopback", () => {
     expect(() =>
       loadConsoleConfig({
-        OSVA_CONSOLE_API_KEY: "osva_ak_test",
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
         OSVA_CONSOLE_HOST: "localhost.example.com",
       }),
     ).toThrow(ConsoleConfigurationError);
@@ -72,14 +110,14 @@ describe("console config", () => {
   it("parses explicit allowed origins and rejects wildcards", () => {
     expect(
       loadConsoleConfig({
-        OSVA_CONSOLE_API_KEY: "osva_ak_test",
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
         OSVA_CONSOLE_ALLOWED_ORIGINS: "https://console.example.com",
       }).allowedOrigins,
     ).toEqual(["https://console.example.com"]);
 
     expect(() =>
       loadConsoleConfig({
-        OSVA_CONSOLE_API_KEY: "osva_ak_test",
+        OSVA_BASE_URL: "http://127.0.0.1:3000",
         OSVA_CONSOLE_ALLOWED_ORIGINS: "*",
       }),
     ).toThrow(ConsoleConfigurationError);

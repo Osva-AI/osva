@@ -6,7 +6,9 @@ import { parseAllowedConsoleOrigins } from "./request-guard.js";
 
 export interface ConsoleConfig {
   readonly osvaBaseUrl: string;
-  readonly osvaApiKey: string;
+  /** Deprecated server-side API key mode; disabled unless legacy flag is set. */
+  readonly osvaApiKey?: string;
+  readonly legacyApiKeyMode: boolean;
   readonly host: string;
   readonly port: number;
   readonly clientDistDir: string;
@@ -31,10 +33,12 @@ export function loadConsoleConfig(
     readOptional(env.OSVA_BASE_URL) ??
     readOptional(env.OSVA_API_BASE_URL) ??
     DEFAULT_OSVA_BASE_URL;
+  const legacyApiKeyMode =
+    readOptionalBoolean(env.OSVA_CONSOLE_LEGACY_API_KEY_MODE) ?? false;
   const osvaApiKey = readOptional(env.OSVA_CONSOLE_API_KEY);
-  if (osvaApiKey === undefined) {
+  if (legacyApiKeyMode && osvaApiKey === undefined) {
     throw new ConsoleConfigurationError(
-      "OSVA_CONSOLE_API_KEY is required to run the OSVA console.",
+      "OSVA_CONSOLE_LEGACY_API_KEY_MODE requires OSVA_CONSOLE_API_KEY.",
     );
   }
 
@@ -58,7 +62,8 @@ export function loadConsoleConfig(
 
   return {
     osvaBaseUrl,
-    osvaApiKey,
+    ...(osvaApiKey === undefined ? {} : { osvaApiKey }),
+    legacyApiKeyMode,
     host,
     port,
     clientDistDir,

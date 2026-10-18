@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WorkflowVersionPage } from "../src/client/routes/workflow-version-page";
+import { stubHumanSessionFetch } from "./human-auth-fetch-stub";
 
 vi.mock("../src/client/components/workflow/workflow-graph-view", () => ({
   WorkflowGraphView: () => <div data-testid="workflow-graph-view-mock" />,
@@ -28,66 +29,55 @@ function renderVersionPage() {
 }
 
 function stubVersionPageFetches(definition: unknown) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo) => {
-      const url = String(input);
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "ADMIN",
-        });
-      }
-      if (url === "/api/v1/agents") {
-        return Response.json({
-          agents: [
-            {
-              id: "agent-1",
-              workspaceId: "ws-1",
-              key: "research",
-              name: "Research",
-              createdAt: "2026-01-01T00:00:00.000Z",
-            },
-          ],
-        });
-      }
-      if (url.includes("/api/v1/agents/agent-1/versions")) {
-        return Response.json({
-          versions: [
-            {
-              id: "av-1",
-              agentId: "agent-1",
-              version: 1,
-              createdAt: "2026-01-01T00:00:00.000Z",
-              manifest: { input: { schema: { type: "object" } } },
-            },
-          ],
-        });
-      }
-      if (url.includes("/versions/")) {
-        return Response.json({
-          id: "wv-1",
-          workflowId: "wf-1",
-          workspaceId: "ws-1",
-          version: 1,
-          definition,
-          createdAt: "2026-01-01T00:00:00.000Z",
-        });
-      }
-      if (url.includes("/api/v1/workflows/wf-1")) {
-        return Response.json({
-          id: "wf-1",
-          workspaceId: "ws-1",
-          key: "demo",
-          name: "Demo",
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-01T00:00:00.000Z",
-        });
-      }
-      return Response.json({ error: "not found" }, { status: 404 });
-    }),
-  );
+  stubHumanSessionFetch("ADMIN", "ws-1", (url) => {
+    if (url === "/api/v1/agents") {
+      return Response.json({
+        agents: [
+          {
+            id: "agent-1",
+            workspaceId: "ws-1",
+            key: "research",
+            name: "Research",
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      });
+    }
+    if (url.includes("/api/v1/agents/agent-1/versions")) {
+      return Response.json({
+        versions: [
+          {
+            id: "av-1",
+            agentId: "agent-1",
+            version: 1,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            manifest: { input: { schema: { type: "object" } } },
+          },
+        ],
+      });
+    }
+    if (url.includes("/versions/")) {
+      return Response.json({
+        id: "wv-1",
+        workflowId: "wf-1",
+        workspaceId: "ws-1",
+        version: 1,
+        definition,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      });
+    }
+    if (url.includes("/api/v1/workflows/wf-1")) {
+      return Response.json({
+        id: "wf-1",
+        workspaceId: "ws-1",
+        key: "demo",
+        name: "Demo",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      });
+    }
+    return undefined;
+  });
 }
 
 describe("Workflow version page", () => {

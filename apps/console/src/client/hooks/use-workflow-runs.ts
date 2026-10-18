@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { consoleFetch } from "../lib/console-api";
 import { ACTIVE_RUN_POLL_MS } from "../lib/query-client";
 import { isWorkflowRunLive } from "../lib/statuses";
+import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface WorkflowRunSummaryResource {
   readonly id: string;
@@ -91,9 +92,11 @@ function buildWorkflowRunsPath(filters: ListWorkflowRunsFilters): string {
 }
 
 export function useWorkflowRunsListQuery(filters: ListWorkflowRunsFilters) {
+  const workspaceId = useWorkspaceQueryScope();
   const path = buildWorkflowRunsPath(filters);
   return useQuery({
-    queryKey: ["workflow-runs", "list", filters],
+    queryKey: ["workflow-runs", workspaceId, "list", filters],
+    enabled: workspaceId !== undefined,
     queryFn: () => consoleFetch<WorkflowRunListResource>(path),
   });
 }
@@ -107,9 +110,10 @@ export function workflowRunRefetchInterval(
 }
 
 export function useWorkflowRunQuery(workflowRunId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["workflow-runs", workflowRunId],
-    enabled: workflowRunId !== undefined,
+    queryKey: ["workflow-runs", workspaceId, workflowRunId],
+    enabled: workspaceId !== undefined && workflowRunId !== undefined,
     queryFn: () =>
       consoleFetch<WorkflowRunResource>(
         `/api/v1/workflow-runs/${workflowRunId}`,

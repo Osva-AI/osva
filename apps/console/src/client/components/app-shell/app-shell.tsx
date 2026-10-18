@@ -1,8 +1,10 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
-import { useAuthContextQuery } from "../../hooks/use-auth-context";
-import { ErrorState } from "../error-state/error-state";
-import { LoadingBlock } from "../loading/loading-block";
+import { useAuth } from "../../context/auth-context";
+import {
+  roleCanManageMembers,
+  roleCanReadAuditEvents,
+} from "../../lib/permissions";
 
 const navItems = [
   { label: "Overview", disabled: true },
@@ -18,41 +20,44 @@ const navItems = [
 ] as const;
 
 export function AppShell() {
-  const authQuery = useAuthContextQuery();
-
-  if (authQuery.isLoading) {
-    return <LoadingBlock label="Connecting to OSVA…" />;
-  }
-
-  if (authQuery.isError) {
-    return (
-      <main className="main-panel">
-        <ErrorState
-          title="Console authentication failed"
-          error={authQuery.error}
-        />
-      </main>
-    );
-  }
-
-  const auth = authQuery.data!;
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const workspace = auth.selectedWorkspace;
+  const role = workspace?.role ?? "—";
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div>
           <div className="brand-title">OSVA Console</div>
-          <div className="brand-subtitle">Operator control plane</div>
+          <div className="brand-subtitle">Human control plane</div>
         </div>
         <div className="workspace-meta">
+          <label>
+            Workspace
+            <select
+              aria-label="Workspace switcher"
+              value={workspace?.workspaceId ?? ""}
+              onChange={(event) => {
+                auth.selectWorkspace(event.target.value);
+                navigate(window.location.pathname, { replace: true });
+              }}
+            >
+              {auth.workspaces.map((item) => (
+                <option key={item.workspaceId} value={item.workspaceId}>
+                  {item.name} ({item.role})
+                </option>
+              ))}
+            </select>
+          </label>
           <div>
-            Workspace <span className="mono">{auth.workspaceId}</span>
+            User{" "}
+            <span className="mono">
+              {auth.user?.email ?? auth.session?.userId ?? "—"}
+            </span>
           </div>
           <div>
-            Subject <span className="mono">{auth.subjectId}</span>
-          </div>
-          <div>
-            Role <span className="mono">{auth.role}</span>
+            Role <span className="mono">{role}</span>
           </div>
         </div>
         <nav aria-label="Primary">
@@ -73,8 +78,33 @@ export function AppShell() {
                 )}
               </li>
             ))}
+            {roleCanManageMembers(role) ? (
+              <li>
+                <NavLink className="nav-link" to="/workspace/access">
+                  Workspace access
+                </NavLink>
+              </li>
+            ) : null}
+            {roleCanReadAuditEvents(role) ? (
+              <li>
+                <NavLink className="nav-link" to="/workspace/security">
+                  Security activity
+                </NavLink>
+              </li>
+            ) : null}
           </ul>
         </nav>
+        <button
+          type="button"
+          className="logout-button"
+          onClick={() => {
+            void auth.logout().finally(() => {
+              navigate("/login", { replace: true });
+            });
+          }}
+        >
+          Sign out
+        </button>
       </aside>
       <main className="main-panel">
         <Outlet />

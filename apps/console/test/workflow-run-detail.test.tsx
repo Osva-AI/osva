@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { stubHumanSessionFetch } from "./human-auth-fetch-stub.js";
+
 import { WorkflowRunDetailPage } from "../src/client/routes/workflow-run-detail-page";
 
 vi.mock("../src/client/components/workflow/workflow-graph-view", () => ({
@@ -96,18 +98,7 @@ describe("WorkflowRunDetailPage", () => {
   });
 
   it("combines definition and node runs with operator actions", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo, init?: RequestInit) => {
-      const url = String(input);
-      if (url.includes("/api/v1/auth/context")) {
-        return new Response(
-          JSON.stringify({
-            subjectId: "sub-1",
-            workspaceId: "ws-1",
-            role: "OPERATOR",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
+    const fetchMock = stubHumanSessionFetch("OPERATOR", "ws-1", (url, init) => {
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return new Response(
           JSON.stringify({
@@ -200,9 +191,8 @@ describe("WorkflowRunDetailPage", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      return emptyArtifactListOrNotFound(url);
+      return undefined;
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     renderDetail();
 
@@ -233,18 +223,7 @@ describe("WorkflowRunDetailPage", () => {
   });
 
   it("shows emit event for waiting EVENT node and preserves request id on failure", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo, init?: RequestInit) => {
-      const url = String(input);
-      if (url.includes("/api/v1/auth/context")) {
-        return new Response(
-          JSON.stringify({
-            subjectId: "sub-1",
-            workspaceId: "ws-1",
-            role: "ADMIN",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
+    stubHumanSessionFetch("OPERATOR", "ws-1", (url, init) => {
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return new Response(
           JSON.stringify({
@@ -299,9 +278,8 @@ describe("WorkflowRunDetailPage", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      return emptyArtifactListOrNotFound(url);
+      return undefined;
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     renderDetail();
     await waitFor(() => {
@@ -327,15 +305,7 @@ describe("WorkflowRunDetailPage", () => {
   });
 
   it("overlays the latest node-run status and lists historical node records without inventing success", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo) => {
-      const url = String(input);
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "OPERATOR",
-        });
-      }
+    stubHumanSessionFetch("OPERATOR", "ws-1", (url) => {
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",
@@ -386,7 +356,6 @@ describe("WorkflowRunDetailPage", () => {
       }
       return emptyArtifactListOrNotFound(url);
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     renderDetail();
     await waitFor(() => {
@@ -418,15 +387,7 @@ describe("WorkflowRunDetailPage", () => {
       request: { packageName: "zod", requestId: "m8-4-handoff-001" },
       evidence: { latestVersion: "3.24.1" },
     };
-    const fetchMock = vi.fn(async (input: RequestInfo) => {
-      const url = String(input);
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "ADMIN",
-        });
-      }
+    stubHumanSessionFetch("OPERATOR", "ws-1", (url) => {
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",
@@ -493,7 +454,6 @@ describe("WorkflowRunDetailPage", () => {
       }
       return emptyArtifactListOrNotFound(url);
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     renderDetail();
     await waitFor(() => {
@@ -516,15 +476,7 @@ describe("WorkflowRunDetailPage", () => {
 
   it("updates overlay after a polling refresh without synthesizing success", async () => {
     let generation = 0;
-    const fetchMock = vi.fn(async (input: RequestInfo) => {
-      const url = String(input);
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "OPERATOR",
-        });
-      }
+    stubHumanSessionFetch("OPERATOR", "ws-1", (url) => {
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",
@@ -573,7 +525,6 @@ describe("WorkflowRunDetailPage", () => {
       }
       return emptyArtifactListOrNotFound(url);
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     renderDetail();
     await waitFor(() => {
@@ -588,66 +539,56 @@ describe("WorkflowRunDetailPage", () => {
   });
 
   it("keeps viewer authorization read-only for approvals", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo) => {
-        const url = String(input);
-        if (url.includes("/api/v1/auth/context")) {
-          return Response.json({
-            subjectId: "sub-1",
-            workspaceId: "ws-1",
-            role: "VIEWER",
-          });
-        }
-        if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
-          return Response.json({
-            id: "wv-1",
-            workflowId: "wf-1",
-            workspaceId: "ws-1",
-            version: 1,
-            definition,
-            createdAt: "2026-01-01T00:00:00.000Z",
-          });
-        }
-        if (url.includes("/api/v1/workflow-runs/wr-1")) {
-          return Response.json({
-            id: "wr-1",
-            workspaceId: "ws-1",
-            workflowId: "wf-1",
-            workflowVersionId: "wv-1",
-            status: "WAITING",
-            input: {},
-            createdAt: "2026-01-01T00:00:00.000Z",
-            updatedAt: "2026-01-01T00:00:01.000Z",
-            nodeRuns: [
-              {
-                id: "wn-2",
-                workspaceId: "ws-1",
-                workflowRunId: "wr-1",
-                workflowNodeKey: "approval",
-                sequence: 2,
-                status: "WAITING",
-                input: {},
-                createdAt: "2026-01-01T00:00:00.000Z",
-                updatedAt: "2026-01-01T00:00:01.000Z",
-              },
-            ],
-            approvalRequests: [
-              {
-                id: "ar-1",
-                workspaceId: "ws-1",
-                workflowRunId: "wr-1",
-                workflowNodeRunId: "wn-2",
-                status: "PENDING",
-                createdAt: "2026-01-01T00:00:00.000Z",
-                updatedAt: "2026-01-01T00:00:01.000Z",
-              },
-            ],
-          });
-        }
-        return emptyArtifactListOrNotFound(url);
-      }),
-    );
+    stubHumanSessionFetch("VIEWER", "ws-1", (url) => {
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-1")) {
+        return Response.json({
+          id: "wr-1",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "WAITING",
+          input: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:01.000Z",
+          nodeRuns: [
+            {
+              id: "wn-2",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeKey: "approval",
+              sequence: 2,
+              status: "WAITING",
+              input: {},
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+          ],
+          approvalRequests: [
+            {
+              id: "ar-1",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-1",
+              workflowNodeRunId: "wn-2",
+              status: "PENDING",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:01.000Z",
+            },
+          ],
+        });
+      }
+      return emptyArtifactListOrNotFound(url);
+      return undefined;
+    });
 
     renderDetail();
     await waitFor(() => {
@@ -698,12 +639,11 @@ function workflowArtifact(overrides: Record<string, unknown> = {}) {
 }
 
 function renderWorkflowRunWithArtifacts(
-  handler: (url: string, init?: RequestInit) => Response | Promise<Response>,
+  handler: (url: string, init?: RequestInit) => Response | undefined,
 ) {
-  const fetchMock = vi.fn(async (input: RequestInfo, init?: RequestInit) => {
-    return handler(String(input), init);
-  });
-  vi.stubGlobal("fetch", fetchMock);
+  const fetchMock = stubHumanSessionFetch("OPERATOR", "ws-1", (url, init) =>
+    handler(url, init),
+  );
   renderDetail();
   return fetchMock;
 }
@@ -716,13 +656,6 @@ describe("WorkflowRunDetailPage artifacts", () => {
 
   it("associates the canonical Report markdown artifact with the Report AGENT node", async () => {
     renderWorkflowRunWithArtifacts((url) => {
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "VIEWER",
-        });
-      }
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",
@@ -838,13 +771,6 @@ describe("WorkflowRunDetailPage artifacts", () => {
 
   it("lists artifacts from multiple AGENT nodes and ignores approval/wait producers", async () => {
     const fetchMock = renderWorkflowRunWithArtifacts((url) => {
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "OPERATOR",
-        });
-      }
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",
@@ -942,13 +868,6 @@ describe("WorkflowRunDetailPage artifacts", () => {
 
   it("communicates a partial list failure and keeps other artifacts", async () => {
     renderWorkflowRunWithArtifacts((url) => {
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "OPERATOR",
-        });
-      }
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",
@@ -1020,13 +939,6 @@ describe("WorkflowRunDetailPage artifacts", () => {
 
   it("surfaces a pagination bound instead of silently omitting later artifacts", async () => {
     renderWorkflowRunWithArtifacts((url) => {
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "OPERATOR",
-        });
-      }
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",
@@ -1086,13 +998,6 @@ describe("WorkflowRunDetailPage artifacts", () => {
   it("keeps an open preview across workflow refresh polling", async () => {
     let runGeneration = 0;
     renderWorkflowRunWithArtifacts((url) => {
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "OPERATOR",
-        });
-      }
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",
@@ -1165,13 +1070,6 @@ describe("WorkflowRunDetailPage artifacts", () => {
 
   it("does not treat a producer-mismatched list item as a workflow artifact", async () => {
     renderWorkflowRunWithArtifacts((url) => {
-      if (url.includes("/api/v1/auth/context")) {
-        return Response.json({
-          subjectId: "sub-1",
-          workspaceId: "ws-1",
-          role: "OPERATOR",
-        });
-      }
       if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
         return Response.json({
           id: "wv-1",

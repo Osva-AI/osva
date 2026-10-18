@@ -141,6 +141,12 @@ Database transactions lock workspace owner scope and enforce **at least one acti
 
 Membership removal invalidates workspace access on the next request (membership lookup). Operator recovery (`pnpm identity:recover`) revokes **all** human sessions for the recovered user.
 
+## Console BFF (M11 Slice 3)
+
+The OSVA Console (`apps/console`) exposes same-origin `/api/v1/*` routes that forward the browser `osva.session_token` cookie to `apps/web`. The BFF strips upstream `Domain` from `Set-Cookie`, rejects browser `Authorization` headers, forwards `Origin` for CSRF-protected mutations, and applies `x-osva-workspace-id` from the browser on workspace-scoped routes. The browser stores the selected workspace id in `sessionStorage` only as a non-secret preference.
+
+Deprecated opt-in API-key BFF mode: `OSVA_CONSOLE_LEGACY_API_KEY_MODE=true` plus `OSVA_CONSOLE_API_KEY`.
+
 ## Explicitly deferred (Slice 2)
 
 - Global `/v1/users/:userId/disable|enable` (organization-level authority required)

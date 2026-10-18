@@ -23,9 +23,6 @@ export interface ConsoleArtifactContent {
 }
 
 export interface ConsoleOsvaClient {
-  getAuthContext(): Promise<
-    ConsoleUpstreamResponse<Awaited<ReturnType<OsvaHttpClient["request"]>>>
-  >;
   listRuns(params: {
     readonly agentId?: string;
     readonly agentVersionId?: string;
@@ -123,7 +120,7 @@ export interface ConsoleOsvaClient {
 }
 
 export function createConsoleOsvaClient(
-  config: ConsoleConfig,
+  config: ConsoleConfig & { readonly osvaApiKey: string },
 ): ConsoleOsvaClient {
   const http = new OsvaHttpClient({
     baseUrl: config.osvaBaseUrl,
@@ -131,11 +128,6 @@ export function createConsoleOsvaClient(
   });
 
   return {
-    getAuthContext: () =>
-      http.requestWithMeta({
-        method: "GET",
-        path: "/v1/auth/context",
-      }),
     listRuns: (params) =>
       http.requestWithMeta({
         method: "GET",

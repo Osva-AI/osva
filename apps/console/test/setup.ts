@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
 
 class ResizeObserverMock {
   observe() {}
@@ -8,3 +8,9 @@ class ResizeObserverMock {
 }
 
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+
+import { setSelectedWorkspaceId } from "../src/client/lib/workspace-selection";
+
+beforeEach(() => {
+  setSelectedWorkspaceId("ws-1");
+});
