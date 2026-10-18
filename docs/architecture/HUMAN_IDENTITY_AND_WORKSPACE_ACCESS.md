@@ -1,8 +1,8 @@
 # Human Identity and Workspace Access
 
-M11 Slice 1 introduces OSVA-owned human identity, organization structure, workspace membership, and security audit persistence. Browser authentication and Console login are **not** part of this slice.
+M11 Slice 1 introduced OSVA-owned human identity, organization structure, workspace membership, and security audit persistence. Slices 2–3 added browser authentication, sessions, and Console integration on the same model ([`HUMAN_AUTHENTICATION.md`](HUMAN_AUTHENTICATION.md)).
 
-See [ADR-008](../adr/ADR-008-human-identity-and-workspace-access.md) for decisions.
+See [ADR-008](../adr/ADR-008-human-identity-and-workspace-access.md) for decisions. Closeout: [`../operations/M11_CLOSEOUT_SUMMARY.md`](../operations/M11_CLOSEOUT_SUMMARY.md).
 
 ## Planes of authentication
 
@@ -10,13 +10,13 @@ See [ADR-008](../adr/ADR-008-human-identity-and-workspace-access.md) for decisio
 Machine callers (CLI / SDK / MCP / automation)
   → API key (unchanged)
   → RequestPrincipal (API_KEY)
-  → existing Community Edition RBAC
+  → Community Edition API-key RBAC
 
-Human callers (future browser sessions)
+Human callers (browser / Console)
   → secure server-side session (Slice 2+)
   → UserId + workspace membership
   → HumanWorkspaceRole + HumanWorkspacePermission
-  → optional mapping to AuthorizationAction for resource checks
+  → mapping to AuthorizationAction for resource checks
 ```
 
 API keys and human sessions remain separate. Machine `ADMIN` does not imply human `OWNER`.
@@ -65,8 +65,10 @@ Migration **`0024_identity_foundation_slice`** adds:
 - `organizations`, `users`, `organization_memberships`, `workspace_memberships`, `security_audit_events`
 - nullable `workspaces.organization_id`
 
-Existing tenant data and API keys are unchanged by migration alone.
+Repository migration head after full M11: **`0026_better_auth_user_image`** (Slice 2 auth tables in **`0025_human_authentication_slice`**).
 
-## Out of scope (Slice 1)
+Existing tenant data and API keys are unchanged by migration alone; run **`pnpm identity:bootstrap`** to link legacy workspaces and provision the first human administrator.
 
-Login routes, sessions, passwords, OIDC, Console UI changes, Better Auth integration, identity-bootstrap HTTP, and exposing human identity on public `/v1` responses.
+## Slice 1 scope (historical)
+
+Slice 1 delivered schema and domain only. Login, sessions, Better Auth, and Console UI shipped in M11 Slices 2–3 without renaming this foundation.

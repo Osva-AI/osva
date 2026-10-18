@@ -107,7 +107,7 @@ Do **not** declare general production readiness until these pass on the candidat
 
 **Not supported / not promised:** Managed OSVA SaaS, Enterprise SSO/SCIM, zero-downtime HA, compliance certification, or multi-tenant hard isolation.
 
-**Access model:** Bearer API keys; Console BFF trusts loopback/session configuration documented in Console engineering docs — not a public internet-facing admin UI without reverse-proxy and auth hardening.
+**Access model:** Bearer API keys for machine `/v1`; M11 adds human Console sessions (see [`M11_CLOSEOUT_SUMMARY.md`](M11_CLOSEOUT_SUMMARY.md)). Console BFF trusts loopback/session configuration documented in Console engineering docs — not a public internet-facing admin UI without reverse-proxy and auth hardening.
 
 **Durability:** PostgreSQL is lifecycle authority; BullMQ/Valkey is transport. Queue redelivery reuses the same RunAttemptId; a new logical retry creates a new RunAttemptId. Interrupted RUNNING attempts follow [EXECUTION_RECOVERY.md](./EXECUTION_RECOVERY.md).
 

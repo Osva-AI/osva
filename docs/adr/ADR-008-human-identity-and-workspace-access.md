@@ -1,6 +1,6 @@
 # ADR-008: Human Identity and Workspace Access
 
-**Status:** Accepted (Slice 1 foundation; Slice 2 human authentication)
+**Status:** Accepted (M11 complete — identity, authentication, Console human sessions)
 
 ## Context
 
@@ -10,7 +10,7 @@ OSVA Community Edition authenticates control-plane callers with workspace-scoped
 
 ### Authentication planes
 
-- Humans will authenticate through **secure server-side browser sessions** (implemented in a later slice).
+- Humans authenticate through **secure server-side browser sessions** (Better Auth; see `docs/architecture/HUMAN_AUTHENTICATION.md`).
 - CLI, SDK, MCP, agents, and automation continue using **API keys**.
 - Human authentication and machine authentication remain **distinct** product paths.
 - `apps/web` will be authoritative for authentication, workspace resolution, and authorization for humans.
@@ -44,7 +44,7 @@ Permissions are expressed as `HumanWorkspacePermission` values. API-key `Authori
 | ADMIN | yes | yes | yes | yes | yes | yes | |
 | OWNER | yes | yes | yes | yes | yes | yes | yes |
 
-Mapped API-key actions for resource checks (human session slice, not API keys today):
+Mapped API-key actions for resource checks (human sessions on `/v1`; API keys unchanged):
 
 | Human role | READ | EXECUTE | WRITE | ADMIN |
 | --- | --- | --- | --- | --- |
@@ -59,21 +59,23 @@ Ownership invariant: a workspace may have **multiple** `OWNER` memberships. Once
 ### Authentication technology
 
 - **Better Auth 1.7.10** is **approved** for browser sessions (see `docs/architecture/HUMAN_AUTHENTICATION.md`).
-- Slice 1 introduced identity schema only; Slice 2 wires Better Auth through `@osva/adapters-auth`.
+- Slice 1 introduced identity schema; Slices 2–3 wire Better Auth through `@osva/adapters-auth` and Console human-session BFF.
 
-### Deferred
+### Deferred (post-M11)
 
-Custom roles, ABAC, departments, SAML, SCIM, MFA, billing roles, impersonation, enterprise policy, invitations, and Console login routes.
+**Future Community:** OIDC and other external identity providers, MFA, email delivery, invitations, custom roles, ABAC, departments.
+
+**Teams / Enterprise:** SAML, SCIM, billing roles, impersonation, enterprise policy packs.
 
 ### Migrations and existing installations
 
 - Migrations remain **additive** and **backward-compatible**.
 - Existing workspaces are linked to organizations through a later explicit **identity-bootstrap** operation, not automatically during migration.
 - `workspaces.organization_id` remains **nullable** during M11 migration and rollback compatibility.
-- Historical migrations `0000`–`0023` are immutable; identity foundation adds **`0024_identity_foundation_slice`**.
+- Historical migrations `0000`–`0023` are immutable; M11 adds **`0024_identity_foundation_slice`**, **`0025_human_authentication_slice`**, and head **`0026_better_auth_user_image`**.
 
 ## Consequences
 
-- Slice 1 adds schema, domain types, repositories, and a membership-based workspace-access resolver with **no externally visible authentication behavior change**.
-- API-key `/v1` behavior and contracts remain unchanged.
-- Slice 2+ can attach session authentication to the same membership and permission model without renaming human roles.
+- M11 adds human identity persistence, session authentication, and Console operator login without breaking API-key automation.
+- API-key `/v1` behavior and contracts for machine callers remain unchanged.
+- Human sessions use the same membership and permission model as Slice 1 without renaming human roles.

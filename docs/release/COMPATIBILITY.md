@@ -55,8 +55,15 @@ This is a **TypeScript source-breaking change for implementers**, not an HTTP `/
 ## Database migrations
 
 - Migrations are forward-only.
-- Tag **`v1.0.0`** ends at **`0022_api_security_slice`**. **`1.1.0-rc.2`** requires **`0023_execution_lease_slice`**. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md).
+- Tag **`v1.0.0`** ends at **`0022_api_security_slice`**. **`1.1.0-rc.2`** requires **`0023_execution_lease_slice`**. Current repository head (M11): **`0026_better_auth_user_image`**. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md).
 - Downgrading application images without a matching schema is unsupported.
+
+## Human identity and authentication (M11)
+
+- **Machine compatibility:** Existing workspace API keys and API-key RBAC semantics are unchanged.
+- **Human authentication:** Additive `/v1/auth/*` routes and session cookies; Console default mode does not require `OSVA_CONSOLE_API_KEY`.
+- **Identity bootstrap:** Legacy workspaces keep `organization_id = null` until `pnpm identity:bootstrap` (explicit operator step).
+- **Deferred:** OIDC is future Community work, not part of M11. SAML/SCIM remain Teams/Enterprise scope.
 
 ## Support windows
 
@@ -64,4 +71,4 @@ Community Edition does not promise indefinite security or feature support window
 
 ## Enterprise features
 
-Enterprise-only capabilities listed in the roadmap (OIDC, advanced policy, billing, etc.) are **out of scope** for Community Edition.
+Enterprise-only capabilities (SAML, SCIM, advanced policy, billing, etc.) are **out of scope** for Community Edition. **OIDC** is planned as future Community work and was **not** part of M11.

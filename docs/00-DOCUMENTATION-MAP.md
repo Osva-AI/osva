@@ -16,6 +16,8 @@
 - `architecture/DOMAIN_MODEL.md`
 - `architecture/CONTROL_EXECUTION_PLANES.md`
 - `architecture/DATA_MODEL.md`
+- `architecture/HUMAN_IDENTITY_AND_WORKSPACE_ACCESS.md`
+- `architecture/HUMAN_AUTHENTICATION.md`
 - `architecture/COMPATIBILITY_AND_MIGRATION.md`
 - `architecture/DEPLOYMENT_TOPOLOGIES.md`
 
@@ -63,6 +65,8 @@
 - `operations/RUNBOOK.md`
 - `operations/UPGRADE.md`
 - `operations/BACKUP_AND_RECOVERY.md`
+- `operations/M11_CLOSEOUT_SUMMARY.md`
+- `operations/M11_ACCEPTANCE_SUMMARY.md`
 - `release/COMPATIBILITY.md`
 - `release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`
 - `release/RC3_VERIFICATION.md`
@@ -94,6 +98,7 @@
 - `adr/ADR-005-apache2.md`
 - `adr/ADR-006-trusted-typescript-runtime.md`
 - `adr/ADR-007-runtime-protocol-and-remote-http.md`
+- `adr/ADR-008-human-identity-and-workspace-access.md`
 
 ## Source-of-truth precedence
 

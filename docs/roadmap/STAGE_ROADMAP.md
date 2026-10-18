@@ -67,4 +67,9 @@ Add/stabilize:
 
 ## Post-1.0
 
-Deepen isolation, AI Office, ecosystem, scalability, policy, and operational tooling.
+Delivered in the Community **`1.1.x`** line (see [`IMPLEMENTATION_TRACKER.md`](IMPLEMENTATION_TRACKER.md)):
+
+- Developer experience (M7–M10): canonical examples, Console product surfaces, CLI agent workflow, release packaging.
+- **M11:** human identity, Better Auth password sessions, fixed workspace roles, Console login and membership administration ([`../operations/M11_CLOSEOUT_SUMMARY.md`](../operations/M11_CLOSEOUT_SUMMARY.md)).
+
+Still ahead: deeper isolation, richer AI Office, ecosystem scale, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).

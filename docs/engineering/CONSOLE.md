@@ -193,7 +193,7 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 ### Artifact retrieval (M8.5.2)
 
-Allowlisted BFF routes (server-held `OSVA_CONSOLE_API_KEY`, no generic proxy):
+Allowlisted BFF routes (human session cookie forwarded upstream; legacy mode uses server-held `OSVA_CONSOLE_API_KEY`; no generic proxy):
 
 - `GET /api/v1/artifacts`
 - `GET /api/v1/artifacts/:artifactId` → `GET /v1/artifacts/:artifactId`

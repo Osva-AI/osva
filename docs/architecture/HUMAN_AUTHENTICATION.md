@@ -1,6 +1,6 @@
-# Human Authentication (M11 Slice 2)
+# Human Authentication (M11)
 
-M11 Slice 2 adds browser-oriented human authentication, server-side sessions, workspace-scoped human authorization, workspace membership administration, and security audit listing on top of the Slice 1 identity foundation.
+M11 Slice 2 adds browser-oriented human authentication, server-side sessions, workspace-scoped human authorization, workspace membership administration, and security audit listing on top of the Slice 1 identity foundation. Slice 3 adds the Console human-session BFF and operator UI (login, workspace selection, membership administration). Closeout: [`../operations/M11_CLOSEOUT_SUMMARY.md`](../operations/M11_CLOSEOUT_SUMMARY.md).
 
 See [ADR-008](../adr/ADR-008-human-identity-and-workspace-access.md) for identity and membership decisions.
 
@@ -147,10 +147,11 @@ The OSVA Console (`apps/console`) exposes same-origin `/api/v1/*` routes that fo
 
 Deprecated opt-in API-key BFF mode: `OSVA_CONSOLE_LEGACY_API_KEY_MODE=true` plus `OSVA_CONSOLE_API_KEY`.
 
-## Explicitly deferred (Slice 2)
+## Explicitly deferred (post-M11)
 
 - Global `/v1/users/:userId/disable|enable` (organization-level authority required)
-- Email invitations, OIDC, SAML, SCIM, custom roles
+- **Community (future):** email invitations, OIDC, MFA
+- **Teams / Enterprise:** SAML, SCIM, custom roles, enterprise policy
 
 ## Existing installations
 

@@ -74,6 +74,8 @@ Authenticated REST, workspace API keys + revocation, fixed RBAC, workspace isola
 
 OIDC/SAML/SCIM, human accounts, organizations, custom roles, ABAC, external policy engines, Vault/cloud secret managers, durable compliance ledger, per-workspace network policy, rate limits/quotas/billing, STDIO sandboxing, connector OAuth, mTLS, Helm/production release packaging, npm/PyPI 1.0 publication.
 
+> **Post-M11 note:** M11 delivered Community human accounts, organizations (domain), Better Auth password sessions, and Console login. Machine API-key `/v1` semantics above are unchanged. OIDC remains future Community work; SAML/SCIM remain Teams/Enterprise. See [`../operations/M11_CLOSEOUT_SUMMARY.md`](../operations/M11_CLOSEOUT_SUMMARY.md).
+
 ## Migrations
 
 Historical migrations `0000`–`0022` are immutable. Pass 4 added **no** new schema migration.
