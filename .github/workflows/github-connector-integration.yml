@@ -66,6 +66,9 @@ jobs:
       - name: Install osva dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build ToolGateway integration dependencies
+        run: pnpm exec turbo run build --filter=@osva/tool-gateway...
+
       - name: Run ToolGateway GitHub connector integration
         env:
           OSVA_REQUIRE_GITHUB_CONNECTOR_INTEGRATION: "true"
