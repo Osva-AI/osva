@@ -178,11 +178,29 @@ export function createHumanSessionOsvaClient(
         .requestJson(ctx, { method: "GET", path: "/v1/model-profiles" })
         .then(toDataOnly),
 
+    createModelProfile: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/model-profiles",
+          body,
+        })
+        .then(toDataOnly),
+
     listModelProfileVersions: (modelProfileId) =>
       upstream
         .requestJson(ctx, {
           method: "GET",
           path: `/v1/model-profiles/${encodeURIComponent(modelProfileId)}/versions`,
+        })
+        .then(toDataOnly),
+
+    appendModelProfileVersion: (modelProfileId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/model-profiles/${encodeURIComponent(modelProfileId)}/versions`,
+          body,
         })
         .then(toDataOnly),
 

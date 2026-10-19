@@ -61,7 +61,11 @@
     "acceptance:m10-2e:test": "node --test scripts/acceptance/m10-2e/test/*.test.mjs",
     "canonical:test:integration": "pnpm --filter @osva/example-canonical-dependency-adoption run test:integration",
     "acceptance:m9-7b": "node scripts/acceptance/m9-7b/run.mjs",
-    "acceptance:m9-7b:test": "node --test scripts/acceptance/m9-7b/test/*.test.mjs"
+    "acceptance:m9-7b:test": "node --test scripts/acceptance/m9-7b/test/*.test.mjs",
+    "acceptance:m12-3": "node scripts/acceptance/m12-3/run.mjs",
+    "acceptance:m12-3:browser": "node scripts/acceptance/m12-3/run.mjs --with-browser",
+    "acceptance:m12-3:browser-ci": "node scripts/acceptance/m12-3/run.mjs --browser-only",
+    "acceptance:m12-3:test": "node --test scripts/acceptance/m12-3/test/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -70,6 +74,7 @@
     "turbo": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
+    "playwright": "^1.55.0",
     "vitest": "catalog:"
   }
 }

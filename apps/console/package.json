@@ -25,6 +25,8 @@
   },
   "devDependencies": {
     "@osva/adapters-auth": "workspace:*",
+    "@osva/adapters-mcp-client": "workspace:*",
+    "@osva/adapters-runtime-typescript": "workspace:*",
     "@osva/adapters-bullmq": "workspace:*",
     "@osva/db": "workspace:*",
     "@osva/web": "workspace:*",
@@ -40,6 +42,7 @@
     "jsdom": "^26.1.0",
     "typescript": "catalog:",
     "vite": "^7.1.5",
+    "playwright": "^1.55.0",
     "vitest": "catalog:"
   }
 }

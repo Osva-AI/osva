@@ -109,7 +109,13 @@ function createMockClient(
       throw new Error("not implemented");
     },
     listModelProfiles: async () => ({ data: { modelProfiles: [] } }),
+    createModelProfile: async () => {
+      throw new Error("not implemented");
+    },
     listModelProfileVersions: async () => ({ data: { versions: [] } }),
+    appendModelProfileVersion: async () => {
+      throw new Error("not implemented");
+    },
     listModelProviderConnections: async () => ({ data: { connections: [] } }),
     listModelProviderConnectionVersions: async () => ({
       data: { versions: [] },

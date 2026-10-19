@@ -97,6 +97,72 @@ jobs:
       - name: Verify Python SDK
         run: pnpm verify:python
 
+  m12-3-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: M12.3 cross-capability acceptance
+        run: pnpm acceptance:m12-3
+
+  m12-3-browser-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: M12.3 browser UI acceptance
+        run: pnpm acceptance:m12-3:browser-ci
+
+      - name: Sanitized failure diagnostics
+        if: failure()
+        run: |
+          echo "::group::Docker containers (names only)"
+          docker ps -a --format '{{.Names}}' 2>/dev/null || true
+          echo "::endgroup::"
+
+      - name: Clean up Docker resources
+        if: always()
+        run: |
+          set +e
+          ids="$(docker ps -aq --filter 'label=org.testcontainers' 2>/dev/null)"
+          if [ -n "$ids" ]; then
+            docker rm -f $ids
+          fi
+          docker container prune -f --filter 'until=1h' 2>/dev/null || true
+
   compose-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
