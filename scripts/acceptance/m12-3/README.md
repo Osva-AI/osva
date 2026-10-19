@@ -9,11 +9,13 @@ pnpm install
 pnpm acceptance:m12-3
 ```
 
-Browser smoke (Playwright + Chromium):
+Browser acceptance (Playwright + Chromium, BFF + full UI journey):
 
 ```bash
 pnpm acceptance:m12-3:browser
 ```
+
+GitHub Actions runs BFF and browser in separate jobs (`m12-3-acceptance` and `m12-3-browser-acceptance` with `pnpm acceptance:m12-3:browser-ci`). The default Console integration suite (`vitest.integration.config.ts`) excludes `*-browser.integration.test.ts` so `pnpm verify:ci` does not require Playwright on the runner.
 
 ## Architecture
 

@@ -64,6 +64,7 @@
     "acceptance:m9-7b:test": "node --test scripts/acceptance/m9-7b/test/*.test.mjs",
     "acceptance:m12-3": "node scripts/acceptance/m12-3/run.mjs",
     "acceptance:m12-3:browser": "node scripts/acceptance/m12-3/run.mjs --with-browser",
+    "acceptance:m12-3:browser-ci": "node scripts/acceptance/m12-3/run.mjs --browser-only",
     "acceptance:m12-3:test": "node --test scripts/acceptance/m12-3/test/*.test.mjs"
   },
   "devDependencies": {

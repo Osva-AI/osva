@@ -15,11 +15,12 @@ Status: **PASS** (mandatory CI gate and full Console browser journey executed on
 
 ```bash
 pnpm acceptance:m12-3              # CI gate: docker preflight, build, 5 BFF integration scenarios
-pnpm acceptance:m12-3:browser      # gate + Playwright Chromium + full UI journey
+pnpm acceptance:m12-3:browser      # BFF + Playwright Chromium + full UI journey (local operator)
+pnpm acceptance:m12-3:browser-ci   # browser UI only (CI; BFF already in m12-3-acceptance)
 pnpm acceptance:m12-3:test         # runner smoke tests (node --test)
 ```
 
-Prerequisites: Docker, `pnpm install`. Browser profile installs Chromium via `pnpm exec playwright install chromium` inside the runner.
+Prerequisites: Docker, `pnpm install`. Browser profiles install Chromium via `pnpm exec playwright install chromium` (local) or `pnpm exec playwright install --with-deps chromium` (GitHub Actions). Console `pnpm test:integration` excludes `*-browser.integration.test.ts` so verify does not require Playwright binaries.
 
 ## Evidence classes
 
@@ -70,7 +71,13 @@ Command: `pnpm acceptance:m12-3` — exitCode 0, wrapper ~200s local.
 
 ## CI
 
-- Workflow job `m12-3-acceptance` runs `pnpm acceptance:m12-3` (Docker required). Browser profile is operator/optional (`acceptance:m12-3:browser`), not default CI.
+| Job | Command | Role |
+| --- | --- | --- |
+| `m12-3-acceptance` | `pnpm acceptance:m12-3` | **Mandatory** — five BFF cross-capability scenarios |
+| `m12-3-browser-acceptance` | Playwright install + `pnpm acceptance:m12-3:browser-ci` | **Mandatory** — full Playwright UI journey (no duplicate BFF) |
+| `verify` | `pnpm verify:ci` | **Mandatory** — Console integration suite excludes browser-only tests |
+
+Local full stack + browser: `pnpm acceptance:m12-3:browser` (BFF and browser in one run).
 
 ## Known limitations
 

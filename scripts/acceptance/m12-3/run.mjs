@@ -9,12 +9,16 @@ const REPO_ROOT = path.resolve(
 );
 
 function parseArgs(argv) {
-  const options = { withBrowser: false, help: false };
+  const options = { withBrowser: false, browserOnly: false, help: false };
   for (const arg of argv) {
     if (arg === "--help" || arg === "-h") {
       options.help = true;
     }
     if (arg === "--with-browser") {
+      options.withBrowser = true;
+    }
+    if (arg === "--browser-only") {
+      options.browserOnly = true;
       options.withBrowser = true;
     }
   }
@@ -23,6 +27,7 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage: pnpm acceptance:m12-3 [--with-browser]
+       pnpm acceptance:m12-3:browser-ci   (CI: browser UI only; BFF runs in m12-3-acceptance)
 
 Runs M12.3 cross-capability acceptance against a disposable real stack:
   - Docker-backed PostgreSQL and Valkey (via integration harness)
@@ -84,6 +89,10 @@ function main() {
     process.exit(build.status ?? 1);
   }
 
+  const vitestConfig = options.browserOnly
+    ? "vitest.integration.browser.config.ts"
+    : "vitest.integration.config.ts";
+
   const integrationArgs = [
     "--filter",
     "@osva/console",
@@ -91,12 +100,27 @@ function main() {
     "vitest",
     "run",
     "--config",
-    "vitest.integration.config.ts",
-    "test/integration/m12-3-cross-capability.integration.test.ts",
+    vitestConfig,
   ];
-  if (options.withBrowser) {
+
+  if (options.browserOnly) {
     integrationArgs.push("test/integration/m12-3-browser.integration.test.ts");
-    const browsers = runPnpm(["exec", "playwright", "install", "chromium"]);
+  } else {
+    integrationArgs.push(
+      "test/integration/m12-3-cross-capability.integration.test.ts",
+    );
+    if (options.withBrowser) {
+      integrationArgs.push("test/integration/m12-3-browser.integration.test.ts");
+    }
+  }
+
+  if (options.withBrowser) {
+    const playwrightInstall = ["exec", "playwright", "install"];
+    if (process.env.CI === "true") {
+      playwrightInstall.push("--with-deps");
+    }
+    playwrightInstall.push("chromium");
+    const browsers = runPnpm(playwrightInstall);
     if (browsers.status !== 0) {
       process.exit(browsers.status ?? 1);
     }
@@ -110,6 +134,7 @@ function main() {
       {
         acceptance: "m12-3",
         withBrowser: options.withBrowser,
+        browserOnly: options.browserOnly,
         exitCode: vitest.status ?? 1,
         wrapperTotalMs: Math.round(totalMs),
       },
