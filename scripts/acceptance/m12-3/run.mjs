@@ -110,7 +110,9 @@ function main() {
       "test/integration/m12-3-cross-capability.integration.test.ts",
     );
     if (options.withBrowser) {
-      integrationArgs.push("test/integration/m12-3-browser.integration.test.ts");
+      integrationArgs.push(
+        "test/integration/m12-3-browser.integration.test.ts",
+      );
     }
   }
 
