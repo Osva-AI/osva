@@ -69,5 +69,5 @@ Status is recorded after locally verifiable checks for each slice.
 - ✅ M11 Human identity, authentication, and Console human sessions (Slices 1–3) — [`../operations/M11_CLOSEOUT_SUMMARY.md`](../operations/M11_CLOSEOUT_SUMMARY.md)
 - 🚧 M12 Model, Tool and Connector Capability Foundation
   - ✅ M12.1 Model provider connections and self-hosted model foundation — [`../operations/M12_1_ACCEPTANCE_SUMMARY.md`](../operations/M12_1_ACCEPTANCE_SUMMARY.md)
-  - ⏳ M12.2 Tool/connector management and MCP discovery
+  - ✅ M12.2 Tool/connector management and MCP discovery — [`../operations/M12_2_ACCEPTANCE_SUMMARY.md`](../operations/M12_2_ACCEPTANCE_SUMMARY.md)
   - ⏳ M12.3 Cross-capability integration and self-hosted acceptance

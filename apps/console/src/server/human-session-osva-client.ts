@@ -233,6 +233,108 @@ export function createHumanSessionOsvaClient(
         })
         .then(toDataOnly),
 
+    listTools: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/tools" })
+        .then(toDataOnly),
+
+    getTool: (toolId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/tools/${encodeURIComponent(toolId)}`,
+        })
+        .then(toDataOnly),
+
+    listToolVersions: (toolId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/tools/${encodeURIComponent(toolId)}/versions`,
+        })
+        .then(toDataOnly),
+
+    getToolVersion: (toolId, toolVersionId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/tools/${encodeURIComponent(toolId)}/versions/${encodeURIComponent(toolVersionId)}`,
+        })
+        .then(toDataOnly),
+
+    listConnectors: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/connectors" })
+        .then(toDataOnly),
+
+    getConnector: (connectorId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/connectors/${encodeURIComponent(connectorId)}`,
+        })
+        .then(toDataOnly),
+
+    createConnector: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/connectors",
+          body,
+        })
+        .then(toDataOnly),
+
+    updateConnector: (connectorId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "PATCH",
+          path: `/v1/connectors/${encodeURIComponent(connectorId)}`,
+          body,
+        })
+        .then(toDataOnly),
+
+    listConnectorVersions: (connectorId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/connectors/${encodeURIComponent(connectorId)}/versions`,
+        })
+        .then(toDataOnly),
+
+    appendConnectorVersion: (connectorId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/connectors/${encodeURIComponent(connectorId)}/versions`,
+          body,
+        })
+        .then(toDataOnly),
+
+    getConnectorVersion: (connectorId, connectorVersionId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/connectors/${encodeURIComponent(connectorId)}/versions/${encodeURIComponent(connectorVersionId)}`,
+        })
+        .then(toDataOnly),
+
+    discoverConnectorTools: (connectorId, connectorVersionId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/connectors/${encodeURIComponent(connectorId)}/versions/${encodeURIComponent(connectorVersionId)}/discover`,
+        })
+        .then(toDataOnly),
+
+    importMcpTools: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/connectors/import-mcp-tools",
+          body,
+        })
+        .then(toDataOnly),
+
     createRun: (body) =>
       upstream
         .requestJson(ctx, { method: "POST", path: "/v1/runs", body })

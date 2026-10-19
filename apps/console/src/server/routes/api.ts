@@ -4,9 +4,13 @@ import type {
   AgentId,
   AgentVersionId,
   ApprovalRequestId,
+  ConnectorId,
+  ConnectorVersionId,
   RunAttemptId,
   RunId,
   RunStepId,
+  ToolId,
+  ToolVersionId,
   WorkflowId,
   WorkflowRunId,
   WorkflowVersionId,
@@ -317,11 +321,104 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/connectors") {
+        const body = await readJsonBody(request);
+        const created = await client.createConnector(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/connectors/import-mcp-tools") {
+        const body = await readJsonBody(request);
+        const imported = await client.importMcpTools(body);
+        sendJson(
+          response,
+          200,
+          imported.data,
+          upstreamRequestIdHeaders(imported.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const connectorVersionPostMatch = pathname.match(
+        /^\/api\/v1\/connectors\/([^/]+)\/versions$/,
+      );
+      if (connectorVersionPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await client.appendConnectorVersion(
+          connectorVersionPostMatch[1] as ConnectorId,
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const connectorDiscoverMatch = pathname.match(
+        /^\/api\/v1\/connectors\/([^/]+)\/versions\/([^/]+)\/discover$/,
+      );
+      if (connectorDiscoverMatch !== null) {
+        const discovered = await client.discoverConnectorTools(
+          connectorDiscoverMatch[1] as ConnectorId,
+          connectorDiscoverMatch[2] as ConnectorVersionId,
+        );
+        sendJson(
+          response,
+          200,
+          discovered.data,
+          upstreamRequestIdHeaders(discovered.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       sendJson(
         response,
         405,
         { error: "Method not allowed." },
-        { Allow: "GET, POST" },
+        { Allow: "GET, POST, PATCH" },
+        deps.security,
+      );
+      return true;
+    }
+
+    if (method === "PATCH") {
+      const connectorPatchMatch = pathname.match(
+        /^\/api\/v1\/connectors\/([^/]+)$/,
+      );
+      if (connectorPatchMatch !== null) {
+        const body = await readJsonBody(request);
+        const updated = await client.updateConnector(
+          connectorPatchMatch[1] as ConnectorId,
+          body,
+        );
+        sendJson(
+          response,
+          200,
+          updated.data,
+          upstreamRequestIdHeaders(updated.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      sendJson(
+        response,
+        405,
+        { error: "Method not allowed." },
+        { Allow: "GET, POST, PATCH" },
         deps.security,
       );
       return true;
@@ -332,7 +429,7 @@ export async function handleConsoleApiRequest(
         response,
         405,
         { error: "Method not allowed." },
-        { Allow: "GET, POST" },
+        { Allow: "GET, POST, PATCH" },
         deps.security,
       );
       return true;
@@ -464,6 +561,130 @@ export async function handleConsoleApiRequest(
         200,
         listed.data,
         upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/tools") {
+      const listed = await client.listTools();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const toolVersionItemMatch = pathname.match(
+      /^\/api\/v1\/tools\/([^/]+)\/versions\/([^/]+)$/,
+    );
+    if (toolVersionItemMatch !== null) {
+      const version = await client.getToolVersion(
+        toolVersionItemMatch[1] as ToolId,
+        toolVersionItemMatch[2] as ToolVersionId,
+      );
+      sendJson(
+        response,
+        200,
+        version.data,
+        upstreamRequestIdHeaders(version.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const toolVersionsMatch = pathname.match(
+      /^\/api\/v1\/tools\/([^/]+)\/versions$/,
+    );
+    if (toolVersionsMatch !== null) {
+      const versions = await client.listToolVersions(
+        toolVersionsMatch[1] as ToolId,
+      );
+      sendJson(
+        response,
+        200,
+        versions.data,
+        upstreamRequestIdHeaders(versions.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const toolItemMatch = pathname.match(/^\/api\/v1\/tools\/([^/]+)$/);
+    if (toolItemMatch !== null) {
+      const tool = await client.getTool(toolItemMatch[1] as ToolId);
+      sendJson(
+        response,
+        200,
+        tool.data,
+        upstreamRequestIdHeaders(tool.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/connectors") {
+      const listed = await client.listConnectors();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const connectorVersionItemMatch = pathname.match(
+      /^\/api\/v1\/connectors\/([^/]+)\/versions\/([^/]+)$/,
+    );
+    if (connectorVersionItemMatch !== null) {
+      const version = await client.getConnectorVersion(
+        connectorVersionItemMatch[1] as ConnectorId,
+        connectorVersionItemMatch[2] as ConnectorVersionId,
+      );
+      sendJson(
+        response,
+        200,
+        version.data,
+        upstreamRequestIdHeaders(version.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const connectorVersionsMatch = pathname.match(
+      /^\/api\/v1\/connectors\/([^/]+)\/versions$/,
+    );
+    if (connectorVersionsMatch !== null) {
+      const versions = await client.listConnectorVersions(
+        connectorVersionsMatch[1] as ConnectorId,
+      );
+      sendJson(
+        response,
+        200,
+        versions.data,
+        upstreamRequestIdHeaders(versions.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const connectorItemMatch = pathname.match(
+      /^\/api\/v1\/connectors\/([^/]+)$/,
+    );
+    if (connectorItemMatch !== null) {
+      const connector = await client.getConnector(
+        connectorItemMatch[1] as ConnectorId,
+      );
+      sendJson(
+        response,
+        200,
+        connector.data,
+        upstreamRequestIdHeaders(connector.requestId),
         deps.security,
       );
       return true;

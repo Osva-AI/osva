@@ -29,6 +29,7 @@ import { ConsoleApiError } from "../lib/console-api";
 import { parseWorkflowRunInputJson } from "../lib/workflow-run-input";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 import { ModelProfileVersionSelector } from "../components/agent/model-profile-version-selector";
+import { ToolVersionBindingSelector } from "../components/agent/tool-version-binding-selector";
 
 export function AgentVersionCreatePage() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -325,6 +326,16 @@ export function AgentVersionCreatePage() {
               return;
             }
             applyPrimaryModelBinding(selection.modelProfileVersionId);
+          }}
+        />
+
+        <ToolVersionBindingSelector
+          manifestText={manifestText}
+          disabled={!canWrite || mutation.isPending}
+          onManifestChange={(next) => {
+            setManifestText(next);
+            setFeedback(undefined);
+            setErrorStatus(undefined);
           }}
         />
 

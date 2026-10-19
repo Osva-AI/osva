@@ -187,9 +187,24 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 | Trusted TypeScript integrity/entrypoint errors | File missing under `OSVA_TRUSTED_RUNTIME_ROOT`, or `runtime.integrity` is not sha256 of those bytes |
 | Syntax-valid JSON then FAILED attempt | Input did not match the agent's runtime expectations. Inspect persisted attempt error |
 
+### Tools and connectors (M12.2)
+
+**Routes:** `/tools`, `/tools/:toolId`, `/tools/connectors`, `/tools/connectors/:connectorId`.
+
+- Tool registry list with immutable ToolVersion summaries (latest version is display-only)
+- Tool detail with version history, MCP snapshots, and input schemas
+- MCP connector registry list and detail
+- Create connector identity and append immutable **Streamable HTTP** ConnectorVersions (secret reference keys are write-only)
+- STDIO ConnectorVersions are read-only in Console; new STDIO configuration is not offered through the general Console form
+- MCP discovery against a selected ConnectorVersion
+- Review-before-import workflow and selective `POST /api/v1/connectors/import-mcp-tools`
+- AgentVersion tool binding selector (coexists with M12.1 primary model selector and JSON manifest editing)
+
+Requires **EDITOR** or **ADMIN** (WRITE) for connector/tool registration and import. Discovery and import follow existing control-plane authorization.
+
 ### Not yet in console
 
-- Global Artifact Explorer, knowledge, tools, models, settings
+- Global Artifact Explorer, knowledge, settings
 
 ### Artifact retrieval (M8.5.2)
 

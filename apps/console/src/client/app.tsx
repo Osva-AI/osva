@@ -28,6 +28,10 @@ import { ModelsPage } from "./routes/models-page";
 import { ModelConnectionsPage } from "./routes/model-connections-page";
 import { ModelConnectionDetailPage } from "./routes/model-connection-detail-page";
 import { ModelProfileDetailPage } from "./routes/model-profile-detail-page";
+import { ToolsPage } from "./routes/tools-page";
+import { ToolDetailPage } from "./routes/tool-detail-page";
+import { ConnectorsPage } from "./routes/connectors-page";
+import { ConnectorDetailPage } from "./routes/connector-detail-page";
 
 const queryClient = createQueryClient();
 
@@ -76,6 +80,16 @@ export function App() {
                     path="/models/:modelProfileId"
                     element={<ModelProfileDetailPage />}
                   />
+                  <Route path="/tools" element={<ToolsPage />} />
+                  <Route
+                    path="/tools/connectors"
+                    element={<ConnectorsPage />}
+                  />
+                  <Route
+                    path="/tools/connectors/:connectorId"
+                    element={<ConnectorDetailPage />}
+                  />
+                  <Route path="/tools/:toolId" element={<ToolDetailPage />} />
                   <Route path="/runs" element={<RunsPage />} />
                   <Route path="/runs/:runId" element={<RunDetailPage />} />
                   <Route
