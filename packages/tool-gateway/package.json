@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
-    "test:integration:github-connector": "vitest run --config vitest.integration.github-connector.config.ts"
+    "test:integration:github-connector": "vitest run --config vitest.integration.github-connector.config.ts",
+    "test:integration:connector-compatibility": "vitest run --config vitest.integration.connector-compatibility.config.ts"
   },
   "dependencies": {
     "@osva/adapters-mcp-client": "workspace:*",

@@ -5,11 +5,13 @@ on:
     paths:
       - "packages/tool-gateway/**"
       - ".github/workflows/github-connector-integration.yml"
+      - ".github/workflows/connector-tool-gateway-integration-reusable.yml"
   push:
     branches: [main]
     paths:
       - "packages/tool-gateway/**"
       - ".github/workflows/github-connector-integration.yml"
+      - ".github/workflows/connector-tool-gateway-integration-reusable.yml"
 
 permissions:
   contents: read
@@ -18,59 +20,16 @@ concurrency:
   group: github-connector-integration-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Pin to the osva-connectors commit that contains C1.2 (stdio fixture + CI).
-  # Update this SHA after merging C1.2 to Osva-AI/osva-connectors main — do not use a floating branch ref.
-  OSVA_CONNECTORS_REF: 4ce706e335422275a667faf15a26dba3485b2daf
-
 jobs:
   tool-gateway-github-connector:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - name: Validate osva-connectors pin
-        run: |
-          if [ "${{ env.OSVA_CONNECTORS_REF }}" = "REPLACE_WITH_OSVA_CONNECTORS_C1_2_COMMIT_SHA" ]; then
-            echo "Set OSVA_CONNECTORS_REF in .github/workflows/github-connector-integration.yml to the merged osva-connectors C1.2 commit SHA."
-            exit 1
-          fi
-
-      - name: Check out osva
-        uses: actions/checkout@v4
-
-      - name: Check out osva-connectors (pinned)
-        uses: actions/checkout@v4
-        with:
-          repository: Osva-AI/osva-connectors
-          ref: ${{ env.OSVA_CONNECTORS_REF }}
-          path: osva-connectors
-
-      - name: Enable Corepack pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@12.4.1 --activate
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-
-      - name: Build connector and test stdio fixture
-        working-directory: osva-connectors
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm --filter @osva-ai/connector-github build
-          pnpm --filter @osva-ai/connector-github build:test-stdio-fixture
-          test -f packages/github/test/fixtures/.build/stdio-github-fixture.js
-
-      - name: Install osva dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build ToolGateway integration dependencies
-        run: pnpm exec turbo run build --filter=@osva/tool-gateway...
-
-      - name: Run ToolGateway GitHub connector integration
-        env:
-          OSVA_REQUIRE_GITHUB_CONNECTOR_INTEGRATION: "true"
-          OSVA_GITHUB_CONNECTOR_TEST_STDIO_ENTRY: ${{ github.workspace }}/osva-connectors/packages/github/test/fixtures/.build/stdio-github-fixture.js
-        run: pnpm --filter @osva/tool-gateway test:integration:github-connector
+    uses: ./.github/workflows/connector-tool-gateway-integration-reusable.yml
+    with:
+      connector_id: github
+      # Pin to the osva-connectors commit that contains C1.2 (stdio fixture + CI).
+      # Update this SHA after connector fixture contract changes — do not use a floating branch ref.
+      osva_connectors_ref: 4ce706e335422275a667faf15a26dba3485b2daf
+      connector_npm_filter: "@osva-ai/connector-github"
+      fixture_relative_path: packages/github/test/fixtures/.build/stdio-github-fixture.js
+      require_env_var: OSVA_REQUIRE_GITHUB_CONNECTOR_INTEGRATION
+      stdio_entry_env_var: OSVA_GITHUB_CONNECTOR_TEST_STDIO_ENTRY
+      vitest_script: test:integration:github-connector

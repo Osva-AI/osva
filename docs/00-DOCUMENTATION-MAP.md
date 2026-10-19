@@ -54,6 +54,7 @@
 - `engineering/NON_FUNCTIONAL_REQUIREMENTS.md`
 - `engineering/TESTING_STRATEGY.md`
 - `engineering/DEVELOPMENT_GATES.md`
+- `engineering/CONNECTOR_TOOL_GATEWAY_ACCEPTANCE.md`
 - `engineering/CONSOLE.md`
 - `engineering/REPOSITORY_STRUCTURE.md`
 - `engineering/SDK.md`

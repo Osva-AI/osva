@@ -159,8 +159,8 @@ Classification key:
 ### Ranked confirmed core integration gaps (M12.4.1)
 
 1. **D / P2 — External adapter ports not on npm:** Third parties cannot implement artifact/model/embedding adapters against a published stable TypeScript port (interfaces live in private `@osva/domain` / `@osva/model-gateway`).
-2. **C / P2 — Connector acceptance not yet generic:** GitHub-specific workflow and test file prove the stack; cancellation and unbound-tool scenarios are not in the cross-repo suite.
-3. **D / P2 — No published connector ToolGateway harness package:** External repos can build fixtures and run osva’s CI template, but there is no npm-delivered test kit (by design for M12.4.1 minimal scope).
+2. **C / P2 — Second connector CI case:** Generic harness + reusable workflow exist; PostgreSQL fixture not yet published in osva-connectors.
+3. **D / P2 — No published connector ToolGateway harness package:** External repos can build fixtures and run osva’s CI template, but there is no npm-delivered test kit (by design for M12.4.2).
 
 ### False-positive gaps (already supported)
 
@@ -171,15 +171,17 @@ Classification key:
 
 ---
 
-## Generic connector acceptance architecture (M12.4.1 recommendation)
+## Generic connector acceptance architecture (M12.4.2)
 
 ### Reference implementation
 
-| Layer | GitHub-specific today | Generic |
+| Layer | GitHub reference case | Generic harness |
 | --- | --- | --- |
-| CI workflow | `.github/workflows/github-connector-integration.yml` | Template: checkout osva + pinned connector repo, build stdio fixture, run integration vitest |
-| Integration test | `packages/tool-gateway/test/github-connector-tool-gateway.integration.test.ts` | Scenario list below; provider mock stays in connector repo |
-| Fixture resolution | `resolve-github-connector-test-entry.ts` | Shared `resolve-external-connector-stdio-entry.ts` (M12.4.1) |
+| CI workflow | `.github/workflows/github-connector-integration.yml` calls reusable `connector-tool-gateway-integration-reusable.yml` | Same reusable workflow for future connectors (pinned SHA, matrix inputs) |
+| Integration test | `packages/tool-gateway/test/connector-compatibility/github.connector-compatibility.case.ts` | `registerMcpConnectorCompatibilitySuite()` in `mcp-connector-compatibility.harness.ts` |
+| Vitest entry | `test/github-connector-tool-gateway.integration.test.ts` (CI alias) | `test/mcp-connector-tool-gateway.integration.test.ts` |
+| Fixture resolution | `resolve-github-connector-test-entry.ts` | Shared `resolve-external-connector-stdio-entry.ts` |
+| Maintainer docs | — | [CONNECTOR_TOOL_GATEWAY_ACCEPTANCE.md](../engineering/CONNECTOR_TOOL_GATEWAY_ACCEPTANCE.md) |
 
 ### Reusable stdio fixture environment contract
 
@@ -205,29 +207,25 @@ Fail CI when required:
 
 Implementation helpers (osva private tests): `packages/tool-gateway/test/fixtures/resolve-external-connector-stdio-entry.ts`.
 
-### Scenario checklist (target contract for M12.4.2)
+### Scenario checklist (M12.4.2 generic harness)
 
-| # | Scenario | Covered by GitHub integration |
+| # | Scenario | Generic harness |
 | --- | --- | --- |
 | 1 | MCP init + discover + import ToolVersion | Yes |
 | 2 | ToolGateway happy-path invoke | Yes |
 | 3 | ToolPolicy deny before MCP | Yes |
 | 4 | Missing SecretReference on discover | Yes |
 | 5 | Stdio gate disabled | Yes |
-| 6 | Provider auth failure sanitized | Yes |
+| 6 | Provider auth failure sanitized | Yes (per connector case) |
 | 7 | Provider 5xx sanitized | Yes |
 | 8 | Cross-workspace discovery denied | Yes |
-| 9 | Cancellation aborts in-flight call | No — add |
-| 10 | Unbound tool (not on AgentVersion) rejected at runtime | No — worker/policy tests partial |
-| 11 | Workspace isolation on invoke | Partial — discovery only |
+| 9 | Cancellation aborts in-flight call | Yes (`AbortSignal` on MCP executor) |
+| 10 | Unbound logical binding rejected before MCP | Yes (`RuntimeBindingToolPolicy` mirrors runtime) |
+| 11 | Workspace isolation on invoke | Yes (workspace-scoped test policy on invoke) |
 
-**Smallest reusable test API for connector repos (recommended):**
+**Follow-on (optional):** Publish `@osva-ai/connector-acceptance` dev kit only if multiple external repos need the harness without osva checkout — not required for M12.4.2.
 
-1. **Phase 1 (M12.4.1):** Env contract + documentation (this file) + shared resolver in osva tests.
-2. **Phase 2 (M12.4.2):** Extract `createMcpConnectorToolGatewayHarness()` from GitHub test (memory repos + `createConnectorApplication` + `ToolGateway`) and parameterize `{ stdioTransport, toolImport, invokeInput, mockBackend }`; keep provider mocks in osva-connectors.
-3. **Phase 3 (optional):** Publish `@osva-ai/connector-acceptance` dev kit re-exporting harness + scenario runner — only if multiple connectors adopt it.
-
-Do **not** replace the GitHub workflow until Phase 2 proves parameterization; add postgres or generic workflow alongside.
+**PostgreSQL connector:** deferred until osva-connectors publishes stdio fixture contract (see CONNECTOR_TOOL_GATEWAY_ACCEPTANCE.md).
 
 ---
 
@@ -282,7 +280,7 @@ Recommend **`@osva-ai/adapter-artifact-*`** implementing a **published** `Artifa
 
 | Slice | Scope |
 | --- | --- |
-| **M12.4.2** | Parameterized connector ToolGateway harness; optional PostgreSQL connector pin job; cancellation scenario; document CI template for connector maintainers |
+| **M12.4.2** | **Done in tree:** parameterized harness, reusable CI workflow, maintainer doc; PostgreSQL second case deferred pending osva-connectors fixture |
 | **M12.4.3** | Publish or extract **adapter port** package(s); bootstrap osva-adapters with one reference adapter; static worker composition doc |
 | **M12.4.4** | osva-examples 1.1 alignment; optional SDK connector helpers; npm-published connector-github; reduce core changes when adding connectors |
 

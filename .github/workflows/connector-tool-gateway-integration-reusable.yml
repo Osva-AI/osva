@@ -1,0 +1,82 @@
+name: Connector ToolGateway integration (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      connector_id:
+        required: true
+        type: string
+      osva_connectors_ref:
+        required: true
+        type: string
+      connector_npm_filter:
+        required: true
+        type: string
+      fixture_relative_path:
+        required: true
+        type: string
+      require_env_var:
+        required: true
+        type: string
+      stdio_entry_env_var:
+        required: true
+        type: string
+      vitest_script:
+        required: true
+        type: string
+        default: test:integration:connector-compatibility
+
+permissions:
+  contents: read
+
+jobs:
+  tool-gateway-external-connector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Validate osva-connectors pin
+        run: |
+          if [ "${{ inputs.osva_connectors_ref }}" = "REPLACE_WITH_OSVA_CONNECTORS_COMMIT_SHA" ]; then
+            echo "Set osva_connectors_ref to a full commit SHA — do not use a floating branch ref."
+            exit 1
+          fi
+
+      - name: Check out osva
+        uses: actions/checkout@v4
+
+      - name: Check out osva-connectors (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: Osva-AI/osva-connectors
+          ref: ${{ inputs.osva_connectors_ref }}
+          path: osva-connectors
+
+      - name: Enable Corepack pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.1 --activate
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Build connector and test stdio fixture
+        working-directory: osva-connectors
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter "${{ inputs.connector_npm_filter }}" build
+          pnpm --filter "${{ inputs.connector_npm_filter }}" build:test-stdio-fixture
+          test -f "${{ inputs.fixture_relative_path }}"
+
+      - name: Install osva dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build ToolGateway integration dependencies
+        run: pnpm exec turbo run build --filter=@osva/tool-gateway...
+
+      - name: Run ToolGateway connector compatibility
+        run: |
+          export "${{ inputs.require_env_var }}=true"
+          export "${{ inputs.stdio_entry_env_var }}=${{ github.workspace }}/osva-connectors/${{ inputs.fixture_relative_path }}"
+          pnpm --filter @osva/tool-gateway ${{ inputs.vitest_script }}
