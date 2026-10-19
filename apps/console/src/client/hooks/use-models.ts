@@ -56,6 +56,24 @@ export function useModelProfilesListQuery() {
   });
 }
 
+export function useCreateModelProfileMutation() {
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
+  return useMutation({
+    mutationFn: (body: { readonly key: string; readonly name: string }) =>
+      consoleFetch<ModelProfileResource>("/api/v1/model-profiles", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["model-profiles", workspaceId],
+      });
+    },
+  });
+}
+
 export function useModelProfileVersionsQuery(
   modelProfileId: string | undefined,
 ) {

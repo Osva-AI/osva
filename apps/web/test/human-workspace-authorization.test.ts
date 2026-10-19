@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { lookupV1RouteAccess } from "../src/v1-route-human-access-inventory.js";
 import { authorizeHumanControlPlaneRequest } from "../src/v1-control-plane-access.js";
+import { structuralRouteKeyFromPathname } from "../src/v1-route-structural-key.js";
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
 import { authorizationHeader, createTestWebApplication } from "./test-web.js";
 
@@ -30,6 +31,106 @@ describe("human workspace authorization", () => {
   it("denies human sessions on API-key-only auth context route metadata", () => {
     const access = lookupV1RouteAccess("GET", "/v1/auth/context");
     expect(access?.accessClass).toBe("api_key_only");
+  });
+
+  it("allows human sessions to resolve model provider connection routes", () => {
+    const access = lookupV1RouteAccess(
+      "POST",
+      "/v1/model-provider-connections",
+    );
+    expect(access?.accessClass).toBe("control_plane_workspace");
+    expect(access?.requiredHumanPermission).toBe("WRITE");
+  });
+
+  it("maps model provider structural keys without treating segments as dynamic ids", () => {
+    expect(
+      structuralRouteKeyFromPathname(
+        "POST",
+        "/v1/model-provider-connections/ws-conn/versions",
+      ),
+    ).toBe("POST /v1/model-provider-connections/*/versions");
+    expect(
+      structuralRouteKeyFromPathname(
+        "POST",
+        "/v1/model-provider-connections/ws-conn/versions/ver-1/test",
+      ),
+    ).toBe("POST /v1/model-provider-connections/*/versions/*/test");
+
+    const appendVersion = lookupV1RouteAccess(
+      "POST",
+      "/v1/model-provider-connections/conn-1/versions",
+    );
+    expect(appendVersion?.requiredHumanPermission).toBe("WRITE");
+    expect(appendVersion?.resourceFamily).toBe("model_provider_connection");
+
+    const connectivityTest = lookupV1RouteAccess(
+      "POST",
+      "/v1/model-provider-connections/conn-1/versions/ver-1/test",
+    );
+    expect(connectivityTest?.requiredHumanPermission).toBe("EXECUTE");
+  });
+
+  it("denies VIEWER human principals for model provider connection writes", async () => {
+    const user = User.create({
+      id: USER,
+      email: "viewer-model@example.com",
+      displayName: "Viewer",
+      status: USER_STATUSES.ACTIVE,
+      createdAt: NOW,
+    });
+    const membership = WorkspaceMembership.create({
+      id: "wm-viewer-model" as WorkspaceMembershipId,
+      workspaceId: WS,
+      userId: USER,
+      role: HUMAN_WORKSPACE_ROLES.VIEWER,
+      createdAt: NOW,
+    });
+    const services = {
+      users: {
+        async save() {},
+        async findById(id: UserId) {
+          return id === USER ? user : null;
+        },
+        async findByEmail() {
+          return user;
+        },
+      },
+      workspaceMemberships: {
+        async save() {},
+        async findById() {
+          return null;
+        },
+        async findByWorkspaceAndUser(workspaceId: WorkspaceId, userId: UserId) {
+          return workspaceId === WS && userId === USER ? membership : null;
+        },
+        async listByWorkspaceId() {
+          return [];
+        },
+        async listByUserId(userId: UserId) {
+          return userId === USER ? [membership] : [];
+        },
+        async countByWorkspaceAndRole() {
+          return 0;
+        },
+      },
+    } as unknown as import("../src/human-auth-http.js").HumanAuthHttpServices;
+
+    await expect(
+      authorizeHumanControlPlaneRequest(
+        {
+          headers: { "x-osva-workspace-id": WS },
+        } as unknown as import("node:http").IncomingMessage,
+        "POST",
+        "/v1/model-provider-connections",
+        services,
+        {
+          authenticationMethod: "HUMAN_SESSION",
+          userId: USER,
+          sessionId: "sess-viewer-model",
+          workspaceId: WS,
+        },
+      ),
+    ).rejects.toMatchObject({ name: "PermissionDeniedError" });
   });
 
   it("allows OPERATOR human principals for knowledge retrieve (EXECUTE)", async () => {

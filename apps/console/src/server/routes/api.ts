@@ -250,6 +250,38 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/model-profiles") {
+        const body = await readJsonBody(request);
+        const created = await client.createModelProfile(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const modelProfileVersionPostMatch = pathname.match(
+        /^\/api\/v1\/model-profiles\/([^/]+)\/versions$/,
+      );
+      if (modelProfileVersionPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await client.appendModelProfileVersion(
+          modelProfileVersionPostMatch[1] ?? "",
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       const connectionVersionPostMatch = pathname.match(
         /^\/api\/v1\/model-provider-connections\/([^/]+)\/versions$/,
       );

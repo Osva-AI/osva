@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { EmptyState } from "../components/empty-state/empty-state";
@@ -5,6 +6,7 @@ import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
+  useCreateModelProfileMutation,
   useModelProfilesListQuery,
   useModelProviderConnectionsListQuery,
 } from "../hooks/use-models";
@@ -14,6 +16,9 @@ export function ModelsPage() {
   const authQuery = useAuthContextQuery();
   const profilesQuery = useModelProfilesListQuery();
   const connectionsQuery = useModelProviderConnectionsListQuery();
+  const createProfileMutation = useCreateModelProfileMutation();
+  const [profileKey, setProfileKey] = useState("");
+  const [profileName, setProfileName] = useState("");
   const canWrite =
     authQuery.data !== undefined &&
     roleCanWriteControlPlaneResources(authQuery.data.role);
@@ -64,13 +69,59 @@ export function ModelsPage() {
         />
       ) : null}
 
+      {canWrite ? (
+        <section className="panel">
+          <h2 className="section-title">Create model profile</h2>
+          <div className="filters">
+            <div className="field">
+              <label htmlFor="model-profile-key">Key</label>
+              <input
+                id="model-profile-key"
+                value={profileKey}
+                onChange={(event) => setProfileKey(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="model-profile-name">Name</label>
+              <input
+                id="model-profile-name"
+                value={profileName}
+                onChange={(event) => setProfileName(event.target.value)}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="button primary"
+            disabled={
+              createProfileMutation.isPending ||
+              profileKey.trim().length === 0 ||
+              profileName.trim().length === 0
+            }
+            onClick={() =>
+              void createProfileMutation
+                .mutateAsync({
+                  key: profileKey.trim(),
+                  name: profileName.trim(),
+                })
+                .then(() => {
+                  setProfileKey("");
+                  setProfileName("");
+                })
+            }
+          >
+            Create profile
+          </button>
+        </section>
+      ) : null}
+
       {profilesQuery.data !== undefined ? (
         <section className="panel">
           <h2 className="section-title">Model profiles</h2>
           {profilesQuery.data.modelProfiles.length === 0 ? (
             <EmptyState
               title="No model profiles yet."
-              description="Create a ModelProfile and append an immutable ModelProfileVersion through the control plane API or SDK."
+              description="Create a ModelProfile above, then append an immutable ModelProfileVersion on the profile detail page."
             />
           ) : (
             <div className="table-scroll">

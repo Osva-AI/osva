@@ -1,6 +1,6 @@
 # M12.1 Acceptance Summary — Model Provider Connections
 
-Status: **CONDITIONAL** (automated acceptance complete; full browser Compose journey waived — see below).
+Status: **PASS** (automated + M12.3 real-stack/browser acceptance; Compose-only operator path optional).
 
 ## Implementation acceptance
 
@@ -35,20 +35,11 @@ LiteLLM acceptance is **protocol compatibility** via fake OpenAI server, not a d
 - Unit: `@osva/console` typecheck PASS; `workflows-page.test.tsx` 3/3; `server.test.ts` model-provider BFF cases PASS.
 - Integration: `apps/console/test/integration/console-human-session.integration.test.ts` (existing harness) — human login, workspace isolation, session/membership behavior with real Postgres/Valkey/web/console (not re-run in this closeout slice; prior green in focused verification).
 
-### Waived: full M12.1 browser journey on Compose
+### Browser / cross-capability (M12.3 closeout)
 
-There is **no** dedicated M12.1 acceptance runner. `deploy/compose` does **not** include Console; `pnpm acceptance:m9-7b` covers agent-run health, not model connections.
-
-**Operator path** (deterministic local providers, no paid APIs):
-
-1. Contributor stack: Postgres + Valkey per `docs/engineering/LOCAL_DEVELOPMENT.md`.
-2. `pnpm db:migrations:verify` (applies through 0027).
-3. Start web, worker, console with `OPENAI_API_KEY` (or test secret ref) pointing at a local fake OpenAI server (`adapters/model-openai/test/fake-openai-server.ts` pattern).
-4. Human bootstrap via compose identity-bootstrap or web auth setup; sign in to Console.
-5. Models → create connection → append version (`allowPrivateNetworks: true` for loopback fake) → test with explicit model id → create ModelProfileVersion → AgentVersion → Run → inspect steps/usage.
-6. Switch workspace in UI; confirm connection list/query scope changes (API enforces workspace on mutations).
-
-Waived until an operator runs the above or a future M12.1 scenario is added to an acceptance harness.
+- **Real browser acceptance:** `pnpm acceptance:m12-3:browser` — Playwright journey covers Models connections, connectivity test, model profile + ModelProfileVersion UI, workspace isolation in Console (2026-10-19 **PASS**).
+- **Real-stack BFF:** `pnpm acceptance:m12-3` — model provider scenario without browser (2026-10-19 **PASS** 5/5).
+- **Compose-only manual path:** still valid for operators using `deploy/compose` without the M12.3 harness; not required when M12.3 gate is green.
 
 ## Deployment compatibility
 

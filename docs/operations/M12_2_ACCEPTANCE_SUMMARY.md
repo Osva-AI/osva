@@ -18,12 +18,12 @@
 | `pnpm --filter @osva/worker exec vitest run --config vitest.integration.config.ts test/integration/mcp-tool-gateway.integration.test.ts` | PASS (2 tests) |
 | `pnpm verify:changed` | PASS (~289s; affected `@osva/console`, `@osva/tool-gateway` from pre-existing working-tree scope) |
 
-## Waivers / deferred (M12.3)
+## M12.3 browser closeout
 
-- Full Compose + Console browser acceptance matrix for tools/connectors (carried from M12.1 model waiver).
-- Dedicated `scripts/acceptance/*` scenario for MCP discovery/import journey.
-- STDIO connector creation through Console (intentionally restricted; read-only display only).
+- **Real browser acceptance:** `pnpm acceptance:m12-3:browser` — MCP connector append, discover, review/import, tool binding on AgentVersion, run + RunSteps (2026-10-19 **PASS**).
+- **Real-stack BFF:** MCP discover/import and combined model+tool scenarios in `m12-3-cross-capability.integration.test.ts` (**PASS**).
+- STDIO connector creation through Console remains intentionally restricted (read-only display).
 
 ## Status
 
-**PASS** for M12.2 Console + BFF slice and existing ToolGateway MCP integration evidence. Full Compose browser acceptance remains deferred to M12.3.
+**PASS** for M12.2 Console + BFF slice, ToolGateway MCP integration, and M12.3 browser/BFF cross-capability evidence.

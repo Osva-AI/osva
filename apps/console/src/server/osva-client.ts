@@ -86,8 +86,13 @@ export interface ConsoleOsvaClient {
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
   listModelProfiles(): Promise<ConsoleUpstreamResponse<unknown>>;
+  createModelProfile(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   listModelProfileVersions(
     modelProfileId: string,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  appendModelProfileVersion(
+    modelProfileId: string,
+    body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
   listModelProviderConnections(): Promise<ConsoleUpstreamResponse<unknown>>;
   listModelProviderConnectionVersions(
@@ -311,10 +316,22 @@ export function createConsoleOsvaClient(
         method: "GET",
         path: "/v1/model-profiles",
       }),
+    createModelProfile: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/model-profiles",
+        body,
+      }),
     listModelProfileVersions: (modelProfileId) =>
       http.requestWithMeta({
         method: "GET",
         path: `/v1/model-profiles/${encodeURIComponent(modelProfileId)}/versions`,
+      }),
+    appendModelProfileVersion: (modelProfileId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/model-profiles/${encodeURIComponent(modelProfileId)}/versions`,
+        body,
       }),
     listModelProviderConnections: () =>
       http.requestWithMeta({
