@@ -3,9 +3,13 @@ import type {
   AgentVersionId,
   ApprovalRequestId,
   ArtifactId,
+  ConnectorId,
+  ConnectorVersionId,
   RunAttemptId,
   RunId,
   RunStepId,
+  ToolId,
+  ToolVersionId,
   WorkflowId,
   WorkflowRunId,
   WorkflowVersionId,
@@ -101,6 +105,38 @@ export interface ConsoleOsvaClient {
     connectionVersionId: string,
     body?: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listTools(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getTool(toolId: ToolId): Promise<ConsoleUpstreamResponse<unknown>>;
+  listToolVersions(toolId: ToolId): Promise<ConsoleUpstreamResponse<unknown>>;
+  getToolVersion(
+    toolId: ToolId,
+    toolVersionId: ToolVersionId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listConnectors(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getConnector(
+    connectorId: ConnectorId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createConnector(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  updateConnector(
+    connectorId: ConnectorId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listConnectorVersions(
+    connectorId: ConnectorId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  appendConnectorVersion(
+    connectorId: ConnectorId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getConnectorVersion(
+    connectorId: ConnectorId,
+    connectorVersionId: ConnectorVersionId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  discoverConnectorTools(
+    connectorId: ConnectorId,
+    connectorVersionId: ConnectorVersionId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  importMcpTools(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   createRun(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   listWorkflows(): Promise<ConsoleUpstreamResponse<unknown>>;
   createWorkflow(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
@@ -310,6 +346,75 @@ export function createConsoleOsvaClient(
       http.requestWithMeta({
         method: "POST",
         path: `/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions/${encodeURIComponent(connectionVersionId)}/test`,
+        body,
+      }),
+    listTools: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/tools",
+      }),
+    getTool: (toolId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/tools/${encodeURIComponent(toolId)}`,
+      }),
+    listToolVersions: (toolId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/tools/${encodeURIComponent(toolId)}/versions`,
+      }),
+    getToolVersion: (toolId, toolVersionId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/tools/${encodeURIComponent(toolId)}/versions/${encodeURIComponent(toolVersionId)}`,
+      }),
+    listConnectors: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/connectors",
+      }),
+    getConnector: (connectorId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/connectors/${encodeURIComponent(connectorId)}`,
+      }),
+    createConnector: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/connectors",
+        body,
+      }),
+    updateConnector: (connectorId, body) =>
+      http.requestWithMeta({
+        method: "PATCH",
+        path: `/v1/connectors/${encodeURIComponent(connectorId)}`,
+        body,
+      }),
+    listConnectorVersions: (connectorId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/connectors/${encodeURIComponent(connectorId)}/versions`,
+      }),
+    appendConnectorVersion: (connectorId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/connectors/${encodeURIComponent(connectorId)}/versions`,
+        body,
+      }),
+    getConnectorVersion: (connectorId, connectorVersionId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/connectors/${encodeURIComponent(connectorId)}/versions/${encodeURIComponent(connectorVersionId)}`,
+      }),
+    discoverConnectorTools: (connectorId, connectorVersionId) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/connectors/${encodeURIComponent(connectorId)}/versions/${encodeURIComponent(connectorVersionId)}/discover`,
+      }),
+    importMcpTools: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/connectors/import-mcp-tools",
         body,
       }),
     createRun: (body) =>

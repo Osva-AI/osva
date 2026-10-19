@@ -123,6 +123,37 @@ function createMockClient(
     testModelProviderConnectionVersion: async () => {
       throw new Error("not implemented");
     },
+    listTools: async () => ({ data: { tools: [] } }),
+    getTool: async () => {
+      throw new Error("not implemented");
+    },
+    listToolVersions: async () => ({ data: { versions: [] } }),
+    getToolVersion: async () => {
+      throw new Error("not implemented");
+    },
+    listConnectors: async () => ({ data: { connectors: [] } }),
+    getConnector: async () => {
+      throw new Error("not implemented");
+    },
+    createConnector: async () => {
+      throw new Error("not implemented");
+    },
+    updateConnector: async () => {
+      throw new Error("not implemented");
+    },
+    listConnectorVersions: async () => ({ data: { versions: [] } }),
+    appendConnectorVersion: async () => {
+      throw new Error("not implemented");
+    },
+    getConnectorVersion: async () => {
+      throw new Error("not implemented");
+    },
+    discoverConnectorTools: async () => {
+      throw new Error("not implemented");
+    },
+    importMcpTools: async () => {
+      throw new Error("not implemented");
+    },
     createRun: async () => {
       throw new Error("not implemented");
     },
@@ -172,6 +203,45 @@ describe("console server API", () => {
       });
       server = undefined;
     }
+  });
+
+  it("returns redacted connector versions without secret reference keys", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        listConnectorVersions: async () => ({
+          data: {
+            versions: [
+              {
+                id: "cv-1",
+                connectorId: "conn-1",
+                version: 1,
+                kind: "MCP",
+                transport: "STREAMABLE_HTTP",
+                transportConfig: {
+                  endpointUrl: "https://mcp.example.com/mcp",
+                },
+                auth: { type: "BEARER", configured: true },
+                createdAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+          },
+          requestId: "req-conn-versions",
+        }),
+      }),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(
+      `${origin}/api/v1/connectors/conn-1/versions`,
+      { headers: { "x-osva-workspace-id": "workspace-1" } },
+    );
+    const body = await response.text();
+    expect(response.status).toBe(200);
+    expect(body).toContain("configured");
+    expect(body).not.toContain("tokenSecret");
+    expect(body).not.toContain("valueSecret");
+    expect(body).not.toContain("super-secret-console-key");
   });
 
   it("returns redacted model provider connection versions without secret references", async () => {
