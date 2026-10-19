@@ -6,5 +6,7 @@ export default defineConfig({
     include: ["test/integration/**/*.integration.test.ts"],
     testTimeout: 300_000,
     hookTimeout: 300_000,
+    // One integration file at a time: each file owns disposable Docker infra.
+    fileParallelism: false,
   },
 });

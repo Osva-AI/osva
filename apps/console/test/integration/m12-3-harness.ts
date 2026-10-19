@@ -430,8 +430,10 @@ export async function startM12_3HumanConsoleStack(options: {
       consoleHeaders,
       copyAgentFixture,
       close: async () => {
-        await worker.stop();
+        // Close web (queue producer + rate limiter) before worker (consumer) so
+        // Valkey clients quit before the disposable container is torn down.
         await web.stop();
+        await worker.stop();
         await fakeOpenAI.close();
         await fakeMcp.close();
         if (consoleServer) {
@@ -449,8 +451,8 @@ export async function startM12_3HumanConsoleStack(options: {
       },
     };
   } catch (error) {
-    await worker.stop().catch(() => undefined);
     await web.stop().catch(() => undefined);
+    await worker.stop().catch(() => undefined);
     await fakeOpenAI.close().catch(() => undefined);
     await fakeMcp.close().catch(() => undefined);
     if (consoleServer) {
