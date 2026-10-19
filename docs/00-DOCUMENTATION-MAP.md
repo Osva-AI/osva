@@ -19,6 +19,7 @@
 - `architecture/HUMAN_IDENTITY_AND_WORKSPACE_ACCESS.md`
 - `architecture/HUMAN_AUTHENTICATION.md`
 - `architecture/COMPATIBILITY_AND_MIGRATION.md`
+- `architecture/EXTERNAL_ECOSYSTEM_COMPATIBILITY.md`
 - `architecture/DEPLOYMENT_TOPOLOGIES.md`
 
 ## Public contracts
