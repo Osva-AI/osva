@@ -4,15 +4,22 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { WorkspaceId } from "@osva-ai/contracts";
+import type {
+  ModelProviderConnectionId,
+  ModelProviderConnectionVersionId,
+  WorkspaceId,
+} from "@osva-ai/contracts";
 import { sha256IntegrityOf } from "@osva/adapters-runtime-typescript";
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
 import {
   createDatabase,
   migrateDatabase,
+  PostgresModelProviderConnectionRepository,
   PostgresRunRepository,
+  PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
+import { ModelProviderConnection, Workspace } from "@osva/domain";
 
 import { startFakeAnthropicMessagesServer } from "../../../../adapters/model-anthropic/test/fake-anthropic-server.js";
 import { bootstrapIntegrationAuth, fetchJson } from "./integration-auth.js";
@@ -508,6 +515,540 @@ describe("model gateway end-to-end", () => {
     }
   });
 
+  it("executes connection-bound OpenAI profiles against a custom OpenAI-compatible endpoint", async () => {
+    await runConnectionBoundProviderEndToEnd(postgres, valkey, {
+      provider: "OPENAI",
+      model: "gpt-connection-bound",
+      credentialEnvKey: "OPENAI_API_KEY",
+      credentialEnvValue: "connection-secret",
+      startFakeProvider: startFakeOpenAIResponsesServer,
+      expectedText: "normalized text from fake openai",
+      assertProviderRequest: (requests) => {
+        expect(requests[0]?.body).toMatchObject({
+          model: "gpt-connection-bound",
+        });
+        expect(requests[0]?.url).toContain("/responses");
+      },
+    });
+  });
+
+  it("executes connection-bound Anthropic profiles against a custom endpoint", async () => {
+    await runConnectionBoundProviderEndToEnd(postgres, valkey, {
+      provider: "ANTHROPIC",
+      model: "claude-connection-bound",
+      credentialEnvKey: "ANTHROPIC_API_KEY",
+      credentialEnvValue: "connection-secret",
+      startFakeProvider: startFakeAnthropicMessagesServer,
+      expectedText: "normalized text from fake anthropic",
+      assertProviderRequest: (requests) => {
+        expect(requests[0]?.body).toMatchObject({
+          model: "claude-connection-bound",
+        });
+      },
+    });
+  });
+
+  it("executes connection-bound Gemini profiles against a custom endpoint", async () => {
+    await runConnectionBoundProviderEndToEnd(postgres, valkey, {
+      provider: "GOOGLE_GEMINI",
+      model: "gemini-connection-bound",
+      credentialEnvKey: "GOOGLE_GEMINI_API_KEY",
+      credentialEnvValue: "connection-secret",
+      startFakeProvider: startFakeGeminiGenerateContentServer,
+      expectedText: "normalized text from fake gemini",
+      assertProviderRequest: (requests) => {
+        expect(requests[0]?.url).toContain("gemini-connection-bound");
+      },
+    });
+  });
+
+  it("treats LiteLLM-style deployments as OpenAI-compatible protocol endpoints", async () => {
+    await runConnectionBoundProviderEndToEnd(postgres, valkey, {
+      provider: "OPENAI",
+      model: "litellm-routed-model",
+      connectionKey: "litellm-gateway",
+      credentialEnvKey: "OPENAI_API_KEY",
+      credentialEnvValue: "litellm-secret",
+      startFakeProvider: startFakeOpenAIResponsesServer,
+      expectedText: "normalized text from fake openai",
+      assertProviderRequest: (requests) => {
+        expect(requests[0]?.body).toMatchObject({
+          model: "litellm-routed-model",
+        });
+      },
+    });
+  });
+
+  it("fails connection-bound execution when credentials are missing", async () => {
+    const trustedRuntimeRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-e2e-connection-missing-creds-"),
+    );
+    await fs.copyFile(
+      path.join(FIXTURE_DIR, "model-text-agent.ts"),
+      path.join(trustedRuntimeRoot, "model-text-agent.ts"),
+    );
+    const integrity = sha256IntegrityOf(
+      await fs.readFile(path.join(trustedRuntimeRoot, "model-text-agent.ts")),
+    );
+    const fakeOpenAI = await startFakeOpenAIResponsesServer();
+
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+      }),
+    );
+    const worker = createWorkerProcess(
+      {
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+      },
+      (connectionString) => createDatabase({ connectionString, max: 5 }),
+    );
+    const runs = new PostgresRunRepository(database);
+
+    try {
+      const port = await web.listen();
+      await worker.start();
+      const origin = `http://127.0.0.1:${String(port)}`;
+
+      const connection = await fetchJson(
+        `${origin}/v1/model-provider-connections`,
+        {
+          method: "POST",
+          body: {
+            key: "missing-creds",
+            name: "Missing creds",
+            provider: "OPENAI",
+          },
+        },
+      );
+      const connectionId = (connection.body as { id: string }).id;
+      const connectionVersion = await fetchJson(
+        `${origin}/v1/model-provider-connections/${connectionId}/versions`,
+        {
+          method: "POST",
+          body: {
+            endpoint: {
+              baseUrl: `${fakeOpenAI.origin}/v1`,
+              allowPrivateNetworks: true,
+            },
+          },
+        },
+      );
+      const connectionVersionId = (connectionVersion.body as { id: string }).id;
+
+      const profile = await fetchJson(`${origin}/v1/model-profiles`, {
+        method: "POST",
+        body: { key: "primary", name: "Primary" },
+      });
+      const modelProfileId = (profile.body as { id: string }).id;
+      const version = await fetchJson(
+        `${origin}/v1/model-profiles/${modelProfileId}/versions`,
+        {
+          method: "POST",
+          body: {
+            provider: "OPENAI",
+            model: "gpt-missing-creds",
+            modelProviderConnectionVersionId: connectionVersionId,
+          },
+        },
+      );
+      const modelProfileVersionId = (version.body as { id: string }).id;
+      const agent = await fetchJson(`${origin}/v1/agents`, {
+        method: "POST",
+        body: { key: "model-text-agent", name: "Model Text Agent" },
+      });
+      const agentId = (agent.body as { id: string }).id;
+      const agentVersion = await fetchJson(
+        `${origin}/v1/agents/${agentId}/versions`,
+        {
+          method: "POST",
+          body: {
+            manifest: {
+              schemaVersion: "1",
+              key: "model-text-agent",
+              name: "Model Text Agent",
+              runtime: {
+                type: "TRUSTED_TYPESCRIPT",
+                entrypoint: "model-text-agent.ts",
+                integrity,
+              },
+              input: { schema: {} },
+              output: { schema: {} },
+              execution: { timeoutMs: 8_000, maxAttempts: 1 },
+              capabilities: { model: true, tools: [] },
+              models: { primary: { modelProfileVersionId } },
+            },
+          },
+        },
+      );
+      const created = await fetchJson(`${origin}/v1/runs`, {
+        method: "POST",
+        body: {
+          agentId,
+          agentVersionId: (agentVersion.body as { id: string }).id,
+          input: { prompt: "missing-creds" },
+        },
+      });
+      const runId = (created.body as { run: { id: string } }).run.id;
+      const runAttemptId = (created.body as { runAttempt: { id: string } })
+        .runAttempt.id;
+
+      await waitUntil(async () => {
+        const run = await runs.findRunById(runId);
+        return run?.status === "FAILED";
+      });
+
+      const attempt = await fetchJson(
+        `${origin}/v1/runs/${runId}/attempts/${runAttemptId}`,
+      );
+      expect(attempt.body).toMatchObject({
+        status: "FAILED",
+        error: { code: "MODEL_AUTHENTICATION_ERROR" },
+      });
+      expect(JSON.stringify(attempt.body)).not.toContain("connection-secret");
+      expect(fakeOpenAI.requests).toHaveLength(0);
+    } finally {
+      await worker.stop();
+      await web.stop();
+      await fakeOpenAI.close();
+    }
+  });
+
+  it("times out connection-bound model calls without leaking credentials", async () => {
+    const trustedRuntimeRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-e2e-connection-hang-"),
+    );
+    await fs.copyFile(
+      path.join(FIXTURE_DIR, "model-hang-agent.ts"),
+      path.join(trustedRuntimeRoot, "model-hang-agent.ts"),
+    );
+    const integrity = sha256IntegrityOf(
+      await fs.readFile(path.join(trustedRuntimeRoot, "model-hang-agent.ts")),
+    );
+    const fakeOpenAI = await startFakeOpenAIResponsesServer();
+
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+        OPENAI_API_KEY: "hang-test-secret",
+      }),
+    );
+    const worker = createWorkerProcess(
+      {
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+        OPENAI_API_KEY: "hang-test-secret",
+      },
+      (connectionString) => createDatabase({ connectionString, max: 5 }),
+    );
+    const runs = new PostgresRunRepository(database);
+
+    try {
+      const port = await web.listen();
+      await worker.start();
+      const origin = `http://127.0.0.1:${String(port)}`;
+
+      const connection = await fetchJson(
+        `${origin}/v1/model-provider-connections`,
+        {
+          method: "POST",
+          body: {
+            key: "hang-connection",
+            name: "Hang connection",
+            provider: "OPENAI",
+          },
+        },
+      );
+      const connectionId = (connection.body as { id: string }).id;
+      const connectionVersion = await fetchJson(
+        `${origin}/v1/model-provider-connections/${connectionId}/versions`,
+        {
+          method: "POST",
+          body: {
+            endpoint: {
+              baseUrl: `${fakeOpenAI.origin}/v1`,
+              allowPrivateNetworks: true,
+            },
+            credentialRef: { key: "OPENAI_API_KEY" },
+          },
+        },
+      );
+      const connectionVersionId = (connectionVersion.body as { id: string }).id;
+
+      const profile = await fetchJson(`${origin}/v1/model-profiles`, {
+        method: "POST",
+        body: { key: "primary", name: "Primary" },
+      });
+      const modelProfileId = (profile.body as { id: string }).id;
+      const version = await fetchJson(
+        `${origin}/v1/model-profiles/${modelProfileId}/versions`,
+        {
+          method: "POST",
+          body: {
+            provider: "OPENAI",
+            model: "gpt-hang-test",
+            modelProviderConnectionVersionId: connectionVersionId,
+          },
+        },
+      );
+      const modelProfileVersionId = (version.body as { id: string }).id;
+
+      const agent = await fetchJson(`${origin}/v1/agents`, {
+        method: "POST",
+        body: { key: "model-hang-agent", name: "Model Hang Agent" },
+      });
+      const agentId = (agent.body as { id: string }).id;
+      const agentVersion = await fetchJson(
+        `${origin}/v1/agents/${agentId}/versions`,
+        {
+          method: "POST",
+          body: {
+            manifest: {
+              schemaVersion: "1",
+              key: "model-hang-agent",
+              name: "Model Hang Agent",
+              runtime: {
+                type: "TRUSTED_TYPESCRIPT",
+                entrypoint: "model-hang-agent.ts",
+                integrity,
+              },
+              input: { schema: {} },
+              output: { schema: {} },
+              execution: { timeoutMs: 3_000, maxAttempts: 1 },
+              capabilities: { model: true, tools: [] },
+              models: { primary: { modelProfileVersionId } },
+            },
+          },
+        },
+      );
+      const created = await fetchJson(`${origin}/v1/runs`, {
+        method: "POST",
+        body: {
+          agentId,
+          agentVersionId: (agentVersion.body as { id: string }).id,
+          input: {},
+        },
+      });
+      const runId = (created.body as { run: { id: string } }).run.id;
+      const runAttemptId = (created.body as { runAttempt: { id: string } })
+        .runAttempt.id;
+
+      await waitUntil(async () => {
+        const run = await runs.findRunById(runId);
+        return run?.status === "FAILED" || run?.status === "CANCELLED";
+      });
+
+      const attempt = await fetchJson(
+        `${origin}/v1/runs/${runId}/attempts/${runAttemptId}`,
+      );
+      expect(attempt.body).toMatchObject({ status: "FAILED" });
+      expect(JSON.stringify(attempt.body)).not.toContain("hang-test-secret");
+      expect(JSON.stringify(attempt.body)).not.toContain("OPENAI_API_KEY");
+
+      expect(fakeOpenAI.requests).toHaveLength(1);
+      expect(fakeOpenAI.requests[0]?.body).toMatchObject({
+        model: "gpt-hang-test",
+      });
+    } finally {
+      await worker.stop();
+      await web.stop();
+      await fakeOpenAI.close();
+    }
+  });
+
+  it("rejects foreign-workspace connection bindings during worker execution", async () => {
+    const trustedRuntimeRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "osva-e2e-connection-foreign-ws-"),
+    );
+    await fs.copyFile(
+      path.join(FIXTURE_DIR, "model-text-agent.ts"),
+      path.join(trustedRuntimeRoot, "model-text-agent.ts"),
+    );
+    const integrity = sha256IntegrityOf(
+      await fs.readFile(path.join(trustedRuntimeRoot, "model-text-agent.ts")),
+    );
+    const fakeOpenAI = await startFakeOpenAIResponsesServer();
+    const foreignWorkspaceId = "ws-model-foreign" as WorkspaceId;
+
+    const web = createWebProcess(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_WEB_HOST: "127.0.0.1",
+        OSVA_WEB_PORT: "0",
+        OPENAI_API_KEY: "foreign-test-key",
+      }),
+    );
+    const worker = createWorkerProcess(
+      {
+        OSVA_DATABASE_URL: postgres.connectionString,
+        OSVA_VALKEY_URL: valkey.url,
+        OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+        OPENAI_API_KEY: "foreign-test-key",
+      },
+      (connectionString) => createDatabase({ connectionString, max: 5 }),
+    );
+    const runs = new PostgresRunRepository(database);
+    const workspaces = new PostgresWorkspaceRepository(database);
+    const connectionsRepo = new PostgresModelProviderConnectionRepository(
+      database,
+    );
+
+    try {
+      await workspaces.save(
+        Workspace.create({
+          id: foreignWorkspaceId,
+          name: "Foreign workspace",
+          createdAt: NOW,
+        }),
+      );
+      await connectionsRepo.saveConnection(
+        ModelProviderConnection.create({
+          id: "mpc-foreign" as ModelProviderConnectionId,
+          workspaceId: foreignWorkspaceId,
+          key: "foreign",
+          name: "Foreign",
+          provider: "OPENAI",
+          createdAt: NOW,
+          updatedAt: NOW,
+        }),
+      );
+      const foreignVersion = await connectionsRepo.appendConnectionVersion({
+        id: "mpcv-foreign" as ModelProviderConnectionVersionId,
+        connectionId: "mpc-foreign" as ModelProviderConnectionId,
+        endpoint: {
+          baseUrl: `${fakeOpenAI.origin}/v1`,
+          allowPrivateNetworks: true,
+        },
+        credentialRef: { key: "OPENAI_API_KEY" },
+        createdAt: NOW,
+      });
+
+      const port = await web.listen();
+      await worker.start();
+      const origin = `http://127.0.0.1:${String(port)}`;
+
+      const connection = await fetchJson(
+        `${origin}/v1/model-provider-connections`,
+        {
+          method: "POST",
+          body: {
+            key: "local",
+            name: "Local",
+            provider: "OPENAI",
+          },
+        },
+      );
+      const connectionId = (connection.body as { id: string }).id;
+      const localVersion = await fetchJson(
+        `${origin}/v1/model-provider-connections/${connectionId}/versions`,
+        {
+          method: "POST",
+          body: {
+            endpoint: {
+              baseUrl: `${fakeOpenAI.origin}/v1`,
+              allowPrivateNetworks: true,
+            },
+            credentialRef: { key: "OPENAI_API_KEY" },
+          },
+        },
+      );
+      const localVersionId = (localVersion.body as { id: string }).id;
+
+      const profile = await fetchJson(`${origin}/v1/model-profiles`, {
+        method: "POST",
+        body: { key: "primary", name: "Primary" },
+      });
+      const modelProfileId = (profile.body as { id: string }).id;
+      const version = await fetchJson(
+        `${origin}/v1/model-profiles/${modelProfileId}/versions`,
+        {
+          method: "POST",
+          body: {
+            provider: "OPENAI",
+            model: "gpt-foreign-binding",
+            modelProviderConnectionVersionId: localVersionId,
+          },
+        },
+      );
+      const modelProfileVersionId = (version.body as { id: string }).id;
+
+      await database.sql`
+        update model_profile_versions
+        set model_provider_connection_version_id = ${foreignVersion.id}
+        where id = ${modelProfileVersionId}
+      `;
+
+      const agent = await fetchJson(`${origin}/v1/agents`, {
+        method: "POST",
+        body: { key: "model-text-agent", name: "Model Text Agent" },
+      });
+      const agentId = (agent.body as { id: string }).id;
+      const agentVersion = await fetchJson(
+        `${origin}/v1/agents/${agentId}/versions`,
+        {
+          method: "POST",
+          body: {
+            manifest: {
+              schemaVersion: "1",
+              key: "model-text-agent",
+              name: "Model Text Agent",
+              runtime: {
+                type: "TRUSTED_TYPESCRIPT",
+                entrypoint: "model-text-agent.ts",
+                integrity,
+              },
+              input: { schema: {} },
+              output: { schema: {} },
+              execution: { timeoutMs: 8_000, maxAttempts: 1 },
+              capabilities: { model: true, tools: [] },
+              models: { primary: { modelProfileVersionId } },
+            },
+          },
+        },
+      );
+      const created = await fetchJson(`${origin}/v1/runs`, {
+        method: "POST",
+        body: {
+          agentId,
+          agentVersionId: (agentVersion.body as { id: string }).id,
+          input: { prompt: "foreign-ws" },
+        },
+      });
+      const runId = (created.body as { run: { id: string } }).run.id;
+      const runAttemptId = (created.body as { runAttempt: { id: string } })
+        .runAttempt.id;
+
+      await waitUntil(async () => {
+        const run = await runs.findRunById(runId);
+        return run?.status === "FAILED";
+      });
+
+      const attempt = await fetchJson(
+        `${origin}/v1/runs/${runId}/attempts/${runAttemptId}`,
+      );
+      expect(attempt.body).toMatchObject({
+        status: "FAILED",
+        error: { code: "MODEL_PROVIDER_UNAVAILABLE" },
+      });
+      expect(JSON.stringify(attempt.body)).not.toContain("foreign-test-key");
+      expect(fakeOpenAI.requests).toHaveLength(0);
+    } finally {
+      await worker.stop();
+      await web.stop();
+      await fakeOpenAI.close();
+    }
+  });
+
   it("fails OPENAI bindings with MODEL_PROVIDER_UNAVAILABLE when no key is configured", async () => {
     const trustedRuntimeRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-e2e-model-unavailable-"),
@@ -619,6 +1160,201 @@ describe("model gateway end-to-end", () => {
     }
   });
 });
+
+async function runConnectionBoundProviderEndToEnd(
+  postgres: PostgresTestContext,
+  valkey: ValkeyTestContext,
+  options: {
+    readonly provider: "OPENAI" | "ANTHROPIC" | "GOOGLE_GEMINI";
+    readonly model: string;
+    readonly credentialEnvKey: string;
+    readonly credentialEnvValue: string;
+    readonly connectionKey?: string;
+    readonly expectedText: string;
+    readonly startFakeProvider: () => Promise<{
+      readonly origin: string;
+      readonly requests: Array<{
+        readonly body: unknown;
+        readonly url?: string;
+      }>;
+      close(): Promise<void>;
+    }>;
+    readonly assertProviderRequest: (
+      requests: Array<{ readonly body: unknown; readonly url?: string }>,
+    ) => void;
+  },
+): Promise<void> {
+  const trustedRuntimeRoot = await fs.mkdtemp(
+    path.join(
+      os.tmpdir(),
+      `osva-e2e-connection-${options.provider.toLowerCase()}-`,
+    ),
+  );
+  await fs.copyFile(
+    path.join(FIXTURE_DIR, "model-text-agent.ts"),
+    path.join(trustedRuntimeRoot, "model-text-agent.ts"),
+  );
+  const integrity = sha256IntegrityOf(
+    await fs.readFile(path.join(trustedRuntimeRoot, "model-text-agent.ts")),
+  );
+  const fakeProvider = await options.startFakeProvider();
+  const envWithCredential = {
+    OSVA_DATABASE_URL: postgres.connectionString,
+    OSVA_VALKEY_URL: valkey.url,
+    OSVA_WEB_HOST: "127.0.0.1",
+    OSVA_WEB_PORT: "0",
+    [options.credentialEnvKey]: options.credentialEnvValue,
+  };
+
+  const web = createWebProcess(withTestAuthEnv(envWithCredential));
+  const worker = createWorkerProcess(
+    {
+      OSVA_DATABASE_URL: postgres.connectionString,
+      OSVA_VALKEY_URL: valkey.url,
+      OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+      [options.credentialEnvKey]: options.credentialEnvValue,
+    },
+    (connectionString) => createDatabase({ connectionString, max: 5 }),
+  );
+
+  try {
+    const port = await web.listen();
+    await worker.start();
+    const origin = `http://127.0.0.1:${String(port)}`;
+
+    const connection = await fetchJson(
+      `${origin}/v1/model-provider-connections`,
+      {
+        method: "POST",
+        body: {
+          key: options.connectionKey ?? "connection-bound",
+          name: "Connection bound",
+          provider: options.provider,
+        },
+      },
+    );
+    expect(connection.status).toBe(201);
+    const connectionId = (connection.body as { id: string }).id;
+    const connectionVersion = await fetchJson(
+      `${origin}/v1/model-provider-connections/${connectionId}/versions`,
+      {
+        method: "POST",
+        body: {
+          endpoint: {
+            baseUrl: `${fakeProvider.origin}/v1`,
+            allowPrivateNetworks: true,
+          },
+          credentialRef: { key: options.credentialEnvKey },
+        },
+      },
+    );
+    expect(connectionVersion.status).toBe(201);
+    expect(JSON.stringify(connectionVersion.body)).not.toContain(
+      options.credentialEnvValue,
+    );
+    const connectionVersionId = (connectionVersion.body as { id: string }).id;
+
+    const profile = await fetchJson(`${origin}/v1/model-profiles`, {
+      method: "POST",
+      body: { key: "primary", name: "Primary" },
+    });
+    const modelProfileId = (profile.body as { id: string }).id;
+    const version = await fetchJson(
+      `${origin}/v1/model-profiles/${modelProfileId}/versions`,
+      {
+        method: "POST",
+        body: {
+          provider: options.provider,
+          model: options.model,
+          modelProviderConnectionVersionId: connectionVersionId,
+          pricing: {
+            currency: "USD",
+            inputUsdMicrosPerMillionTokens: 1_000_000,
+            outputUsdMicrosPerMillionTokens: 2_000_000,
+          },
+        },
+      },
+    );
+    expect(version.status).toBe(201);
+    const modelProfileVersionId = (version.body as { id: string }).id;
+
+    const agent = await fetchJson(`${origin}/v1/agents`, {
+      method: "POST",
+      body: { key: "model-text-agent", name: "Model Text Agent" },
+    });
+    const agentId = (agent.body as { id: string }).id;
+    const agentVersion = await fetchJson(
+      `${origin}/v1/agents/${agentId}/versions`,
+      {
+        method: "POST",
+        body: {
+          manifest: {
+            schemaVersion: "1",
+            key: "model-text-agent",
+            name: "Model Text Agent",
+            runtime: {
+              type: "TRUSTED_TYPESCRIPT",
+              entrypoint: "model-text-agent.ts",
+              integrity,
+            },
+            input: { schema: {} },
+            output: { schema: {} },
+            execution: { timeoutMs: 8_000, maxAttempts: 1 },
+            capabilities: { model: true, tools: [] },
+            models: { primary: { modelProfileVersionId } },
+          },
+        },
+      },
+    );
+    const created = await fetchJson(`${origin}/v1/runs`, {
+      method: "POST",
+      body: {
+        agentId,
+        agentVersionId: (agentVersion.body as { id: string }).id,
+        input: { prompt: `connection-${options.provider.toLowerCase()}` },
+      },
+    });
+    const runId = (created.body as { run: { id: string } }).run.id;
+    const runAttemptId = (created.body as { runAttempt: { id: string } })
+      .runAttempt.id;
+
+    await waitUntil(async () => {
+      const run = await fetchJson(`${origin}/v1/runs/${runId}`);
+      return (
+        run.status === 200 &&
+        (run.body as { status?: string }).status === "SUCCEEDED"
+      );
+    });
+
+    const attempt = await fetchJson(
+      `${origin}/v1/runs/${runId}/attempts/${runAttemptId}`,
+    );
+    expect(attempt.body).toMatchObject({
+      status: "SUCCEEDED",
+      output: { text: options.expectedText },
+    });
+    expect(fakeProvider.requests).toHaveLength(1);
+    options.assertProviderRequest(fakeProvider.requests);
+
+    const steps = await fetchJson(
+      `${origin}/v1/runs/${runId}/attempts/${runAttemptId}/steps`,
+    );
+    expect(
+      (steps.body as { steps: Array<Record<string, unknown>> }).steps[0],
+    ).toMatchObject({
+      kind: "MODEL",
+      modelProfileVersionId,
+      status: "SUCCEEDED",
+    });
+    expect(JSON.stringify(steps.body)).not.toContain(
+      options.credentialEnvValue,
+    );
+  } finally {
+    await worker.stop();
+    await web.stop();
+    await fakeProvider.close();
+  }
+}
 
 async function runProviderEndToEnd(
   postgres: PostgresTestContext,

@@ -14,6 +14,11 @@ export type {
   ConnectorRepository,
 } from "./connector-repository.js";
 export type {
+  AppendModelProviderConnectionVersionInput,
+  ModelProviderConnectionMetadataUpdate,
+  ModelProviderConnectionRepository,
+} from "./model-provider-connection-repository.js";
+export type {
   AppendToolVersionInput,
   ToolMetadataUpdate,
   ToolRepository,

@@ -108,6 +108,21 @@ function createMockClient(
     createAgentVersion: async () => {
       throw new Error("not implemented");
     },
+    listModelProfiles: async () => ({ data: { modelProfiles: [] } }),
+    listModelProfileVersions: async () => ({ data: { versions: [] } }),
+    listModelProviderConnections: async () => ({ data: { connections: [] } }),
+    listModelProviderConnectionVersions: async () => ({
+      data: { versions: [] },
+    }),
+    createModelProviderConnection: async () => {
+      throw new Error("not implemented");
+    },
+    appendModelProviderConnectionVersion: async () => {
+      throw new Error("not implemented");
+    },
+    testModelProviderConnectionVersion: async () => {
+      throw new Error("not implemented");
+    },
     createRun: async () => {
       throw new Error("not implemented");
     },
@@ -157,6 +172,84 @@ describe("console server API", () => {
       });
       server = undefined;
     }
+  });
+
+  it("returns redacted model provider connection versions without secret references", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        listModelProviderConnectionVersions: async () => ({
+          data: {
+            versions: [
+              {
+                id: "mpcv-1",
+                connectionId: "mpc-1",
+                version: 1,
+                provider: "OPENAI",
+                endpoint: { baseUrl: "http://127.0.0.1:9001/v1" },
+                credential: { configured: true },
+                createdAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+          },
+          requestId: "req-mpc-versions",
+        }),
+      }),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(
+      `${origin}/api/v1/model-provider-connections/mpc-1/versions`,
+      { headers: { "x-osva-workspace-id": "workspace-1" } },
+    );
+    const body = await response.text();
+    expect(response.status).toBe(200);
+    expect(body).toContain("configured");
+    expect(body).not.toContain("credentialRef");
+    expect(body).not.toContain("OPENAI_API_KEY");
+    expect(body).not.toContain("sk-live");
+    expect(body).not.toContain("super-secret-console-key");
+  });
+
+  it("forwards model connectivity test bodies without echoing credentials", async () => {
+    let capturedBody: unknown;
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        testModelProviderConnectionVersion: async (
+          _connectionId,
+          _connectionVersionId,
+          body,
+        ) => {
+          capturedBody = body;
+          return {
+            data: {
+              status: "READY",
+              checkedAt: "2026-01-01T00:00:00.000Z",
+            },
+            requestId: "req-mpc-test",
+          };
+        },
+      }),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(
+      `${origin}/api/v1/model-provider-connections/mpc-1/versions/mpcv-1/test`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-osva-workspace-id": "workspace-1",
+        },
+        body: JSON.stringify({ model: "gpt-test-snapshot" }),
+      },
+    );
+    const text = await response.text();
+    expect(response.status).toBe(200);
+    expect(capturedBody).toEqual({ model: "gpt-test-snapshot" });
+    expect(text).not.toContain("OPENAI_API_KEY");
+    expect(text).not.toContain("super-secret-console-key");
   });
 
   it("returns safe agent list without exposing the API key", async () => {

@@ -8,6 +8,7 @@ export {
   ModelGateway,
   type ModelGatewayDependencies,
 } from "./model-gateway.js";
+export type { ModelProviderConnectionResolverPort } from "./model-gateway.js";
 export type {
   ModelGatewayGenerateTextOptions,
   ModelProviderAdapter,

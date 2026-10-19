@@ -25,6 +25,7 @@ const MODULE_RESOURCE_FAMILIES: Record<V1HandlerModule, string> = {
   "api-key-http": "api_key",
   "agent-http": "agent",
   "model-profile-http": "model_profile",
+  "model-provider-connection-http": "model_provider_connection",
   "connector-http": "connector",
   "memory-http": "memory",
   "artifact-http": "artifact",

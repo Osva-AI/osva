@@ -31,6 +31,7 @@ import {
   PostgresAgentRepository,
   PostgresConnectorRepository,
   PostgresModelProfileRepository,
+  PostgresModelProviderConnectionRepository,
   PostgresToolRepository,
   PostgresRunRepository,
   PostgresScheduleRepository,
@@ -63,6 +64,7 @@ import {
   createEvaluationSuiteApplication,
   createMemoryApplication,
   createModelProfileApplication,
+  createModelProviderConnectionApplication,
   createRunApplication,
   createRunObservabilityApplication,
   createScheduleApplication,
@@ -87,7 +89,12 @@ import {
 } from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
+import { ModelProviderConnectionResolver } from "./model-provider-connection-resolver.js";
 import { createWebApplication } from "./http.js";
+import {
+  composeLegacyModelProviders,
+  modelProviderEnvApiKeys,
+} from "./model-provider-wiring.js";
 import { defaultHttpRateLimitContext } from "./http-rate-limit.js";
 import { logEvent } from "./log.js";
 import { resolveHumanSessionPrincipal } from "./human-auth-http.js";
@@ -137,6 +144,16 @@ export function createWebProcess(
   const workspaces = new PostgresWorkspaceRepository(database);
   const apiKeys = new PostgresApiKeyRepository(database);
   const modelProfiles = new PostgresModelProfileRepository(database);
+  const modelProviderConnections =
+    new PostgresModelProviderConnectionRepository(database);
+  const legacyModelProviders = composeLegacyModelProviders(env);
+  const modelProviderConnectionResolver = new ModelProviderConnectionResolver({
+    connections: modelProviderConnections,
+    modelProfiles,
+    secretResolver: new ProcessEnvSecretResolver(env),
+    legacyProviders: legacyModelProviders,
+    policy: { envApiKeys: modelProviderEnvApiKeys(env) },
+  });
   const tools = new PostgresToolRepository(database);
   const connectors = new PostgresConnectorRepository(database);
   const runs = new PostgresRunRepository(database);
@@ -297,7 +314,18 @@ export function createWebProcess(
     }),
     modelProfiles: createModelProfileApplication({
       modelProfiles,
+      modelProviderConnections,
       workspaces,
+      clock,
+      ids,
+    }),
+    modelProviderConnections: createModelProviderConnectionApplication({
+      connections: modelProviderConnections,
+      modelProfiles,
+      workspaces,
+      tester: {
+        test: (input) => modelProviderConnectionResolver.testConnection(input),
+      },
       clock,
       ids,
     }),

@@ -3,6 +3,7 @@ import type {
   ModelProfileVersionId,
   ModelProfileVersionPricing,
   ModelProvider,
+  ModelProviderConnectionVersionId,
   WorkspaceId,
 } from "@osva-ai/contracts";
 import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
@@ -10,11 +11,15 @@ import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 import {
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
+  ModelProviderConnectionBindingError,
+  ModelProviderConnectionNotFoundError,
+  ModelProviderConnectionVersionNotFoundError,
   WorkspaceNotFoundError,
 } from "./errors.js";
 import { ModelProfile } from "./model-profile.js";
 import type { ModelProfileVersion } from "./model-profile-version.js";
 import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
+import type { ModelProviderConnectionRepository } from "./ports/model-provider-connection-repository.js";
 import type { WorkspaceRepository } from "./ports/workspace-repository.js";
 import {
   controlPlaneWorkspaceId,
@@ -37,6 +42,7 @@ export interface ModelProfileApplicationIds {
 
 export interface ModelProfileApplicationDependencies {
   readonly modelProfiles: ModelProfileRepository;
+  readonly modelProviderConnections?: ModelProviderConnectionRepository;
   readonly workspaces: WorkspaceRepository;
   readonly clock: ModelProfileApplicationClock;
   readonly ids: ModelProfileApplicationIds;
@@ -57,6 +63,7 @@ export interface AppendModelProfileVersionCommand {
   readonly modelProfileId: ModelProfileId;
   readonly provider: ModelProvider;
   readonly model: string;
+  readonly modelProviderConnectionVersionId?: ModelProviderConnectionVersionId;
   readonly pricing?: ModelProfileVersionPricing;
 }
 
@@ -190,14 +197,61 @@ export class AppendModelProfileVersion {
       throw new ModelProfileNotFoundError(command.modelProfileId);
     }
 
+    if (command.modelProviderConnectionVersionId !== undefined) {
+      await assertModelProviderConnectionVersionBinding({
+        connections: this.deps.modelProviderConnections,
+        workspaceId: profile.workspaceId,
+        provider: command.provider,
+        connectionVersionId: command.modelProviderConnectionVersionId,
+      });
+    }
+
     return this.deps.modelProfiles.appendModelProfileVersion({
       id: this.deps.ids.createId() as ModelProfileVersionId,
       modelProfileId: command.modelProfileId,
       provider: command.provider,
       model: command.model,
+      modelProviderConnectionVersionId:
+        command.modelProviderConnectionVersionId,
       pricing: command.pricing,
       createdAt: this.deps.clock.now(),
     });
+  }
+}
+
+async function assertModelProviderConnectionVersionBinding(input: {
+  readonly connections: ModelProviderConnectionRepository | undefined;
+  readonly workspaceId: WorkspaceId;
+  readonly provider: ModelProvider;
+  readonly connectionVersionId: ModelProviderConnectionVersionId;
+}): Promise<void> {
+  if (input.connections === undefined) {
+    throw new ModelProviderConnectionBindingError(
+      "Model provider connections are not configured.",
+    );
+  }
+
+  const version = await input.connections.findConnectionVersionById(
+    input.connectionVersionId,
+  );
+  if (version === null) {
+    throw new ModelProviderConnectionVersionNotFoundError(
+      input.connectionVersionId,
+    );
+  }
+
+  const connection = await input.connections.findConnectionByWorkspaceAndId(
+    input.workspaceId,
+    version.connectionId,
+  );
+  if (connection === null) {
+    throw new ModelProviderConnectionNotFoundError(version.connectionId);
+  }
+
+  if (connection.provider !== input.provider) {
+    throw new ModelProviderConnectionBindingError(
+      "ModelProfileVersion provider must match the bound provider connection.",
+    );
   }
 }
 

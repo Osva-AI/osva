@@ -2,6 +2,7 @@ import type {
   ModelProfileId,
   ModelProfileVersionId,
   ModelProvider,
+  ModelProviderConnectionVersionId,
 } from "@osva-ai/contracts";
 import { ModelProfileVersion } from "@osva/domain";
 
@@ -17,6 +18,8 @@ export function modelProfileVersionToRow(version: ModelProfileVersion) {
     version: version.version,
     provider: version.provider,
     model: version.model,
+    modelProviderConnectionVersionId:
+      version.modelProviderConnectionVersionId ?? null,
     pricing: version.pricing ?? null,
     createdAt: version.createdAt,
   };
@@ -31,6 +34,10 @@ export function modelProfileVersionFromRow(
     version: row.version,
     provider: row.provider as ModelProvider,
     model: row.model,
+    modelProviderConnectionVersionId:
+      row.modelProviderConnectionVersionId === null
+        ? undefined
+        : (row.modelProviderConnectionVersionId as ModelProviderConnectionVersionId),
     pricing: row.pricing ?? undefined,
     createdAt: toDomainDate(row.createdAt),
   });
@@ -46,6 +53,8 @@ export function isSameModelProfileVersion(
     left.version === right.version &&
     left.provider === right.provider &&
     left.model === right.model &&
+    left.modelProviderConnectionVersionId ===
+      right.modelProviderConnectionVersionId &&
     JSON.stringify(left.pricing ?? null) ===
       JSON.stringify(right.pricing ?? null) &&
     left.createdAt.getTime() === right.createdAt.getTime()

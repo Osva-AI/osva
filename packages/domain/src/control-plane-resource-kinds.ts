@@ -4,6 +4,7 @@ export const CONTROL_PLANE_RESOURCE_KINDS = {
   tool: "tool",
   connector: "connector",
   modelProfile: "model_profile",
+  modelProviderConnection: "model_provider_connection",
   workflow: "workflow",
   workflowRun: "workflow_run",
   approvalRequest: "approval_request",

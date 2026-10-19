@@ -14,6 +14,7 @@ import {
   MemoryEvaluationRepository,
   MemoryJobQueue,
   MemoryModelProfileRepository,
+  MemoryModelProviderConnectionRepository,
   MemorySecretResolver,
   MemoryToolRepository,
   MemoryRunRepository,
@@ -41,6 +42,7 @@ import {
   createKnowledgeApplication,
   createMemoryApplication,
   createModelProfileApplication,
+  createModelProviderConnectionApplication,
   createRunApplication,
   createRunObservabilityApplication,
   createScheduleApplication,
@@ -98,6 +100,8 @@ export async function createTestWebApplication(options?: {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
   const modelProfiles = new MemoryModelProfileRepository();
+  const modelProviderConnections =
+    new MemoryModelProviderConnectionRepository();
   const connectors = new MemoryConnectorRepository();
   const tools = new MemoryToolRepository();
   const runs = new MemoryRunRepository();
@@ -241,7 +245,21 @@ export async function createTestWebApplication(options?: {
     }),
     modelProfiles: createModelProfileApplication({
       modelProfiles,
+      modelProviderConnections,
       workspaces,
+      clock,
+      ids,
+    }),
+    modelProviderConnections: createModelProviderConnectionApplication({
+      connections: modelProviderConnections,
+      modelProfiles,
+      workspaces,
+      tester: {
+        test: async () => ({
+          status: "READY",
+          checkedAt: TEST_NOW.toISOString(),
+        }),
+      },
       clock,
       ids,
     }),

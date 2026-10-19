@@ -55,6 +55,7 @@ export {
   DuplicateEvaluationSuiteKeyError,
   DuplicateMemoryNamespaceKeyError,
   DuplicateModelProfileKeyError,
+  DuplicateModelProviderConnectionKeyError,
   DuplicateToolKeyError,
   DuplicateScheduleKeyError,
   DuplicateWorkflowKeyError,
@@ -113,6 +114,9 @@ export {
   KnowledgeChunkConsistencyError,
   ConnectorNotFoundError,
   ConnectorVersionNotFoundError,
+  ModelProviderConnectionBindingError,
+  ModelProviderConnectionNotFoundError,
+  ModelProviderConnectionVersionNotFoundError,
   ModelProfileNotFoundError,
   ModelProfileVersionNotFoundError,
   ToolNotFoundError,
@@ -408,10 +412,13 @@ export type {
   ApprovalRequestRepository,
   AppendAgentVersionInput,
   AppendConnectorVersionInput,
+  AppendModelProviderConnectionVersionInput,
   AppendModelProfileVersionInput,
   AppendToolVersionInput,
   ConnectorMetadataUpdate,
   ConnectorRepository,
+  ModelProviderConnectionMetadataUpdate,
+  ModelProviderConnectionRepository,
   DeleteMemoryRecordInput,
   EvaluationRepository,
   EvaluationSuiteRepository,
@@ -709,6 +716,31 @@ export {
   type UpdateConnectorMetadataCommand,
 } from "./connector-application.js";
 export { toMcpConnectorExecutionConfig } from "./mcp-connector-execution.js";
+
+export { ModelProviderConnection } from "./model-provider-connection.js";
+export { ModelProviderConnectionVersion } from "./model-provider-connection-version.js";
+export {
+  AppendModelProviderConnectionVersion,
+  CreateModelProviderConnection,
+  GetModelProviderConnection,
+  GetModelProviderConnectionVersion,
+  ListModelProviderConnectionVersions,
+  ListModelProviderConnections,
+  TestModelProviderConnectionVersion,
+  UpdateModelProviderConnectionMetadata,
+  createModelProviderConnectionApplication,
+  mapModelProviderConnectionVersionToResource,
+  type AppendModelProviderConnectionVersionCommand,
+  type CreateModelProviderConnectionCommand,
+  type GetModelProviderConnectionVersionCommand,
+  type ModelProviderConnectionApplication,
+  type ModelProviderConnectionApplicationClock,
+  type ModelProviderConnectionApplicationDependencies,
+  type ModelProviderConnectionApplicationIds,
+  type ModelProviderConnectionTester,
+  type TestModelProviderConnectionVersionCommand,
+  type UpdateModelProviderConnectionMetadataCommand,
+} from "./model-provider-connection-application.js";
 
 export {
   AppendModelProfileVersion,

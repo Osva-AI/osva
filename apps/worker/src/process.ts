@@ -48,6 +48,7 @@ import {
   PostgresEvaluationSuiteRepository,
   PostgresMemoryNamespaceRepository,
   PostgresModelProfileRepository,
+  PostgresModelProviderConnectionRepository,
   PostgresKnowledgeRepository,
   PostgresToolRepository,
   PostgresRunRepository,
@@ -71,6 +72,7 @@ import {
 } from "@osva/embedding-gateway";
 import { MemoryGateway } from "@osva/memory-gateway";
 import { ModelGateway, type ModelProviderAdapter } from "@osva/model-gateway";
+import { ModelProviderConnectionResolver } from "./model-provider-connection-resolver.js";
 import {
   createInstrumentedRuntimeAdapter,
   createRunStepRecorder,
@@ -180,6 +182,8 @@ export function createWorkerProcess(
     },
     onStart: async () => {
       const modelProfiles = new PostgresModelProfileRepository(database);
+      const modelProviderConnections =
+        new PostgresModelProviderConnectionRepository(database);
       const runsRepository = new PostgresRunRepository(database);
       const agents = new PostgresAgentRepository(database);
       const connectors = new PostgresConnectorRepository(database);
@@ -190,9 +194,28 @@ export function createWorkerProcess(
         stdioConnectorsEnabled: config.mcpStdioConnectorsEnabled,
         allowPrivateNetworks: config.mcpConnectorAllowPrivateNetworks,
       });
+      const legacyModelProviders = composeModelProviders(env, dependencies);
+      const modelProviderConnectionResolver =
+        new ModelProviderConnectionResolver({
+          connections: modelProviderConnections,
+          modelProfiles,
+          secretResolver: new ProcessEnvSecretResolver(env),
+          legacyProviders: legacyModelProviders,
+          policy: {
+            envApiKeys: {
+              OPENAI: dependencies.openai?.apiKey ?? env.OPENAI_API_KEY?.trim(),
+              ANTHROPIC:
+                dependencies.anthropic?.apiKey ?? env.ANTHROPIC_API_KEY?.trim(),
+              GOOGLE_GEMINI:
+                dependencies.gemini?.apiKey ??
+                env.GOOGLE_GEMINI_API_KEY?.trim(),
+            },
+          },
+        });
       const modelGateway = new ModelGateway({
         modelProfiles,
-        providers: composeModelProviders(env, dependencies),
+        providers: legacyModelProviders,
+        connectionResolver: modelProviderConnectionResolver,
       });
       const toolGateway = new ToolGateway({
         tools: new PostgresToolRepository(database),

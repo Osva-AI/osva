@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   modelProfileIdSchema,
   modelProfileVersionIdSchema,
+  modelProviderConnectionVersionIdSchema,
   workspaceIdSchema,
 } from "./ids.js";
 import {
@@ -25,6 +26,8 @@ export const createModelProfileVersionRequestSchema = z.strictObject({
   provider: modelProviderSchema,
   model: modelProviderModelIdSchema,
   pricing: modelProfileVersionPricingSchema.optional(),
+  modelProviderConnectionVersionId:
+    modelProviderConnectionVersionIdSchema.optional(),
 });
 
 export const modelProfileResourceSchema = z.strictObject({
@@ -42,6 +45,8 @@ export const modelProfileVersionResourceSchema = z.strictObject({
   provider: modelProviderSchema,
   model: modelProviderModelIdSchema,
   pricing: modelProfileVersionPricingSchema.optional(),
+  modelProviderConnectionVersionId:
+    modelProviderConnectionVersionIdSchema.optional(),
   createdAt: utcIso8601TimestampSchema,
 });
 

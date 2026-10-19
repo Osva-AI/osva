@@ -14,7 +14,11 @@ const BASE_ENV = {
 describe("createKnowledgeWorkerProcess", () => {
   it("fails startup when required dependencies are unavailable", async () => {
     const worker = createKnowledgeWorkerProcess(BASE_ENV);
-    await expect(worker.start()).rejects.toThrow();
+    try {
+      await expect(worker.start()).rejects.toThrow();
+    } finally {
+      await worker.stop();
+    }
   });
 
   it("shuts down OpenTelemetry after a failed start and stays no-op without OTLP", async () => {

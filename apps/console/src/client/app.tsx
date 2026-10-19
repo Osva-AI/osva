@@ -24,6 +24,10 @@ import { WorkflowVersionPage } from "./routes/workflow-version-page";
 import { WorkflowCreatePage } from "./routes/workflow-create-page";
 import { WorkflowsPage } from "./routes/workflows-page";
 import { WorkspaceAccessPage } from "./routes/workspace-access-page";
+import { ModelsPage } from "./routes/models-page";
+import { ModelConnectionsPage } from "./routes/model-connections-page";
+import { ModelConnectionDetailPage } from "./routes/model-connection-detail-page";
+import { ModelProfileDetailPage } from "./routes/model-profile-detail-page";
 
 const queryClient = createQueryClient();
 
@@ -58,6 +62,19 @@ export function App() {
                   <Route
                     path="/agents/:agentId/versions/:agentVersionId"
                     element={<AgentVersionPage />}
+                  />
+                  <Route path="/models" element={<ModelsPage />} />
+                  <Route
+                    path="/models/connections"
+                    element={<ModelConnectionsPage />}
+                  />
+                  <Route
+                    path="/models/connections/:connectionId"
+                    element={<ModelConnectionDetailPage />}
+                  />
+                  <Route
+                    path="/models/:modelProfileId"
+                    element={<ModelProfileDetailPage />}
                   />
                   <Route path="/runs" element={<RunsPage />} />
                   <Route path="/runs/:runId" element={<RunDetailPage />} />

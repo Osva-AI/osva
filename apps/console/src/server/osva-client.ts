@@ -81,6 +81,26 @@ export interface ConsoleOsvaClient {
     agentId: AgentId,
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listModelProfiles(): Promise<ConsoleUpstreamResponse<unknown>>;
+  listModelProfileVersions(
+    modelProfileId: string,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listModelProviderConnections(): Promise<ConsoleUpstreamResponse<unknown>>;
+  listModelProviderConnectionVersions(
+    connectionId: string,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createModelProviderConnection(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  appendModelProviderConnectionVersion(
+    connectionId: string,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  testModelProviderConnectionVersion(
+    connectionId: string,
+    connectionVersionId: string,
+    body?: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
   createRun(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   listWorkflows(): Promise<ConsoleUpstreamResponse<unknown>>;
   createWorkflow(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
@@ -248,6 +268,48 @@ export function createConsoleOsvaClient(
       http.requestWithMeta({
         method: "POST",
         path: `/v1/agents/${encodeURIComponent(agentId)}/versions`,
+        body,
+      }),
+    listModelProfiles: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/model-profiles",
+      }),
+    listModelProfileVersions: (modelProfileId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/model-profiles/${encodeURIComponent(modelProfileId)}/versions`,
+      }),
+    listModelProviderConnections: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/model-provider-connections",
+      }),
+    listModelProviderConnectionVersions: (connectionId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions`,
+      }),
+    createModelProviderConnection: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/model-provider-connections",
+        body,
+      }),
+    appendModelProviderConnectionVersion: (connectionId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions`,
+        body,
+      }),
+    testModelProviderConnectionVersion: (
+      connectionId,
+      connectionVersionId,
+      body,
+    ) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions/${encodeURIComponent(connectionVersionId)}/test`,
         body,
       }),
     createRun: (body) =>

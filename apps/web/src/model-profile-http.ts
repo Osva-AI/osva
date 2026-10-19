@@ -164,6 +164,8 @@ async function dispatchModelProfileRoute(
           provider: parsed.data.provider,
           model: parsed.data.model,
           pricing: parsed.data.pricing,
+          modelProviderConnectionVersionId:
+            parsed.data.modelProviderConnectionVersionId,
         },
       );
       sendJson(response, 201, toModelProfileVersionResource(created));
@@ -264,6 +266,7 @@ function toModelProfileVersionResource(version: ModelProfileVersion) {
     provider: version.provider,
     model: version.model,
     pricing: version.pricing,
+    modelProviderConnectionVersionId: version.modelProviderConnectionVersionId,
     createdAt: version.createdAt.toISOString(),
   });
 }
@@ -278,6 +281,8 @@ function toModelProfileVersionListResource(
       version: version.version,
       provider: version.provider,
       model: version.model,
+      modelProviderConnectionVersionId:
+        version.modelProviderConnectionVersionId,
       createdAt: version.createdAt.toISOString(),
     })),
   });

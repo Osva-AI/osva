@@ -9,6 +9,7 @@ import { V1_HTTP_ROUTES as evaluationHttpRoutes } from "../src/evaluation-http.j
 import { V1_HTTP_ROUTES as knowledgeHttpRoutes } from "../src/knowledge-http.js";
 import { V1_HTTP_ROUTES as memoryHttpRoutes } from "../src/memory-http.js";
 import { V1_HTTP_ROUTES as modelProfileHttpRoutes } from "../src/model-profile-http.js";
+import { V1_HTTP_ROUTES as modelProviderConnectionHttpRoutes } from "../src/model-provider-connection-http.js";
 import { V1_HTTP_ROUTES as officeHttpRoutes } from "../src/office-http.js";
 import { V1_HTTP_ROUTES as runHttpRoutes } from "../src/run-http.js";
 import { V1_HTTP_ROUTES as runObservabilityHttpRoutes } from "../src/run-observability-http.js";
@@ -38,6 +39,7 @@ const HANDLER_ROUTE_EXPORTS: Readonly<
   "api-key-http": apiKeyHttpRoutes,
   "agent-http": agentHttpRoutes,
   "model-profile-http": modelProfileHttpRoutes,
+  "model-provider-connection-http": modelProviderConnectionHttpRoutes,
   "connector-http": connectorHttpRoutes,
   "memory-http": memoryHttpRoutes,
   "artifact-http": artifactHttpRoutes,

@@ -155,6 +155,7 @@ describe("GET /v1/auth/context", () => {
       artifactMaxBytes: 1,
       evaluations: {} as never,
       modelProfiles: {} as never,
+      modelProviderConnections: {} as never,
       tools: {} as never,
       runs: {} as never,
       runObservability: {} as never,

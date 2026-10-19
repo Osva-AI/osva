@@ -67,7 +67,7 @@ describe("PostgreSQL migration acceptance", () => {
     await migrateDatabase(database);
     const status = await readMigrationStatus(database.sql);
     expect(status.status).toBe("current");
-    expect(status.repositoryHead).toBe("0026_better_auth_user_image");
+    expect(status.repositoryHead).toBe("0027_model_provider_connections");
     expect(status.pendingMigrations).toEqual([]);
 
     const userImageColumn = await database.sql`
@@ -153,7 +153,7 @@ describe("PostgreSQL migration acceptance", () => {
 
     const status = await readMigrationStatus(database.sql);
     expect(status.status).toBe("current");
-    expect(status.repositoryHead).toBe("0026_better_auth_user_image");
+    expect(status.repositoryHead).toBe("0027_model_provider_connections");
 
     const apiKeys = await database.sql`
       SELECT to_regclass('public.api_keys') AS api_keys_table
@@ -262,7 +262,7 @@ describe("PostgreSQL migration acceptance", () => {
     expect(userRow[0]?.email).toBe(ownerEmail);
 
     const status = await readMigrationStatus(database.sql);
-    expect(status.repositoryHead).toBe("0026_better_auth_user_image");
+    expect(status.repositoryHead).toBe("0027_model_provider_connections");
 
     await database.close();
   });

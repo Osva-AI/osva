@@ -26,8 +26,8 @@ const ACCEPTANCE_SCRIPT = path.join(
 );
 
 describe("deploy compose acceptance wiring", () => {
-  it("expects migration head 0026_better_auth_user_image", () => {
-    assert.equal(EXPECTED_MIGRATION_HEAD, "0026_better_auth_user_image");
+  it("expects migration head 0027_model_provider_connections", () => {
+    assert.equal(EXPECTED_MIGRATION_HEAD, "0027_model_provider_connections");
   });
 
   it("builds a complete Compose parse environment with test defaults", () => {

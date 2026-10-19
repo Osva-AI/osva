@@ -11,6 +11,7 @@ import {
 import type { ModelProfileVersionPricing } from "@osva-ai/contracts";
 
 import { modelProfiles } from "./model-profiles.js";
+import { modelProviderConnectionVersions } from "./model-provider-connection-versions.js";
 import { sqlTextInList } from "./sql.js";
 import { PERSISTED_MODEL_PROVIDERS } from "./states.js";
 
@@ -24,6 +25,9 @@ export const modelProfileVersions = pgTable(
     version: integer("version").notNull(),
     provider: text("provider").notNull(),
     model: text("model").notNull(),
+    modelProviderConnectionVersionId: text(
+      "model_provider_connection_version_id",
+    ).references(() => modelProviderConnectionVersions.id),
     pricing: jsonb("pricing").$type<ModelProfileVersionPricing>(),
     createdAt: timestamp("created_at", {
       withTimezone: true,
