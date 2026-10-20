@@ -76,6 +76,7 @@ export {
   InvalidRunAttemptTransitionError,
   InvalidRunTransitionError,
   InvalidSubsequentAttemptError,
+  InvalidAgentManifestError,
   InvalidWorkflowDefinitionError,
   WorkflowDefinitionNotExecutableError,
   WorkflowWaitCorrelationResolutionError,

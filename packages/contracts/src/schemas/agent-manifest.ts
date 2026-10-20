@@ -32,6 +32,18 @@ import {
   isRelativeTrustedEntrypoint,
   isSha256IntegrityDigest,
 } from "../trusted-runtime.js";
+import {
+  DECLARATIVE_AGENT_CONFIG_VERSION,
+  DECLARATIVE_INSTRUCTIONS_MAX_LENGTH,
+  DECLARATIVE_MAX_ALLOWED_TOOL_BINDINGS,
+  DECLARATIVE_MAX_MODEL_INVOCATIONS,
+  DECLARATIVE_MAX_OUTPUT_TOKENS,
+  DECLARATIVE_MAX_TOOL_INVOCATIONS,
+  DECLARATIVE_MIN_MODEL_INVOCATIONS,
+  DECLARATIVE_MIN_OUTPUT_TOKENS,
+  DECLARATIVE_MIN_TOOL_INVOCATIONS,
+  collectDeclarativeManifestIssues,
+} from "../declarative-agent-runtime.js";
 
 const builtinPackageRuntimeSchema = z.strictObject({
   type: z.literal("BUILTIN_PACKAGE"),
@@ -81,11 +93,58 @@ const containerRuntimeSchema = z.strictObject({
   resources: containerRuntimeResourcesSchema.optional(),
 });
 
+const declarativeBindingNameSchema = z
+  .string()
+  .regex(MODEL_BINDING_NAME_PATTERN, {
+    message:
+      "binding names must start with a letter and use only letters, digits, '_' or '-'.",
+  });
+
+const declarativeAgentRuntimeConfigSchema = z.strictObject({
+  configVersion: z.literal(DECLARATIVE_AGENT_CONFIG_VERSION),
+  instructions: z
+    .string()
+    .min(1)
+    .max(DECLARATIVE_INSTRUCTIONS_MAX_LENGTH)
+    .refine((value) => value.trim().length > 0, {
+      message:
+        "runtime.config.instructions must not be empty or whitespace-only.",
+    }),
+  modelBinding: declarativeBindingNameSchema,
+  allowedToolBindings: z
+    .array(
+      z.string().regex(TOOL_BINDING_NAME_PATTERN, {
+        message:
+          "tool binding names must start with a letter and use only letters, digits, '_' or '-'.",
+      }),
+    )
+    .max(DECLARATIVE_MAX_ALLOWED_TOOL_BINDINGS),
+  maxModelInvocations: z
+    .int()
+    .min(DECLARATIVE_MIN_MODEL_INVOCATIONS)
+    .max(DECLARATIVE_MAX_MODEL_INVOCATIONS),
+  maxToolInvocations: z
+    .int()
+    .min(DECLARATIVE_MIN_TOOL_INVOCATIONS)
+    .max(DECLARATIVE_MAX_TOOL_INVOCATIONS),
+  maxOutputTokens: z
+    .int()
+    .min(DECLARATIVE_MIN_OUTPUT_TOKENS)
+    .max(DECLARATIVE_MAX_OUTPUT_TOKENS)
+    .optional(),
+});
+
+const declarativeAgentRuntimeSchema = z.strictObject({
+  type: z.literal("DECLARATIVE"),
+  config: declarativeAgentRuntimeConfigSchema,
+});
+
 export const agentRuntimeSchema = z.discriminatedUnion("type", [
   builtinPackageRuntimeSchema,
   trustedTypeScriptRuntimeSchema,
   remoteHttpRuntimeSchema,
   containerRuntimeSchema,
+  declarativeAgentRuntimeSchema,
 ]);
 
 const agentManifestIoSchema = z.strictObject({
@@ -168,17 +227,26 @@ const agentManifestKnowledgeSchema = z
     },
   );
 
-export const agentManifestSchema = z.strictObject({
-  schemaVersion: z.literal(AGENT_MANIFEST_SCHEMA_VERSION),
-  key: z.string().min(1),
-  name: z.string().min(1),
-  runtime: agentRuntimeSchema,
-  input: agentManifestIoSchema,
-  output: agentManifestIoSchema,
-  execution: agentManifestExecutionSchema,
-  capabilities: agentManifestCapabilitiesSchema,
-  models: agentManifestModelsSchema.optional(),
-  tools: agentManifestToolsSchema.optional(),
-  memory: agentManifestMemorySchema.optional(),
-  knowledge: agentManifestKnowledgeSchema.optional(),
-});
+export const agentManifestSchema = z
+  .strictObject({
+    schemaVersion: z.literal(AGENT_MANIFEST_SCHEMA_VERSION),
+    key: z.string().min(1),
+    name: z.string().min(1),
+    runtime: agentRuntimeSchema,
+    input: agentManifestIoSchema,
+    output: agentManifestIoSchema,
+    execution: agentManifestExecutionSchema,
+    capabilities: agentManifestCapabilitiesSchema,
+    models: agentManifestModelsSchema.optional(),
+    tools: agentManifestToolsSchema.optional(),
+    memory: agentManifestMemorySchema.optional(),
+    knowledge: agentManifestKnowledgeSchema.optional(),
+  })
+  .superRefine((manifest, ctx) => {
+    for (const message of collectDeclarativeManifestIssues(manifest)) {
+      ctx.addIssue({
+        code: "custom",
+        message,
+      });
+    }
+  });

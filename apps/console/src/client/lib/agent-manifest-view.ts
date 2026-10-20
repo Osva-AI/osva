@@ -41,6 +41,8 @@ export function describeRuntimeType(type: string): string {
       return "Container runtime. The worker starts an ephemeral OCI container per RunAttempt. A digest-pinned image reference is not proof the image exists locally.";
     case "BUILTIN_PACKAGE":
       return "Built-in package runtime used by in-process test adapters. Production workers typically have no executor registered for this type.";
+    case "DECLARATIVE":
+      return "Declarative agent runtime. Configuration is stored on the AgentVersion; execution requires a registered DECLARATIVE executor (M13.2+).";
     default:
       return "Runtime type from the immutable AgentVersion manifest.";
   }

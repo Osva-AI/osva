@@ -354,3 +354,193 @@ describe("Agent Manifest v1", () => {
     ).toBe(false);
   });
 });
+
+const validDeclarativeManifest = {
+  ...validManifest,
+  key: "declarative-agent",
+  name: "Declarative Agent",
+  runtime: {
+    type: "DECLARATIVE",
+    config: {
+      configVersion: "1",
+      instructions: "Answer questions concisely.",
+      modelBinding: "primary",
+      allowedToolBindings: ["search"],
+      maxModelInvocations: 4,
+      maxToolInvocations: 8,
+      maxOutputTokens: 2048,
+    },
+  },
+  capabilities: {
+    model: true,
+    tools: ["search"],
+  },
+  models: {
+    primary: { modelProfileVersionId: "mpv-1" },
+  },
+  tools: {
+    search: { toolVersionId: "tv-1" },
+  },
+};
+
+describe("Declarative Agent Manifest v1", () => {
+  it("parses a valid declarative manifest", () => {
+    const parsed = agentManifestSchema.parse(validDeclarativeManifest);
+    expect(parsed.runtime.type).toBe("DECLARATIVE");
+    if (parsed.runtime.type === "DECLARATIVE") {
+      expect(parsed.runtime.config.modelBinding).toBe("primary");
+    }
+  });
+
+  it("round-trips declarative runtime through JSON serialization", () => {
+    const parsed = agentManifestSchema.parse(validDeclarativeManifest);
+    const revived = agentManifestSchema.parse(
+      JSON.parse(JSON.stringify(parsed)) as unknown,
+    );
+    expect(revived).toEqual(parsed);
+  });
+
+  it("rejects whitespace-only instructions", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            ...validDeclarativeManifest.runtime.config,
+            instructions: "   \n\t  ",
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects missing model capability", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        capabilities: { model: false, tools: ["search"] },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects unknown model binding", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            ...validDeclarativeManifest.runtime.config,
+            modelBinding: "missing",
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects unknown tool binding", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            ...validDeclarativeManifest.runtime.config,
+            allowedToolBindings: ["missing"],
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects duplicate allowed tool bindings", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            ...validDeclarativeManifest.runtime.config,
+            allowedToolBindings: ["search", "search"],
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects tool binding not authorized in capabilities.tools", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        capabilities: { model: true, tools: [] },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects invalid execution budgets", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            ...validDeclarativeManifest.runtime.config,
+            maxModelInvocations: 0,
+          },
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            ...validDeclarativeManifest.runtime.config,
+            maxToolInvocations: 999,
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires maxToolInvocations to be zero when no tools are allowed", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        capabilities: { model: true, tools: [] },
+        tools: undefined,
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            ...validDeclarativeManifest.runtime.config,
+            allowedToolBindings: [],
+            maxToolInvocations: 4,
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects unknown runtime.config fields and executable-shaped config", () => {
+    expect(
+      agentManifestSchema.safeParse({
+        ...validDeclarativeManifest,
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            ...validDeclarativeManifest.runtime.config,
+            script: "process.exit(1)",
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("preserves compatibility for existing BUILTIN_PACKAGE manifests", () => {
+    const parsed = agentManifestSchema.parse(validManifest);
+    expect(parsed.runtime).toEqual(validManifest.runtime);
+  });
+});

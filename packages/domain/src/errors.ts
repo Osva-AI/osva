@@ -566,6 +566,8 @@ export class InvalidApprovalRequestTransitionError extends DomainError {
   }
 }
 
+export class InvalidAgentManifestError extends DomainInvariantError {}
+
 export class InvalidWorkflowDefinitionError extends DomainInvariantError {}
 
 export class WorkflowDefinitionNotExecutableError extends DomainInvariantError {

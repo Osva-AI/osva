@@ -213,6 +213,18 @@ function runtimeFromFields(
         type: "BUILTIN_PACKAGE",
         key: fields.packageKey.trim() || fields.key.trim() || "example-agent",
       };
+    case "DECLARATIVE":
+      return {
+        type: "DECLARATIVE",
+        config: {
+          configVersion: "1",
+          instructions: "Replace with natural-language agent instructions.",
+          modelBinding: "primary",
+          allowedToolBindings: [],
+          maxModelInvocations: 8,
+          maxToolInvocations: 0,
+        },
+      };
   }
 }
 

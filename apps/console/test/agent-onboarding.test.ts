@@ -65,6 +65,25 @@ describe("agent onboarding helpers", () => {
     );
   });
 
+  it("warns that declarative execution requires a registered executor", () => {
+    const items = buildRuntimeReadiness({
+      controlPlaneReachable: true,
+      selectedVersion: {
+        id: "av-declarative",
+        agentId: "agent-1",
+        version: 1,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        manifest: {
+          runtime: { type: "DECLARATIVE" },
+          capabilities: { model: true, tools: [] },
+        },
+      },
+    });
+    expect(items.find((item) => item.id === "runtime-adapter")?.detail).toMatch(
+      /declarative executor fail closed with UNSUPPORTED_RUNTIME/i,
+    );
+  });
+
   it("resolves the selected version input contract without inventing fields", () => {
     const contract = resolveAgentVersionInputContract("agent-1", "av-1", {
       id: "av-1",
