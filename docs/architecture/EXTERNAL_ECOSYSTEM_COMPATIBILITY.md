@@ -16,7 +16,8 @@ This document records the M12.4.1 audit of cross-repository integration boundari
 | Repository | Commit (main at audit) | Notes |
 | --- | --- | --- |
 | osva-examples | `72d6f5737373f18793b40cf163d519a2d8ea4e8e` | `COMPATIBILITY.md` targets OSS **1.0.0** |
-| osva-connectors | `2ac7c7877424a99cf6e05ddf821b434a0026a0c2` | GitHub + PostgreSQL packages; `docs/compatibility.md` targets **1.1.0-rc.2** |
+| osva-connectors | `f8298248e5ac2ddfe869d9324a3ba9d44d8dbba3` (M12.4.4 read) | GitHub + PostgreSQL packages; `docs/compatibility.md` targets **1.1.0-rc.2** |
+| osva (upstream main) | `21605c96cabde8688fd1b018f89c98cc41b890c2` (M12.4.4 read) | This worktree may be ahead on M12.4.4 closeout |
 | osva-adapters | *(empty)* | No default branch content |
 
 **Pinned cross-repo CI reference:** `.github/workflows/github-connector-integration.yml` uses osva-connectors `4ce706e335422275a667faf15a26dba3485b2daf` (may trail `main`; update pin when connector fixture contract changes).
@@ -276,9 +277,7 @@ Versioning: semver on `@osva-ai/contracts`; breaking port changes require major 
 | **Registered driver** | — | `OSVA_ARTIFACT_STORAGE_DRIVER=registered` and `OSVA_ARTIFACT_BLOB_STORE_REGISTER_MODULE=<specifier>` |
 | **Process DI** | — | `WorkerProcessDependencies.artifactBlobStore`, `WebProcessDependencies.artifactBlobStore`, `KnowledgeWorkerProcessDependencies.artifactBlobStore` |
 
-**Worker** resolves `registered` asynchronously during startup (`resolveArtifactBlobStoreFromConfig`).
-
-**Web** and **knowledge-worker** construct synchronously: use built-in drivers or inject `artifactBlobStore` when building a custom distribution. Using `registered` without DI throws a clear error directing operators to `resolveArtifactBlobStoreFromConfig` or DI.
+**Worker**, **web**, and **knowledge-worker** resolve `registered` asynchronously before serving traffic or processing work (`resolveArtifactBlobStoreFromConfig` in worker `onStart`, web `listen()`, knowledge-worker `start()`). Built-in `filesystem` / `s3` drivers remain synchronous. Process DI overrides env for all three.
 
 **Security / operations:**
 

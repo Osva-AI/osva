@@ -3,8 +3,12 @@ import { randomUUID } from "node:crypto";
 import {
   createArtifactBlobStore,
   loadArtifactStorageConfig,
+  resolveArtifactBlobStoreFromConfig,
 } from "@osva/adapters-artifact-storage";
-import type { ArtifactBlobStore } from "@osva-ai/contracts";
+import {
+  ARTIFACT_STORAGE_DRIVER_REGISTERED,
+  type ArtifactBlobStore,
+} from "@osva-ai/contracts";
 import { BullMqKnowledgeIndexQueue } from "@osva/adapters-bullmq";
 import {
   createOpenTelemetryLifecycle,
@@ -74,19 +78,12 @@ export function createKnowledgeWorkerProcess(
   const artifactsRepository = new PostgresArtifactRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
   const runs = new PostgresRunRepository(database);
-  const blobStore =
-    dependencies.artifactBlobStore ?? createArtifactBlobStore(artifactStorage);
+  const needsAsyncArtifactBlobStore =
+    dependencies.artifactBlobStore === undefined &&
+    artifactStorage.driver === ARTIFACT_STORAGE_DRIVER_REGISTERED;
+
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
-  const artifacts = createArtifactApplication({
-    artifacts: artifactsRepository,
-    blobStore,
-    workspaces,
-    runs,
-    maxBytes: artifactStorage.maxBytes,
-    clock,
-    ids,
-  });
 
   const providers: Record<
     string,
@@ -103,25 +100,43 @@ export function createKnowledgeWorkerProcess(
     });
   }
 
-  const ingestion = new KnowledgeIngestionService({
-    knowledge: knowledgeRepository,
-    parsers: new OsvaKnowledgeParserRegistry(),
-    createArtifact: artifacts.createArtifact,
-    openArtifact: artifacts.openArtifactContent,
-    embeddings: new EmbeddingGateway({ providers }),
-    vectorStore: new PgVectorStore(database),
-    clock,
-    ids,
-    logger: {
-      info: logEvent,
-      warn: logEvent,
-    },
-    maxSourceBytes: Math.min(
-      artifactStorage.maxBytes,
-      KNOWLEDGE_MAX_SOURCE_BYTES,
-    ),
-    maxExtractedBytes: KNOWLEDGE_MAX_EXTRACTED_BYTES,
-  });
+  const createIngestion = (blobStore: ArtifactBlobStore) => {
+    const artifacts = createArtifactApplication({
+      artifacts: artifactsRepository,
+      blobStore,
+      workspaces,
+      runs,
+      maxBytes: artifactStorage.maxBytes,
+      clock,
+      ids,
+    });
+    return new KnowledgeIngestionService({
+      knowledge: knowledgeRepository,
+      parsers: new OsvaKnowledgeParserRegistry(),
+      createArtifact: artifacts.createArtifact,
+      openArtifact: artifacts.openArtifactContent,
+      embeddings: new EmbeddingGateway({ providers }),
+      vectorStore: new PgVectorStore(database),
+      clock,
+      ids,
+      logger: {
+        info: logEvent,
+        warn: logEvent,
+      },
+      maxSourceBytes: Math.min(
+        artifactStorage.maxBytes,
+        KNOWLEDGE_MAX_SOURCE_BYTES,
+      ),
+      maxExtractedBytes: KNOWLEDGE_MAX_EXTRACTED_BYTES,
+    });
+  };
+
+  let ingestion: KnowledgeIngestionService | undefined;
+  if (dependencies.artifactBlobStore !== undefined) {
+    ingestion = createIngestion(dependencies.artifactBlobStore);
+  } else if (!needsAsyncArtifactBlobStore) {
+    ingestion = createIngestion(createArtifactBlobStore(artifactStorage));
+  }
 
   const queue = new BullMqKnowledgeIndexQueue({ url: config.valkeyUrl });
   let probeServer: ProcessProbeServer | undefined;
@@ -136,10 +151,16 @@ export function createKnowledgeWorkerProcess(
   return {
     config,
     async start() {
+      if (ingestion === undefined) {
+        const blobStore =
+          await resolveArtifactBlobStoreFromConfig(artifactStorage);
+        ingestion = createIngestion(blobStore);
+      }
+      const activeIngestion = ingestion;
       await readinessCheck();
       await queue.start(async (knowledgeIndexId) => {
         try {
-          await ingestion.processIndex(knowledgeIndexId);
+          await activeIngestion.processIndex(knowledgeIndexId);
         } catch {
           // durable failure state is persisted on the index
         }

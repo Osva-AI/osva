@@ -78,6 +78,45 @@ describe("registered artifact blob store loader", () => {
     expect(typeof (store as ArtifactBlobStore).write).toBe("function");
   });
 
+  it("loads registered filesystem fixture using OSVA_ARTIFACT_FILESYSTEM_ROOT", async () => {
+    const root = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      ".tmp-registered-fs",
+    );
+    const fixtureModule = pathToFileURL(
+      path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "fixtures",
+        "registered-filesystem-blob-store.js",
+      ),
+    ).href;
+    process.env.OSVA_ARTIFACT_FILESYSTEM_ROOT = root;
+
+    const store = await loadRegisteredArtifactBlobStore({
+      driver: ARTIFACT_STORAGE_DRIVER_REGISTERED,
+      maxBytes: 4096,
+      registerModule: fixtureModule,
+    });
+    const key = "workspace/ws/artifact/fs-1";
+    const body = Buffer.from("filesystem-registered-fixture");
+    const writeResult = await store.write({
+      key,
+      content: Readable.from([body]),
+      maxBytes: 4096,
+    });
+    expect(writeResult.sizeBytes).toBe(body.length);
+
+    const handle = await store.open(key);
+    const chunks: Buffer[] = [];
+    for await (const chunk of handle.stream) {
+      chunks.push(Buffer.from(chunk));
+    }
+    expect(Buffer.concat(chunks).toString("utf8")).toBe(
+      "filesystem-registered-fixture",
+    );
+    await store.delete(key);
+  });
+
   it("createArtifactBlobStore fails clearly for registered driver", async () => {
     const { createArtifactBlobStore } = await import("../src/factory.js");
     expect(() =>

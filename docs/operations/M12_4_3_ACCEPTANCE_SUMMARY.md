@@ -42,7 +42,7 @@ Loader: `@osva/adapters-artifact-storage` (`resolveArtifactBlobStoreFromConfig`,
 | Registered loader unit tests | **PASS** | `@osva/adapters-artifact-storage` (7 tests, fixture module write/open/delete) |
 | Worker composition hook (`registered` / DI) | **PASS** | Code: `apps/worker/src/process.ts` uses `resolveArtifactBlobStoreFromConfig` in async startup |
 | Worker → web cross-process artifact access (`filesystem` / `s3`) | **PASS** (unchanged) | Existing integration tests (shared PostgreSQL + shared storage config); not re-run in this audit |
-| Worker → web cross-process with **`registered` driver** | **NOT DONE** | No integration test; web/kw do not resolve `registered` from env; uniform `registered` env fails web/kw at sync factory |
+| Worker → web cross-process with **`registered` driver** | **PASS** (M12.4.4) | `registered-artifact-storage.integration.test.ts`; web/kw async resolve |
 | Worker integration with external npm adapter package | **NOT DONE** | Requires custom deployment image + adapter on `node_modules`; no GHCR E2E in this slice |
 | Public npm publication of new contract fields | **NOT DONE** | Follows normal `@osva-ai/contracts` release; local proof uses `pnpm pack` only |
 | Custom deployment image with adapter preinstalled | **NOT DONE** | Documented operator requirement; not validated in CI |
@@ -108,7 +108,7 @@ Loader: `@osva/adapters-artifact-storage` (`resolveArtifactBlobStoreFromConfig`,
 - JobQueue external composition without custom distribution
 - Vector store / embedding provider ports
 - OpenTelemetry exporter port
-- Web/knowledge-worker `registered` env resolution (async startup) for multi-process deployments
+- ~~Web/knowledge-worker `registered` env resolution~~ **Delivered in M12.4.4**
 
 ## Verification
 
