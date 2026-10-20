@@ -16,8 +16,12 @@ import { OpenAiCompatibleEmbeddingAdapter } from "@osva/adapters-embedding-opena
 import {
   createArtifactBlobStore,
   loadArtifactStorageConfig,
+  resolveArtifactBlobStoreFromConfig,
 } from "@osva/adapters-artifact-storage";
-import type { ArtifactBlobStore } from "@osva-ai/contracts";
+import {
+  ARTIFACT_STORAGE_DRIVER_REGISTERED,
+  type ArtifactBlobStore,
+} from "@osva-ai/contracts";
 import {
   createOpenTelemetryLifecycle,
   type OpenTelemetryLifecycle,
@@ -272,8 +276,10 @@ export function createWebProcess(
     embeddings: embeddingGateway,
     vectorStore,
   });
-  const artifactBlobStore =
-    dependencies.artifactBlobStore ?? createArtifactBlobStore(artifactStorage);
+  const needsAsyncArtifactBlobStore =
+    dependencies.artifactBlobStore === undefined &&
+    artifactStorage.driver === ARTIFACT_STORAGE_DRIVER_REGISTERED;
+
   const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
   const officeRepository = new PostgresOfficeRepository(database);
   const createRun = new CreateRun({
@@ -303,168 +309,189 @@ export function createWebProcess(
     stdioConnectorsEnabled: mcpRuntimePolicy.stdioConnectorsEnabled,
     allowPrivateNetworks: mcpRuntimePolicy.allowPrivateNetworks,
   });
-  const server = createWebApplication({
-    readinessCheck: postgresAndValkeyReadinessCheck(database, queue),
-    agents: createAgentApplication({
-      agents,
-      workspaces,
-      modelProfiles,
-      tools,
-      memoryNamespaces,
-      knowledge: knowledgeRepository,
-      clock,
-      ids,
-    }),
-    modelProfiles: createModelProfileApplication({
-      modelProfiles,
-      modelProviderConnections,
-      workspaces,
-      clock,
-      ids,
-    }),
-    modelProviderConnections: createModelProviderConnectionApplication({
-      connections: modelProviderConnections,
-      modelProfiles,
-      workspaces,
-      tester: {
-        test: (input) => modelProviderConnectionResolver.testConnection(input),
-      },
-      clock,
-      ids,
-    }),
-    tools: createToolApplication({
-      tools,
-      workspaces,
-      clock,
-      ids,
-    }),
-    connectors: createConnectorApplication({
-      connectors,
-      tools,
-      workspaces,
-      mcpClientPool,
-      mcpRuntimePolicy,
-      clock,
-      ids,
-    }),
-    memory: createMemoryApplication({
-      memoryNamespaces,
-      workspaces,
-      clock,
-      ids,
-    }),
-    artifacts: createArtifactApplication({
-      artifacts: artifactsRepository,
-      blobStore: artifactBlobStore,
-      workspaces,
-      runs,
-      maxBytes: artifactStorage.maxBytes,
-      clock,
-      ids,
-      logger: {
-        info: (message, fields) => logEvent(message, fields),
-        warn: (message, fields) => logEvent(message, fields),
-      },
-    }),
-    artifactMaxBytes: artifactStorage.maxBytes,
-    evaluations: {
-      suites: createEvaluationSuiteApplication({
-        evaluationSuites,
+  const createWebServer = (artifactBlobStore: ArtifactBlobStore): Server =>
+    createWebApplication({
+      readinessCheck: postgresAndValkeyReadinessCheck(database, queue),
+      agents: createAgentApplication({
+        agents,
+        workspaces,
+        modelProfiles,
+        tools,
+        memoryNamespaces,
+        knowledge: knowledgeRepository,
+        clock,
+        ids,
+      }),
+      modelProfiles: createModelProfileApplication({
+        modelProfiles,
+        modelProviderConnections,
         workspaces,
         clock,
         ids,
       }),
-      runs: createEvaluationRunApplication({
-        evaluationSuites,
+      modelProviderConnections: createModelProviderConnectionApplication({
+        connections: modelProviderConnections,
+        modelProfiles,
+        workspaces,
+        tester: {
+          test: (input) =>
+            modelProviderConnectionResolver.testConnection(input),
+        },
+        clock,
+        ids,
+      }),
+      tools: createToolApplication({
+        tools,
+        workspaces,
+        clock,
+        ids,
+      }),
+      connectors: createConnectorApplication({
+        connectors,
+        tools,
+        workspaces,
+        mcpClientPool,
+        mcpRuntimePolicy,
+        clock,
+        ids,
+      }),
+      memory: createMemoryApplication({
+        memoryNamespaces,
+        workspaces,
+        clock,
+        ids,
+      }),
+      artifacts: createArtifactApplication({
+        artifacts: artifactsRepository,
+        blobStore: artifactBlobStore,
+        workspaces,
         runs,
-        agents,
-        queue,
+        maxBytes: artifactStorage.maxBytes,
         clock,
         ids,
+        logger: {
+          info: (message, fields) => logEvent(message, fields),
+          warn: (message, fields) => logEvent(message, fields),
+        },
       }),
-    },
-    runs: {
-      runs: createRunApplication({ runs }),
-      createRun,
-      clock,
-      ids,
-    },
-    runObservability: {
-      observability: createRunObservabilityApplication({ runs }),
-      evaluations: createEvaluationApplication({
-        runs,
-        evaluations: new PostgresEvaluationRepository(database),
-        clock,
-        ids,
-      }),
-    },
-    schedules: {
-      schedules: createScheduleApplication({
-        schedules: scheduleRepository,
-        agents,
-        workspaces,
-        clock,
-        ids,
-      }),
-      clock,
-      ids,
-    },
-    workflows: createWorkflowApplication({
-      workflows: workflowRepository,
-      workflowRuns: workflowRunRepository,
-      approvalRequests: approvalRequestRepository,
-      agents,
-      workspaces,
-      clock,
-      ids,
-    }),
-    workflowEvents: {
-      ingest: ingestWorkflowEvent,
-      clock,
-      ids: {
-        createWorkflowEventId: () => randomUUID() as WorkflowEventId,
+      artifactMaxBytes: artifactStorage.maxBytes,
+      evaluations: {
+        suites: createEvaluationSuiteApplication({
+          evaluationSuites,
+          workspaces,
+          clock,
+          ids,
+        }),
+        runs: createEvaluationRunApplication({
+          evaluationSuites,
+          runs,
+          agents,
+          queue,
+          clock,
+          ids,
+        }),
       },
-    },
-    office: {
-      office: createOfficeApplication({
-        office: officeRepository,
-        workspaces,
-        agents,
+      runs: {
+        runs: createRunApplication({ runs }),
+        createRun,
+        clock,
+        ids,
+      },
+      runObservability: {
+        observability: createRunObservabilityApplication({ runs }),
+        evaluations: createEvaluationApplication({
+          runs,
+          evaluations: new PostgresEvaluationRepository(database),
+          clock,
+          ids,
+        }),
+      },
+      schedules: {
+        schedules: createScheduleApplication({
+          schedules: scheduleRepository,
+          agents,
+          workspaces,
+          clock,
+          ids,
+        }),
+        clock,
+        ids,
+      },
+      workflows: createWorkflowApplication({
         workflows: workflowRepository,
+        workflowRuns: workflowRunRepository,
+        approvalRequests: approvalRequestRepository,
+        agents,
+        workspaces,
         clock,
         ids,
       }),
-      launchAssignment,
-      reconcileAssignment,
-      clock,
-      ids,
-    },
-    knowledge: {
-      knowledge: knowledgeApplication,
-      retriever: knowledgeRetriever,
-    },
-    apiKeys: apiKeyApplication,
-    humanAuth: humanAuthServices,
-    security: {
-      ...createWebSecurityServices(authenticateApiKey),
-      authenticateHumanSession: (request) =>
-        resolveHumanSessionPrincipal(request, humanAuthServices),
-    },
-    instrumentation,
-    logEvent,
-    rateLimit: defaultHttpRateLimitContext(rateLimiter, {
-      trustedProxies: config.trustedProxies,
-      unauthenticatedPerMinute: config.unauthenticatedRateLimitPerMinute,
-      authenticatedPerMinute: config.authenticatedRateLimitPerMinute,
-    }),
-  });
+      workflowEvents: {
+        ingest: ingestWorkflowEvent,
+        clock,
+        ids: {
+          createWorkflowEventId: () => randomUUID() as WorkflowEventId,
+        },
+      },
+      office: {
+        office: createOfficeApplication({
+          office: officeRepository,
+          workspaces,
+          agents,
+          workflows: workflowRepository,
+          clock,
+          ids,
+        }),
+        launchAssignment,
+        reconcileAssignment,
+        clock,
+        ids,
+      },
+      knowledge: {
+        knowledge: knowledgeApplication,
+        retriever: knowledgeRetriever,
+      },
+      apiKeys: apiKeyApplication,
+      humanAuth: humanAuthServices,
+      security: {
+        ...createWebSecurityServices(authenticateApiKey),
+        authenticateHumanSession: (request) =>
+          resolveHumanSessionPrincipal(request, humanAuthServices),
+      },
+      instrumentation,
+      logEvent,
+      rateLimit: defaultHttpRateLimitContext(rateLimiter, {
+        trustedProxies: config.trustedProxies,
+        unauthenticatedPerMinute: config.unauthenticatedRateLimitPerMinute,
+        authenticatedPerMinute: config.authenticatedRateLimitPerMinute,
+      }),
+    });
+
+  let server: Server | undefined;
+  if (dependencies.artifactBlobStore !== undefined) {
+    server = createWebServer(dependencies.artifactBlobStore);
+  } else if (!needsAsyncArtifactBlobStore) {
+    server = createWebServer(createArtifactBlobStore(artifactStorage));
+  }
 
   let stopping: Promise<void> | undefined;
 
   return {
     config,
-    server,
+    get server(): Server {
+      if (server === undefined) {
+        throw new Error(
+          "Web server is not initialized until listen() when OSVA_ARTIFACT_STORAGE_DRIVER=registered.",
+        );
+      }
+      return server;
+    },
     async listen() {
+      if (server === undefined) {
+        const artifactBlobStore =
+          await resolveArtifactBlobStoreFromConfig(artifactStorage);
+        server = createWebServer(artifactBlobStore);
+      }
       const port = await listenHttpServer(server, config.host, config.port);
       logEvent("web.listening", { host: config.host, port });
       return port;
@@ -477,7 +504,9 @@ export function createWebProcess(
       stopping = (async () => {
         logEvent("web.shutting_down");
         await knowledgeIndexQueue.stop();
-        await closeHttpServer(server);
+        if (server !== undefined) {
+          await closeHttpServer(server);
+        }
         await queue.shutdown();
         await rateLimiter.close();
         await database.close();
