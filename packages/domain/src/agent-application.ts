@@ -33,6 +33,7 @@ import {
   type ControlPlaneScope,
 } from "./control-plane.js";
 import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js";
+import { assertValidAgentManifest } from "./agent-manifest-validation.js";
 
 const AGENT_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.agent };
 
@@ -197,6 +198,8 @@ export class AppendAgentVersion {
     if (agent === null) {
       throw new AgentNotFoundError(command.agentId);
     }
+
+    assertValidAgentManifest(command.manifest);
 
     await assertModelBindings(
       this.deps.modelProfiles,

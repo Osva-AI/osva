@@ -1,12 +1,15 @@
 import type {
   AgentId,
+  AgentManifestV1,
   ModelProfileVersionId,
   ToolVersionId,
 } from "@osva-ai/contracts";
+import { COMMUNITY_EDITION_ROLES } from "@osva-ai/contracts";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
   DuplicateAgentKeyError,
+  InvalidAgentManifestError,
   InvalidModelBindingError,
   InvalidToolBindingError,
   Workspace,
@@ -14,6 +17,7 @@ import {
   createAgentApplication,
   createModelProfileApplication,
   createToolApplication,
+  PermissionDeniedError,
   type AgentApplication,
   type AgentRepository,
   type WorkspaceRepository,
@@ -385,7 +389,283 @@ describe("Agent Registry application", () => {
       }),
     ).rejects.toBeInstanceOf(InvalidToolBindingError);
   });
+
+  it("denies unauthorized append before manifest or binding validation", async () => {
+    const { application } = await createHarness();
+    const agent = await application.createAgent.execute(scope, {
+      workspaceId,
+      key: "example-agent",
+      name: "Example Agent",
+    });
+    const viewerScope = fakeControlPlaneScope(
+      workspaceId,
+      COMMUNITY_EDITION_ROLES.VIEWER,
+    );
+
+    await expect(
+      application.appendAgentVersion.execute(viewerScope, {
+        agentId: agent.id,
+        manifest: malformedDeclarativeManifest(),
+      }),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it("rejects a malformed declarative manifest at the domain boundary", async () => {
+    const { application } = await createHarness();
+    const agent = await application.createAgent.execute(scope, {
+      workspaceId,
+      key: "declarative-agent",
+      name: "Declarative Agent",
+    });
+
+    await expect(
+      application.appendAgentVersion.execute(scope, {
+        agentId: agent.id,
+        manifest: malformedDeclarativeManifest(),
+      }),
+    ).rejects.toBeInstanceOf(InvalidAgentManifestError);
+  });
+
+  it("rejects a cross-workspace tool binding after schema validation", async () => {
+    const { application, modelProfiles, tools, workspaces } =
+      await createHarness();
+    await workspaces.save(
+      Workspace.create({
+        id: otherWorkspaceId,
+        name: "Other",
+        createdAt: NOW,
+      }),
+    );
+    let profileIds = 0;
+    const profiles = createModelProfileApplication({
+      modelProfiles,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          profileIds += 1;
+          return `mp-${String(profileIds)}`;
+        },
+      },
+    });
+    const profile = await profiles.createModelProfile.execute(scope, {
+      workspaceId,
+      key: "primary",
+      name: "Primary",
+    });
+    const modelVersion = await profiles.appendModelProfileVersion.execute(
+      scope,
+      {
+        modelProfileId: profile.id,
+        provider: "OPENAI",
+        model: "gpt-test",
+      },
+    );
+    let otherIds = 0;
+    const toolApp = createToolApplication({
+      tools,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          otherIds += 1;
+          return `other-tool-${String(otherIds)}`;
+        },
+      },
+    });
+    const otherTool = await toolApp.createTool.execute(otherScope, {
+      workspaceId: otherWorkspaceId,
+      key: "echo",
+      name: "Echo",
+    });
+    const otherToolVersion = await toolApp.appendToolVersion.execute(
+      otherScope,
+      {
+        toolId: otherTool.id,
+        type: "INTERNAL",
+        implementation: "OSVA_ECHO_V1",
+      },
+    );
+    const agent = await application.createAgent.execute(scope, {
+      workspaceId,
+      key: "declarative-agent",
+      name: "Declarative Agent",
+    });
+
+    await expect(
+      application.appendAgentVersion.execute(scope, {
+        agentId: agent.id,
+        manifest: validDeclarativeManifest({
+          models: {
+            primary: { modelProfileVersionId: modelVersion.id },
+          },
+          tools: {
+            search: { toolVersionId: otherToolVersion.id },
+          },
+        }),
+      }),
+    ).rejects.toBeInstanceOf(InvalidToolBindingError);
+  });
+
+  it("does not append a version or consume version numbers when validation fails", async () => {
+    const { application } = await createHarness();
+    const agent = await application.createAgent.execute(scope, {
+      workspaceId,
+      key: "example-agent",
+      name: "Example Agent",
+    });
+
+    await expect(
+      application.appendAgentVersion.execute(scope, {
+        agentId: agent.id,
+        manifest: malformedDeclarativeManifest(),
+      }),
+    ).rejects.toBeInstanceOf(InvalidAgentManifestError);
+
+    expect(
+      await application.listAgentVersions.execute(scope, agent.id),
+    ).toEqual([]);
+
+    const accepted = await application.appendAgentVersion.execute(scope, {
+      agentId: agent.id,
+      manifest: createManifest(),
+    });
+    expect(accepted.version).toBe(1);
+  });
+
+  it("persists a valid declarative AgentVersion with an immutable manifest", async () => {
+    const { application, modelProfiles, tools, workspaces } =
+      await createHarness();
+    let profileIds = 0;
+    const profiles = createModelProfileApplication({
+      modelProfiles,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          profileIds += 1;
+          return `mp-${String(profileIds)}`;
+        },
+      },
+    });
+    const profile = await profiles.createModelProfile.execute(scope, {
+      workspaceId,
+      key: "primary",
+      name: "Primary",
+    });
+    const modelVersion = await profiles.appendModelProfileVersion.execute(
+      scope,
+      {
+        modelProfileId: profile.id,
+        provider: "OPENAI",
+        model: "gpt-test",
+      },
+    );
+    let toolIds = 0;
+    const toolApp = createToolApplication({
+      tools,
+      workspaces,
+      clock: { now: () => NOW },
+      ids: {
+        createId() {
+          toolIds += 1;
+          return `tool-${String(toolIds)}`;
+        },
+      },
+    });
+    const tool = await toolApp.createTool.execute(scope, {
+      workspaceId,
+      key: "search",
+      name: "Search",
+    });
+    const toolVersion = await toolApp.appendToolVersion.execute(scope, {
+      toolId: tool.id,
+      type: "INTERNAL",
+      implementation: "OSVA_ECHO_V1",
+    });
+    const agent = await application.createAgent.execute(scope, {
+      workspaceId,
+      key: "declarative-agent",
+      name: "Declarative Agent",
+    });
+    const manifest = validDeclarativeManifest({
+      models: {
+        primary: { modelProfileVersionId: modelVersion.id },
+      },
+      tools: {
+        search: { toolVersionId: toolVersion.id },
+      },
+    });
+
+    const appended = await application.appendAgentVersion.execute(scope, {
+      agentId: agent.id,
+      manifest,
+    });
+    const loaded = await application.getAgentVersion.execute(scope, {
+      agentId: agent.id,
+      agentVersionId: appended.id,
+    });
+
+    expect(appended.manifest).toEqual(manifest);
+    expect(loaded.manifest).toEqual(manifest);
+    expect(loaded.manifest.runtime).toEqual(manifest.runtime);
+  });
 });
+
+function malformedDeclarativeManifest(): AgentManifestV1 {
+  return createManifest({
+    runtime: {
+      type: "DECLARATIVE",
+      config: {
+        configVersion: "1",
+        instructions: "Answer briefly.",
+        modelBinding: "missing",
+        allowedToolBindings: [],
+        maxModelInvocations: 1,
+        maxToolInvocations: 0,
+      },
+    },
+    capabilities: { model: true, tools: [] },
+    models: {
+      primary: {
+        modelProfileVersionId: "mpv-placeholder" as ModelProfileVersionId,
+      },
+    },
+  });
+}
+
+function validDeclarativeManifest(
+  overrides: Partial<AgentManifestV1> = {},
+): AgentManifestV1 {
+  return createManifest({
+    key: "declarative-agent",
+    name: "Declarative Agent",
+    runtime: {
+      type: "DECLARATIVE",
+      config: {
+        configVersion: "1",
+        instructions: "Answer questions concisely.",
+        modelBinding: "primary",
+        allowedToolBindings: ["search"],
+        maxModelInvocations: 4,
+        maxToolInvocations: 8,
+      },
+    },
+    capabilities: {
+      model: true,
+      tools: ["search"],
+    },
+    models: {
+      primary: {
+        modelProfileVersionId: "mpv-1" as ModelProfileVersionId,
+      },
+    },
+    tools: {
+      search: { toolVersionId: "tv-1" as ToolVersionId },
+    },
+    ...overrides,
+  });
+}
 
 function createEmptyHarness(): {
   application: AgentApplication;

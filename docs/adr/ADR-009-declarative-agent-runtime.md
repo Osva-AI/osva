@@ -80,6 +80,16 @@ Append-time domain validation continues to verify ModelProfileVersion and
 ToolVersion rows exist in the workspace. External providers are not called at
 append.
 
+### M13.1B — application-layer manifest validation
+
+`AppendAgentVersion` validates every manifest with the canonical
+`agentManifestSchema` (including declarative cross-field refines) after
+authorization and agent workspace lookup, and before binding resolution.
+Unauthorized callers receive `PermissionDeniedError` without manifest or
+binding detail. Authorized schema failures map to `InvalidAgentManifestError`
+(HTTP `400 invalid_request`). Repository mappers trust persisted JSON hydrated
+through the domain application path; they do not re-parse Zod at read time.
+
 ## Execution budget model
 
 Budget fields cap future declarative loops (M13.2). They do not grant unbounded

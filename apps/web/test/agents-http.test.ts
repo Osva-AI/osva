@@ -241,6 +241,43 @@ describe("Agent Registry HTTP API", () => {
     expect(badEndpoint.status).toBe(400);
   });
 
+  it("rejects an invalid declarative manifest with invalid_request", async () => {
+    const { origin } = await listen();
+    await fetchJson(`${origin}/v1/agents`, {
+      method: "POST",
+      body: {
+        key: "declarative-agent",
+        name: "Declarative Agent",
+      },
+    });
+
+    const response = await fetchJson(`${origin}/v1/agents/id-1/versions`, {
+      method: "POST",
+      body: {
+        manifest: {
+          ...VALID_MANIFEST,
+          runtime: {
+            type: "DECLARATIVE",
+            config: {
+              configVersion: "1",
+              instructions: "Answer briefly.",
+              modelBinding: "missing",
+              allowedToolBindings: [],
+              maxModelInvocations: 1,
+              maxToolInvocations: 0,
+            },
+          },
+          capabilities: { model: true, tools: [] },
+          models: {
+            primary: { modelProfileVersionId: "mpv-1" },
+          },
+        },
+      },
+    });
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ status: "invalid_request" });
+  });
+
   it("creates, reads, and lists AgentVersions with deterministic numbering", async () => {
     const { origin } = await listen();
     await fetchJson(`${origin}/v1/agents`, {

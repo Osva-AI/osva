@@ -354,6 +354,10 @@ export {
   collectDeclarativeManifestIssues,
   isDeclarativeAgentRuntime,
 } from "./declarative-agent-runtime.js";
+export {
+  validateAgentManifest,
+  type AgentManifestValidationResult,
+} from "./validate-agent-manifest.js";
 export type { DeclarativeAgentConfigVersion } from "./declarative-agent-runtime.js";
 export {
   OCI_SHA256_DIGEST_PREFIX,
