@@ -21,8 +21,8 @@ import {
 } from "@osva/adapters-model-openai";
 import type { ModelProvider } from "@osva-ai/contracts";
 import {
-  createArtifactBlobStore,
   loadArtifactStorageConfig,
+  resolveArtifactBlobStoreFromConfig,
 } from "@osva/adapters-artifact-storage";
 import {
   ProcessEnvSecretResolver,
@@ -58,7 +58,11 @@ import {
 } from "@osva/db";
 import { PgVectorStore } from "@osva/adapters-vector-pgvector";
 import { OpenAiCompatibleEmbeddingAdapter } from "@osva/adapters-embedding-openai-compatible";
-import type { ArtifactId, JsonObject } from "@osva-ai/contracts";
+import type {
+  ArtifactBlobStore,
+  ArtifactId,
+  JsonObject,
+} from "@osva-ai/contracts";
 import {
   KnowledgeRetriever,
   RuntimeKnowledgeGateway,
@@ -123,6 +127,7 @@ export interface WorkerProcessDependencies {
   readonly gemini?: Omit<GeminiProviderAdapterOptions, "apiKey"> & {
     readonly apiKey?: string;
   };
+  readonly artifactBlobStore?: ArtifactBlobStore;
 }
 
 export function createWorkerProcess(
@@ -254,7 +259,9 @@ export function createWorkerProcess(
       });
       const workspaces = new PostgresWorkspaceRepository(database);
       const artifactsRepository = new PostgresArtifactRepository(database);
-      const artifactBlobStore = createArtifactBlobStore(artifactStorage);
+      const artifactBlobStore =
+        dependencies.artifactBlobStore ??
+        (await resolveArtifactBlobStoreFromConfig(artifactStorage));
       const artifactApplication = createArtifactApplication({
         artifacts: artifactsRepository,
         blobStore: artifactBlobStore,

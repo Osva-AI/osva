@@ -148,11 +148,11 @@ Classification key:
 | Remote HTTP runtime + tool capability | osva-examples | Runtime Protocol V1 + SDK runtime | 1.0.0 | Example 02, in-repo E2E | **A** | — | — | — |
 | Workflow V3 + approvals + event wait | osva-examples | REST + contracts | 1.0+ | Example 03 | **A** | — | — | — |
 | Python remote runtime example | osva-examples | Python SDK runtime module | 1.0+ | Example 13, `verify:python` | **A** | — | — | — |
-| Replace BullMQ / JobQueue | osva-adapters | `JobQueue` in `@osva-ai/contracts` | — | In-repo contract tests | **D/E** | osva-adapters | Requires composition-root wiring; no dynamic load (**F** for plugins) | P3 |
-| Replace model provider adapter | osva-adapters | `ModelProviderAdapter` in **private** `@osva/model-gateway` | — | In-repo adapters | **D** | osva | Publish adapter interface or stability doc before external packages (M12.4.3) | P2 |
-| Replace artifact blob store | osva-adapters | `ArtifactBlobStore` in **private** `@osva/domain` | — | Filesystem/S3 in-repo | **D** | osva | Expose stable port package or documented copy of port (M12.4.3) | P2 |
-| Swap artifact driver without core source edit | osva-adapters | `createArtifactBlobStore` env drivers | 1.1.0-rc.2 | Worker env config | **E** | osva | Static composition only: new driver in core or rebuild worker with new dep | P2 |
-| OpenTelemetry backend | osva-adapters | `@osva/adapters-opentelemetry` (private) | — | Optional worker env | **F** | osva-adapters | First external adapter candidate after port publish | P3 |
+| Replace BullMQ / JobQueue | osva-adapters | `JobQueue` in `@osva-ai/contracts` | 1.1.0-rc.2 | In-repo contract tests | **A/D** | osva-adapters | Port is public; worker still statically imports BullMQ — external queue needs custom distribution (**E**) | P3 |
+| Replace model provider adapter | osva-adapters | `ModelProviderAdapter` in **private** `@osva/model-gateway` | — | In-repo adapters | **D** | osva | Publish port on `@osva-ai/contracts` or sibling public package (deferred post M12.4.3) | P2 |
+| Replace artifact blob store | osva-adapters | `ArtifactBlobStore` + storage config types in `@osva-ai/contracts` | 1.1.0-rc.2+ | M12.4.3 pack consumer + registered loader tests | **A** | osva-adapters | Implement against contracts; register via trusted env or process DI | P2 |
+| Swap artifact driver without core source edit | osva-adapters | `registered` driver + `OSVA_ARTIFACT_BLOB_STORE_REGISTER_MODULE` | M12.4.3 | Worker async resolve; web/knowledge-worker require DI | **A/E** | osva / operator | Adapter package must be on worker `node_modules`; not agent-controlled | P2 |
+| OpenTelemetry backend | osva-adapters | `@osva/adapters-opentelemetry` (private) | — | Optional worker env | **F** | osva-adapters | Publish telemetry port or document copy before external packages | P3 |
 | Dynamic adapter loading / plugins | osva-adapters | Not supported | — | — | **F** | — | Explicitly out of scope M12.4 | — |
 | osva-adapters repository bootstrap | osva-adapters | — | — | Empty repo | **B** | osva-adapters | Add README + first package after M12.4.3 port decision | P3 |
 
@@ -229,22 +229,98 @@ Implementation helpers (osva private tests): `packages/tool-gateway/test/fixture
 
 ---
 
+## Infrastructure adapter ports (M12.4.3)
+
+### Port inventory (evidence-backed)
+
+| Category | Interface location | Public npm export | Third-party compile | Runtime external impl | Config selects impl | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Artifact blob store** | `@osva-ai/contracts` (`ArtifactBlobStore`, `ArtifactStorageConfig*`) | **Yes** (M12.4.3) | **Yes** (pack consumer fixture) | **Yes** (worker `registered` driver or `artifactBlobStore` DI) | `filesystem` / `s3` / `registered` + module env | Metadata stays in PostgreSQL; bytes only in store |
+| **Job queue** | `@osva-ai/contracts` (`JobQueue`) | **Yes** | **Yes** | **No** (worker imports `@osva/adapters-bullmq`) | Valkey URL only | Port public; composition static |
+| **Model provider** | `@osva/model-gateway` (`ModelProviderAdapter`) | **No** | **No** without private packages | **No** | Env API keys + connections | Deferred port publish |
+| **Vector store** | `@osva/domain` (`VectorStore`) | **No** | **No** | **No** (`PgVectorStore` in worker) | None | Knowledge coupling |
+| **Embedding provider** | `@osva/embedding-gateway` (`EmbeddingProviderAdapter`) | **No** | **No** | **No** | Optional OpenAI-compatible env | Gateway private |
+| **Observability** | `@osva/adapters-opentelemetry` (lifecycle helpers) | **No** | **No** | **No** | OTEL env vars | Optional telemetry |
+| **Runtime adapter** | `@osva-ai/contracts` (`RuntimeAdapter`) | **Yes** | **Yes** | Partial (HTTP/container/trusted TS in core) | Worker env | Already public |
+| **MCP client pool** | `@osva-ai/contracts` | **Yes** | **Yes** | **No** (in-repo MCP client) | Stdio gate env | Connectors external; client built-in |
+
+### M12.4.3 first supported category: Artifact blob store
+
+**Selected because:** smallest port surface; config wiring already existed for `filesystem`/`s3`; independent verification via pack + TypeScript consumer; security boundary clear (opaque bytes, no tool/model bypass); aligns with planned osva-adapters first package.
+
+**Alternatives considered:**
+
+| Category | Why not first |
+| --- | --- |
+| **JobQueue** | Public port exists but replacing BullMQ requires recompiling worker/web/orchestrator with a new queue adapter — higher blast radius. |
+| **ModelProviderAdapter** | Interface still private; touches ModelGateway routing and secrets policy. |
+| **OpenTelemetry** | No stable public exporter port; lower product demand than artifacts. |
+| **Vector / embedding** | Tied to MemoryGateway/Knowledge ingestion; broader persistence semantics. |
+
+### Public contract (artifact)
+
+Published from `@osva-ai/contracts`:
+
+- `ArtifactBlobStore`, `ArtifactBlobWriteInput`, `ArtifactBlobWriteResult`, `ArtifactBlobReadHandle`
+- `ArtifactStorageConfig`, driver constants, `RegisteredArtifactBlobStoreModule`
+
+`@osva/domain` re-exports the blob store port types from contracts for in-repo compatibility.
+
+Versioning: semver on `@osva-ai/contracts`; breaking port changes require major bump + contract tests.
+
+### Trusted composition (artifact)
+
+| Mechanism | Default | External adapter |
+| --- | --- | --- |
+| Built-in drivers | `filesystem` (default), `s3` | — |
+| **Registered driver** | — | `OSVA_ARTIFACT_STORAGE_DRIVER=registered` and `OSVA_ARTIFACT_BLOB_STORE_REGISTER_MODULE=<specifier>` |
+| **Process DI** | — | `WorkerProcessDependencies.artifactBlobStore`, `WebProcessDependencies.artifactBlobStore`, `KnowledgeWorkerProcessDependencies.artifactBlobStore` |
+
+**Worker** resolves `registered` asynchronously during startup (`resolveArtifactBlobStoreFromConfig`).
+
+**Web** and **knowledge-worker** construct synchronously: use built-in drivers or inject `artifactBlobStore` when building a custom distribution. Using `registered` without DI throws a clear error directing operators to `resolveArtifactBlobStoreFromConfig` or DI.
+
+**Security / operations:**
+
+- No package discovery, npm download, or workflow-controlled module paths.
+- Operator must install adapter package into the OSVA deployment image / `node_modules` and set env or DI explicitly.
+- Adapter code runs with worker/web process privileges — treat like database credentials and stdio connectors (trusted operator only).
+- Exporting TypeScript interfaces does **not** imply drop-in npm install without rebuilding or repackaging OSVA images.
+
+**Limitation:** Independently `npm install`ing an adapter on a stock GHCR image without rebuilding the image will not load the module unless the deployment already includes that dependency and env.
+
+### External consumer proof
+
+- Fixture (outside pnpm workspace): `test-fixtures/artifact-blob-store-external-consumer/`
+- Runner: `node scripts/acceptance/m12-4-3/run.mjs` (pack `@osva-ai/contracts`, npm install fixture, `tsc --noEmit`, in-repo registered loader tests)
+- Distinction: **type compilation** and **tarball consumption** proven locally; **npm registry publication** follows normal release; **runtime integration** proven via `@osva/adapters-artifact-storage` registered loader tests + worker composition hook.
+
+### osva-adapters follow-up (first package)
+
+See [M12_4_3_ACCEPTANCE_SUMMARY.md](../operations/M12_4_3_ACCEPTANCE_SUMMARY.md) for package name, tests, and compatibility policy.
+
+### Deferred categories (M12.4.3)
+
+- Model provider port publication
+- JobQueue composition without custom worker build
+- Vector store / embedding provider ports
+- OpenTelemetry exporter port
+- Dynamic plugin registry
+
+---
+
 ## External adapter packaging recommendation
 
-### Answers (M12.4.1)
+### Answers (M12.4.1, updated M12.4.3)
 
-1. **Public adapter interfaces today:** Only generic ports in `@osva-ai/contracts` (e.g. `JobQueue`, `RuntimeAdapter`, `SecretResolver`, MCP client pool interfaces). Domain ports (`ArtifactBlobStore`, repositories) and `ModelProviderAdapter` are **not** public npm APIs.
-2. **Built-in adapters:** BullMQ, in-repo model providers, filesystem/S3 artifacts, pgvector, OpenAI-compatible embeddings, TypeScript/HTTP/container runtimes, MCP client, auth — wired in `apps/worker/src/process.ts`.
-3. **Independent compile today:** A third-party package can depend on `@osva-ai/contracts` only for queue/runtime/MCP-related experiments; not for drop-in worker artifact/model replacement.
-4. **Integrate without core source change:** **No** for new adapter categories — worker statically imports adapter packages. Operators can configure existing drivers (artifact env) without code changes.
-5. **First external adapter categories:** (1) **Artifact blob store** behind a published port; (2) **Model provider** behind published `ModelProviderAdapter`; (3) **OpenTelemetry** exporter wiring — lowest product risk after ports exist.
-6. **Guarantees needed:** Same as in-repo adapters — no bypass of gateways, secrets by reference, no arbitrary code load, semver on published port packages.
-7. **Registration mechanism:** Required for productized swapping; **static trusted composition** (worker bundle lists adapter packages at build time) is sufficient before any dynamic registry.
-8. **Dynamic loading:** Out of scope — do not load untrusted adapter code at runtime.
-
-### Minimal first osva-adapters package (after M12.4.3)
-
-Recommend **`@osva-ai/adapter-artifact-*`** implementing a **published** `ArtifactBlobStore` port (or official `@osva-ai/adapter-ports` package extracted from domain), selected via existing `loadArtifactStorageConfig()` driver enum or a new documented driver string — still static composition in worker.
+1. **Public adapter interfaces today:** `@osva-ai/contracts` exports `JobQueue`, `RuntimeAdapter`, MCP pool types, **and (M12.4.3)** `ArtifactBlobStore` + artifact storage config. `ModelProviderAdapter`, `VectorStore`, and `EmbeddingProviderAdapter` remain private.
+2. **Built-in adapters:** Unchanged — wired in worker/web composition roots.
+3. **Independent compile today:** External packages can implement `ArtifactBlobStore` using only `@osva-ai/contracts` (+ Node types).
+4. **Integrate without core source change:** **Artifact (partial):** trusted `registered` driver or DI when deployment includes the adapter package. Other categories still require core or custom distribution changes.
+5. **First external adapter category shipped:** **Artifact blob store** (M12.4.3).
+6. **Guarantees:** Gateway boundaries unchanged; semver on contracts; contract tests gate port shape.
+7. **Registration:** Explicit env module specifier or composition-root DI — not agent/workflow controlled.
+8. **Dynamic loading:** Only the narrow `import(specifier)` for operator-set `OSVA_ARTIFACT_BLOB_STORE_REGISTER_MODULE`; not a general plugin framework.
 
 ---
 
@@ -281,7 +357,7 @@ Recommend **`@osva-ai/adapter-artifact-*`** implementing a **published** `Artifa
 | Slice | Scope |
 | --- | --- |
 | **M12.4.2** | **Done in tree:** parameterized harness, reusable CI workflow, maintainer doc; PostgreSQL second case deferred pending osva-connectors fixture |
-| **M12.4.3** | Publish or extract **adapter port** package(s); bootstrap osva-adapters with one reference adapter; static worker composition doc |
+| **M12.4.3** | **Done in tree:** `ArtifactBlobStore` on `@osva-ai/contracts`, trusted `registered` driver, external pack consumer, osva-adapters spec in acceptance summary |
 | **M12.4.4** | osva-examples 1.1 alignment; optional SDK connector helpers; npm-published connector-github; reduce core changes when adding connectors |
 
 ---
@@ -292,7 +368,7 @@ Recommend **`@osva-ai/adapter-artifact-*`** implementing a **published** `Artifa
 | --- | --- |
 | osva-connectors | Keep stdio fixture contract stable; document `OSVA_CONNECTOR_TEST_STDIO_ENTRY`; publish GitHub connector to npm |
 | osva-examples | Update COMPATIBILITY when moving to 1.1 stable; continue HTTP client patterns for connector CRUD |
-| osva-adapters | Initialize README and first package after core port decision |
+| osva-adapters | Add `@osva-ai/adapter-artifact-memory` (or provider-specific name) per M12.4.3 acceptance summary |
 
 ---
 
@@ -311,3 +387,4 @@ Recommend **`@osva-ai/adapter-artifact-*`** implementing a **published** `Artifa
 - [COMPATIBILITY_AND_MIGRATION.md](./COMPATIBILITY_AND_MIGRATION.md)
 - [REPOSITORY_MAP.md](./REPOSITORY_MAP.md)
 - [DEVELOPMENT_GATES.md](../engineering/DEVELOPMENT_GATES.md) (verification playbook; `ENGINEERING_VERIFICATION_PLAYBOOK.md` not present in repo)
+- [M12_4_3_ACCEPTANCE_SUMMARY.md](../operations/M12_4_3_ACCEPTANCE_SUMMARY.md)

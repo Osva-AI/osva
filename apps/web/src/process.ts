@@ -17,6 +17,7 @@ import {
   createArtifactBlobStore,
   loadArtifactStorageConfig,
 } from "@osva/adapters-artifact-storage";
+import type { ArtifactBlobStore } from "@osva-ai/contracts";
 import {
   createOpenTelemetryLifecycle,
   type OpenTelemetryLifecycle,
@@ -112,6 +113,7 @@ export interface WebProcess {
 
 export interface WebProcessDependencies {
   readonly telemetry?: OpenTelemetryLifecycle;
+  readonly artifactBlobStore?: ArtifactBlobStore;
 }
 
 export function createWebProcess(
@@ -270,7 +272,8 @@ export function createWebProcess(
     embeddings: embeddingGateway,
     vectorStore,
   });
-  const artifactBlobStore = createArtifactBlobStore(artifactStorage);
+  const artifactBlobStore =
+    dependencies.artifactBlobStore ?? createArtifactBlobStore(artifactStorage);
   const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
   const officeRepository = new PostgresOfficeRepository(database);
   const createRun = new CreateRun({

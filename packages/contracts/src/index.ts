@@ -369,6 +369,32 @@ export {
 } from "./artifact-gateway.js";
 export type { ArtifactErrorCode } from "./artifact-gateway.js";
 
+export type {
+  ArtifactBlobContentStream,
+  ArtifactBlobReadHandle,
+  ArtifactBlobStore,
+  ArtifactBlobWriteInput,
+  ArtifactBlobWriteResult,
+} from "./artifact-blob-store.js";
+
+export {
+  ARTIFACT_STORAGE_DRIVER_FILESYSTEM,
+  ARTIFACT_STORAGE_DRIVER_REGISTERED,
+  ARTIFACT_STORAGE_DRIVER_S3,
+  ARTIFACT_STORAGE_DRIVERS,
+  DEFAULT_ARTIFACT_FILESYSTEM_ROOT,
+  DEFAULT_ARTIFACT_MAX_BYTES,
+} from "./artifact-storage-config.js";
+export type {
+  ArtifactStorageConfig,
+  ArtifactStorageConfigFilesystem,
+  ArtifactStorageConfigRegistered,
+  ArtifactStorageConfigS3,
+  ArtifactStorageDriver,
+  RegisteredArtifactBlobStoreFactory,
+  RegisteredArtifactBlobStoreModule,
+} from "./artifact-storage-config.js";
+
 export {
   KNOWLEDGE_ATTRIBUTES_MAX_SERIALIZED_BYTES,
   KNOWLEDGE_CHUNK_TEXT_MAX_BYTES,

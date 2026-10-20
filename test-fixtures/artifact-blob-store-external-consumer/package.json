@@ -1,0 +1,19 @@
+{
+  "name": "artifact-blob-store-external-consumer-fixture",
+  "private": true,
+  "type": "module",
+  "description": "M12.4.3 external-style consumer; not part of the pnpm workspace",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@osva-ai/contracts": "0.0.0-placeholder"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.4",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

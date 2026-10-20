@@ -273,15 +273,15 @@ importers:
 
   adapters/artifact-storage:
     dependencies:
+      '@osva-ai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@osva/adapters-artifact-filesystem':
         specifier: workspace:*
         version: link:../artifact-filesystem
       '@osva/adapters-artifact-s3':
         specifier: workspace:*
         version: link:../artifact-s3
-      '@osva/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

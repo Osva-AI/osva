@@ -75,14 +75,15 @@ export class S3ArtifactBlobStore implements ArtifactBlobStore {
     limiter.on("error", () => {
       body.destroy();
     });
-    input.content.on("error", () => {
+    const source = input.content as Readable;
+    source.on("error", () => {
       body.destroy();
     });
 
     const uploadPromise = upload.done();
 
     try {
-      await pipeline(input.content, limiter, body);
+      await pipeline(source, limiter, body);
       await uploadPromise;
     } catch (error) {
       await Promise.allSettled([upload.abort(), uploadPromise]);
