@@ -119,6 +119,8 @@ function runtimeAdapterDetail(
       return "Runtime type is REMOTE_HTTP. Console cannot verify that the remote endpoint is reachable.";
     case "BUILTIN_PACKAGE":
       return "Runtime type is BUILTIN_PACKAGE. Production workers typically have no executor for this type; Runs fail at execution, not at create time.";
+    case "DECLARATIVE":
+      return "Runtime type is DECLARATIVE. Workers without a declarative executor fail closed with UNSUPPORTED_RUNTIME at execution time.";
     default:
       return "Console cannot verify that a runtime adapter is registered on the worker.";
   }

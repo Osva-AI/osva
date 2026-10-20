@@ -336,9 +336,25 @@ export type {
   BuiltinPackageRuntime,
   ContainerRuntime,
   ContainerRuntimeResources,
+  DeclarativeAgentRuntime,
+  DeclarativeAgentRuntimeConfig,
   RemoteHttpRuntime,
   TrustedTypeScriptRuntime,
 } from "./agent-manifest.js";
+export {
+  DECLARATIVE_AGENT_CONFIG_VERSION,
+  DECLARATIVE_INSTRUCTIONS_MAX_LENGTH,
+  DECLARATIVE_MAX_ALLOWED_TOOL_BINDINGS,
+  DECLARATIVE_MAX_MODEL_INVOCATIONS,
+  DECLARATIVE_MAX_OUTPUT_TOKENS,
+  DECLARATIVE_MAX_TOOL_INVOCATIONS,
+  DECLARATIVE_MIN_MODEL_INVOCATIONS,
+  DECLARATIVE_MIN_OUTPUT_TOKENS,
+  DECLARATIVE_MIN_TOOL_INVOCATIONS,
+  collectDeclarativeManifestIssues,
+  isDeclarativeAgentRuntime,
+} from "./declarative-agent-runtime.js";
+export type { DeclarativeAgentConfigVersion } from "./declarative-agent-runtime.js";
 export {
   OCI_SHA256_DIGEST_PREFIX,
   isDigestPinnedOciImageReference,

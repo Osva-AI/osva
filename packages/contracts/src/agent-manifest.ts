@@ -17,6 +17,7 @@ export const AGENT_RUNTIME_TYPES = [
   "TRUSTED_TYPESCRIPT",
   "REMOTE_HTTP",
   "CONTAINER",
+  "DECLARATIVE",
 ] as const;
 
 export const AGENT_REMOTE_HTTP_PROTOCOL_VERSION = "1" as const;
@@ -84,6 +85,32 @@ export interface ContainerRuntime {
   readonly resources?: ContainerRuntimeResources;
 }
 
+export interface DeclarativeAgentRuntimeConfig {
+  readonly configVersion: "1";
+  /**
+   * Natural-language system instructions. Not executable code; no shell or
+   * network directives are interpreted from this field in M13.1A.
+   */
+  readonly instructions: string;
+  /**
+   * Logical name of the required model binding declared in `manifest.models`.
+   */
+  readonly modelBinding: string;
+  /**
+   * Logical tool binding names the declarative executor may invoke. Each name
+   * must exist in `manifest.tools` and `capabilities.tools`.
+   */
+  readonly allowedToolBindings: readonly string[];
+  readonly maxModelInvocations: number;
+  readonly maxToolInvocations: number;
+  readonly maxOutputTokens?: number;
+}
+
+export interface DeclarativeAgentRuntime {
+  readonly type: "DECLARATIVE";
+  readonly config: DeclarativeAgentRuntimeConfig;
+}
+
 export interface RemoteHttpRuntime {
   readonly type: "REMOTE_HTTP";
   /**
@@ -111,7 +138,8 @@ export type AgentRuntime =
   | BuiltinPackageRuntime
   | TrustedTypeScriptRuntime
   | RemoteHttpRuntime
-  | ContainerRuntime;
+  | ContainerRuntime
+  | DeclarativeAgentRuntime;
 
 export interface AgentManifestIO {
   readonly schema: JsonSchemaRecord;

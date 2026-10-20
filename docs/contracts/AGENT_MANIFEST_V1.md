@@ -41,6 +41,50 @@ runtime:
   key: example-agent
 ```
 
+Declarative runtime (configuration-only in M13.1A; execution is M13.2):
+
+```yaml
+runtime:
+  type: DECLARATIVE
+  config:
+    configVersion: "1"
+    instructions: |
+      Answer support questions using the primary model only.
+    modelBinding: primary
+    allowedToolBindings:
+      - search
+    maxModelInvocations: 8
+    maxToolInvocations: 16
+    maxOutputTokens: 4096
+
+capabilities:
+  model: true
+  tools:
+    - search
+
+models:
+  primary:
+    modelProfileVersionId: mpv_...
+
+tools:
+  search:
+    toolVersionId: tv_...
+```
+
+Rules for `DECLARATIVE`:
+
+- `runtime.config` is a strict object; unknown fields are rejected.
+- `instructions` must be non-empty after trim (max 32768 characters).
+- `modelBinding` must name an entry in `models`.
+- `capabilities.model` must be `true`.
+- Each `allowedToolBindings` entry must exist in `tools` and in `capabilities.tools`.
+- Duplicate tool names in `allowedToolBindings` are rejected.
+- `maxModelInvocations` is 1–32; `maxToolInvocations` is 0–64 and must be `0` when
+  `allowedToolBindings` is empty.
+- Optional `maxOutputTokens` is 1–16384.
+- Workers without a declarative executor fail with `UNSUPPORTED_RUNTIME` (fail closed).
+- See `docs/adr/ADR-009-declarative-agent-runtime.md`.
+
 Remote HTTP runtime:
 
 ```yaml
