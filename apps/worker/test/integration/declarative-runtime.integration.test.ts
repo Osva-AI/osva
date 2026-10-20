@@ -5,11 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { ToolVersionId, WorkspaceId } from "@osva-ai/contracts";
-import {
-  createDatabase,
-  migrateDatabase,
-  type Database,
-} from "@osva/db";
+import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 
 import { startFakeOpenAIResponsesServer } from "../../../../adapters/model-openai/test/fake-openai-server.js";
 import { createWebProcess } from "../../../web/src/process.js";
@@ -402,42 +398,44 @@ async function createDeclarativeAgentVersion(
           ),
         };
 
-  const maxToolInvocations =
-    input.allowedToolBindings.length === 0 ? 0 : 4;
+  const maxToolInvocations = input.allowedToolBindings.length === 0 ? 0 : 4;
 
-  const versionResponse = await fetchJson(`${origin}/v1/agents/${input.agentId}/versions`, {
-    method: "POST",
-    body: {
-      manifest: {
-        schemaVersion: "1",
-        key: "declarative-agent",
-        name: "Declarative Agent",
-        runtime: {
-          type: "DECLARATIVE",
-          config: {
-            configVersion: "1",
-            instructions: "Answer using tools only when allowed.",
-            modelBinding: "primary",
-            allowedToolBindings: input.allowedToolBindings,
-            maxModelInvocations: 4,
-            maxToolInvocations,
-            maxOutputTokens: 512,
+  const versionResponse = await fetchJson(
+    `${origin}/v1/agents/${input.agentId}/versions`,
+    {
+      method: "POST",
+      body: {
+        manifest: {
+          schemaVersion: "1",
+          key: "declarative-agent",
+          name: "Declarative Agent",
+          runtime: {
+            type: "DECLARATIVE",
+            config: {
+              configVersion: "1",
+              instructions: "Answer using tools only when allowed.",
+              modelBinding: "primary",
+              allowedToolBindings: input.allowedToolBindings,
+              maxModelInvocations: 4,
+              maxToolInvocations,
+              maxOutputTokens: 512,
+            },
           },
+          input: { schema: { type: "object" } },
+          output: { schema: OUTPUT_SCHEMA },
+          execution: { timeoutMs: 15_000, maxAttempts: 1 },
+          capabilities: {
+            model: true,
+            tools: input.toolCapabilities,
+          },
+          models: {
+            primary: { modelProfileVersionId: input.modelProfileVersionId },
+          },
+          ...toolsBlock,
         },
-        input: { schema: { type: "object" } },
-        output: { schema: OUTPUT_SCHEMA },
-        execution: { timeoutMs: 15_000, maxAttempts: 1 },
-        capabilities: {
-          model: true,
-          tools: input.toolCapabilities,
-        },
-        models: {
-          primary: { modelProfileVersionId: input.modelProfileVersionId },
-        },
-        ...toolsBlock,
       },
     },
-  });
+  );
   expect(versionResponse.status).toBe(201);
   return versionResponse;
 }
