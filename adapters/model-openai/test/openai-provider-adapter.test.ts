@@ -32,6 +32,7 @@ describe("OpenAIProviderAdapter", () => {
 
     expect(result).toEqual({
       text: "normalized text from fake openai",
+      finishReason: "stop",
       usage: {
         inputTokens: 120,
         outputTokens: 15,

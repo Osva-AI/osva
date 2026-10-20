@@ -1,4 +1,4 @@
-import type { ModelFinishReason } from "./finish-reason.js";
+import type { ModelFinishReason, ModelToolCall } from "@osva-ai/contracts";
 
 export interface NormalizedModelUsage {
   readonly inputTokens: number;
@@ -8,7 +8,8 @@ export interface NormalizedModelUsage {
 }
 
 export interface ProviderGenerateTextResult {
-  readonly text: string;
+  readonly text?: string;
+  readonly toolCalls?: readonly ModelToolCall[];
   readonly usage?: NormalizedModelUsage;
   readonly finishReason?: ModelFinishReason;
   readonly providerRequestId?: string;

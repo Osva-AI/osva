@@ -91,6 +91,11 @@ describe("gateway instrumentation privacy", () => {
   it("records model metadata without prompt or output content", async () => {
     const harness = await createInMemoryOpenTelemetryHarness();
     const inner = {
+      generateCompletionOutcome: vi.fn(async () => ({
+        text: "ok",
+        toolCalls: [],
+        finishReason: "stop",
+      })),
       generateTextOutcome: vi.fn(async () => ({
         text: "secret-output",
         usage: { inputTokens: 3, outputTokens: 5, totalTokens: 8 },

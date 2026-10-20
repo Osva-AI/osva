@@ -564,7 +564,9 @@ export { JOB_ENQUEUE_OUTCOMES } from "./job-queue.js";
 
 export {
   MODEL_BINDING_NAME_PATTERN,
+  MODEL_CONVERSATION_ROLES,
   MODEL_ERROR_CODES,
+  MODEL_FINISH_REASONS,
   MODEL_MAX_OUTPUT_TOKENS_MAX,
   MODEL_MAX_OUTPUT_TOKENS_MIN,
   MODEL_PROVIDER_MODEL_ID_MAX_LENGTH,
@@ -574,20 +576,29 @@ export {
   MODEL_TEXT_ROLES,
   isModelBindingName,
   isModelErrorCode,
+  isModelFinishReason,
   isModelProvider,
 } from "./model-gateway.js";
 export type {
+  GenerateCompletionInput,
+  GenerateCompletionRequest,
+  GenerateCompletionResult,
   GenerateTextInput,
   GenerateTextRequest,
   GenerateTextResult,
+  ModelConversationMessage,
+  ModelConversationRole,
   ModelErrorCode,
+  ModelFinishReason,
   ModelGateway,
   ModelProvider,
   ModelRequest,
   ModelResponse,
   ModelTextMessage,
   ModelTextRole,
+  ModelToolCall,
   ModelToolDefinition,
+  ModelToolResultMessage,
   ModelUsage,
 } from "./model-gateway.js";
 

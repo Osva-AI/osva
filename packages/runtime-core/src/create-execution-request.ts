@@ -41,7 +41,9 @@ export function createExecutionRequest(
     agentVersionId: source.run.effectiveBindings.agentVersionId,
     runtime: source.agentVersion.manifest.runtime,
     input: source.run.input,
-    effectiveConfig: Object.freeze({}),
+    effectiveConfig: Object.freeze({
+      agentOutputSchema: source.agentVersion.manifest.output.schema,
+    }),
     modelProfileVersionBindings:
       source.run.effectiveBindings.modelProfileVersionBindings,
     toolVersionBindings: source.run.effectiveBindings.toolVersionBindings,

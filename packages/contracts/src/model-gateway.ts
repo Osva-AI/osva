@@ -13,6 +13,24 @@ export const MODEL_TEXT_ROLES = ["system", "user", "assistant"] as const;
 
 export type ModelTextRole = (typeof MODEL_TEXT_ROLES)[number];
 
+export const MODEL_CONVERSATION_ROLES = [...MODEL_TEXT_ROLES, "tool"] as const;
+
+export type ModelConversationRole = (typeof MODEL_CONVERSATION_ROLES)[number];
+
+export const MODEL_FINISH_REASONS = [
+  "stop",
+  "length",
+  "blocked",
+  "tool_call",
+  "other",
+] as const;
+
+export type ModelFinishReason = (typeof MODEL_FINISH_REASONS)[number];
+
+export function isModelFinishReason(value: string): value is ModelFinishReason {
+  return (MODEL_FINISH_REASONS as readonly string[]).includes(value);
+}
+
 export const MODEL_BINDING_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 
 export const MODEL_TEXT_CONTENT_MAX_LENGTH = 32_768;
@@ -59,9 +77,36 @@ export interface ModelTextMessage {
   readonly content: string;
 }
 
+export interface ModelToolResultMessage {
+  readonly role: "tool";
+  readonly toolCallId: string;
+  readonly name: string;
+  readonly content: string;
+}
+
+export type ModelConversationMessage =
+  ModelTextMessage | ModelToolResultMessage;
+
+export interface ModelToolCall {
+  readonly id: string;
+  readonly name: string;
+  readonly arguments: unknown;
+}
+
 export interface GenerateTextInput {
   readonly messages: readonly ModelTextMessage[];
   readonly maxOutputTokens?: number;
+}
+
+export interface GenerateCompletionInput {
+  readonly messages: readonly ModelConversationMessage[];
+  readonly maxOutputTokens?: number;
+  readonly toolDefinitions?: readonly ModelToolDefinition[];
+  /**
+   When set, providers that support JSON/schema-constrained output may use this
+   for the completion. Omitted for intermediate tool-loop turns.
+   */
+  readonly jsonSchema?: JsonSchemaRecord;
 }
 
 /**
@@ -72,8 +117,18 @@ export interface GenerateTextRequest extends GenerateTextInput {
   readonly modelProfileVersionId: ModelProfileVersionId;
 }
 
+export interface GenerateCompletionRequest extends GenerateCompletionInput {
+  readonly modelProfileVersionId: ModelProfileVersionId;
+}
+
 export interface GenerateTextResult {
   readonly text: string;
+}
+
+export interface GenerateCompletionResult {
+  readonly text?: string;
+  readonly toolCalls: readonly ModelToolCall[];
+  readonly finishReason: ModelFinishReason;
 }
 
 export interface ModelToolDefinition {
@@ -121,4 +176,7 @@ export interface ModelResponse {
  */
 export interface ModelGateway {
   generateText(request: GenerateTextRequest): Promise<GenerateTextResult>;
+  generateCompletion(
+    request: GenerateCompletionRequest,
+  ): Promise<GenerateCompletionResult>;
 }

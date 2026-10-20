@@ -1,5 +1,8 @@
-import type { ModelTextMessage } from "@osva-ai/contracts";
-import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
+import type {
+  ModelConversationMessage,
+  ModelToolCall,
+} from "@osva-ai/contracts";
+import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
   type ModelProviderAdapter,
@@ -44,20 +47,197 @@ export class OpenAIProviderAdapter implements ModelProviderAdapter {
   async generateText(
     request: ResolvedProviderGenerateTextRequest,
   ): Promise<ProviderGenerateTextResult> {
-    const params = toResponsesCreateParams(request);
-
     try {
+      if (requiresChatCompletions(request)) {
+        return await this.generateChatCompletion(request);
+      }
+
+      const params = toResponsesCreateParams(request);
       const response = await this.client.responses.create(params, {
         signal: request.signal,
       });
       return {
-        text: normalizeOutputText(response.output_text),
+        text: normalizeRequiredOutputText(response.output_text),
+        finishReason: "stop",
         usage: normalizeUsage(response.usage),
       };
     } catch (error) {
       throw mapOpenAIError(error);
     }
   }
+
+  private async generateChatCompletion(
+    request: ResolvedProviderGenerateTextRequest,
+  ): Promise<ProviderGenerateTextResult> {
+    const messages = toChatCompletionMessages(request.messages);
+    const response = await this.client.chat.completions.create(
+      {
+        model: request.model,
+        messages,
+        max_tokens: request.maxOutputTokens,
+        tools:
+          request.toolDefinitions === undefined ||
+          request.toolDefinitions.length === 0
+            ? undefined
+            : request.toolDefinitions.map((tool) => ({
+                type: "function" as const,
+                function: {
+                  name: tool.name,
+                  description: tool.description,
+                  parameters: tool.inputSchema,
+                },
+              })),
+        response_format:
+          request.jsonSchema === undefined
+            ? undefined
+            : {
+                type: "json_schema" as const,
+                json_schema: {
+                  name: "agent_output",
+                  schema: request.jsonSchema,
+                  strict: true,
+                },
+              },
+      },
+      { signal: request.signal },
+    );
+
+    const choice = response.choices[0];
+    if (choice === undefined) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned no choices.",
+      );
+    }
+
+    const toolCalls = normalizeOpenAiToolCalls(choice.message.tool_calls);
+    const text = choice.message.content?.trim();
+    const finishReason =
+      toolCalls.length > 0
+        ? ("tool_call" as const)
+        : choice.finish_reason === "length"
+          ? ("length" as const)
+          : ("stop" as const);
+
+    if (toolCalls.length === 0 && (text === undefined || text.length === 0)) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned no textual output.",
+      );
+    }
+
+    return {
+      text: text && text.length > 0 ? text : undefined,
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+      finishReason,
+      usage: normalizeChatUsage(response.usage),
+      providerRequestId: response.id,
+      providerFinishReason: choice.finish_reason ?? undefined,
+    };
+  }
+}
+
+function requiresChatCompletions(
+  request: ResolvedProviderGenerateTextRequest,
+): boolean {
+  if (request.jsonSchema !== undefined) {
+    return true;
+  }
+
+  if (
+    request.toolDefinitions !== undefined &&
+    request.toolDefinitions.length > 0
+  ) {
+    return true;
+  }
+
+  return request.messages.some((message) => message.role === "tool");
+}
+
+function toChatCompletionMessages(
+  messages: readonly ModelConversationMessage[],
+): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+  const mapped: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+
+  for (const message of messages) {
+    if (message.role === "system") {
+      mapped.push({ role: "system", content: message.content });
+      continue;
+    }
+
+    if (message.role === "assistant") {
+      mapped.push({ role: "assistant", content: message.content });
+      continue;
+    }
+
+    if (message.role === "tool") {
+      mapped.push({
+        role: "tool",
+        tool_call_id: message.toolCallId,
+        content: message.content,
+      });
+      continue;
+    }
+
+    mapped.push({ role: "user", content: message.content });
+  }
+
+  return mapped;
+}
+
+function normalizeOpenAiToolCalls(
+  toolCalls:
+    OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] | undefined,
+): readonly ModelToolCall[] {
+  if (toolCalls === undefined || toolCalls.length === 0) {
+    return [];
+  }
+
+  const normalized: ModelToolCall[] = [];
+  for (const call of toolCalls) {
+    if (call.type !== "function") {
+      continue;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(call.function.arguments);
+    } catch {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned invalid tool arguments.",
+      );
+    }
+
+    if (!isCanonicalJsonValue(parsed)) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned invalid tool arguments.",
+      );
+    }
+
+    normalized.push({
+      id: call.id,
+      name: call.function.name,
+      arguments: parsed,
+    });
+  }
+
+  return normalized;
+}
+
+function normalizeChatUsage(
+  usage: OpenAI.Completions.CompletionUsage | undefined,
+): NormalizedModelUsage | undefined {
+  if (usage === undefined) {
+    return undefined;
+  }
+
+  return {
+    inputTokens: usage.prompt_tokens,
+    outputTokens: usage.completion_tokens,
+    totalTokens: usage.total_tokens,
+  };
 }
 
 function toResponsesCreateParams(
@@ -68,7 +248,7 @@ function toResponsesCreateParams(
     .map((message) => message.content)
     .join("\n\n");
   const input = request.messages
-    .filter((message) => message.role !== "system")
+    .filter((message) => message.role !== "system" && message.role !== "tool")
     .map(toResponseInputMessage);
 
   const params: ResponseCreateParamsNonStreaming = {
@@ -88,7 +268,7 @@ function toResponsesCreateParams(
   return params;
 }
 
-function toResponseInputMessage(message: ModelTextMessage): {
+function toResponseInputMessage(message: ModelConversationMessage): {
   readonly type: "message";
   readonly role: "user" | "assistant";
   readonly content: string;
@@ -100,7 +280,9 @@ function toResponseInputMessage(message: ModelTextMessage): {
   };
 }
 
-function normalizeOutputText(outputText: string | null | undefined): string {
+function normalizeRequiredOutputText(
+  outputText: string | null | undefined,
+): string {
   if (typeof outputText !== "string" || outputText.trim().length === 0) {
     throw new ModelGatewayError(
       MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,

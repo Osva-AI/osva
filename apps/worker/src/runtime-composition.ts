@@ -9,6 +9,7 @@ import {
   RemoteHttpRuntimeAdapter,
   type RuntimeExecutionBootstrapStore,
 } from "@osva/adapters-runtime-http";
+import { DeclarativeRuntimeAdapter } from "@osva/adapters-runtime-declarative";
 import { TrustedTypeScriptRuntimeAdapter } from "@osva/adapters-runtime-typescript";
 import type { AgentRuntimeType, RuntimeAdapter } from "@osva-ai/contracts";
 
@@ -41,10 +42,29 @@ export interface ContainerRuntimeComposition {
   };
 }
 
+export interface DeclarativeRuntimeComposition {
+  readonly createScopedModelGateway: (
+    execution: import("@osva-ai/contracts").ExecutionRequest,
+  ) =>
+    | import("@osva/adapters-runtime-declarative").DeclarativeRuntimeModelGateway
+    | undefined;
+  readonly createScopedToolGateway: (
+    execution: import("@osva-ai/contracts").ExecutionRequest,
+  ) =>
+    | import("@osva/adapters-runtime-declarative").DeclarativeRuntimeToolGateway
+    | undefined;
+  readonly resolveToolMetadata: import("@osva/adapters-runtime-declarative").DeclarativeRuntimeAdapterOptions["resolveToolMetadata"];
+  readonly logger?: {
+    info(event: string, fields?: Readonly<Record<string, unknown>>): void;
+    error(event: string, error: unknown): void;
+  };
+}
+
 export interface ComposeRuntimeExecutorsOptions {
   readonly config: WorkerConfig;
   readonly trusted: TrustedRuntimeComposition;
   readonly remoteHttp: RemoteHttpRuntimeComposition;
+  readonly declarative: DeclarativeRuntimeComposition;
   readonly container?: ContainerRuntimeComposition;
   readonly secretResolver?: ProcessEnvSecretResolver;
 }
@@ -57,6 +77,12 @@ export function composeRuntimeExecutors(
 
   const executors: Partial<Record<AgentRuntimeType, RuntimeAdapter>> = {
     TRUSTED_TYPESCRIPT: options.trusted.trustedAdapter,
+    DECLARATIVE: new DeclarativeRuntimeAdapter({
+      logger: options.declarative.logger,
+      createScopedModelGateway: options.declarative.createScopedModelGateway,
+      createScopedToolGateway: options.declarative.createScopedToolGateway,
+      resolveToolMetadata: options.declarative.resolveToolMetadata,
+    }),
     REMOTE_HTTP: new RemoteHttpRuntimeAdapter({
       secretResolver,
       getCapabilityBaseUrl: options.remoteHttp.getCapabilityBaseUrl,

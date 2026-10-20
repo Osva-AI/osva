@@ -1,6 +1,6 @@
 import { RuntimeExecutionBootstrapStore } from "@osva/adapters-runtime-http";
 import { TrustedTypeScriptRuntimeAdapter } from "@osva/adapters-runtime-typescript";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { loadWorkerConfig } from "../src/config.js";
 import { composeRuntimeExecutors } from "../src/runtime-composition.js";
@@ -8,6 +8,12 @@ import { composeRuntimeExecutors } from "../src/runtime-composition.js";
 const baseEnv = {
   OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
   OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+};
+
+const declarativeComposition = {
+  createScopedModelGateway: vi.fn(),
+  createScopedToolGateway: vi.fn(),
+  resolveToolMetadata: vi.fn(),
 };
 
 describe("composeRuntimeExecutors", () => {
@@ -29,10 +35,12 @@ describe("composeRuntimeExecutors", () => {
         allowPrivateNetworks: false,
         clock: { now: () => new Date() },
       },
+      declarative: declarativeComposition,
     });
     expect(disabled.CONTAINER).toBeUndefined();
     expect(disabled.TRUSTED_TYPESCRIPT).toBeDefined();
     expect(disabled.REMOTE_HTTP).toBeDefined();
+    expect(disabled.DECLARATIVE).toBeDefined();
 
     const enabledConfig = loadWorkerConfig({
       ...baseEnv,
@@ -52,6 +60,7 @@ describe("composeRuntimeExecutors", () => {
         allowPrivateNetworks: false,
         clock: { now: () => new Date() },
       },
+      declarative: declarativeComposition,
       container: {
         getCapabilityBaseUrl: () => "http://host.docker.internal:8080",
         capabilitySecret: "secret",

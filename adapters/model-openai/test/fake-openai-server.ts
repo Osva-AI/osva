@@ -31,11 +31,18 @@ export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIRespon
         body = raw;
       }
 
+      const url = req.url ?? "/";
+
       requests.push({
         method: req.method ?? "GET",
-        url: req.url ?? "/",
+        url,
         body,
       });
+
+      if (url.includes("/chat/completions")) {
+        writeChatCompletionResponse(body, res);
+        return;
+      }
 
       const prompt = extractPrompt(body);
       if (prompt === "hang") {
@@ -149,6 +156,124 @@ export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIRespon
       });
     },
   };
+}
+
+function writeChatCompletionResponse(
+  body: unknown,
+  res: http.ServerResponse,
+): void {
+  const record =
+    body !== null && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : {};
+  const tools = record.tools;
+  const hasTools = Array.isArray(tools) && tools.length > 0;
+  const scenario = extractChatScenario(body);
+  const usage = {
+    prompt_tokens: 120,
+    completion_tokens: 15,
+    total_tokens: 135,
+  };
+
+  const messages = record.messages;
+  const hasToolResults =
+    Array.isArray(messages) &&
+    messages.some(
+      (message) =>
+        message !== null &&
+        typeof message === "object" &&
+        (message as Record<string, unknown>).role === "tool",
+    );
+
+  if (hasTools && !hasToolResults) {
+    const toolName =
+      scenario === "declarative-unauthorized" ? "blocked" : "echo";
+    const argumentsJson =
+      toolName === "echo"
+        ? JSON.stringify({ value: "declarative-tool-input" })
+        : JSON.stringify({ value: "blocked" });
+
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        id: "chat_tool",
+        object: "chat.completion",
+        choices: [
+          {
+            index: 0,
+            finish_reason: "tool_calls",
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                {
+                  id: "call_declarative_1",
+                  type: "function",
+                  function: { name: toolName, arguments: argumentsJson },
+                },
+              ],
+            },
+          },
+        ],
+        usage,
+      }),
+    );
+    return;
+  }
+
+  const answer =
+    scenario === "declarative-tool-flow"
+      ? "declarative-after-tool"
+      : "declarative-ok";
+
+  res.writeHead(200, { "content-type": "application/json" });
+  res.end(
+    JSON.stringify({
+      id: "chat_json",
+      object: "chat.completion",
+      choices: [
+        {
+          index: 0,
+          finish_reason: "stop",
+          message: {
+            role: "assistant",
+            content: JSON.stringify({ answer }),
+          },
+        },
+      ],
+      usage,
+    }),
+  );
+}
+
+function extractChatScenario(body: unknown): string {
+  if (body === null || typeof body !== "object") {
+    return "";
+  }
+
+  const record = body as Record<string, unknown>;
+  const messages = record.messages;
+  if (!Array.isArray(messages)) {
+    return "";
+  }
+
+  for (const message of messages) {
+    if (message === null || typeof message !== "object") {
+      continue;
+    }
+    const content = (message as Record<string, unknown>).content;
+    if (typeof content !== "string") {
+      continue;
+    }
+    if (content.includes("declarative-unauthorized")) {
+      return "declarative-unauthorized";
+    }
+    if (content.includes("declarative-tool-flow")) {
+      return "declarative-tool-flow";
+    }
+  }
+
+  return "";
 }
 
 function extractPrompt(body: unknown): string {

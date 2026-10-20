@@ -184,13 +184,17 @@ export {
 export { jobQueuePayloadSchema } from "./job-queue.js";
 
 export {
+  generateCompletionInputSchema,
+  generateCompletionResultSchema,
   generateTextInputSchema,
   generateTextResultSchema,
+  modelConversationMessageSchema,
   modelProviderModelIdSchema,
   modelProviderSchema,
   modelRequestSchema,
   modelResponseSchema,
   modelTextMessageSchema,
+  modelToolCallSchema,
   modelUsageSchema,
 } from "./model-gateway.js";
 

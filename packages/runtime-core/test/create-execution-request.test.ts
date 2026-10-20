@@ -108,7 +108,9 @@ describe("createExecutionRequest", () => {
         key: "example-agent",
       },
       input: RUN_INPUT,
-      effectiveConfig: {},
+      effectiveConfig: {
+        agentOutputSchema: createVersion().manifest.output.schema,
+      },
       modelProfileVersionBindings:
         run.effectiveBindings.modelProfileVersionBindings,
       toolVersionBindings: run.effectiveBindings.toolVersionBindings,

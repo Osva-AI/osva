@@ -1,11 +1,16 @@
 import type {
+  GenerateCompletionRequest,
+  GenerateCompletionResult,
   GenerateTextRequest,
   GenerateTextResult,
   ModelGateway as ModelGatewayPort,
   ModelProvider,
 } from "@osva-ai/contracts";
-import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
-import { generateTextInputSchema } from "@osva-ai/contracts/schemas";
+import { MODEL_ERROR_CODES, isModelFinishReason } from "@osva-ai/contracts";
+import {
+  generateCompletionInputSchema,
+  generateTextInputSchema,
+} from "@osva-ai/contracts/schemas";
 import type { ModelProfileRepository } from "@osva/domain";
 
 import { ModelGatewayError } from "./errors.js";
@@ -47,7 +52,31 @@ export class ModelGateway implements ModelGatewayPort {
     options?: ModelGatewayGenerateTextOptions,
   ): Promise<GenerateTextResult> {
     const outcome = await this.generateTextOutcome(request, options);
+    if (outcome.text === undefined || outcome.text.trim().length === 0) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned no textual output.",
+      );
+    }
     return { text: outcome.text };
+  }
+
+  async generateCompletion(
+    request: GenerateCompletionRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): Promise<GenerateCompletionResult> {
+    const outcome = await this.generateCompletionOutcome(request, options);
+    const finishReason =
+      outcome.finishReason !== undefined &&
+      isModelFinishReason(outcome.finishReason)
+        ? outcome.finishReason
+        : "other";
+
+    return {
+      text: outcome.text,
+      toolCalls: outcome.toolCalls ?? [],
+      finishReason,
+    };
   }
 
   async generateTextOutcome(
@@ -65,7 +94,50 @@ export class ModelGateway implements ModelGatewayPort {
       );
     }
 
-    if (!request.modelProfileVersionId) {
+    return this.invokeProviderGenerate({
+      modelProfileVersionId: request.modelProfileVersionId,
+      messages: parsed.data.messages,
+      maxOutputTokens: parsed.data.maxOutputTokens,
+      signal: options?.signal,
+    });
+  }
+
+  async generateCompletionOutcome(
+    request: GenerateCompletionRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): Promise<ProviderGenerateTextResult> {
+    const parsed = generateCompletionInputSchema.safeParse({
+      messages: request.messages,
+      maxOutputTokens: request.maxOutputTokens,
+      toolDefinitions: request.toolDefinitions,
+      jsonSchema: request.jsonSchema,
+    });
+    if (!parsed.success) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+        "Model generateCompletion request is invalid.",
+      );
+    }
+
+    return this.invokeProviderGenerate({
+      modelProfileVersionId: request.modelProfileVersionId,
+      messages: parsed.data.messages,
+      maxOutputTokens: parsed.data.maxOutputTokens,
+      toolDefinitions: parsed.data.toolDefinitions,
+      jsonSchema: parsed.data.jsonSchema,
+      signal: options?.signal,
+    });
+  }
+
+  private async invokeProviderGenerate(input: {
+    readonly modelProfileVersionId: GenerateTextRequest["modelProfileVersionId"];
+    readonly messages: GenerateCompletionRequest["messages"];
+    readonly maxOutputTokens?: number;
+    readonly toolDefinitions?: GenerateCompletionRequest["toolDefinitions"];
+    readonly jsonSchema?: GenerateCompletionRequest["jsonSchema"];
+    readonly signal?: AbortSignal;
+  }): Promise<ProviderGenerateTextResult> {
+    if (!input.modelProfileVersionId) {
       throw new ModelGatewayError(
         MODEL_ERROR_CODES.MODEL_PROFILE_VERSION_NOT_FOUND,
         "ModelProfileVersion was not found.",
@@ -73,7 +145,7 @@ export class ModelGateway implements ModelGatewayPort {
     }
 
     const version = await this.deps.modelProfiles.findModelProfileVersionById(
-      request.modelProfileVersionId,
+      input.modelProfileVersionId,
     );
     if (version === null) {
       throw new ModelGatewayError(
@@ -101,9 +173,11 @@ export class ModelGateway implements ModelGatewayPort {
 
     return adapter.generateText({
       model: version.model,
-      messages: parsed.data.messages,
-      maxOutputTokens: parsed.data.maxOutputTokens,
-      signal: options?.signal,
+      messages: input.messages,
+      maxOutputTokens: input.maxOutputTokens,
+      toolDefinitions: input.toolDefinitions,
+      jsonSchema: input.jsonSchema,
+      signal: input.signal,
     });
   }
 }

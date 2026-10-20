@@ -1,5 +1,8 @@
-import type { ModelTextMessage } from "@osva-ai/contracts";
-import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
+import type {
+  ModelConversationMessage,
+  ModelToolCall,
+} from "@osva-ai/contracts";
+import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
   type ModelFinishReason,
@@ -78,10 +81,37 @@ function toAnthropicCreateParams(
     params.system = systemContent;
   }
 
+  if (
+    request.toolDefinitions !== undefined &&
+    request.toolDefinitions.length > 0
+  ) {
+    params.tools = request.toolDefinitions.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema: {
+        type: "object",
+        ...tool.inputSchema,
+      },
+    }));
+  }
+
   return params;
 }
 
-function toAnthropicMessage(message: ModelTextMessage): MessageParam {
+function toAnthropicMessage(message: ModelConversationMessage): MessageParam {
+  if (message.role === "tool") {
+    return {
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: message.toolCallId,
+          content: message.content,
+        },
+      ],
+    };
+  }
+
   return {
     role: message.role === "assistant" ? "assistant" : "user",
     content: message.content,
@@ -91,11 +121,25 @@ function toAnthropicMessage(message: ModelTextMessage): MessageParam {
 function normalizeAnthropicResponse(
   message: Message,
 ): ProviderGenerateTextResult {
-  const text = normalizeOutputText(message.content);
+  const toolCalls = normalizeToolCalls(message.content);
+  const text = normalizeOptionalOutputText(message.content);
   const finish = normalizeAnthropicFinishReason(message.stop_reason);
+
+  if (
+    toolCalls.length === 0 &&
+    (text === undefined || text.length === 0) &&
+    finish.reason !== "blocked"
+  ) {
+    throw new ModelGatewayError(
+      MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+      "The model provider returned no usable output.",
+      { provider: ANTHROPIC_PROVIDER, retryable: false },
+    );
+  }
 
   return {
     text,
+    toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     usage: normalizeUsage(message.usage),
     finishReason: finish.reason,
     providerFinishReason: finish.raw,
@@ -103,25 +147,44 @@ function normalizeAnthropicResponse(
   };
 }
 
-function normalizeOutputText(content: Message["content"]): string {
+function normalizeOptionalOutputText(
+  content: Message["content"],
+): string | undefined {
   const text = content
     .filter((block) => block.type === "text")
     .map((block) => (block.type === "text" ? block.text : ""))
     .join("")
     .trim();
 
-  if (text.length === 0) {
-    const unsupported = content.some((block) => block.type !== "text");
-    throw new ModelGatewayError(
-      MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
-      unsupported
-        ? "The model provider returned unsupported output types."
-        : "The model provider returned no textual output.",
-      { provider: ANTHROPIC_PROVIDER, retryable: false },
-    );
+  return text.length > 0 ? text : undefined;
+}
+
+function normalizeToolCalls(
+  content: Message["content"],
+): readonly ModelToolCall[] {
+  const calls: ModelToolCall[] = [];
+
+  for (const block of content) {
+    if (block.type !== "tool_use") {
+      continue;
+    }
+
+    if (!isCanonicalJsonValue(block.input)) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned invalid tool arguments.",
+        { provider: ANTHROPIC_PROVIDER, retryable: false },
+      );
+    }
+
+    calls.push({
+      id: block.id,
+      name: block.name,
+      arguments: block.input,
+    });
   }
 
-  return text;
+  return calls;
 }
 
 function normalizeUsage(

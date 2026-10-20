@@ -66,8 +66,14 @@ describe("RunStepRecorder", () => {
     };
 
     const inner = {
+      generateCompletionOutcome: vi.fn(async () => ({
+        text: "ok",
+        toolCalls: [],
+        finishReason: "stop",
+      })),
       generateTextOutcome: vi.fn(async () => ({
         text: "hello",
+        finishReason: "stop",
         usage: {
           inputTokens: 120,
           outputTokens: 15,

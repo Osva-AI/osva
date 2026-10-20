@@ -1,4 +1,8 @@
-import type { ModelTextMessage } from "@osva-ai/contracts";
+import type {
+  JsonSchemaRecord,
+  ModelConversationMessage,
+  ModelToolDefinition,
+} from "@osva-ai/contracts";
 
 import type { ProviderGenerateTextResult } from "./usage.js";
 
@@ -9,8 +13,10 @@ import type { ProviderGenerateTextResult } from "./usage.js";
  */
 export interface ResolvedProviderGenerateTextRequest {
   readonly model: string;
-  readonly messages: readonly ModelTextMessage[];
+  readonly messages: readonly ModelConversationMessage[];
   readonly maxOutputTokens?: number;
+  readonly toolDefinitions?: readonly ModelToolDefinition[];
+  readonly jsonSchema?: JsonSchemaRecord;
   readonly signal?: AbortSignal;
 }
 

@@ -132,14 +132,7 @@ export async function startFakeAnthropicMessagesServer(): Promise<FakeAnthropicM
             role: "assistant",
             model: "claude-test",
             stop_reason: "end_turn",
-            content: [
-              {
-                type: "tool_use",
-                id: "tool_1",
-                name: "lookup",
-                input: {},
-              },
-            ],
+            content: [],
           }),
         );
         return;

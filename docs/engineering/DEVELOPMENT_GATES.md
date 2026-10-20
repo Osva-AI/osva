@@ -148,3 +148,4 @@ Before completion, run `pnpm verify:ci:clean`.
 Do not return a successful implementation report unless the final gate
 passes or a concrete environmental limitation is explicitly reported.
 ```
+Agent verification budget: Coding agents may execute focused tests and targeted package checks. Repository-wide verification gates (verify:changed, verify:ci:clean) are operator-owned and must not be launched automatically. A failed or timed-out check must be diagnosed from existing output before any retry. No repeated full-suite runs, detached test processes, or concurrent heavy checks. Full clean verification is reserved for explicit operator-requested release qualification.
