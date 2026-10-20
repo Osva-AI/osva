@@ -1,33 +1,30 @@
 import path from "node:path";
 
-export const ARTIFACT_STORAGE_DRIVER_FILESYSTEM = "filesystem" as const;
-export const ARTIFACT_STORAGE_DRIVER_S3 = "s3" as const;
+import {
+  ARTIFACT_STORAGE_DRIVER_FILESYSTEM,
+  ARTIFACT_STORAGE_DRIVER_REGISTERED,
+  ARTIFACT_STORAGE_DRIVER_S3,
+  DEFAULT_ARTIFACT_FILESYSTEM_ROOT,
+  DEFAULT_ARTIFACT_MAX_BYTES,
+  type ArtifactStorageConfig,
+  type ArtifactStorageConfigFilesystem,
+  type ArtifactStorageConfigRegistered,
+  type ArtifactStorageConfigS3,
+  type ArtifactStorageDriver,
+} from "@osva-ai/contracts";
 
-export type ArtifactStorageDriver =
-  typeof ARTIFACT_STORAGE_DRIVER_FILESYSTEM | typeof ARTIFACT_STORAGE_DRIVER_S3;
-
-export const DEFAULT_ARTIFACT_FILESYSTEM_ROOT = ".osva/artifacts";
-export const DEFAULT_ARTIFACT_MAX_BYTES = 67_108_864;
-
-export interface ArtifactStorageConfigFilesystem {
-  readonly driver: typeof ARTIFACT_STORAGE_DRIVER_FILESYSTEM;
-  readonly filesystemRoot: string;
-  readonly maxBytes: number;
-}
-
-export interface ArtifactStorageConfigS3 {
-  readonly driver: typeof ARTIFACT_STORAGE_DRIVER_S3;
-  readonly maxBytes: number;
-  readonly bucket: string;
-  readonly region: string;
-  readonly endpoint?: string;
-  readonly accessKeyId?: string;
-  readonly secretAccessKey?: string;
-  readonly forcePathStyle: boolean;
-}
-
-export type ArtifactStorageConfig =
-  ArtifactStorageConfigFilesystem | ArtifactStorageConfigS3;
+export {
+  ARTIFACT_STORAGE_DRIVER_FILESYSTEM,
+  ARTIFACT_STORAGE_DRIVER_REGISTERED,
+  ARTIFACT_STORAGE_DRIVER_S3,
+  DEFAULT_ARTIFACT_FILESYSTEM_ROOT,
+  DEFAULT_ARTIFACT_MAX_BYTES,
+  type ArtifactStorageConfig,
+  type ArtifactStorageConfigFilesystem,
+  type ArtifactStorageConfigRegistered,
+  type ArtifactStorageConfigS3,
+  type ArtifactStorageDriver,
+};
 
 export function loadArtifactStorageConfig(
   env: NodeJS.ProcessEnv = process.env,
@@ -68,8 +65,19 @@ export function loadArtifactStorageConfig(
     };
   }
 
+  if (driverRaw === ARTIFACT_STORAGE_DRIVER_REGISTERED) {
+    const registerModule = readRequired(
+      env.OSVA_ARTIFACT_BLOB_STORE_REGISTER_MODULE,
+    );
+    return {
+      driver: ARTIFACT_STORAGE_DRIVER_REGISTERED,
+      maxBytes,
+      registerModule,
+    };
+  }
+
   throw new Error(
-    `Unsupported OSVA_ARTIFACT_STORAGE_DRIVER '${driverRaw}'. Supported values: filesystem, s3.`,
+    `Unsupported OSVA_ARTIFACT_STORAGE_DRIVER '${driverRaw}'. Supported values: filesystem, s3, registered.`,
   );
 }
 

@@ -4,6 +4,7 @@ import {
   createArtifactBlobStore,
   loadArtifactStorageConfig,
 } from "@osva/adapters-artifact-storage";
+import type { ArtifactBlobStore } from "@osva-ai/contracts";
 import { BullMqKnowledgeIndexQueue } from "@osva/adapters-bullmq";
 import {
   createOpenTelemetryLifecycle,
@@ -51,6 +52,7 @@ export interface KnowledgeWorkerProcess {
 
 export interface KnowledgeWorkerProcessDependencies {
   readonly telemetry?: OpenTelemetryLifecycle;
+  readonly artifactBlobStore?: ArtifactBlobStore;
 }
 
 export function createKnowledgeWorkerProcess(
@@ -72,7 +74,8 @@ export function createKnowledgeWorkerProcess(
   const artifactsRepository = new PostgresArtifactRepository(database);
   const workspaces = new PostgresWorkspaceRepository(database);
   const runs = new PostgresRunRepository(database);
-  const blobStore = createArtifactBlobStore(artifactStorage);
+  const blobStore =
+    dependencies.artifactBlobStore ?? createArtifactBlobStore(artifactStorage);
   const clock = { now: () => new Date() };
   const ids = { createId: () => randomUUID() };
   const artifacts = createArtifactApplication({

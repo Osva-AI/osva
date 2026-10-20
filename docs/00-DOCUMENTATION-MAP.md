@@ -69,6 +69,8 @@
 - `operations/BACKUP_AND_RECOVERY.md`
 - `operations/M11_CLOSEOUT_SUMMARY.md`
 - `operations/M11_ACCEPTANCE_SUMMARY.md`
+- `operations/M12_4_2_ACCEPTANCE_SUMMARY.md`
+- `operations/M12_4_3_ACCEPTANCE_SUMMARY.md`
 - `release/COMPATIBILITY.md`
 - `release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`
 - `release/RC3_VERIFICATION.md`

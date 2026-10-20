@@ -18,7 +18,7 @@
   "dependencies": {
     "@osva/adapters-artifact-filesystem": "workspace:*",
     "@osva/adapters-artifact-s3": "workspace:*",
-    "@osva/domain": "workspace:*"
+    "@osva-ai/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

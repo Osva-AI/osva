@@ -17,7 +17,7 @@ export class PdfKnowledgeParser implements KnowledgeParser {
   async *parse(
     input: KnowledgeParserParseInput,
   ): AsyncIterable<KnowledgeTextSegmentV1> {
-    const buffer = await readStreamBuffer(input.content);
+    const buffer = await readStreamBuffer(input.content as Readable);
     const data = new Uint8Array(buffer);
     const document = await getDocument({
       data,

@@ -15,7 +15,8 @@ Stage 3.4 delivers Community Artifact storage for the control plane and runtimes
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `OSVA_ARTIFACT_STORAGE_DRIVER` | `filesystem` | `filesystem` or `s3` |
+| `OSVA_ARTIFACT_STORAGE_DRIVER` | `filesystem` | `filesystem`, `s3`, or trusted `registered` (see below) |
+| `OSVA_ARTIFACT_BLOB_STORE_REGISTER_MODULE` | — | Required when driver is `registered`: Node module specifier or `file:` URL exporting `createArtifactBlobStore()` |
 | `OSVA_ARTIFACT_FILESYSTEM_ROOT` | `.osva/artifacts` | Local blob root (single-host / shared filesystem deployments) |
 | `OSVA_ARTIFACT_MAX_BYTES` | `67108864` | Streaming upload limit |
 | `OSVA_ARTIFACT_S3_*` | — | S3-compatible backend (recommended for multi-node production) |

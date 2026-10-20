@@ -1,7 +1,10 @@
 import type { ChildProcess } from "node:child_process";
 import { PassThrough } from "node:stream";
 
-import type { ExecutionRequest } from "@osva-ai/contracts";
+import type {
+  ArtifactBlobReadHandle,
+  ExecutionRequest,
+} from "@osva-ai/contracts";
 import { ARTIFACT_ERROR_CODES } from "@osva-ai/contracts";
 
 import { TRUSTED_RUNTIME_ARTIFACT_IPC_CHUNK_BYTES } from "./constants.js";
@@ -44,10 +47,7 @@ export interface TrustedRuntimeArtifactApplication {
       execution: TrustedRuntimeArtifactExecution,
     ): Promise<{
       readonly artifact: RuntimeArtifactViewMessage;
-      readonly content: {
-        readonly sizeBytes: number;
-        readonly stream: AsyncIterable<Uint8Array | Buffer>;
-      };
+      readonly content: Pick<ArtifactBlobReadHandle, "sizeBytes" | "stream">;
     }>;
   };
 }
