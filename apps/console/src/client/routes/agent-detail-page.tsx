@@ -38,6 +38,13 @@ export function AgentDetailPage() {
   }
 
   const versions = versionsQuery.data?.versions ?? [];
+  const latestVersion =
+    versions.length === 0
+      ? undefined
+      : versions.reduce(
+          (latest, item) => (item.version > latest.version ? item : latest),
+          versions[0]!,
+        );
 
   return (
     <>
@@ -101,7 +108,21 @@ export function AgentDetailPage() {
               className="button primary"
               to={`/agents/${agentId}/versions/new`}
             >
-              Create version
+              New version
+            </Link>
+          ) : null}
+          {canWrite ? (
+            <Link
+              className="button"
+              to={`/agents/${agentId}/versions/new?from=${latestVersion?.id ?? ""}`}
+              aria-disabled={versions.length === 0}
+              onClick={(event) => {
+                if (versions.length === 0) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              Copy latest version
             </Link>
           ) : null}
         </div>

@@ -173,12 +173,14 @@ describe("M12.3 browser acceptance (Playwright)", () => {
         timeout: 30_000,
       });
 
-      // Agent + version with model and tool bindings
-      await page.goto(`${stack.consoleOrigin}/agents/new`);
+      // Agent + version with model and tool bindings (developer runtime path)
+      await page.goto(`${stack.consoleOrigin}/agents/new/developer`);
       await page.fill("#agent-key", "browser-combined");
       await page.fill("#agent-name", "Browser Combined");
-      await page.getByRole("button", { name: "Register agent" }).click();
-      await page.getByRole("link", { name: "Create version" }).click();
+      await page.getByRole("button", { name: "Register Agent" }).click();
+      await page.locator("#agent-version-manifest-json").waitFor({
+        timeout: 30_000,
+      });
 
       await page.fill("#agent-version-key", "browser-combined");
       await page.fill("#agent-version-name", "Browser Combined");

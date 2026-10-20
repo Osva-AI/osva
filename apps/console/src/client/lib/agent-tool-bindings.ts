@@ -1,5 +1,6 @@
 import { TOOL_BINDING_NAME_PATTERN } from "@osva-ai/contracts";
 
+import { syncDeclarativeToolBudgets } from "./declarative-agent-manifest";
 import { parseWorkflowRunInputJson } from "./workflow-run-input";
 
 export interface AgentToolBindingRow {
@@ -76,5 +77,6 @@ export function applyToolBindingsToManifestText(
   } else {
     record.tools = tools;
   }
-  return JSON.stringify(record, null, 2);
+  const synced = syncDeclarativeToolBudgets(record);
+  return JSON.stringify(synced, null, 2);
 }

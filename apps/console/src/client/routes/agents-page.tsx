@@ -31,7 +31,7 @@ export function AgentsPage() {
           </Link>
           {canWrite ? (
             <Link className="button primary" to="/agents/new">
-              Register Agent
+              Create Agent
             </Link>
           ) : null}
           <button
@@ -61,7 +61,7 @@ export function AgentsPage() {
       agentsQuery.data.agents.length === 0 ? (
         <EmptyState
           title="No agents yet."
-          description="Register an Agent in this workspace, then append an immutable AgentVersion before launching a Run."
+          description="Create a no-code agent in this workspace, or open an existing agent to publish a new version before launching a Run."
         />
       ) : null}
 

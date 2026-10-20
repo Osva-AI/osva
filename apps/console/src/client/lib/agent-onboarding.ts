@@ -74,11 +74,11 @@ export function firstAgentOnboardingSteps(
     },
     {
       id: "register",
-      title: "Register Agent or choose an example",
+      title: "Create Agent",
       description:
-        "Create a workspace Agent (key + name) or continue with the supported hello-agent example (no paid model provider).",
+        "Use the no-code studio for declarative agents, or the developer path for trusted TypeScript and other runtimes.",
       to: "/agents/new",
-      actionLabel: "Register Agent",
+      actionLabel: "Create Agent",
       requiresWrite: true,
     },
     {
