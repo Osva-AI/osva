@@ -96,6 +96,7 @@ import {
 } from "@osva/adapters-runtime-container";
 
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
+import { createDeclarativeToolMetadataResolver } from "./declarative-tool-metadata.js";
 import { composeRuntimeExecutors } from "./runtime-composition.js";
 import { createExecuteRunAttemptHandler } from "./execute-run-attempt-handler.js";
 import { logError, logEvent } from "./log.js";
@@ -222,8 +223,9 @@ export function createWorkerProcess(
         providers: legacyModelProviders,
         connectionResolver: modelProviderConnectionResolver,
       });
+      const toolsRepository = new PostgresToolRepository(database);
       const toolGateway = new ToolGateway({
-        tools: new PostgresToolRepository(database),
+        tools: toolsRepository,
         connectors,
         mcpClientPool,
         policy: new DefaultToolPolicy(),
@@ -395,6 +397,16 @@ export function createWorkerProcess(
               capabilitySecret: config.runtimeCapabilitySecret ?? "",
               allowPrivateNetworks: config.remoteHttpAllowPrivateNetworks,
               clock,
+              logger: {
+                info: logEvent,
+                error: logError,
+              },
+            },
+            declarative: {
+              createScopedModelGateway: scopedModel,
+              createScopedToolGateway: scopedTool,
+              resolveToolMetadata:
+                createDeclarativeToolMetadataResolver(toolsRepository),
               logger: {
                 info: logEvent,
                 error: logError,

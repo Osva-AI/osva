@@ -1,5 +1,8 @@
-import type { ModelTextMessage } from "@osva-ai/contracts";
-import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
+import type {
+  ModelConversationMessage,
+  ModelToolCall,
+} from "@osva-ai/contracts";
+import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
   type ModelFinishReason,
@@ -100,15 +103,38 @@ interface GeminiGenerateContentBody {
     parts: [{ text: string }];
   };
   contents: GeminiContent[];
+  tools?: readonly [
+    {
+      functionDeclarations: readonly {
+        name: string;
+        description?: string;
+        parameters: unknown;
+      }[];
+    },
+  ];
   generationConfig?: {
     maxOutputTokens?: number;
+    responseMimeType?: string;
+    responseSchema?: unknown;
   };
 }
 
 interface GeminiContent {
   role: "user" | "model";
-  parts: [{ text: string }];
+  parts: GeminiPart[];
 }
+
+type GeminiPart =
+  | { text: string }
+  | {
+      functionCall: { name: string; args: Record<string, unknown> };
+    }
+  | {
+      functionResponse: {
+        name: string;
+        response: Record<string, unknown>;
+      };
+    };
 
 interface GeminiGenerateContentResponse {
   readonly responseId?: string;
@@ -119,7 +145,7 @@ interface GeminiGenerateContentResponse {
 
 interface GeminiCandidate {
   content?: {
-    parts?: Array<{ text?: string }>;
+    parts?: GeminiPart[];
   };
   finishReason?: string;
 }
@@ -151,16 +177,72 @@ function toGeminiGenerateContentBody(
     body.systemInstruction = { parts: [{ text: systemContent }] };
   }
 
-  if (request.maxOutputTokens !== undefined) {
+  if (
+    request.maxOutputTokens !== undefined ||
+    request.jsonSchema !== undefined
+  ) {
     body.generationConfig = {
-      maxOutputTokens: request.maxOutputTokens,
+      ...(request.maxOutputTokens !== undefined
+        ? { maxOutputTokens: request.maxOutputTokens }
+        : {}),
+      ...(request.jsonSchema !== undefined
+        ? {
+            responseMimeType: "application/json",
+            responseSchema: request.jsonSchema,
+          }
+        : {}),
     };
+  }
+
+  if (
+    request.toolDefinitions !== undefined &&
+    request.toolDefinitions.length > 0
+  ) {
+    body.tools = [
+      {
+        functionDeclarations: request.toolDefinitions.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.inputSchema,
+        })),
+      },
+    ];
   }
 
   return body;
 }
 
-function toGeminiContent(message: ModelTextMessage): GeminiContent {
+function toGeminiContent(message: ModelConversationMessage): GeminiContent {
+  if (message.role === "tool") {
+    let response: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(message.content);
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        Array.isArray(parsed)
+      ) {
+        response = { result: parsed };
+      } else {
+        response = parsed as Record<string, unknown>;
+      }
+    } catch {
+      response = { result: message.content };
+    }
+
+    return {
+      role: "user",
+      parts: [
+        {
+          functionResponse: {
+            name: message.name,
+            response,
+          },
+        },
+      ],
+    };
+  }
+
   return {
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content }],
@@ -179,35 +261,74 @@ function normalizeGeminiResponse(
     );
   }
 
-  const text = normalizeOutputText(candidate.content?.parts);
+  const toolCalls = normalizeGeminiToolCalls(candidate.content?.parts);
+  const text = normalizeOptionalOutputText(candidate.content?.parts);
   const finish = normalizeGeminiFinishReason(candidate.finishReason);
+
+  if (
+    toolCalls.length === 0 &&
+    (text === undefined || text.length === 0) &&
+    finish.reason !== "blocked"
+  ) {
+    throw new ModelGatewayError(
+      MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+      "The model provider returned no usable output.",
+      { provider: GEMINI_PROVIDER, retryable: false },
+    );
+  }
 
   return {
     text,
+    toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     usage: normalizeUsage(payload.usageMetadata),
-    finishReason: finish.reason,
+    finishReason:
+      toolCalls.length > 0 && finish.reason === "stop"
+        ? "tool_call"
+        : finish.reason,
     providerFinishReason: finish.raw,
     providerRequestId: payload.responseId,
   };
 }
 
-function normalizeOutputText(
-  parts: Array<{ text?: string }> | undefined,
-): string {
+function normalizeOptionalOutputText(
+  parts: GeminiPart[] | undefined,
+): string | undefined {
   const text = (parts ?? [])
-    .map((part) => part.text ?? "")
+    .filter((part): part is { text: string } => "text" in part)
+    .map((part) => part.text)
     .join("")
     .trim();
 
-  if (text.length === 0) {
-    throw new ModelGatewayError(
-      MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
-      "The model provider returned no textual output.",
-      { provider: GEMINI_PROVIDER, retryable: false },
-    );
+  return text.length > 0 ? text : undefined;
+}
+
+function normalizeGeminiToolCalls(
+  parts: GeminiPart[] | undefined,
+): readonly ModelToolCall[] {
+  const calls: ModelToolCall[] = [];
+
+  for (const part of parts ?? []) {
+    if (!("functionCall" in part)) {
+      continue;
+    }
+
+    const args = part.functionCall.args;
+    if (!isCanonicalJsonValue(args)) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned invalid tool arguments.",
+        { provider: GEMINI_PROVIDER, retryable: false },
+      );
+    }
+
+    calls.push({
+      id: `${part.functionCall.name}-${calls.length + 1}`,
+      name: part.functionCall.name,
+      arguments: args,
+    });
   }
 
-  return text;
+  return calls;
 }
 
 function normalizeUsage(

@@ -361,6 +361,9 @@ describe("RuntimeCapabilityBridge", () => {
         async generateText() {
           return { text: "ok" };
         },
+        async generateCompletion() {
+          return { text: "ok", toolCalls: [], finishReason: "stop" };
+        },
       }),
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,

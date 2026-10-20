@@ -1,12 +1,15 @@
-import type { ModelTextMessage } from "@osva-ai/contracts";
+import type {
+  ModelConversationMessage,
+  ModelTextMessage,
+} from "@osva-ai/contracts";
 
 export interface SplitModelMessagesResult {
   readonly systemContent: string;
-  readonly conversation: readonly ModelTextMessage[];
+  readonly conversation: readonly ModelConversationMessage[];
 }
 
 export function splitSystemAndConversationMessages(
-  messages: readonly ModelTextMessage[],
+  messages: readonly ModelConversationMessage[],
 ): SplitModelMessagesResult {
   const systemContent = messages
     .filter((message) => message.role === "system")
@@ -15,4 +18,14 @@ export function splitSystemAndConversationMessages(
   const conversation = messages.filter((message) => message.role !== "system");
 
   return { systemContent, conversation };
+}
+
+export function isModelTextMessage(
+  message: ModelConversationMessage,
+): message is ModelTextMessage {
+  return (
+    message.role === "system" ||
+    message.role === "user" ||
+    message.role === "assistant"
+  );
 }

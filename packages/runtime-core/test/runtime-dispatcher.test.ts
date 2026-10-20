@@ -72,6 +72,36 @@ describe("RuntimeDispatcher", () => {
     expect(calls).toEqual(["trusted:run-attempt-1", "remote:run-attempt-1"]);
   });
 
+  it("routes DECLARATIVE runtimes to the declarative executor", async () => {
+    const calls: string[] = [];
+    const dispatcher = new RuntimeDispatcher({
+      executors: {
+        DECLARATIVE: recordingAdapter("declarative", calls),
+      },
+    });
+
+    const result = await dispatcher.execute({
+      ...trustedRequest,
+      runtime: {
+        type: "DECLARATIVE",
+        config: {
+          configVersion: "1",
+          instructions: "test",
+          modelBinding: "primary",
+          allowedToolBindings: [],
+          maxModelInvocations: 1,
+          maxToolInvocations: 0,
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      status: "succeeded",
+      output: { via: "declarative" },
+    });
+    expect(calls).toEqual(["declarative:run-attempt-1"]);
+  });
+
   it("fails closed when no executor is registered for the runtime type", async () => {
     const dispatcher = new RuntimeDispatcher({ executors: {} });
     const result = await dispatcher.execute(trustedRequest);

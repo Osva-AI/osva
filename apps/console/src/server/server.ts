@@ -22,7 +22,7 @@ export interface ConsoleServerOptions {
 export function createConsoleServer(
   options: ConsoleServerOptions = {},
 ): http.Server {
-  const config = options.config ?? tryLoadConsoleConfig();
+  const config = "config" in options ? options.config : tryLoadConsoleConfig();
   const testClient = "client" in options ? options.client : undefined;
   const legacyClient =
     config !== undefined &&

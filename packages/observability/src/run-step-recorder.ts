@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import type {
   ExecutionRequest,
+  GenerateCompletionRequest,
+  GenerateCompletionResult,
   GenerateTextRequest,
   GenerateTextResult,
   JsonValue,
@@ -116,6 +118,10 @@ export interface RuntimeModelGateway {
     request: GenerateTextRequest,
     options?: { readonly signal?: AbortSignal },
   ): Promise<GenerateTextResult>;
+  generateCompletion(
+    request: GenerateCompletionRequest,
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<GenerateCompletionResult>;
 }
 
 export interface RuntimeToolGateway {
@@ -256,7 +262,122 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
             );
           }
 
+          if (outcome.text === undefined || outcome.text.trim().length === 0) {
+            throw new Error(MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE);
+          }
+
           return { text: outcome.text };
+        } catch (error) {
+          const errorCategory = mapModelErrorCode(error);
+          await this.finalizeSafely(runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          span.setStatus(false, errorCategory);
+          span.recordException(error);
+          throw error;
+        }
+      },
+    );
+  }
+
+  async generateCompletion(
+    request: GenerateCompletionRequest,
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<GenerateCompletionResult> {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+    const bindingName = findModelBindingName(
+      this.execution.modelProfileVersionBindings,
+      request.modelProfileVersionId,
+    );
+    const startedAt = this.deps.clock.now();
+    const perfStartedAt = performance.now();
+    const runStepId = this.deps.ids.createId() as RunStepId;
+
+    const running = RunStep.start({
+      id: runStepId,
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      kind: "MODEL",
+      bindingName,
+      startedAt,
+      modelProfileVersionId: request.modelProfileVersionId,
+    });
+
+    try {
+      await this.deps.runs.insertRunningRunStep(running);
+    } catch (error) {
+      this.deps.logger?.error("observability.run_step_start_failed", error);
+    }
+
+    this.deps.logger?.info("observability.model_step_started", {
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      runStepId,
+      kind: "MODEL",
+      bindingName,
+    });
+
+    return telemetry.withSpan(
+      OSVA_SPAN.MODEL_GENERATE_TEXT,
+      {
+        [OSVA_ATTR.RUN_ID]: this.execution.runId,
+        [OSVA_ATTR.RUN_ATTEMPT_ID]: this.execution.runAttemptId,
+        [OSVA_ATTR.MODEL_PROFILE_VERSION_ID]: request.modelProfileVersionId,
+        [OSVA_ATTR.OPERATION]: "generate_completion",
+      },
+      async (span) => {
+        try {
+          const outcome = await this.inner.generateCompletionOutcome(
+            request,
+            options,
+          );
+          const version =
+            await this.deps.modelProfiles.findModelProfileVersionById(
+              request.modelProfileVersionId,
+            );
+          if (version !== null) {
+            span.setAttributes({
+              [OSVA_ATTR.PROVIDER]: version.provider,
+            });
+          }
+          const estimatedCostUsdMicros =
+            outcome.usage === undefined
+              ? null
+              : estimateModelCostUsdMicros(
+                  {
+                    inputTokens: outcome.usage.inputTokens,
+                    outputTokens: outcome.usage.outputTokens,
+                  },
+                  version?.pricing,
+                );
+
+          await this.finalizeSafely(runStepId, {
+            status: "SUCCEEDED",
+            completedAt: this.deps.clock.now(),
+            inputTokens: outcome.usage?.inputTokens,
+            outputTokens: outcome.usage?.outputTokens,
+            totalTokens: outcome.usage?.totalTokens,
+            cachedInputTokens: outcome.usage?.cachedInputTokens,
+            estimatedCostUsdMicros,
+          });
+
+          span.setStatus(true);
+          telemetry.recordCounter(OSVA_METRIC.MODEL_CALLS, 1, {
+            provider: version?.provider ?? "unknown",
+          });
+          telemetry.recordHistogram(
+            OSVA_METRIC.MODEL_DURATION_MS,
+            elapsedMs(perfStartedAt, performance.now()),
+            { provider: version?.provider ?? "unknown" },
+          );
+
+          return {
+            text: outcome.text,
+            toolCalls: outcome.toolCalls ?? [],
+            finishReason: outcome.finishReason ?? "other",
+          };
         } catch (error) {
           const errorCategory = mapModelErrorCode(error);
           await this.finalizeSafely(runStepId, {

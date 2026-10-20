@@ -1,6 +1,6 @@
 # ADR-009: Declarative Agent Runtime Descriptor (M13.1A)
 
-**Status:** Accepted for Milestone 13.1 Slice A
+**Status:** Accepted (M13.1A descriptor; M13.2 execution)
 
 ## Context
 
@@ -17,9 +17,9 @@ AgentVersions: immutable snapshots, existing append validation for referenced
 ModelProfileVersion and ToolVersion rows, and existing CreateRun effective-binding
 freezing.
 
-Execution is **out of scope** for M13.1A. Workers without a declarative
-`RuntimeAdapter` fail closed with `UNSUPPORTED_RUNTIME`, matching other unregistered
-runtime types. No fake production executor is registered in this slice.
+M13.1A deferred execution. **M13.2** registers `@osva/adapters-runtime-declarative`
+on production workers. Unregistered worker builds still fail closed with
+`UNSUPPORTED_RUNTIME`.
 
 ## Non-goals (M13.1A)
 
@@ -36,7 +36,7 @@ runtime types. No fake production executor is registered in this slice.
 | Behavior source | Operator-supplied executable artifacts | Natural-language instructions + bounded budgets |
 | Model/tools | Optional binding maps + capabilities | Required logical model binding; explicit allowed tool bindings |
 | Trust boundary | Operator-installed code / images | OSVA-mediated ModelGateway and ToolGateway only (future executor) |
-| Execution | Registered `RuntimeAdapter` | Deferred to M13.2; fails closed until then |
+| Execution | Registered `RuntimeAdapter` | In-process declarative loop (M13.2) |
 
 `BUILTIN_PACKAGE` remains the in-process test runtime and is **not** overloaded
 for declarative configuration.
@@ -45,8 +45,7 @@ for declarative configuration.
 
 ```text
 AgentVersion.manifest.runtime.type === "DECLARATIVE"
-  → RuntimeDispatcher (no adapter in M13.1A)
-  → UNSUPPORTED_RUNTIME at ExecuteRunAttempt
+  → RuntimeDispatcher → DeclarativeRuntimeAdapter (M13.2+)
 ```
 
 Workflow nodes do not select runtimes. Runtime choice stays on the immutable
@@ -122,5 +121,5 @@ attempt limits, they bound cost and side effects.
 
 | Slice | Responsibility |
 | --- | --- |
-| M13.2 | Declarative `RuntimeAdapter`, budget enforcement at execution, gateway integration |
+| M13.2 | **Done:** `DeclarativeRuntimeAdapter`, `ModelGateway.generateCompletion` (native tool calls), budget enforcement, scoped gateway observability |
 | M13.3 | Console Studio for declarative authoring and validation UX |

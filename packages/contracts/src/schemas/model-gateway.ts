@@ -3,6 +3,7 @@ import { z } from "zod";
 import { jsonSchemaRecordSchema } from "./json-schema.js";
 import { modelProfileVersionIdSchema } from "./ids.js";
 import {
+  MODEL_FINISH_REASONS,
   MODEL_MAX_OUTPUT_TOKENS_MAX,
   MODEL_MAX_OUTPUT_TOKENS_MIN,
   MODEL_PROVIDERS,
@@ -64,6 +65,44 @@ export const generateTextInputSchema = z.strictObject({
     .min(MODEL_MAX_OUTPUT_TOKENS_MIN)
     .max(MODEL_MAX_OUTPUT_TOKENS_MAX)
     .optional(),
+});
+
+const modelToolResultMessageSchema = z.strictObject({
+  role: z.literal("tool"),
+  toolCallId: z.string().min(1).max(128),
+  name: z.string().min(1).max(128),
+  content: z.string().min(1).max(MODEL_TEXT_CONTENT_MAX_LENGTH),
+});
+
+export const modelConversationMessageSchema = z.discriminatedUnion("role", [
+  modelTextMessageSchema,
+  modelToolResultMessageSchema,
+]);
+
+export const generateCompletionInputSchema = z.strictObject({
+  messages: z
+    .array(modelConversationMessageSchema)
+    .min(1)
+    .max(MODEL_TEXT_MAX_MESSAGES),
+  maxOutputTokens: z
+    .int()
+    .min(MODEL_MAX_OUTPUT_TOKENS_MIN)
+    .max(MODEL_MAX_OUTPUT_TOKENS_MAX)
+    .optional(),
+  toolDefinitions: z.array(modelToolDefinitionSchema).max(32).optional(),
+  jsonSchema: jsonSchemaRecordSchema.optional(),
+});
+
+export const modelToolCallSchema = z.strictObject({
+  id: z.string().min(1).max(128),
+  name: z.string().min(1).max(128),
+  arguments: z.unknown(),
+});
+
+export const generateCompletionResultSchema = z.strictObject({
+  text: z.string().min(1).optional(),
+  toolCalls: z.array(modelToolCallSchema),
+  finishReason: z.enum(MODEL_FINISH_REASONS),
 });
 
 export const generateTextResultSchema = z.strictObject({

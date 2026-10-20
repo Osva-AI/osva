@@ -42,7 +42,7 @@ export function describeRuntimeType(type: string): string {
     case "BUILTIN_PACKAGE":
       return "Built-in package runtime used by in-process test adapters. Production workers typically have no executor registered for this type.";
     case "DECLARATIVE":
-      return "Declarative agent runtime. Configuration is stored on the AgentVersion; execution requires a registered DECLARATIVE executor (M13.2+).";
+      return "Declarative agent runtime. Instructions and budgets live on the AgentVersion; workers execute via the built-in declarative executor.";
     default:
       return "Runtime type from the immutable AgentVersion manifest.";
   }

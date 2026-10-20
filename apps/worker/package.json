@@ -22,6 +22,7 @@
     "@osva/adapters-model-gemini": "workspace:*",
     "@osva/adapters-model-openai": "workspace:*",
     "@osva/adapters-model-provider-connectivity": "workspace:*",
+    "@osva/adapters-runtime-declarative": "workspace:*",
     "@osva/adapters-runtime-container": "workspace:*",
     "@osva/adapters-runtime-http": "workspace:*",
     "@osva/adapters-runtime-typescript": "workspace:*",

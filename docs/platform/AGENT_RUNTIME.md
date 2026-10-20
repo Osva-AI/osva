@@ -85,6 +85,45 @@ Production workers compose `@osva/adapters-runtime-typescript` behind
 
 See Runtime Protocol v1 and Agent Manifest v1.
 
+## Declarative runtime
+
+`DECLARATIVE` AgentVersions execute through `@osva/adapters-runtime-declarative`
+in the worker process (no child process or remote hop).
+
+- Configuration is immutable `runtime.config` on the AgentVersion (`instructions`,
+  logical model/tool bindings, invocation budgets, optional `maxOutputTokens`).
+- Model access uses `ModelGateway.generateCompletion` with provider-native tool
+  calls when tools are allowed; final output is JSON validated against the
+  AgentVersion output schema (snapshotted on `ExecutionRequest.effectiveConfig`).
+- Tool access uses the same scoped `ToolGateway` and RunStep recording as trusted
+  TypeScript; only `allowedToolBindings` may run, and tool arguments are validated
+  against the ToolVersion input schema before invoke.
+
+### Tool authorization boundaries (M13.2)
+
+- **`ExecutionRequest.toolGrants`** is still an empty frozen array from
+  `createExecutionRequest` (Stage 0 placeholder). It is **not** populated from
+  persisted grants in this slice.
+- **`DefaultToolPolicy`** (Community Edition) is intentionally permissive: any
+  invocation that reaches `ToolGateway` with a resolved `toolVersionId` is
+  allowed. Unbound tools are rejected by runtimes before invoke.
+- **Declarative enforcement** is stricter than `DefaultToolPolicy`: the adapter
+  checks `runtime.config.allowedToolBindings`, requires a matching entry in
+  frozen `toolVersionBindings`, validates arguments, then calls scoped
+  `ToolGateway.invoke`. Model-requested tools outside the allowlist fail with
+  `TOOL_NOT_AUTHORIZED` without reaching the gateway.
+- **Not a bypass:** empty `toolGrants` does not let declarative agents invoke
+  extra tools beyond the allowlist and effective bindings. A future grant model
+  would tighten `ToolGateway` for all runtimes; that redesign is out of scope
+  for M13.2.
+- Run input, tool output, and knowledge are treated as untrusted user/tool content;
+  instructions are trusted operator configuration only.
+- Cooperative `cancel()` aborts in-flight model calls; completed tool side effects
+  are not rolled back (same as other runtimes).
+- Workers still require `OSVA_TRUSTED_RUNTIME_ROOT` readiness today because the
+  production worker composes all runtime adapters in one process; declarative-only
+  deployments may relax that in a later slice.
+
 ## Container runtime
 
 `CONTAINER` AgentVersions execute through `@osva/adapters-runtime-container`.

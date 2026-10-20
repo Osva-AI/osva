@@ -65,7 +65,7 @@ describe("agent onboarding helpers", () => {
     );
   });
 
-  it("warns that declarative execution requires a registered executor", () => {
+  it("describes declarative execution on the worker", () => {
     const items = buildRuntimeReadiness({
       controlPlaneReachable: true,
       selectedVersion: {
@@ -80,7 +80,7 @@ describe("agent onboarding helpers", () => {
       },
     });
     expect(items.find((item) => item.id === "runtime-adapter")?.detail).toMatch(
-      /declarative executor fail closed with UNSUPPORTED_RUNTIME/i,
+      /in-process declarative runtime \(ModelGateway and ToolGateway\)/i,
     );
   });
 
