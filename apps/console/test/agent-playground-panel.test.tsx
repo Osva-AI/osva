@@ -119,12 +119,12 @@ describe("AgentPlaygroundPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Run test" }));
 
     await waitFor(() => {
-      const createCall = fetchMock.mock.calls.find((call) => {
-        const url = typeof call[0] === "string" ? call[0] : call[0].url;
+      const createCall = fetchMock.mock.calls.find(([input]) => {
+        const url = typeof input === "string" ? input : input.url;
         return url.endsWith("/api/v1/runs");
       });
       expect(createCall).toBeTruthy();
-      const init = createCall?.[1] as RequestInit | undefined;
+      const init = createCall?.[1];
       expect(init).toBeDefined();
       expect(JSON.parse(String(init!.body))).toEqual({
         agentId: "agent-echo",
