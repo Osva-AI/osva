@@ -1,4 +1,8 @@
-import type { ExecutionRequest } from "@osva-ai/contracts";
+import type {
+  EvaluationCaseId,
+  EvaluationRunId,
+  ExecutionRequest,
+} from "@osva-ai/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { buildDeclarativeContextUserContent } from "../src/declarative-context-prefetch.js";
@@ -78,6 +82,33 @@ describe("buildDeclarativeContextUserContent", () => {
 
     await buildDeclarativeContextUserContent({
       request: baseExecution({
+        evaluationContext: {
+          evaluationRunId: "eval-run-1" as EvaluationRunId,
+          evaluationCaseId: "eval-case-1" as EvaluationCaseId,
+        },
+        memoryNamespaceBindings: {
+          notes: {
+            namespaceId: "mn-1" as never,
+            access: "READ_WRITE",
+          },
+        },
+      }),
+      knowledgeGateway: undefined,
+      memoryGateway: { list },
+    });
+
+    expect(list).toHaveBeenCalled();
+  });
+
+  it("passes allowPersistentMutation false when restrictPersistentMemory is set on the execution request", async () => {
+    const list = vi.fn(async (_request, authorization) => {
+      expect(authorization.allowPersistentMutation).toBe(false);
+      return { items: [] };
+    });
+
+    await buildDeclarativeContextUserContent({
+      request: baseExecution({
+        restrictPersistentMemory: true,
         memoryNamespaceBindings: {
           notes: {
             namespaceId: "mn-1" as never,

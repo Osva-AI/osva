@@ -5,6 +5,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import { AgentPlaygroundPanel } from "../components/agent/agent-playground-panel";
 import { AgentRunLaunchForm } from "../components/agent/agent-run-launch-form";
 import { RuntimeReadinessPanel } from "../components/agent/runtime-readiness-panel";
 import { EmptyState } from "../components/empty-state/empty-state";
@@ -291,6 +292,15 @@ export function AgentVersionPage() {
             </p>
             <JsonView label="Manifest" value={version.manifest ?? {}} />
           </section>
+
+          <AgentPlaygroundPanel
+            mode="embedded"
+            agentId={agentId}
+            agentVersionId={agentVersionId}
+            agentName={agentQuery.data?.name}
+            agentKey={agentQuery.data?.key}
+            canExecute={canExecute}
+          />
 
           <div id="run-agent">
             <AgentRunLaunchForm

@@ -169,6 +169,12 @@
       "tag": "0027_model_provider_connections",
       "file": "0027_model_provider_connections.sql",
       "sha256": "13243ca49e1d0174b70e3ad87e9f31233d99e612768bf50ee102f37f1f08b9cd"
+    },
+    {
+      "idx": 28,
+      "tag": "0028_playground_memory_restriction",
+      "file": "0028_playground_memory_restriction.sql",
+      "sha256": "d1a3f8f2af4b2bdc337aafc650a75506096bee2cad5b47feaabad8b0a97b57d4"
     }
   ]
 }

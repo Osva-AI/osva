@@ -172,4 +172,17 @@ describe("createExecutionRequest", () => {
       }),
     ).toThrow(DomainInvariantError);
   });
+
+  it("includes restrictPersistentMemory on the execution request when set on the Run", () => {
+    const run = Run.rehydrate({
+      ...createRun(),
+      restrictPersistentMemory: true,
+    });
+    const request = createExecutionRequest({
+      run,
+      runAttempt: createAttempt(),
+      agentVersion: createVersion(),
+    });
+    expect(request.restrictPersistentMemory).toBe(true);
+  });
 });

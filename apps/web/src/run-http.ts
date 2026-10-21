@@ -116,6 +116,7 @@ async function dispatchRunRoute(
         agentVersionId: parsed.data.agentVersionId,
         input: parsed.data.input,
         idempotencyKey: parsed.data.idempotencyKey,
+        restrictPersistentMemory: parsed.data.restrictPersistentMemory,
         now: services.clock.now(),
       });
       sendJson(
@@ -291,6 +292,15 @@ function toRunResource(run: Run) {
     createdAt: run.createdAt.toISOString(),
     updatedAt: run.updatedAt.toISOString(),
     idempotencyKey: run.idempotencyKey,
+    ...(run.evaluationRunId !== undefined
+      ? { evaluationRunId: run.evaluationRunId }
+      : {}),
+    ...(run.evaluationCaseId !== undefined
+      ? { evaluationCaseId: run.evaluationCaseId }
+      : {}),
+    ...(run.restrictPersistentMemory
+      ? { restrictPersistentMemory: true }
+      : {}),
   });
 }
 

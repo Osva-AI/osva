@@ -527,4 +527,52 @@ describe("CreateRun", () => {
       company_docs: [indexA],
     });
   });
+
+  it("persists restrictPersistentMemory for ad-hoc Runs when requested", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    await seedAgentGraph(workspaces, agents);
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const restrictedRunId = "run-restrict-memory" as typeof runId;
+    const restrictedAttemptId = "run-attempt-restrict-memory" as typeof runAttemptId;
+    const result = await createRun.execute({
+      ...createCommand(),
+      runId: restrictedRunId,
+      runAttemptId: restrictedAttemptId,
+      restrictPersistentMemory: true,
+    });
+
+    expect(result.run.restrictPersistentMemory).toBe(true);
+    const persisted = await runs.findRunById(restrictedRunId);
+    expect(persisted?.restrictPersistentMemory).toBe(true);
+  });
+
+  it("ignores restrictPersistentMemory on evaluation child Runs", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const runs = new MemoryRunRepository();
+    const queue = new MemoryJobQueue();
+    await seedAgentGraph(workspaces, agents);
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const evalChildRunId = "run-eval-child" as typeof runId;
+    const evalChildAttemptId = "run-attempt-eval-child" as typeof runAttemptId;
+    const result = await createRun.execute({
+      ...createCommand(),
+      runId: evalChildRunId,
+      runAttemptId: evalChildAttemptId,
+      evaluationRunId: "eval-run-1" as import("@osva-ai/contracts").EvaluationRunId,
+      evaluationCaseId: "eval-case-1" as import("@osva-ai/contracts").EvaluationCaseId,
+      restrictPersistentMemory: true,
+    });
+
+    expect(result.run.restrictPersistentMemory).toBe(false);
+    expect(result.run.evaluationRunId).toBe("eval-run-1");
+    const persisted = await runs.findRunById(evalChildRunId);
+    expect(persisted?.restrictPersistentMemory).toBe(false);
+    expect(persisted?.evaluationRunId).toBe("eval-run-1");
+  });
 });

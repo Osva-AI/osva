@@ -50,7 +50,9 @@ export class RunsResource {
     });
   }
 
-  create(input: CreateRunRequest): Promise<CreateRunResponse> {
+  create(
+    input: CreateRunRequest & { readonly restrictPersistentMemory?: boolean },
+  ): Promise<CreateRunResponse> {
     return this.client.request({
       method: "POST",
       path: "/v1/runs",

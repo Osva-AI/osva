@@ -39,6 +39,20 @@ export interface ExecutionRequest {
   readonly timeoutMs: number;
   readonly policyContext: Readonly<Record<string, unknown>>;
   readonly evaluationContext?: ExecutionEvaluationContext;
+  readonly restrictPersistentMemory?: boolean;
+}
+
+export function allowsPersistentMemoryMutation(execution: Readonly<{
+  readonly evaluationContext?: ExecutionEvaluationContext;
+  readonly restrictPersistentMemory?: boolean;
+}>): boolean {
+  if (execution.evaluationContext !== undefined) {
+    return false;
+  }
+  if (execution.restrictPersistentMemory === true) {
+    return false;
+  }
+  return true;
 }
 
 export interface ExecutionError {

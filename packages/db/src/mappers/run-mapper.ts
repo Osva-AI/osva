@@ -34,6 +34,7 @@ export function runToRow(run: Run) {
     knowledgeIndexBindings: run.effectiveBindings.knowledgeIndexBindings,
     evaluationRunId: run.evaluationRunId ?? null,
     evaluationCaseId: run.evaluationCaseId ?? null,
+    restrictPersistentMemory: run.restrictPersistentMemory,
     input: run.input,
     idempotencyKey: run.idempotencyKey ?? null,
     createdAt: run.createdAt,
@@ -68,6 +69,7 @@ export function runFromRow(row: RunRow): Run {
       (row.evaluationRunId as EvaluationRunId | null) ?? undefined,
     evaluationCaseId:
       (row.evaluationCaseId as EvaluationCaseId | null) ?? undefined,
+    restrictPersistentMemory: row.restrictPersistentMemory,
   });
 }
 

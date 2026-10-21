@@ -61,5 +61,8 @@ export function createExecutionRequest(
             evaluationCaseId: source.run.evaluationCaseId,
           })
         : undefined,
+    restrictPersistentMemory: source.run.restrictPersistentMemory
+      ? true
+      : undefined,
   });
 }

@@ -7,7 +7,11 @@ import type {
   MemoryListResult,
   MemoryRecordView,
 } from "@osva-ai/contracts";
-import { KNOWLEDGE_ERROR_CODES, MEMORY_ERROR_CODES } from "@osva-ai/contracts";
+import {
+  allowsPersistentMemoryMutation,
+  KNOWLEDGE_ERROR_CODES,
+  MEMORY_ERROR_CODES,
+} from "@osva-ai/contracts";
 
 import {
   DECLARATIVE_MEMORY_LIST_LIMIT,
@@ -199,7 +203,7 @@ function memoryAuthorization(execution: ExecutionRequest): MemoryAuthorization {
   return {
     workspaceId: execution.workspaceId,
     memoryNamespaceBindings: execution.memoryNamespaceBindings,
-    allowPersistentMutation: false,
+    allowPersistentMutation: allowsPersistentMemoryMutation(execution),
   };
 }
 

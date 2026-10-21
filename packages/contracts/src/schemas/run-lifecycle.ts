@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   agentIdSchema,
   agentVersionIdSchema,
+  evaluationCaseIdSchema,
+  evaluationRunIdSchema,
   modelProfileVersionIdSchema,
   toolVersionIdSchema,
   runAttemptIdSchema,
@@ -22,6 +24,7 @@ export const createRunRequestSchema = z.strictObject({
   agentVersionId: agentVersionIdSchema,
   input: z.unknown(),
   idempotencyKey: z.string().min(1).optional(),
+  restrictPersistentMemory: z.boolean().optional(),
 });
 
 export const runResourceSchema = z.strictObject({
@@ -41,6 +44,9 @@ export const runResourceSchema = z.strictObject({
   createdAt: utcIso8601TimestampSchema,
   updatedAt: utcIso8601TimestampSchema,
   idempotencyKey: z.string().min(1).optional(),
+  evaluationRunId: evaluationRunIdSchema.optional(),
+  evaluationCaseId: evaluationCaseIdSchema.optional(),
+  restrictPersistentMemory: z.boolean().optional(),
 });
 
 export const runAttemptResourceSchema = z.strictObject({
