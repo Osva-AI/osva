@@ -260,14 +260,44 @@ describe("Agents UI", () => {
   });
 
   it("walks onboarding links without storing credentials", async () => {
-    stubConsole("ADMIN");
+    stubConsole("ADMIN", (url) => {
+      if (url.includes("/api/v1/model-provider-connections")) {
+        return json({ connections: [] });
+      }
+      if (
+        url.includes("/api/v1/model-profiles") &&
+        !url.includes("/versions")
+      ) {
+        return json({ modelProfiles: [] });
+      }
+      if (url.includes("/api/v1/workflows")) {
+        return json({ workflows: [] });
+      }
+      if (url.includes("/api/v1/runs")) {
+        return json({ runs: [] });
+      }
+      return undefined;
+    });
     renderAgents("/onboarding?agentId=agent-echo&agentVersionId=av-echo");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Getting started", level: 1 }),
+      ).toBeTruthy();
+    });
     await waitFor(() => {
       expect(screen.getByRole("link", { name: "Run Agent" })).toBeTruthy();
     });
-    expect(screen.getByRole("link", { name: "Open registry" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open Models" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Create Agent" })).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: "Open builder" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Publish version" })
+        .getAttribute("href"),
+    ).toBe("/agents/agent-echo/versions/av-echo");
+    expect(
+      screen
+        .getByRole("link", { name: "Open Workflow Builder" })
+        .getAttribute("href"),
     ).toBe("/workflows/new?agentId=agent-echo&agentVersionId=av-echo");
     expect(document.body.textContent ?? "").not.toMatch(/osva_ak_|Bearer /);
   });
