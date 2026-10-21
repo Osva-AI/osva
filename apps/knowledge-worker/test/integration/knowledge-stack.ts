@@ -61,11 +61,12 @@ export async function createKnowledgeIntegrationStack(
     readonly embeddingDefaults?: KnowledgeEmbeddingDefaults;
     readonly vectorStore?: PgVectorStore;
     readonly now?: Date;
+    readonly artifactRoot?: string;
   },
 ): Promise<KnowledgeIntegrationStack> {
-  const artifactRoot = await fs.mkdtemp(
-    path.join(os.tmpdir(), "osva-knowledge-test-"),
-  );
+  const artifactRoot =
+    options?.artifactRoot ??
+    (await fs.mkdtemp(path.join(os.tmpdir(), "osva-knowledge-test-")));
   const artifactStorage = loadArtifactStorageConfig({
     OSVA_ARTIFACT_FILESYSTEM_ROOT: artifactRoot,
   });

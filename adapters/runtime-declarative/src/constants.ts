@@ -10,7 +10,14 @@ export const DeclarativeRuntimeErrorCode = {
   CANCELLED: "RUNTIME_CANCELLED",
   MODEL_UNAVAILABLE: "MODEL_PROVIDER_UNAVAILABLE",
   TOOL_UNAVAILABLE: "TOOL_EXECUTION_ERROR",
+  KNOWLEDGE_UNAVAILABLE: "KNOWLEDGE_UNAVAILABLE",
+  MEMORY_UNAVAILABLE: "MEMORY_UNAVAILABLE",
 } as const;
+
+export const DECLARATIVE_KNOWLEDGE_TOP_K = 5;
+export const DECLARATIVE_KNOWLEDGE_MAX_CONTEXT_CHARS = 12_000;
+export const DECLARATIVE_MEMORY_LIST_LIMIT = 20;
+export const DECLARATIVE_MEMORY_MAX_CONTEXT_CHARS = 8_000;
 
 export type DeclarativeRuntimeErrorCode =
   (typeof DeclarativeRuntimeErrorCode)[keyof typeof DeclarativeRuntimeErrorCode];

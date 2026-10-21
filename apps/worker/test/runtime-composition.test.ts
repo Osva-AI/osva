@@ -13,6 +13,8 @@ const baseEnv = {
 const declarativeComposition = {
   createScopedModelGateway: vi.fn(),
   createScopedToolGateway: vi.fn(),
+  createScopedKnowledgeGateway: vi.fn(),
+  createScopedMemoryGateway: vi.fn(),
   resolveToolMetadata: vi.fn(),
 };
 

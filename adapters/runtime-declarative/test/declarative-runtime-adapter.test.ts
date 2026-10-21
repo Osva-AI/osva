@@ -272,6 +272,104 @@ describe("DeclarativeRuntimeAdapter", () => {
     }
   });
 
+  it("prefetches bound knowledge into the user message before the first model call", async () => {
+    let firstUserContent: string | undefined;
+    const adapter = new DeclarativeRuntimeAdapter({
+      modelGateway: createModelGateway(async (request) => {
+        const userMessage = request.messages.find(
+          (message) => message.role === "user",
+        );
+        if (
+          userMessage !== undefined &&
+          typeof userMessage.content === "string"
+        ) {
+          firstUserContent = userMessage.content;
+        }
+        return {
+          text: JSON.stringify({ answer: "ok" }),
+          toolCalls: [],
+          finishReason: "stop",
+        };
+      }),
+      createScopedKnowledgeGateway: () => ({
+        search: async () => [
+          {
+            knowledgeChunkId: "kc-1" as never,
+            knowledgeIndexId: "ki-1" as never,
+            knowledgeSourceId: "ks-1" as never,
+            artifactReference: {
+              type: "ARTIFACT_REFERENCE_V1",
+              artifactId: "art-1" as never,
+            },
+            text: "Policy excerpt about refunds.",
+            score: 0.91,
+            attributes: {},
+          },
+        ],
+      }),
+      resolveToolMetadata: vi.fn(),
+    });
+
+    const result = await adapter.execute(
+      baseRequest({
+        knowledgeIndexBindings: {
+          policy_docs: ["ki-1" as never],
+        },
+        input: { task: "Summarize refund policy" },
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            configVersion: "1",
+            instructions: "Use evidence only.",
+            modelBinding: "primary",
+            allowedToolBindings: [],
+            maxModelInvocations: 2,
+            maxToolInvocations: 0,
+          },
+        },
+        toolVersionBindings: {},
+      }),
+    );
+
+    expect(result.status).toBe("succeeded");
+    expect(firstUserContent).toContain("untrusted retrieved data");
+    expect(firstUserContent).toContain("Policy excerpt about refunds.");
+    expect(firstUserContent).toContain("Summarize refund policy");
+  });
+
+  it("does not retrieve knowledge when no bindings are present", async () => {
+    const search = vi.fn();
+    const adapter = new DeclarativeRuntimeAdapter({
+      modelGateway: createModelGateway(async () => ({
+        text: JSON.stringify({ answer: "ok" }),
+        toolCalls: [],
+        finishReason: "stop",
+      })),
+      createScopedKnowledgeGateway: () => ({ search }),
+      resolveToolMetadata: vi.fn(),
+    });
+
+    await adapter.execute(
+      baseRequest({
+        knowledgeIndexBindings: {},
+        runtime: {
+          type: "DECLARATIVE",
+          config: {
+            configVersion: "1",
+            instructions: "Test",
+            modelBinding: "primary",
+            allowedToolBindings: [],
+            maxModelInvocations: 2,
+            maxToolInvocations: 0,
+          },
+        },
+        toolVersionBindings: {},
+      }),
+    );
+
+    expect(search).not.toHaveBeenCalled();
+  });
+
   it("supports cooperative cancellation", async () => {
     const adapter = new DeclarativeRuntimeAdapter({
       modelGateway: createModelGateway(

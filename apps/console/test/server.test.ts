@@ -189,6 +189,101 @@ function createMockClient(
     },
     decideApprovalRequest: async () => ({ data: {} }),
     ingestWorkflowEvent: async () => ({ data: {}, requestId: "req-event" }),
+    listKnowledgeSources: async () => ({
+      data: { items: [] },
+      requestId: "req-knowledge-sources",
+    }),
+    createKnowledgeSource: async () => ({
+      data: {
+        id: "ks-1",
+        workspaceId: "workspace-1",
+        key: "docs",
+        name: "Docs",
+        artifactId: "art-1",
+        attributes: {},
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+      requestId: "req-knowledge-source-create",
+    }),
+    getKnowledgeSource: async () => ({
+      data: {
+        id: "ks-1",
+        workspaceId: "workspace-1",
+        key: "docs",
+        name: "Docs",
+        artifactId: "art-1",
+        attributes: {},
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+      requestId: "req-knowledge-source-get",
+    }),
+    listKnowledgeIndexes: async () => ({
+      data: { items: [] },
+      requestId: "req-knowledge-indexes",
+    }),
+    createKnowledgeIndex: async () => ({
+      data: {
+        id: "ki-1",
+        workspaceId: "workspace-1",
+        knowledgeSourceId: "ks-1",
+        status: "PENDING",
+        parserKey: "text",
+        parserVersion: "1",
+        chunkerKey: "fixed",
+        chunkerVersion: "1",
+        chunkSize: 512,
+        chunkOverlap: 64,
+        embeddingProvider: "openai",
+        embeddingModel: "embed",
+        embeddingDimensions: 8,
+        distanceMetric: "COSINE",
+        pipelineFingerprint: "fp",
+        attemptCount: 0,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      requestId: "req-knowledge-index-create",
+    }),
+    getKnowledgeIndex: async () => ({
+      data: { id: "ki-1", status: "READY" },
+      requestId: "req-knowledge-index-get",
+    }),
+    retryKnowledgeIndex: async () => ({
+      data: { id: "ki-1", status: "PENDING" },
+      requestId: "req-knowledge-index-retry",
+    }),
+    retrieveKnowledge: async () => ({
+      data: { hits: [] },
+      requestId: "req-knowledge-retrieve",
+    }),
+    listMemoryNamespaces: async () => ({
+      data: { items: [] },
+      requestId: "req-memory-namespaces",
+    }),
+    createMemoryNamespace: async () => ({
+      data: {
+        id: "mn-1",
+        workspaceId: "workspace-1",
+        key: "session",
+        name: "Session",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+      requestId: "req-memory-namespace-create",
+    }),
+    getMemoryNamespace: async () => ({
+      data: {
+        id: "mn-1",
+        workspaceId: "workspace-1",
+        key: "session",
+        name: "Session",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+      requestId: "req-memory-namespace-get",
+    }),
+    listMemoryRecords: async () => ({
+      data: { items: [] },
+      requestId: "req-memory-records",
+    }),
     ...overrides,
   };
 }
@@ -285,6 +380,56 @@ describe("console server API", () => {
     expect(body).not.toContain("OPENAI_API_KEY");
     expect(body).not.toContain("sk-live");
     expect(body).not.toContain("super-secret-console-key");
+  });
+
+  it("forwards knowledge retrieve without accepting browser workspace override in body", async () => {
+    let capturedBody: unknown;
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        retrieveKnowledge: async (body) => {
+          capturedBody = body;
+          return {
+            data: {
+              hits: [
+                {
+                  knowledgeChunkId: "kc-1",
+                  knowledgeIndexId: "ki-1",
+                  knowledgeSourceId: "ks-1",
+                  text: "excerpt",
+                  score: 0.5,
+                  attributes: {},
+                },
+              ],
+            },
+            requestId: "req-knowledge-retrieve",
+          };
+        },
+      }),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(`${origin}/api/v1/knowledge/retrieve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-osva-workspace-id": "workspace-1",
+      },
+      body: JSON.stringify({
+        knowledgeIndexIds: ["ki-1"],
+        query: "refund policy",
+        workspaceId: "workspace-attacker",
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(capturedBody).toMatchObject({
+      knowledgeIndexIds: ["ki-1"],
+      query: "refund policy",
+    });
+    const bodyText = await response.text();
+    expect(bodyText).toContain("excerpt");
+    expect(bodyText).not.toContain("super-secret-console-key");
   });
 
   it("forwards model connectivity test bodies without echoing credentials", async () => {

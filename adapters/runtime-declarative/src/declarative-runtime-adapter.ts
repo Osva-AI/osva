@@ -26,6 +26,11 @@ import {
   DeclarativeRuntimeErrorCode,
 } from "./constants.js";
 import { validateJsonSchemaInstance } from "./json-schema-instance.js";
+import { buildDeclarativeContextUserContent } from "./declarative-context-prefetch.js";
+import type {
+  DeclarativeRuntimeKnowledgeGateway,
+  DeclarativeRuntimeMemoryGateway,
+} from "./declarative-context-prefetch.js";
 import {
   executionFailure,
   sanitizePublicErrorMessage,
@@ -62,6 +67,12 @@ export interface DeclarativeRuntimeAdapterOptions {
   readonly createScopedToolGateway?: (
     execution: ExecutionRequest,
   ) => DeclarativeRuntimeToolGateway | undefined;
+  readonly createScopedKnowledgeGateway?: (
+    execution: ExecutionRequest,
+  ) => DeclarativeRuntimeKnowledgeGateway | undefined;
+  readonly createScopedMemoryGateway?: (
+    execution: ExecutionRequest,
+  ) => DeclarativeRuntimeMemoryGateway | undefined;
   readonly resolveToolMetadata: (input: {
     readonly toolVersionId: ToolVersionId;
   }) => Promise<DeclarativeToolMetadata | null>;
@@ -86,6 +97,16 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
         execution: ExecutionRequest,
       ) => DeclarativeRuntimeToolGateway | undefined)
     | undefined;
+  private readonly createScopedKnowledgeGateway:
+    | ((
+        execution: ExecutionRequest,
+      ) => DeclarativeRuntimeKnowledgeGateway | undefined)
+    | undefined;
+  private readonly createScopedMemoryGateway:
+    | ((
+        execution: ExecutionRequest,
+      ) => DeclarativeRuntimeMemoryGateway | undefined)
+    | undefined;
   private readonly resolveToolMetadata: DeclarativeRuntimeAdapterOptions["resolveToolMetadata"];
   private readonly liveExecutions = new Map<RunAttemptId, LiveExecution>();
 
@@ -95,6 +116,8 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
     this.toolGateway = options.toolGateway;
     this.createScopedModelGateway = options.createScopedModelGateway;
     this.createScopedToolGateway = options.createScopedToolGateway;
+    this.createScopedKnowledgeGateway = options.createScopedKnowledgeGateway;
+    this.createScopedMemoryGateway = options.createScopedMemoryGateway;
     this.resolveToolMetadata = options.resolveToolMetadata;
   }
 
@@ -154,6 +177,9 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
     const toolGateway =
       this.createScopedToolGateway?.(request) ?? this.toolGateway;
 
+    const knowledgeGateway = this.createScopedKnowledgeGateway?.(request);
+    const memoryGateway = this.createScopedMemoryGateway?.(request);
+
     const abort = new AbortController();
     let cancelledByOperator = false;
     this.liveExecutions.set(request.runAttemptId, {
@@ -168,12 +194,13 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
       return await this.runLoop({
         request,
         config,
-        runtime,
         modelProfileVersionId,
         allowedTools,
         outputSchema,
         modelGateway,
         toolGateway,
+        knowledgeGateway,
+        memoryGateway,
         signal: abort.signal,
       });
     } catch (error) {
@@ -206,12 +233,13 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
   private async runLoop(input: {
     readonly request: ExecutionRequest;
     readonly config: DeclarativeAgentRuntime["config"];
-    readonly runtime: DeclarativeAgentRuntime;
     readonly modelProfileVersionId: GenerateCompletionRequest["modelProfileVersionId"];
     readonly allowedTools: ReadonlySet<string>;
     readonly outputSchema: JsonSchemaRecord;
     readonly modelGateway: DeclarativeRuntimeModelGateway;
     readonly toolGateway: DeclarativeRuntimeToolGateway | undefined;
+    readonly knowledgeGateway: DeclarativeRuntimeKnowledgeGateway | undefined;
+    readonly memoryGateway: DeclarativeRuntimeMemoryGateway | undefined;
     readonly signal: AbortSignal;
   }): Promise<ExecutionResult> {
     const {
@@ -222,6 +250,8 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
       outputSchema,
       modelGateway,
       toolGateway,
+      knowledgeGateway,
+      memoryGateway,
       signal,
     } = input;
 
@@ -233,6 +263,24 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
       allowedTools,
     );
 
+    let retrievedContext: string | undefined;
+    try {
+      retrievedContext = await buildDeclarativeContextUserContent({
+        request,
+        knowledgeGateway,
+        memoryGateway,
+        logger: this.logger,
+      });
+    } catch (error) {
+      const mapped = mapContextPrefetchFailure(error);
+      return executionFailure(mapped.code, mapped.message);
+    }
+
+    const userContentParts = [
+      formatUntrustedRunInput(request.input),
+      retrievedContext,
+    ].filter((part): part is string => part !== undefined);
+
     const messages: ModelConversationMessage[] = [
       {
         role: "system",
@@ -240,7 +288,7 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
       },
       {
         role: "user",
-        content: formatUntrustedRunInput(request.input),
+        content: userContentParts.join("\n\n"),
       },
     ];
 
@@ -465,6 +513,33 @@ function throwIfCancelled(signal: AbortSignal): void {
   if (signal.aborted) {
     throw new Error(DeclarativeRuntimeErrorCode.CANCELLED);
   }
+}
+
+function mapContextPrefetchFailure(error: unknown): {
+  code: string;
+  message: string;
+} {
+  if (error instanceof Error) {
+    const code = (error as { code?: unknown }).code;
+    if (
+      typeof code === "string" &&
+      (code === DeclarativeRuntimeErrorCode.KNOWLEDGE_UNAVAILABLE ||
+        code === DeclarativeRuntimeErrorCode.MEMORY_UNAVAILABLE)
+    ) {
+      return {
+        code,
+        message: sanitizePublicErrorMessage(
+          error.message,
+          "Context retrieval failed.",
+        ),
+      };
+    }
+  }
+
+  return {
+    code: DeclarativeRuntimeErrorCode.KNOWLEDGE_UNAVAILABLE,
+    message: "Context retrieval failed.",
+  };
 }
 
 function mapThrownError(error: unknown): { code: string; message: string } {

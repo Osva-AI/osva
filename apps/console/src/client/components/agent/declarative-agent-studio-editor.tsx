@@ -1,6 +1,4 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
-
 import {
   applyDeclarativeStudioPatch,
   describeDeclarativeManifestValidation,
@@ -12,6 +10,10 @@ import {
 } from "../../lib/declarative-agent-manifest";
 import { ModelProfileVersionSelector } from "./model-profile-version-selector";
 import { ToolVersionBindingSelector } from "./tool-version-binding-selector";
+import { KnowledgeBindingSelector } from "./knowledge-binding-selector";
+import { MemoryBindingSelector } from "./memory-binding-selector";
+import { extractKnowledgeBindingRows } from "../../lib/agent-knowledge-bindings";
+import { extractMemoryBindingRows } from "../../lib/agent-memory-bindings";
 
 export type AgentStudioEditorMode = "guided" | "advanced";
 
@@ -144,18 +146,16 @@ export function DeclarativeAgentStudioEditor(props: {
         </p>
       ) : null}
 
-      <section className="panel">
-        <h2 className="section-title">Context (optional)</h2>
-        <p className="muted">
-          Knowledge indexes and memory namespaces are configured on the
-          AgentVersion manifest. Full browsing and setup belong in Knowledge and
-          Memory Studio (coming soon). Use Advanced JSON to attach bindings when
-          your workspace already has READY indexes or namespaces.
-        </p>
-        <Link className="button" to="/tools">
-          Browse approved tools
-        </Link>
-      </section>
+      <KnowledgeBindingSelector
+        manifestText={props.manifestText}
+        disabled={props.disabled}
+        onManifestChange={props.onManifestTextChange}
+      />
+      <MemoryBindingSelector
+        manifestText={props.manifestText}
+        disabled={props.disabled}
+        onManifestChange={props.onManifestTextChange}
+      />
 
       <details className="panel">
         <summary>Execution and limits</summary>
@@ -355,6 +355,28 @@ export function AgentVersionReviewPanel(props: {
             {isRecord(parsed.value.tools)
               ? Object.keys(parsed.value.tools).join(", ") || "None"
               : "None"}
+          </dd>
+        </div>
+        <div>
+          <dt>Knowledge bindings</dt>
+          <dd>
+            {extractKnowledgeBindingRows(parsed.value)
+              .map(
+                (row) =>
+                  `${row.bindingName} → ${row.knowledgeIndexIds.join(", ")}`,
+              )
+              .join("; ") || "None"}
+          </dd>
+        </div>
+        <div>
+          <dt>Memory bindings</dt>
+          <dd>
+            {extractMemoryBindingRows(parsed.value)
+              .map(
+                (row) =>
+                  `${row.bindingName} → ${row.namespaceId} (${row.access})`,
+              )
+              .join("; ") || "None"}
           </dd>
         </div>
         <div>

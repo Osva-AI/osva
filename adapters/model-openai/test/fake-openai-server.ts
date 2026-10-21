@@ -221,10 +221,16 @@ function writeChatCompletionResponse(
     return;
   }
 
-  const answer =
+  const userText = extractChatUserText(body);
+  let answer =
     scenario === "declarative-tool-flow"
       ? "declarative-after-tool"
       : "declarative-ok";
+  if (userText.includes("declarative-knowledge-probe")) {
+    answer = userText.includes(DECLARATIVE_KNOWLEDGE_PROBE_MARKER)
+      ? "declarative-knowledge-ok"
+      : "declarative-knowledge-miss";
+  }
 
   res.writeHead(200, { "content-type": "application/json" });
   res.end(
@@ -244,6 +250,31 @@ function writeChatCompletionResponse(
       usage,
     }),
   );
+}
+
+const DECLARATIVE_KNOWLEDGE_PROBE_MARKER = "OSVA_DECLARATIVE_KB_PROBE_MARKER";
+
+function extractChatUserText(body: unknown): string {
+  if (body === null || typeof body !== "object") {
+    return "";
+  }
+  const record = body as Record<string, unknown>;
+  const messages = record.messages;
+  if (!Array.isArray(messages)) {
+    return "";
+  }
+  const parts: string[] = [];
+  for (const message of messages) {
+    if (message === null || typeof message !== "object") {
+      continue;
+    }
+    const role = (message as Record<string, unknown>).role;
+    const content = (message as Record<string, unknown>).content;
+    if (role === "user" && typeof content === "string") {
+      parts.push(content);
+    }
+  }
+  return parts.join("\n");
 }
 
 function extractChatScenario(body: unknown): string {

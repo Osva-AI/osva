@@ -405,6 +405,26 @@ export function createWorkerProcess(
             declarative: {
               createScopedModelGateway: scopedModel,
               createScopedToolGateway: scopedTool,
+              createScopedKnowledgeGateway: (execution) => {
+                const gateway = scopedKnowledge(execution);
+                if (gateway === undefined) {
+                  return undefined;
+                }
+                return {
+                  search: (_exec, bindingName, request) =>
+                    gateway.search(bindingName, request),
+                };
+              },
+              createScopedMemoryGateway: (execution) => {
+                const gateway = scopedMemory(execution);
+                if (gateway === undefined) {
+                  return undefined;
+                }
+                return {
+                  list: (request, authorization) =>
+                    gateway.list(request, authorization),
+                };
+              },
               resolveToolMetadata:
                 createDeclarativeToolMetadataResolver(toolsRepository),
               logger: {

@@ -14,6 +14,9 @@ import type {
   WorkflowId,
   WorkflowRunId,
   WorkflowVersionId,
+  KnowledgeIndexId,
+  KnowledgeSourceId,
+  MemoryNamespaceId,
 } from "@osva-ai/contracts";
 
 import {
@@ -411,6 +414,81 @@ export async function handleConsoleApiRequest(
           200,
           discovered.data,
           upstreamRequestIdHeaders(discovered.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/knowledge-sources") {
+        const body = await readJsonBody(request);
+        const created = await client.createKnowledgeSource(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const knowledgeSourceIndexesPostMatch = pathname.match(
+        /^\/api\/v1\/knowledge-sources\/([^/]+)\/indexes$/,
+      );
+      if (knowledgeSourceIndexesPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await client.createKnowledgeIndex(
+          knowledgeSourceIndexesPostMatch[1] as KnowledgeSourceId,
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const knowledgeIndexRetryPostMatch = pathname.match(
+        /^\/api\/v1\/knowledge-indexes\/([^/]+)\/retry$/,
+      );
+      if (knowledgeIndexRetryPostMatch !== null) {
+        const retried = await client.retryKnowledgeIndex(
+          knowledgeIndexRetryPostMatch[1] as KnowledgeIndexId,
+        );
+        sendJson(
+          response,
+          200,
+          retried.data,
+          upstreamRequestIdHeaders(retried.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/knowledge/retrieve") {
+        const body = await readJsonBody(request);
+        const retrieved = await client.retrieveKnowledge(body);
+        sendJson(
+          response,
+          200,
+          retrieved.data,
+          upstreamRequestIdHeaders(retrieved.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/memory/namespaces") {
+        const body = await readJsonBody(request);
+        const created = await client.createMemoryNamespace(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
           deps.security,
         );
         return true;
@@ -935,6 +1013,209 @@ export async function handleConsoleApiRequest(
         200,
         approval.data,
         upstreamRequestIdHeaders(approval.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/knowledge-sources") {
+      if (method === "GET") {
+        const limitParam = searchParams.get("limit");
+        const limit =
+          limitParam === null ? undefined : Number.parseInt(limitParam, 10);
+        const listed = await client.listKnowledgeSources({
+          limit:
+            limit !== undefined && Number.isInteger(limit) ? limit : undefined,
+          cursor: searchParams.get("cursor") ?? undefined,
+        });
+        sendJson(
+          response,
+          200,
+          listed.data,
+          upstreamRequestIdHeaders(listed.requestId),
+          deps.security,
+        );
+        return true;
+      }
+      if (method === "POST") {
+        const body = await readJsonBody(request);
+        const created = await client.createKnowledgeSource(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+    }
+
+    const knowledgeSourceItemMatch = pathname.match(
+      /^\/api\/v1\/knowledge-sources\/([^/]+)$/,
+    );
+    if (knowledgeSourceItemMatch !== null && method === "GET") {
+      const source = await client.getKnowledgeSource(
+        knowledgeSourceItemMatch[1] as KnowledgeSourceId,
+      );
+      sendJson(
+        response,
+        200,
+        source.data,
+        upstreamRequestIdHeaders(source.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const knowledgeSourceIndexesMatch = pathname.match(
+      /^\/api\/v1\/knowledge-sources\/([^/]+)\/indexes$/,
+    );
+    if (knowledgeSourceIndexesMatch !== null) {
+      const sourceId = knowledgeSourceIndexesMatch[1] as KnowledgeSourceId;
+      if (method === "GET") {
+        const limitParam = searchParams.get("limit");
+        const limit =
+          limitParam === null ? undefined : Number.parseInt(limitParam, 10);
+        const listed = await client.listKnowledgeIndexes(sourceId, {
+          limit:
+            limit !== undefined && Number.isInteger(limit) ? limit : undefined,
+          cursor: searchParams.get("cursor") ?? undefined,
+        });
+        sendJson(
+          response,
+          200,
+          listed.data,
+          upstreamRequestIdHeaders(listed.requestId),
+          deps.security,
+        );
+        return true;
+      }
+      if (method === "POST") {
+        const body = await readJsonBody(request);
+        const created = await client.createKnowledgeIndex(sourceId, body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+    }
+
+    const knowledgeIndexItemMatch = pathname.match(
+      /^\/api\/v1\/knowledge-indexes\/([^/]+)$/,
+    );
+    if (knowledgeIndexItemMatch !== null && method === "GET") {
+      const index = await client.getKnowledgeIndex(
+        knowledgeIndexItemMatch[1] as KnowledgeIndexId,
+      );
+      sendJson(
+        response,
+        200,
+        index.data,
+        upstreamRequestIdHeaders(index.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const knowledgeIndexRetryMatch = pathname.match(
+      /^\/api\/v1\/knowledge-indexes\/([^/]+)\/retry$/,
+    );
+    if (knowledgeIndexRetryMatch !== null && method === "POST") {
+      const retried = await client.retryKnowledgeIndex(
+        knowledgeIndexRetryMatch[1] as KnowledgeIndexId,
+      );
+      sendJson(
+        response,
+        200,
+        retried.data,
+        upstreamRequestIdHeaders(retried.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/knowledge/retrieve" && method === "POST") {
+      const body = await readJsonBody(request);
+      const retrieved = await client.retrieveKnowledge(body);
+      sendJson(
+        response,
+        200,
+        retrieved.data,
+        upstreamRequestIdHeaders(retrieved.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/memory/namespaces") {
+      if (method === "GET") {
+        const listed = await client.listMemoryNamespaces();
+        sendJson(
+          response,
+          200,
+          listed.data,
+          upstreamRequestIdHeaders(listed.requestId),
+          deps.security,
+        );
+        return true;
+      }
+      if (method === "POST") {
+        const body = await readJsonBody(request);
+        const created = await client.createMemoryNamespace(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+    }
+
+    const memoryNamespaceItemMatch = pathname.match(
+      /^\/api\/v1\/memory\/namespaces\/([^/]+)$/,
+    );
+    if (memoryNamespaceItemMatch !== null && method === "GET") {
+      const namespace = await client.getMemoryNamespace(
+        memoryNamespaceItemMatch[1] as MemoryNamespaceId,
+      );
+      sendJson(
+        response,
+        200,
+        namespace.data,
+        upstreamRequestIdHeaders(namespace.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const memoryRecordsMatch = pathname.match(
+      /^\/api\/v1\/memory\/namespaces\/([^/]+)\/records$/,
+    );
+    if (memoryRecordsMatch !== null && method === "GET") {
+      const limitParam = searchParams.get("limit");
+      const limit =
+        limitParam === null ? undefined : Number.parseInt(limitParam, 10);
+      const listed = await client.listMemoryRecords(
+        memoryRecordsMatch[1] as MemoryNamespaceId,
+        {
+          prefix: searchParams.get("prefix") ?? undefined,
+          limit:
+            limit !== undefined && Number.isInteger(limit) ? limit : undefined,
+          cursor: searchParams.get("cursor") ?? undefined,
+        },
+      );
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
         deps.security,
       );
       return true;
