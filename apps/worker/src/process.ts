@@ -61,7 +61,11 @@ import { OpenAiCompatibleEmbeddingAdapter } from "@osva/adapters-embedding-opena
 import type {
   ArtifactBlobStore,
   ArtifactId,
+  ExecutionRequest,
   JsonObject,
+  KnowledgeSearchRequestV1,
+  MemoryAuthorization,
+  MemoryListRequest,
 } from "@osva-ai/contracts";
 import {
   KnowledgeRetriever,
@@ -405,6 +409,31 @@ export function createWorkerProcess(
             declarative: {
               createScopedModelGateway: scopedModel,
               createScopedToolGateway: scopedTool,
+              createScopedKnowledgeGateway: (execution) => {
+                const gateway = scopedKnowledge(execution);
+                if (gateway === undefined) {
+                  return undefined;
+                }
+                return {
+                  search: (
+                    _exec: ExecutionRequest,
+                    bindingName: string,
+                    request: KnowledgeSearchRequestV1,
+                  ) => gateway.search(bindingName, request),
+                };
+              },
+              createScopedMemoryGateway: (execution) => {
+                const gateway = scopedMemory(execution);
+                if (gateway === undefined) {
+                  return undefined;
+                }
+                return {
+                  list: (
+                    request: MemoryListRequest,
+                    authorization: MemoryAuthorization,
+                  ) => gateway.list(request, authorization),
+                };
+              },
               resolveToolMetadata:
                 createDeclarativeToolMetadataResolver(toolsRepository),
               logger: {

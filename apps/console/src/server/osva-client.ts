@@ -13,6 +13,9 @@ import type {
   WorkflowId,
   WorkflowRunId,
   WorkflowVersionId,
+  KnowledgeIndexId,
+  KnowledgeSourceId,
+  MemoryNamespaceId,
 } from "@osva-ai/contracts";
 import { OsvaHttpClient } from "@osva-ai/sdk";
 
@@ -178,6 +181,46 @@ export interface ConsoleOsvaClient {
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
   ingestWorkflowEvent(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  listKnowledgeSources(params: {
+    readonly limit?: number;
+    readonly cursor?: string;
+  }): Promise<ConsoleUpstreamResponse<unknown>>;
+  createKnowledgeSource(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getKnowledgeSource(
+    knowledgeSourceId: KnowledgeSourceId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listKnowledgeIndexes(
+    knowledgeSourceId: KnowledgeSourceId,
+    params: { readonly limit?: number; readonly cursor?: string },
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createKnowledgeIndex(
+    knowledgeSourceId: KnowledgeSourceId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getKnowledgeIndex(
+    knowledgeIndexId: KnowledgeIndexId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  retryKnowledgeIndex(
+    knowledgeIndexId: KnowledgeIndexId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  retrieveKnowledge(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  listMemoryNamespaces(): Promise<ConsoleUpstreamResponse<unknown>>;
+  createMemoryNamespace(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getMemoryNamespace(
+    namespaceId: MemoryNamespaceId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listMemoryRecords(
+    namespaceId: MemoryNamespaceId,
+    params: {
+      readonly prefix?: string;
+      readonly limit?: number;
+      readonly cursor?: string;
+    },
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
 }
 
 export function createConsoleOsvaClient(
@@ -511,6 +554,84 @@ export function createConsoleOsvaClient(
         method: "POST",
         path: "/v1/workflow-events",
         body,
+      }),
+    listKnowledgeSources: (params) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/knowledge-sources",
+        query: {
+          limit: params.limit === undefined ? undefined : String(params.limit),
+          cursor: params.cursor,
+        },
+      }),
+    createKnowledgeSource: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/knowledge-sources",
+        body,
+      }),
+    getKnowledgeSource: (knowledgeSourceId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/knowledge-sources/${encodeURIComponent(knowledgeSourceId)}`,
+      }),
+    listKnowledgeIndexes: (knowledgeSourceId, params) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/knowledge-sources/${encodeURIComponent(knowledgeSourceId)}/indexes`,
+        query: {
+          limit: params.limit === undefined ? undefined : String(params.limit),
+          cursor: params.cursor,
+        },
+      }),
+    createKnowledgeIndex: (knowledgeSourceId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/knowledge-sources/${encodeURIComponent(knowledgeSourceId)}/indexes`,
+        body,
+      }),
+    getKnowledgeIndex: (knowledgeIndexId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/knowledge-indexes/${encodeURIComponent(knowledgeIndexId)}`,
+      }),
+    retryKnowledgeIndex: (knowledgeIndexId) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/knowledge-indexes/${encodeURIComponent(knowledgeIndexId)}/retry`,
+        body: {},
+      }),
+    retrieveKnowledge: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/knowledge/retrieve",
+        body,
+      }),
+    listMemoryNamespaces: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/memory/namespaces",
+      }),
+    createMemoryNamespace: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/memory/namespaces",
+        body,
+      }),
+    getMemoryNamespace: (namespaceId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/memory/namespaces/${encodeURIComponent(namespaceId)}`,
+      }),
+    listMemoryRecords: (namespaceId, params) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/memory/namespaces/${encodeURIComponent(namespaceId)}/records`,
+        query: {
+          prefix: params.prefix,
+          limit: params.limit === undefined ? undefined : String(params.limit),
+          cursor: params.cursor,
+        },
       }),
   };
 }

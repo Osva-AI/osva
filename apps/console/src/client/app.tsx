@@ -34,6 +34,10 @@ import { ToolDetailPage } from "./routes/tool-detail-page";
 import { ConnectorsPage } from "./routes/connectors-page";
 import { ConnectorDetailPage } from "./routes/connector-detail-page";
 import { OverviewPage } from "./routes/overview-page";
+import { KnowledgePage } from "./routes/knowledge-page";
+import { KnowledgeSourcePage } from "./routes/knowledge-source-page";
+import { MemoryPage } from "./routes/memory-page";
+import { MemoryNamespacePage } from "./routes/memory-namespace-page";
 
 const queryClient = createQueryClient();
 
@@ -89,6 +93,16 @@ export function App() {
                   <Route
                     path="/models/:modelProfileId"
                     element={<ModelProfileDetailPage />}
+                  />
+                  <Route path="/knowledge" element={<KnowledgePage />} />
+                  <Route
+                    path="/knowledge/sources/:sourceId"
+                    element={<KnowledgeSourcePage />}
+                  />
+                  <Route path="/memory" element={<MemoryPage />} />
+                  <Route
+                    path="/memory/namespaces/:namespaceId"
+                    element={<MemoryNamespacePage />}
                   />
                   <Route path="/tools" element={<ToolsPage />} />
                   <Route

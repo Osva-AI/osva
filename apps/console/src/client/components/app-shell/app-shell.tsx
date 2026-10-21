@@ -31,6 +31,8 @@ const navSections: readonly NavSection[] = [
       { label: "Workflows", to: "/workflows" },
       { label: "Models", to: "/models" },
       { label: "Tools / Connectors", to: "/tools" },
+      { label: "Knowledge", to: "/knowledge" },
+      { label: "Memory", to: "/memory" },
     ],
   },
   {

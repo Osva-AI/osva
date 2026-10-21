@@ -53,6 +53,16 @@ export interface DeclarativeRuntimeComposition {
   ) =>
     | import("@osva/adapters-runtime-declarative").DeclarativeRuntimeToolGateway
     | undefined;
+  readonly createScopedKnowledgeGateway: (
+    execution: import("@osva-ai/contracts").ExecutionRequest,
+  ) =>
+    | import("@osva/adapters-runtime-declarative").DeclarativeRuntimeKnowledgeGateway
+    | undefined;
+  readonly createScopedMemoryGateway: (
+    execution: import("@osva-ai/contracts").ExecutionRequest,
+  ) =>
+    | import("@osva/adapters-runtime-declarative").DeclarativeRuntimeMemoryGateway
+    | undefined;
   readonly resolveToolMetadata: import("@osva/adapters-runtime-declarative").DeclarativeRuntimeAdapterOptions["resolveToolMetadata"];
   readonly logger?: {
     info(event: string, fields?: Readonly<Record<string, unknown>>): void;
@@ -81,6 +91,9 @@ export function composeRuntimeExecutors(
       logger: options.declarative.logger,
       createScopedModelGateway: options.declarative.createScopedModelGateway,
       createScopedToolGateway: options.declarative.createScopedToolGateway,
+      createScopedKnowledgeGateway:
+        options.declarative.createScopedKnowledgeGateway,
+      createScopedMemoryGateway: options.declarative.createScopedMemoryGateway,
       resolveToolMetadata: options.declarative.resolveToolMetadata,
     }),
     REMOTE_HTTP: new RemoteHttpRuntimeAdapter({
