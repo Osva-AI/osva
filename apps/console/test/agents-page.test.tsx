@@ -276,13 +276,14 @@ describe("Agents UI", () => {
     stubConsole("VIEWER");
     renderAgents("/onboarding");
     await waitFor(() => {
-      expect(screen.getByText("First-agent onboarding")).toBeTruthy();
+      expect(screen.getByText("Getting started")).toBeTruthy();
     });
     expect(
-      screen.getAllByText(/requires EDITOR or ADMIN/).length,
+      screen.getAllByText(/requires DEVELOPER, ADMIN, or OWNER/).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(/requires OPERATOR, EDITOR, or ADMIN/).length,
+      screen.getAllByText(/requires OPERATOR, DEVELOPER, ADMIN, or OWNER/)
+        .length,
     ).toBeGreaterThan(0);
   });
 

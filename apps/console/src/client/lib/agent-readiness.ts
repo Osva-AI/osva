@@ -73,11 +73,11 @@ export function buildRuntimeReadiness(input: {
     },
     {
       id: "model-provider",
-      label: "Model provider keys",
+      label: "Model bindings",
       state: capabilities.model ? "requires_setup" : "not_verified",
       detail: capabilities.model
-        ? "This version declares model capability. Provider keys belong on the worker process, never in the Console or browser."
-        : "This version does not declare model capability. Console cannot prove worker environment either way.",
+        ? "This version declares model capability. Configure provider connections and model profile versions on the Models page; declarative execution resolves bindings through ModelGateway at run time."
+        : "This version does not declare model capability.",
     },
     {
       id: "tools",

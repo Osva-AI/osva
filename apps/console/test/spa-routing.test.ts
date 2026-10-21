@@ -70,6 +70,10 @@ describe("console production SPA routing", () => {
     expect(onboarding.status).toBe(200);
     expect(await onboarding.text()).toContain('id="root"');
 
+    const overview = await fetch(`${origin}/overview`);
+    expect(overview.status).toBe(200);
+    expect(await overview.text()).toContain('id="root"');
+
     const runDetail = await fetch(`${origin}/runs/run-123`);
     expect(runDetail.status).toBe(200);
     expect(await runDetail.text()).toContain('id="root"');

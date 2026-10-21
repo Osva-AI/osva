@@ -21,10 +21,10 @@ export function LoginPage() {
       auth.selectWorkspace(auth.workspaces[0]!.workspaceId);
     }
     if (auth.workspaces.length === 1) {
-      return <Navigate to={returnTo ?? "/runs"} replace />;
+      return <Navigate to={returnTo ?? "/overview"} replace />;
     }
     if (auth.selectedWorkspace !== undefined) {
-      return <Navigate to={returnTo ?? "/runs"} replace />;
+      return <Navigate to={returnTo ?? "/overview"} replace />;
     }
     return <Navigate to="/select-workspace" replace />;
   }
@@ -51,7 +51,7 @@ export function LoginPage() {
       }
       if (workspaces.workspaces.length === 1) {
         auth.selectWorkspace(workspaces.workspaces[0]!.workspaceId);
-        navigate(returnTo ?? "/runs", { replace: true });
+        navigate(returnTo ?? "/overview", { replace: true });
         return;
       }
       navigate(

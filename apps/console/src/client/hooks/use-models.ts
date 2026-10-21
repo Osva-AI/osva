@@ -202,3 +202,61 @@ export function useAppendModelProfileVersionMutation(modelProfileId: string) {
     },
   });
 }
+
+export interface ModelBindingReadinessResource {
+  readonly connectionCount: number;
+  readonly profileCount: number;
+  readonly hasBoundProfileVersion: boolean;
+  readonly profileVersions: ReadonlyArray<{
+    readonly profileId: string;
+    readonly versions: readonly ModelProfileVersionResource[];
+  }>;
+}
+
+export function useModelBindingReadinessQuery() {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: ["model-profiles", workspaceId, "binding-readiness"],
+    enabled: workspaceId !== undefined,
+    queryFn: async (): Promise<ModelBindingReadinessResource> => {
+      const [connections, profiles] = await Promise.all([
+        consoleFetch<{ connections: ModelProviderConnectionResource[] }>(
+          "/api/v1/model-provider-connections",
+        ),
+        consoleFetch<{ modelProfiles: ModelProfileResource[] }>(
+          "/api/v1/model-profiles",
+        ),
+      ]);
+      const profileVersions: Array<{
+        readonly profileId: string;
+        readonly versions: readonly ModelProfileVersionResource[];
+      }> = [];
+      let hasBoundProfileVersion = false;
+      for (const profile of profiles.modelProfiles) {
+        const versions = await consoleFetch<{
+          versions: ModelProfileVersionResource[];
+        }>(`/api/v1/model-profiles/${encodeURIComponent(profile.id)}/versions`);
+        profileVersions.push({
+          profileId: profile.id,
+          versions: versions.versions,
+        });
+        if (
+          !hasBoundProfileVersion &&
+          versions.versions.some(
+            (version) =>
+              version.modelProviderConnectionVersionId !== undefined &&
+              version.modelProviderConnectionVersionId.length > 0,
+          )
+        ) {
+          hasBoundProfileVersion = true;
+        }
+      }
+      return {
+        connectionCount: connections.connections.length,
+        profileCount: profiles.modelProfiles.length,
+        hasBoundProfileVersion,
+        profileVersions,
+      };
+    },
+  });
+}
