@@ -7,7 +7,8 @@ export function SelectWorkspacePage() {
   const auth = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = sanitizeReturnPath(searchParams.get("returnTo")) ?? "/runs";
+  const returnTo =
+    sanitizeReturnPath(searchParams.get("returnTo")) ?? "/overview";
 
   return (
     <main className="auth-panel">

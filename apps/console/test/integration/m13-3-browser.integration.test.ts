@@ -22,14 +22,16 @@ async function loginAndSelectWorkspaceA(
   await page.fill('input[type="email"]', OPERATOR_EMAIL);
   await page.fill('input[type="password"]', HUMAN_PASSWORD);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(select-workspace|runs)/, { timeout: 60_000 });
+  await page.waitForURL(/\/(select-workspace|overview|runs)/, {
+    timeout: 60_000,
+  });
 
   if (page.url().includes("/select-workspace")) {
     await page
       .locator(".workspace-select-list button")
       .filter({ hasText: "ws-m12-3-a" })
       .click();
-    await page.waitForURL(/\/runs/, { timeout: 30_000 });
+    await page.waitForURL(/\/(overview|runs)/, { timeout: 30_000 });
   }
 }
 

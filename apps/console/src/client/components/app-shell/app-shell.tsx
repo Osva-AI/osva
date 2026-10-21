@@ -6,24 +6,47 @@ import {
   roleCanReadAuditEvents,
 } from "../../lib/permissions";
 
-const navItems = [
-  { label: "Overview", disabled: true },
-  { label: "Agents", to: "/agents", disabled: false },
-  { label: "Runs", to: "/runs", disabled: false },
-  { label: "Workflows", to: "/workflows", disabled: false },
-  { label: "WorkflowRuns", to: "/workflow-runs", disabled: false },
-  { label: "Artifacts", disabled: true },
-  { label: "Knowledge", disabled: true },
-  { label: "Tools", to: "/tools", disabled: false },
-  { label: "Models", to: "/models", disabled: false },
-  { label: "Settings", disabled: true },
-] as const;
+interface NavLinkItem {
+  readonly label: string;
+  readonly to: string;
+}
+
+interface NavSection {
+  readonly title: string;
+  readonly items: readonly NavLinkItem[];
+}
+
+const navSections: readonly NavSection[] = [
+  {
+    title: "Workspace",
+    items: [
+      { label: "Overview", to: "/overview" },
+      { label: "Getting started", to: "/onboarding" },
+    ],
+  },
+  {
+    title: "Build",
+    items: [
+      { label: "Agents", to: "/agents" },
+      { label: "Workflows", to: "/workflows" },
+      { label: "Models", to: "/models" },
+      { label: "Tools / Connectors", to: "/tools" },
+    ],
+  },
+  {
+    title: "Operate",
+    items: [
+      { label: "Runs", to: "/runs" },
+      { label: "Workflow Runs", to: "/workflow-runs" },
+    ],
+  },
+];
 
 export function AppShell() {
   const auth = useAuth();
   const navigate = useNavigate();
   const workspace = auth.selectedWorkspace;
-  const role = workspace?.role ?? "—";
+  const role = workspace?.role;
 
   return (
     <div className="app-shell">
@@ -57,42 +80,52 @@ export function AppShell() {
             </span>
           </div>
           <div>
-            Role <span className="mono">{role}</span>
+            Role <span className="mono">{role ?? "—"}</span>
           </div>
         </div>
         <nav aria-label="Primary">
-          <ul className="nav-list">
-            {navItems.map((item) => (
-              <li key={item.label}>
-                {"to" in item && !item.disabled ? (
-                  <NavLink
-                    className={({ isActive }) =>
-                      `nav-link${isActive ? " active" : ""}`
-                    }
-                    to={item.to}
-                  >
-                    {item.label}
-                  </NavLink>
-                ) : (
-                  <span className="nav-link disabled">{item.label}</span>
-                )}
-              </li>
-            ))}
-            {roleCanManageMembers(role) ? (
-              <li>
-                <NavLink className="nav-link" to="/workspace/access">
-                  Workspace access
-                </NavLink>
-              </li>
-            ) : null}
-            {roleCanReadAuditEvents(role) ? (
-              <li>
-                <NavLink className="nav-link" to="/workspace/security">
-                  Security activity
-                </NavLink>
-              </li>
-            ) : null}
-          </ul>
+          {navSections.map((section) => (
+            <div key={section.title} className="nav-section">
+              <div className="nav-section-title">{section.title}</div>
+              <ul className="nav-list">
+                {section.items.map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      className={({ isActive }) =>
+                        `nav-link${isActive ? " active" : ""}`
+                      }
+                      to={item.to}
+                      end={item.to === "/overview"}
+                    >
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          {role !== undefined &&
+          (roleCanManageMembers(role) || roleCanReadAuditEvents(role)) ? (
+            <div className="nav-section">
+              <div className="nav-section-title">Administration</div>
+              <ul className="nav-list">
+                {roleCanManageMembers(role) ? (
+                  <li>
+                    <NavLink className="nav-link" to="/workspace/access">
+                      Workspace Access
+                    </NavLink>
+                  </li>
+                ) : null}
+                {roleCanReadAuditEvents(role) ? (
+                  <li>
+                    <NavLink className="nav-link" to="/workspace/security">
+                      Security Activity
+                    </NavLink>
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+          ) : null}
         </nav>
         <button
           type="button"

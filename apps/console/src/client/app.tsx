@@ -33,6 +33,7 @@ import { ToolsPage } from "./routes/tools-page";
 import { ToolDetailPage } from "./routes/tool-detail-page";
 import { ConnectorsPage } from "./routes/connectors-page";
 import { ConnectorDetailPage } from "./routes/connector-detail-page";
+import { OverviewPage } from "./routes/overview-page";
 
 const queryClient = createQueryClient();
 
@@ -52,7 +53,11 @@ export function App() {
               />
               <Route element={<RequireWorkspace />}>
                 <Route element={<AppShell />}>
-                  <Route path="/" element={<Navigate to="/runs" replace />} />
+                  <Route
+                    path="/"
+                    element={<Navigate to="/overview" replace />}
+                  />
+                  <Route path="/overview" element={<OverviewPage />} />
                   <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route path="/agents" element={<AgentsPage />} />
                   <Route path="/agents/new" element={<AgentCreatePage />} />

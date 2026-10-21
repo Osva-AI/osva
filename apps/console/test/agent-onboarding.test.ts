@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import { helloAgentManifestTemplate } from "../src/client/lib/agent-example";
 import { describeManifestSubmitBlocker } from "../src/client/lib/agent-manifest-draft";
 import {
+  deriveOnboardingProgress,
+  developerOnboardingSteps,
   firstAgentOnboardingSteps,
+  noCodeFirstAgentSteps,
   onboardingSearch,
   parseOnboardingContext,
 } from "../src/client/lib/agent-onboarding";
@@ -63,6 +66,89 @@ describe("agent onboarding helpers", () => {
     expect(items.find((item) => item.id === "model-provider")?.state).toBe(
       "requires_setup",
     );
+    expect(items.find((item) => item.id === "model-provider")?.detail).toMatch(
+      /Models page/i,
+    );
+  });
+
+  it("marks no-code onboarding complete from API-backed progress flags", () => {
+    const context = parseOnboardingContext(new URLSearchParams());
+    const flags = deriveOnboardingProgress({
+      workspaceSelected: true,
+      modelProfiles: [
+        { id: "mp-1", workspaceId: "ws-1", key: "p", name: "P", createdAt: "" },
+      ],
+      modelProfileVersions: [
+        {
+          profileId: "mp-1",
+          versions: [
+            {
+              id: "mpv-1",
+              modelProfileId: "mp-1",
+              version: 1,
+              provider: "OPENAI",
+              model: "gpt",
+              modelProviderConnectionVersionId: "conn-v-1",
+              createdAt: "",
+            },
+          ],
+        },
+      ],
+      modelConnections: [
+        {
+          id: "c1",
+          workspaceId: "ws-1",
+          key: "c",
+          name: "C",
+          provider: "OPENAI",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      agents: [
+        {
+          id: "agent-1",
+          workspaceId: "ws-1",
+          key: "a",
+          name: "A",
+          createdAt: "",
+        },
+      ],
+      agentVersions: [
+        {
+          agentId: "agent-1",
+          versions: [
+            {
+              id: "av-1",
+              agentId: "agent-1",
+              version: 1,
+              createdAt: "",
+              manifest: { runtime: { type: "DECLARATIVE" } },
+            },
+          ],
+        },
+      ],
+      runs: [],
+      workflows: [],
+      context,
+    });
+    const steps = noCodeFirstAgentSteps(context, flags);
+    expect(steps.find((step) => step.id === "workspace")?.status).toBe(
+      "complete",
+    );
+    expect(steps.find((step) => step.id === "model")?.status).toBe("complete");
+    expect(steps.find((step) => step.id === "publish")?.status).toBe(
+      "complete",
+    );
+    expect(steps.find((step) => step.id === "run")?.status).toBe("current");
+  });
+
+  it("preserves developer onboarding steps separately", () => {
+    const steps = developerOnboardingSteps(
+      parseOnboardingContext(new URLSearchParams()),
+    );
+    expect(steps.some((step) => step.to.includes("/developer"))).toBe(true);
+    expect(JSON.stringify(steps)).toMatch(/Hello Agent|trusted/i);
   });
 
   it("describes declarative execution on the worker", () => {
