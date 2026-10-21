@@ -49,10 +49,7 @@ import type {
   ListEvaluationRunsQuery,
   ListEvaluationRunsResult,
 } from "./ports/evaluation-suite-repository.js";
-import {
-  DEFAULT_EVALUATION_RUN_LIST_LIMIT,
-  MAX_EVALUATION_RUN_LIST_LIMIT,
-} from "./ports/evaluation-suite-repository.js";
+import { MAX_EVALUATION_RUN_LIST_LIMIT } from "./ports/evaluation-suite-repository.js";
 import type { RunRepository } from "./ports/run-repository.js";
 import { Run } from "./run.js";
 import { RunAttempt } from "./run-attempt.js";
