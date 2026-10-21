@@ -11,6 +11,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../src/client/context/auth-context";
+import { AgentCreateDeveloperPage } from "../src/client/routes/agent-create-developer-page";
 import { AgentCreatePage } from "../src/client/routes/agent-create-page";
 import { stubHumanSessionFetch, json } from "./human-auth-fetch-stub";
 import { AgentDetailPage } from "../src/client/routes/agent-detail-page";
@@ -37,6 +38,10 @@ function renderAgents(path: string) {
           <Routes>
             <Route path="/agents" element={<AgentsPage />} />
             <Route path="/agents/new" element={<AgentCreatePage />} />
+            <Route
+              path="/agents/new/developer"
+              element={<AgentCreateDeveloperPage />}
+            />
             <Route path="/agents/:agentId" element={<AgentDetailPage />} />
             <Route
               path="/agents/:agentId/versions/new"
@@ -116,7 +121,7 @@ describe("Agents UI", () => {
     renderAgents("/agents");
     await waitFor(() => {
       expect(screen.getByText("Echo Agent")).toBeTruthy();
-      expect(screen.getByRole("link", { name: "Register Agent" })).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Create Agent" })).toBeTruthy();
     });
     expect(screen.getByRole("link", { name: "agent-echo" })).toBeTruthy();
   });
@@ -127,7 +132,7 @@ describe("Agents UI", () => {
     await waitFor(() => {
       expect(screen.getByText("Echo Agent")).toBeTruthy();
     });
-    expect(screen.queryByRole("link", { name: "Register Agent" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Create Agent" })).toBeNull();
   });
 
   it("registers an agent and navigates to the persisted id", async () => {
@@ -145,14 +150,19 @@ describe("Agents UI", () => {
         return json({ ...agent, id: "agent-created" }, 201);
       }
       if (url === "/api/v1/agents/agent-created") {
-        return json({ ...agent, id: "agent-created" });
+        return json({
+          ...agent,
+          id: "agent-created",
+          key: "hello-agent",
+          name: "Hello Agent",
+        });
       }
       if (url === "/api/v1/agents/agent-created/versions") {
         return json({ versions: [] });
       }
       return undefined;
     });
-    renderAgents("/agents/new");
+    renderAgents("/agents/new/developer");
     await waitFor(() => {
       expect(screen.getByLabelText("Key")).toBeTruthy();
     });
@@ -161,9 +171,8 @@ describe("Agents UI", () => {
     );
     await user.click(screen.getByRole("button", { name: "Register Agent" }));
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Agent" })).toBeTruthy();
+      expect(screen.getByLabelText("Manifest (JSON)")).toBeTruthy();
     });
-    expect(screen.getByText("agent-created")).toBeTruthy();
     expect(
       fetchMock.mock.calls.some(
         ([url, init]) =>
@@ -193,7 +202,7 @@ describe("Agents UI", () => {
 
   it("rejects invalid version JSON before posting", async () => {
     stubConsole("ADMIN");
-    renderAgents("/agents/agent-echo/versions/new");
+    renderAgents("/agents/agent-echo/versions/new?developer=1");
     await waitFor(() => {
       expect(screen.getByLabelText("Manifest (JSON)")).toBeTruthy();
     });
@@ -212,7 +221,15 @@ describe("Agents UI", () => {
 
   it("blocks submit while TRUSTED_TYPESCRIPT integrity is a placeholder", async () => {
     stubConsole("ADMIN");
-    renderAgents("/agents/agent-echo/versions/new");
+    renderAgents("/agents/agent-echo/versions/new?developer=1");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Load Hello Agent manifest" }),
+      ).toBeTruthy();
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Load Hello Agent manifest" }),
+    );
     await waitFor(() => {
       expect(screen.getByLabelText("runtime.integrity")).toBeTruthy();
     });

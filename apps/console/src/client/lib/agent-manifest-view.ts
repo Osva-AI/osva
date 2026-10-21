@@ -84,6 +84,46 @@ export function readManifestIoSchemas(manifest: unknown): {
   };
 }
 
+export function readDeclarativeConfigurationSummary(manifest: unknown):
+  | {
+      readonly instructionsPreview: string;
+      readonly modelBinding: string;
+      readonly allowedTools: readonly string[];
+      readonly maxModelInvocations: string;
+      readonly maxToolInvocations: string;
+      readonly maxOutputTokens: string;
+    }
+  | undefined {
+  if (!isRecord(manifest) || !isRecord(manifest.runtime)) {
+    return undefined;
+  }
+  if (manifest.runtime.type !== "DECLARATIVE") {
+    return undefined;
+  }
+  const config = manifest.runtime.config;
+  if (!isRecord(config)) {
+    return undefined;
+  }
+  const instructions =
+    typeof config.instructions === "string" ? config.instructions : "";
+  return {
+    instructionsPreview:
+      instructions.trim().length > 0
+        ? instructions.trim().slice(0, 280)
+        : "(empty)",
+    modelBinding:
+      typeof config.modelBinding === "string" ? config.modelBinding : "primary",
+    allowedTools: Array.isArray(config.allowedToolBindings)
+      ? config.allowedToolBindings.filter(
+          (entry): entry is string => typeof entry === "string",
+        )
+      : [],
+    maxModelInvocations: stringOrDash(config.maxModelInvocations),
+    maxToolInvocations: stringOrDash(config.maxToolInvocations),
+    maxOutputTokens: stringOrDash(config.maxOutputTokens),
+  };
+}
+
 export function readManifestBindingNames(manifest: unknown): {
   readonly models: readonly string[];
   readonly tools: readonly string[];
@@ -100,6 +140,16 @@ export function readManifestBindingNames(manifest: unknown): {
 
 function recordKeys(value: unknown): readonly string[] {
   return isRecord(value) ? Object.keys(value) : [];
+}
+
+function stringOrDash(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+  return "—";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

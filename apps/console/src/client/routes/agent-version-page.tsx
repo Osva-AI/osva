@@ -1,4 +1,9 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 
 import { AgentRunLaunchForm } from "../components/agent/agent-run-launch-form";
 import { RuntimeReadinessPanel } from "../components/agent/runtime-readiness-panel";
@@ -14,6 +19,7 @@ import {
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   readAgentRuntimeView,
+  readDeclarativeConfigurationSummary,
   readManifestBindingNames,
   readManifestCapabilities,
   readManifestIoSchemas,
@@ -30,6 +36,8 @@ export function AgentVersionPage() {
     agentVersionId: string;
   }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const justPublished = searchParams.get("published") === "1";
   const agentQuery = useAgentQuery(agentId);
   const versionQuery = useAgentVersionQuery(agentId, agentVersionId);
   const versionsQuery = useAgentVersionsQuery(agentId);
@@ -57,6 +65,9 @@ export function AgentVersionPage() {
   const capabilities = readManifestCapabilities(version?.manifest);
   const io = readManifestIoSchemas(version?.manifest);
   const bindings = readManifestBindingNames(version?.manifest);
+  const declarativeSummary = readDeclarativeConfigurationSummary(
+    version?.manifest,
+  );
   const versions = versionsQuery.data?.versions ?? [];
 
   return (
@@ -79,6 +90,11 @@ export function AgentVersionPage() {
           >
             Use in Workflow Builder
           </Link>
+          {canExecute ? (
+            <a className="button primary" href="#run-agent">
+              Test this version
+            </a>
+          ) : null}
           <Link className="button" to={`/agents/${agentId}`}>
             Back to agent
           </Link>
@@ -103,6 +119,14 @@ export function AgentVersionPage() {
 
       {version !== undefined ? (
         <>
+          {justPublished ? (
+            <section className="panel">
+              <p className="muted">
+                This AgentVersion is now saved. Test runs use this immutable
+                configuration and may invoke your model provider.
+              </p>
+            </section>
+          ) : null}
           <section className="panel">
             <dl className="meta-grid">
               <div>
@@ -170,7 +194,43 @@ export function AgentVersionPage() {
 
           <section className="panel">
             <h2 className="panel-title">Runtime configuration</h2>
-            <p className="muted">{runtime.summary}</p>
+            {declarativeSummary !== undefined ? (
+              <>
+                <p className="muted">{runtime.summary}</p>
+                <dl className="meta-grid">
+                  <div>
+                    <dt>Instructions</dt>
+                    <dd>{declarativeSummary.instructionsPreview}</dd>
+                  </div>
+                  <div>
+                    <dt>Model binding</dt>
+                    <dd className="mono">{declarativeSummary.modelBinding}</dd>
+                  </div>
+                  <div>
+                    <dt>Approved tools</dt>
+                    <dd>
+                      {declarativeSummary.allowedTools.length === 0
+                        ? "None"
+                        : declarativeSummary.allowedTools.join(", ")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Model call budget</dt>
+                    <dd>{declarativeSummary.maxModelInvocations}</dd>
+                  </div>
+                  <div>
+                    <dt>Tool call budget</dt>
+                    <dd>{declarativeSummary.maxToolInvocations}</dd>
+                  </div>
+                  <div>
+                    <dt>Max output tokens</dt>
+                    <dd>{declarativeSummary.maxOutputTokens}</dd>
+                  </div>
+                </dl>
+              </>
+            ) : (
+              <p className="muted">{runtime.summary}</p>
+            )}
             {Object.keys(runtime.details).length > 0 ? (
               <dl className="meta-grid">
                 {Object.entries(runtime.details).map(([key, value]) => (
@@ -232,14 +292,16 @@ export function AgentVersionPage() {
             <JsonView label="Manifest" value={version.manifest ?? {}} />
           </section>
 
-          <AgentRunLaunchForm
-            agentId={agentId}
-            agentKey={agentQuery.data?.key}
-            agentName={agentQuery.data?.name}
-            selectedVersion={version}
-            canExecute={canExecute}
-            versionLoading={versionQuery.isLoading}
-          />
+          <div id="run-agent">
+            <AgentRunLaunchForm
+              agentId={agentId}
+              agentKey={agentQuery.data?.key}
+              agentName={agentQuery.data?.name}
+              selectedVersion={version}
+              canExecute={canExecute}
+              versionLoading={versionQuery.isLoading}
+            />
+          </div>
         </>
       ) : null}
     </>

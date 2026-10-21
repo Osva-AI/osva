@@ -5,6 +5,7 @@ import { RequireAuth, RequireWorkspace } from "./components/auth/require-auth";
 import { AppShell } from "./components/app-shell/app-shell";
 import { AuthProvider } from "./context/auth-context";
 import { createQueryClient } from "./lib/query-client";
+import { AgentCreateDeveloperPage } from "./routes/agent-create-developer-page";
 import { AgentCreatePage } from "./routes/agent-create-page";
 import { AgentDetailPage } from "./routes/agent-detail-page";
 import { AgentVersionCreatePage } from "./routes/agent-version-create-page";
@@ -55,6 +56,10 @@ export function App() {
                   <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route path="/agents" element={<AgentsPage />} />
                   <Route path="/agents/new" element={<AgentCreatePage />} />
+                  <Route
+                    path="/agents/new/developer"
+                    element={<AgentCreateDeveloperPage />}
+                  />
                   <Route
                     path="/agents/:agentId"
                     element={<AgentDetailPage />}

@@ -1,22 +1,44 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import {
+  AgentVersionReviewPanel,
+  DeclarativeAgentStudioEditor,
+  type AgentStudioEditorMode,
+} from "../components/agent/declarative-agent-studio-editor";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
-import { useCreateAgentMutation } from "../hooks/use-agents";
+import {
+  useCreateAgentMutation,
+  useCreateAgentVersionMutation,
+} from "../hooks/use-agents";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
-import { HELLO_AGENT_KEY, HELLO_AGENT_NAME } from "../lib/agent-example";
 import { describeRegistryWriteFailure } from "../lib/agent-manifest-draft";
+import {
+  defaultDeclarativeManifestTemplate,
+  describeDeclarativeManifestValidation,
+  manifestToText,
+  parseManifestRecord,
+  slugAgentKeyFromName,
+} from "../lib/declarative-agent-manifest";
 import { ConsoleApiError } from "../lib/console-api";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
 export function AgentCreatePage() {
   const navigate = useNavigate();
   const authQuery = useAuthContextQuery();
-  const mutation = useCreateAgentMutation();
+  const createAgent = useCreateAgentMutation();
+  const createVersion = useCreateAgentVersionMutation();
   const submittingRef = useRef(false);
-  const [key, setKey] = useState("");
-  const [name, setName] = useState("");
+
+  const [agentName, setAgentName] = useState("");
+  const [agentKey, setAgentKey] = useState("");
+  const [keyTouched, setKeyTouched] = useState(false);
+  const [manifestText, setManifestText] = useState(() =>
+    manifestToText(defaultDeclarativeManifestTemplate()),
+  );
+  const [editorMode, setEditorMode] = useState<AgentStudioEditorMode>("guided");
+  const [showReview, setShowReview] = useState(false);
   const [feedback, setFeedback] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
   const [errorStatus, setErrorStatus] = useState<number | undefined>();
@@ -24,6 +46,44 @@ export function AgentCreatePage() {
   const canWrite =
     authQuery.data !== undefined &&
     roleCanWriteControlPlaneResources(authQuery.data.role);
+
+  useEffect(() => {
+    if (keyTouched) {
+      return;
+    }
+    const slug = slugAgentKeyFromName(agentName);
+    setAgentKey(slug);
+    setManifestText((current) => {
+      const parsed = parseManifestRecord(current);
+      if (!parsed.ok) {
+        return current;
+      }
+      return manifestToText({
+        ...parsed.value,
+        key: slug,
+        name: agentName.trim() || String(parsed.value.name),
+      });
+    });
+  }, [agentName, keyTouched]);
+
+  const parsedManifest = parseManifestRecord(manifestText);
+  const validation = parsedManifest.ok
+    ? describeDeclarativeManifestValidation(parsedManifest.value)
+    : {
+        ok: false,
+        messages: [parsedManifest.message],
+        fieldErrors: {},
+      };
+
+  const canSubmit =
+    canWrite &&
+    agentName.trim().length > 0 &&
+    agentKey.trim().length > 0 &&
+    parsedManifest.ok &&
+    validation.ok &&
+    !createAgent.isPending &&
+    !createVersion.isPending &&
+    !submittingRef.current;
 
   if (authQuery.isLoading) {
     return <LoadingBlock label="Loading…" />;
@@ -33,15 +93,12 @@ export function AgentCreatePage() {
     return <ErrorState title="Authentication failed" error={authQuery.error} />;
   }
 
-  const canSubmit =
-    canWrite &&
-    key.trim().length > 0 &&
-    name.trim().length > 0 &&
-    !mutation.isPending &&
-    !submittingRef.current;
-
-  async function submit() {
-    if (!canSubmit || submittingRef.current) {
+  async function publishAgent() {
+    if (!canSubmit || submittingRef.current || !parsedManifest.ok) {
+      if (!validation.ok) {
+        setFeedback("Fix validation issues before publishing.");
+        setShowReview(true);
+      }
       return;
     }
     submittingRef.current = true;
@@ -49,15 +106,26 @@ export function AgentCreatePage() {
     setErrorRequestId(undefined);
     setErrorStatus(undefined);
     try {
-      const created = await mutation.mutateAsync({
-        key: key.trim(),
-        name: name.trim(),
+      const createdAgent = await createAgent.mutateAsync({
+        key: agentKey.trim(),
+        name: agentName.trim(),
       });
-      navigate(`/agents/${created.id}`);
+      const manifest = {
+        ...parsedManifest.value,
+        key: agentKey.trim(),
+        name: agentName.trim(),
+      };
+      const createdVersion = await createVersion.mutateAsync({
+        agentId: createdAgent.id,
+        manifest,
+      });
+      navigate(
+        `/agents/${createdAgent.id}/versions/${createdVersion.id}?published=1`,
+      );
     } catch (error) {
       submittingRef.current = false;
       setFeedback(
-        error instanceof Error ? error.message : "Failed to register agent.",
+        error instanceof Error ? error.message : "Failed to create agent.",
       );
       if (error instanceof ConsoleApiError) {
         setErrorRequestId(error.body.requestId);
@@ -70,80 +138,105 @@ export function AgentCreatePage() {
     <>
       <header className="page-header">
         <div>
-          <h1 className="page-title">Register Agent</h1>
+          <h1 className="page-title">Create Agent</h1>
           <p className="page-subtitle">
-            Creates a workspace Agent registry row. An AgentVersion with a
-            runtime manifest is required before a Run can execute.
+            Build a no-code declarative agent with instructions, an approved
+            model, and optional tools. Publishing saves an immutable
+            AgentVersion you can test with a Run.
           </p>
         </div>
-        <Link className="button" to="/agents">
-          Back to agents
-        </Link>
+        <div className="toolbar">
+          <Link className="button" to="/agents">
+            Back to agents
+          </Link>
+          <Link className="button" to="/agents/new/developer">
+            Developer registration
+          </Link>
+        </div>
       </header>
 
       {!canWrite ? (
         <p className="muted">
-          Registering an Agent requires an EDITOR or ADMIN role.
+          Creating an agent requires an EDITOR or ADMIN role.
         </p>
       ) : null}
 
       <section className="panel">
-        <div className="field">
-          <label htmlFor="agent-key">Key</label>
-          <input
-            id="agent-key"
-            value={key}
-            onChange={(event) => {
-              setKey(event.target.value);
-              setFeedback(undefined);
-              setErrorStatus(undefined);
-            }}
-            disabled={!canWrite || mutation.isPending}
-            autoComplete="off"
-          />
-          <p className="muted">
-            Workspace-unique identifier. Creating an Agent does not create a
-            runnable version.
-          </p>
+        <div className="filters">
+          <div className="field">
+            <label htmlFor="create-agent-name">Agent name</label>
+            <input
+              id="create-agent-name"
+              value={agentName}
+              onChange={(event) => {
+                setAgentName(event.target.value);
+                setFeedback(undefined);
+                setErrorStatus(undefined);
+              }}
+              disabled={!canWrite || createAgent.isPending}
+              autoComplete="off"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="create-agent-key">Agent key</label>
+            <input
+              id="create-agent-key"
+              value={agentKey}
+              onChange={(event) => {
+                setKeyTouched(true);
+                setAgentKey(event.target.value);
+                setFeedback(undefined);
+                setErrorStatus(undefined);
+              }}
+              disabled={!canWrite || createAgent.isPending}
+              autoComplete="off"
+            />
+            <p className="muted">
+              Generated from the name; edit if you need a specific key.
+            </p>
+          </div>
         </div>
-        <div className="field">
-          <label htmlFor="agent-name">Name</label>
-          <input
-            id="agent-name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-              setFeedback(undefined);
-              setErrorStatus(undefined);
-            }}
-            disabled={!canWrite || mutation.isPending}
-            autoComplete="off"
-          />
-          <p className="muted">Display name for the registry row.</p>
-        </div>
+
+        <DeclarativeAgentStudioEditor
+          manifestText={manifestText}
+          disabled={
+            !canWrite || createAgent.isPending || createVersion.isPending
+          }
+          mode={editorMode}
+          onModeChange={setEditorMode}
+          onManifestTextChange={(next) => {
+            setManifestText(next);
+            setFeedback(undefined);
+            setErrorStatus(undefined);
+          }}
+          validation={validation}
+        />
+
         <div className="toolbar">
           <button
             type="button"
             className="button"
-            onClick={() => {
-              setKey(HELLO_AGENT_KEY);
-              setName(HELLO_AGENT_NAME);
-              setFeedback(undefined);
-              setErrorStatus(undefined);
-            }}
-            disabled={!canWrite || mutation.isPending}
+            disabled={!parsedManifest.ok}
+            onClick={() => setShowReview((current) => !current)}
           >
-            Use Hello Agent example
+            {showReview ? "Hide review" : "Validate and review"}
           </button>
           <button
             type="button"
             className="button primary"
-            onClick={() => void submit()}
             disabled={!canSubmit}
+            onClick={() => void publishAgent()}
           >
-            {mutation.isPending ? "Registering…" : "Register Agent"}
+            {createAgent.isPending || createVersion.isPending
+              ? "Publishing…"
+              : "Publish agent version"}
           </button>
         </div>
+
+        {showReview ? (
+          <AgentVersionReviewPanel manifestText={manifestText} />
+        ) : null}
+
         {errorStatus !== undefined ? (
           <p className="error-inline">
             {describeRegistryWriteFailure(errorStatus)}
