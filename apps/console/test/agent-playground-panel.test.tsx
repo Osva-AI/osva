@@ -69,41 +69,41 @@ describe("AgentPlaygroundPanel", () => {
   it("posts restrictPersistentMemory when the checkbox is enabled", async () => {
     const fetchMock = vi.fn(
       async (input: RequestInfo, _init?: RequestInit): Promise<Response> => {
-      const url = typeof input === "string" ? input : input.url;
-      if (url.endsWith("/api/v1/runs")) {
-        return new Response(
-          JSON.stringify({
-            run: { id: "run-1", status: "QUEUED" },
-            runAttempt: { id: "ra-1", status: "PENDING" },
-          }),
-          { status: 201, headers: { "content-type": "application/json" } },
-        );
-      }
-      if (url.includes("/api/v1/runs/run-1")) {
-        return new Response(
-          JSON.stringify({
-            id: "run-1",
-            status: "SUCCEEDED",
-            restrictPersistentMemory: true,
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }
-      if (url.includes("/attempts/ra-1")) {
-        return new Response(
-          JSON.stringify({
-            id: "ra-1",
-            status: "SUCCEEDED",
-            output: { echoed: true },
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }
-      return new Response("{}", {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    },
+        const url = typeof input === "string" ? input : input.url;
+        if (url.endsWith("/api/v1/runs")) {
+          return new Response(
+            JSON.stringify({
+              run: { id: "run-1", status: "QUEUED" },
+              runAttempt: { id: "ra-1", status: "PENDING" },
+            }),
+            { status: 201, headers: { "content-type": "application/json" } },
+          );
+        }
+        if (url.includes("/api/v1/runs/run-1")) {
+          return new Response(
+            JSON.stringify({
+              id: "run-1",
+              status: "SUCCEEDED",
+              restrictPersistentMemory: true,
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        if (url.includes("/attempts/ra-1")) {
+          return new Response(
+            JSON.stringify({
+              id: "ra-1",
+              status: "SUCCEEDED",
+              output: { echoed: true },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        return new Response("{}", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
     );
     vi.stubGlobal("fetch", fetchMock);
 

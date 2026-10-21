@@ -537,7 +537,8 @@ describe("CreateRun", () => {
 
     const createRun = new CreateRun({ runs, agents, queue });
     const restrictedRunId = "run-restrict-memory" as typeof runId;
-    const restrictedAttemptId = "run-attempt-restrict-memory" as typeof runAttemptId;
+    const restrictedAttemptId =
+      "run-attempt-restrict-memory" as typeof runAttemptId;
     const result = await createRun.execute({
       ...createCommand(),
       runId: restrictedRunId,
@@ -564,8 +565,10 @@ describe("CreateRun", () => {
       ...createCommand(),
       runId: evalChildRunId,
       runAttemptId: evalChildAttemptId,
-      evaluationRunId: "eval-run-1" as import("@osva-ai/contracts").EvaluationRunId,
-      evaluationCaseId: "eval-case-1" as import("@osva-ai/contracts").EvaluationCaseId,
+      evaluationRunId:
+        "eval-run-1" as import("@osva-ai/contracts").EvaluationRunId,
+      evaluationCaseId:
+        "eval-case-1" as import("@osva-ai/contracts").EvaluationCaseId,
       restrictPersistentMemory: true,
     });
 

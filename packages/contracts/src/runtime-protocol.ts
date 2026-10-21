@@ -42,10 +42,12 @@ export interface ExecutionRequest {
   readonly restrictPersistentMemory?: boolean;
 }
 
-export function allowsPersistentMemoryMutation(execution: Readonly<{
-  readonly evaluationContext?: ExecutionEvaluationContext;
-  readonly restrictPersistentMemory?: boolean;
-}>): boolean {
+export function allowsPersistentMemoryMutation(
+  execution: Readonly<{
+    readonly evaluationContext?: ExecutionEvaluationContext;
+    readonly restrictPersistentMemory?: boolean;
+  }>,
+): boolean {
   if (execution.evaluationContext !== undefined) {
     return false;
   }
