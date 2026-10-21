@@ -6,7 +6,9 @@ import postgres from "postgres";
 import { createDatabase } from "../../src/database.js";
 import { migrateDatabase } from "../../src/migrate.js";
 import { readMigrationStatus } from "../../src/migration-status.js";
+import { readDrizzleJournal } from "../../src/migration-history.js";
 import {
+  BETTER_AUTH_USER_IMAGE_MIGRATION_TAG,
   formatSchemaIntegrity,
   verifySchemaIntegrity,
 } from "../../src/schema-integrity.js";
@@ -154,20 +156,26 @@ describe("schema integrity against disposable PostgreSQL", () => {
     await withRolledBackMutation(
       postgresContext.connectionString,
       async (sql) => {
-        // Drop the two newest journal rows so pending includes 0026 while the
-        // physical schema still has users.image (and 0027 objects).
+        const journal = readDrizzleJournal();
+        const probedMigrationIndex = journal.entries.findIndex(
+          (entry) => entry.tag === BETTER_AUTH_USER_IMAGE_MIGRATION_TAG,
+        );
+        expect(probedMigrationIndex).toBeGreaterThanOrEqual(0);
+        const deleteNewestCount = journal.entries.length - probedMigrationIndex;
+        // Drop newest journal rows so pending includes the probed migration while
+        // the physical schema still has its artifacts (and later migration objects).
         await sql.unsafe(`
         DELETE FROM drizzle.__drizzle_migrations
         WHERE hash IN (
           SELECT hash FROM drizzle.__drizzle_migrations
           ORDER BY id DESC
-          LIMIT 2
+          LIMIT ${deleteNewestCount}
         )
       `);
         const report = await verifySchemaIntegrity(sql);
         expect(report.outcome).toBe("schema_ahead");
         expect(report.journal.pendingMigrations).toContain(
-          "0026_better_auth_user_image",
+          BETTER_AUTH_USER_IMAGE_MIGRATION_TAG,
         );
       },
     );

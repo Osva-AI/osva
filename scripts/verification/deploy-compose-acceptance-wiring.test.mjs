@@ -10,6 +10,7 @@ import {
   COMPOSE_PARSE_ENV_KEYS,
   EXPECTED_MIGRATION_HEAD,
   buildComposeAcceptanceEnv,
+  readRepositoryMigrationHead,
 } from "../deployment/deploy-compose-acceptance-env.mjs";
 import { loadEnvironment } from "./environment.mjs";
 
@@ -26,8 +27,18 @@ const ACCEPTANCE_SCRIPT = path.join(
 );
 
 describe("deploy compose acceptance wiring", () => {
-  it("expects migration head 0027_model_provider_connections", () => {
-    assert.equal(EXPECTED_MIGRATION_HEAD, "0027_model_provider_connections");
+  it("expects migration head to match the committed drizzle journal", () => {
+    assert.equal(EXPECTED_MIGRATION_HEAD, readRepositoryMigrationHead());
+    const journalPath = path.join(
+      REPO_ROOT,
+      "packages",
+      "db",
+      "drizzle",
+      "meta",
+      "_journal.json",
+    );
+    const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
+    assert.equal(EXPECTED_MIGRATION_HEAD, journal.entries.at(-1)?.tag);
   });
 
   it("builds a complete Compose parse environment with test defaults", () => {
