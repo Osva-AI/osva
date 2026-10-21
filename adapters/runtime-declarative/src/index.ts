@@ -10,3 +10,7 @@ export {
   AGENT_OUTPUT_SCHEMA_EFFECTIVE_CONFIG_KEY,
   DeclarativeRuntimeErrorCode,
 } from "./constants.js";
+export type {
+  DeclarativeRuntimeKnowledgeGateway,
+  DeclarativeRuntimeMemoryGateway,
+} from "./declarative-context-prefetch.js";

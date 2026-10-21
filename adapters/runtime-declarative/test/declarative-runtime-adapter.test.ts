@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AGENT_OUTPUT_SCHEMA_EFFECTIVE_CONFIG_KEY,
   DeclarativeRuntimeAdapter,
+  type DeclarativeRuntimeKnowledgeGateway,
 } from "../src/index.js";
 
 const outputSchema: JsonSchemaRecord = {
@@ -291,14 +292,14 @@ describe("DeclarativeRuntimeAdapter", () => {
           finishReason: "stop",
         };
       }),
-      createScopedKnowledgeGateway: () => ({
-        search: async () => [
+      createScopedKnowledgeGateway: (): DeclarativeRuntimeKnowledgeGateway => ({
+        search: async (_execution, _bindingName, _request) => [
           {
             knowledgeChunkId: "kc-1" as never,
             knowledgeIndexId: "ki-1" as never,
             knowledgeSourceId: "ks-1" as never,
             artifactReference: {
-              type: "ARTIFACT_REFERENCE_V1",
+              type: "artifact",
               artifactId: "art-1" as never,
             },
             text: "Policy excerpt about refunds.",
@@ -338,7 +339,9 @@ describe("DeclarativeRuntimeAdapter", () => {
   });
 
   it("does not retrieve knowledge when no bindings are present", async () => {
-    const search = vi.fn();
+    const search: DeclarativeRuntimeKnowledgeGateway["search"] = vi.fn(
+      async () => [],
+    );
     const adapter = new DeclarativeRuntimeAdapter({
       modelGateway: createModelGateway(async () => ({
         text: JSON.stringify({ answer: "ok" }),
