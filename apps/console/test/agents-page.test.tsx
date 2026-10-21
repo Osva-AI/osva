@@ -321,9 +321,10 @@ describe("Agents UI", () => {
     stubConsole("ADMIN");
     renderAgents("/workflows/new?agentId=agent-echo&agentVersionId=av-echo");
     await waitFor(() => {
-      expect(screen.getByText("AgentVersion handoff")).toBeTruthy();
+      expect(screen.getByText("Agent version handoff")).toBeTruthy();
     });
     expect(screen.getAllByText("av-echo").length).toBeGreaterThan(0);
-    expect(screen.getByText(/does not auto-select it/i)).toBeTruthy();
+    expect(screen.getAllByText(/Run AI agent/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/choose version/i)).toBeTruthy();
   });
 });

@@ -2,6 +2,7 @@ import type { WorkflowV3NodeType } from "@osva-ai/contracts";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import { useAgentBindingResolution } from "../../hooks/use-agent-binding-resolution";
+import { useWorkflowCanvasLabelContext } from "../../hooks/use-workflow-canvas-label-context";
 import { LoadingBlock } from "../loading/loading-block";
 import type { WorkflowBuilderDraft } from "../../lib/workflow-builder-draft";
 import { updateRegistry } from "../../lib/workflow-builder-draft";
@@ -14,6 +15,8 @@ import {
   asWorkflowDefinitionView,
   orderWorkflowNodeKeys,
 } from "../../lib/workflow-definition";
+import { resolveWorkflowCanvasLabel } from "../../lib/workflow-canvas-labels";
+import { workflowNodePresentation } from "../../lib/workflow-node-catalog";
 import {
   analyzeWorkflowBuilderDraft,
   errorNodeKeys,
@@ -44,7 +47,9 @@ export function WorkflowBuilderForm({
   disabled,
 }: WorkflowBuilderFormProps) {
   const bindingResolution = useAgentBindingResolution(draft);
+  const canvasLabels = useWorkflowCanvasLabelContext();
   const [selectedNodeKey, setSelectedNodeKey] = useState<string | undefined>();
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [manualAgentIdByNodeKey, setManualAgentIdByNodeKey] = useState<
     Record<string, string>
   >({});
@@ -95,7 +100,7 @@ export function WorkflowBuilderForm({
   return (
     <div className="stack">
       <section className="panel">
-        <h2 className="section-title">Workflow registry</h2>
+        <h2 className="section-title">Workflow details</h2>
         <div className="stack">
           <div className="field">
             <label htmlFor="workflow-key">Key</label>
@@ -153,10 +158,28 @@ export function WorkflowBuilderForm({
       <section className="panel">
         <h2 className="section-title">Workflow graph</h2>
         <p className="muted workflow-graph-intro">
-          Drag nodes to arrange layout (saved in your draft only). Connect
-          handles to add edges; select an edge and press Delete to remove. Use
-          the inspector or node list for configuration without the canvas.
+          Drag steps to arrange the layout (saved in your draft only). Connect
+          the dots between steps; select a connection and press Delete to remove
+          it.
         </p>
+        <div className="toolbar">
+          <button
+            type="button"
+            className={`button${showAdvanced ? "" : " primary"}`}
+            disabled={disabled}
+            onClick={() => setShowAdvanced(false)}
+          >
+            Guided
+          </button>
+          <button
+            type="button"
+            className={`button${showAdvanced ? " primary" : ""}`}
+            disabled={disabled}
+            onClick={() => setShowAdvanced(true)}
+          >
+            Advanced details
+          </button>
+        </div>
         <WorkflowNodePalette disabled={disabled} onAddNode={addNode} />
         {bindingResolution.isResolving ? (
           <p className="muted">Loading agent version bindings…</p>
@@ -169,6 +192,7 @@ export function WorkflowBuilderForm({
             selectedNodeKey={selectedNodeKey}
             onSelectNodeKey={setSelectedNodeKey}
             errorNodeKeys={invalidNodeKeys}
+            canvasLabelContext={canvasLabels}
           />
         </Suspense>
       </section>
@@ -179,17 +203,19 @@ export function WorkflowBuilderForm({
       />
 
       <section className="panel">
-        <h2 className="section-title">Node inspector</h2>
+        <h2 className="section-title">Step configuration</h2>
         <WorkflowNodeInspector
           draft={draft}
           nodeKey={selectedNodeKey}
           onDraftChange={onDraftChange}
           disabled={disabled}
+          showAdvanced={showAdvanced}
           agentIdByNodeKey={agentIdByNodeKey}
           unavailableVersionByNodeKey={
             bindingResolution.unavailableVersionByNodeKey
           }
           nodeIssues={selectedNodeIssues}
+          canvasLabelContext={canvasLabels}
           onManualAgentIdChange={(nodeKey, agentId) => {
             setManualAgentIdByNodeKey((current) => ({
               ...current,
@@ -203,9 +229,9 @@ export function WorkflowBuilderForm({
       </section>
 
       <section className="panel">
-        <h2 className="section-title">Nodes (accessible list)</h2>
+        <h2 className="section-title">Steps (accessible list)</h2>
         {orderedKeys.length === 0 ? (
-          <p className="muted">Add nodes using the palette above.</p>
+          <p className="muted">Add steps using the buttons above.</p>
         ) : (
           <ul className="stack workflow-node-accessible-list">
             {orderedKeys.map((key) => {
@@ -215,6 +241,8 @@ export function WorkflowBuilderForm({
               if (node === undefined) {
                 return null;
               }
+              const label = resolveWorkflowCanvasLabel(node, canvasLabels);
+              const typeLabel = workflowNodePresentation(node.type).label;
               return (
                 <li key={key}>
                   <button
@@ -223,9 +251,10 @@ export function WorkflowBuilderForm({
                     disabled={disabled}
                     onClick={() => setSelectedNodeKey(key)}
                   >
-                    <span className="mono">
-                      {node.key} · {node.type}
-                    </span>
+                    {typeLabel}: {label}
+                    {showAdvanced ? (
+                      <span className="mono"> ({node.key})</span>
+                    ) : null}
                   </button>
                 </li>
               );

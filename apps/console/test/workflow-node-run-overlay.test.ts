@@ -143,7 +143,7 @@ describe("workflow node run overlay mapping", () => {
         status: "WAITING",
       }),
     );
-    expect(reason).toMatch(/duration of 5000 ms/);
+    expect(reason).toMatch(/Waiting for a timer \(delay\)/);
     expect(reason).toContain(WORKFLOW_SUSPENDED_COPY);
   });
 

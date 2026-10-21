@@ -6,7 +6,6 @@ import {
   applyCanonicalPublishGate,
   type WorkflowBuilderValidationReport,
 } from "./workflow-builder-validation";
-
 export interface WorkflowNodeLayout {
   readonly x: number;
   readonly y: number;
@@ -18,6 +17,15 @@ export interface WorkflowBuilderRegistry {
   readonly description?: string;
 }
 
+export interface WorkflowBuilderEditContextNewVersion {
+  readonly kind: "newVersion";
+  readonly workflowId: string;
+  readonly sourceVersionId: string;
+}
+
+export type WorkflowBuilderEditContext =
+  { readonly kind: "create" } | WorkflowBuilderEditContextNewVersion;
+
 export interface WorkflowBuilderDraft {
   readonly draftId: string;
   readonly workspaceId: string;
@@ -28,6 +36,7 @@ export interface WorkflowBuilderDraft {
   readonly nodeOrder: readonly string[];
   readonly nextNodeSequence: number;
   readonly createdWorkflowId?: string;
+  readonly editContext?: WorkflowBuilderEditContext;
 }
 
 export function createDraftId(): string {
@@ -48,6 +57,7 @@ export function createEmptyWorkflowBuilderDraft(
     layoutByNodeKey: {},
     nodeOrder: [],
     nextNodeSequence: 1,
+    editContext: { kind: "create" },
   };
 }
 

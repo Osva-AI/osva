@@ -244,7 +244,7 @@ describe("WorkflowRunLaunchForm", () => {
     await waitFor(() => {
       expect(screen.getByText("Input schema")).toBeTruthy();
     });
-    expect(screen.getByText("av-research")).toBeTruthy();
+    expect(screen.getByText("research")).toBeTruthy();
     expect(
       screen.getByText(/does not mean the first agent will accept/i),
     ).toBeTruthy();
