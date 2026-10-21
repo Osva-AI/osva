@@ -17,6 +17,9 @@ export interface RunResource {
   readonly input: unknown;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly evaluationRunId?: string;
+  readonly evaluationCaseId?: string;
+  readonly restrictPersistentMemory?: boolean;
 }
 
 export interface RunListResource {
@@ -235,6 +238,7 @@ export interface CreateRunInput {
   readonly agentId: string;
   readonly agentVersionId: string;
   readonly input: unknown;
+  readonly restrictPersistentMemory?: boolean;
 }
 
 export interface CreateRunResponseResource {
@@ -253,6 +257,9 @@ export function useCreateRunMutation() {
           agentId: input.agentId,
           agentVersionId: input.agentVersionId,
           input: input.input,
+          ...(input.restrictPersistentMemory === true
+            ? { restrictPersistentMemory: true }
+            : {}),
         }),
       }),
     onSuccess: async () => {

@@ -443,6 +443,31 @@ describe("REST two-workspace security matrix", () => {
         ),
       );
     });
+
+    it("scopes evaluation run list to principal workspace", async () => {
+      const harness = await createTwoWorkspaceHarness(servers);
+      const b = await seedWorkspaceBFixtures(harness.ctx);
+
+      const listA = await fetchV1(`${harness.origin}/v1/evaluation-runs`, {
+        headers: harness.authA,
+      });
+      expect(listA.status).toBe(200);
+      expect(
+        (listA.body as { items: { id: string }[] }).items.some(
+          (item) => item.id === b.evaluationRunId,
+        ),
+      ).toBe(false);
+
+      const listB = await fetchV1(`${harness.origin}/v1/evaluation-runs`, {
+        headers: harness.authB,
+      });
+      expect(listB.status).toBe(200);
+      expect(
+        (listB.body as { items: { id: string }[] }).items.some(
+          (item) => item.id === b.evaluationRunId,
+        ),
+      ).toBe(true);
+    });
   });
 
   describe("office", () => {

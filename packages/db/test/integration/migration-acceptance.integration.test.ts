@@ -24,6 +24,14 @@ import {
   type PostgresTestContext,
 } from "./postgres-harness.js";
 
+function repositoryMigrationHead(): string {
+  const tag = readDrizzleJournal().entries.at(-1)?.tag;
+  if (tag === undefined) {
+    throw new Error("drizzle journal has no migration entries");
+  }
+  return tag;
+}
+
 function materializeMigrationsThroughIndex(
   targetDir: string,
   maxIdx: number,
@@ -67,7 +75,7 @@ describe("PostgreSQL migration acceptance", () => {
     await migrateDatabase(database);
     const status = await readMigrationStatus(database.sql);
     expect(status.status).toBe("current");
-    expect(status.repositoryHead).toBe("0027_model_provider_connections");
+    expect(status.repositoryHead).toBe(repositoryMigrationHead());
     expect(status.pendingMigrations).toEqual([]);
 
     const userImageColumn = await database.sql`
@@ -153,7 +161,7 @@ describe("PostgreSQL migration acceptance", () => {
 
     const status = await readMigrationStatus(database.sql);
     expect(status.status).toBe("current");
-    expect(status.repositoryHead).toBe("0027_model_provider_connections");
+    expect(status.repositoryHead).toBe(repositoryMigrationHead());
 
     const apiKeys = await database.sql`
       SELECT to_regclass('public.api_keys') AS api_keys_table
@@ -262,7 +270,7 @@ describe("PostgreSQL migration acceptance", () => {
     expect(userRow[0]?.email).toBe(ownerEmail);
 
     const status = await readMigrationStatus(database.sql);
-    expect(status.repositoryHead).toBe("0027_model_provider_connections");
+    expect(status.repositoryHead).toBe(repositoryMigrationHead());
 
     await database.close();
   });

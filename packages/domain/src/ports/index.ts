@@ -144,5 +144,14 @@ export type {
   ArtifactBlobWriteInput,
   ArtifactBlobWriteResult,
 } from "./artifact-blob-store.js";
-export type { EvaluationSuiteRepository } from "./evaluation-suite-repository.js";
+export type {
+  EvaluationRunListCursor,
+  EvaluationSuiteRepository,
+  ListEvaluationRunsQuery,
+  ListEvaluationRunsResult,
+} from "./evaluation-suite-repository.js";
+export {
+  DEFAULT_EVALUATION_RUN_LIST_LIMIT,
+  MAX_EVALUATION_RUN_LIST_LIMIT,
+} from "./evaluation-suite-repository.js";
 export type { OfficeRepository } from "./office-repository.js";

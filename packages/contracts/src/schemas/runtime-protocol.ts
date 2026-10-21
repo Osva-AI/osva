@@ -49,6 +49,7 @@ export const executionRequestSchema = z.strictObject({
   timeoutMs: z.int().positive(),
   policyContext: z.record(z.string(), z.unknown()),
   evaluationContext: executionEvaluationContextSchema.optional(),
+  restrictPersistentMemory: z.boolean().optional(),
 });
 
 const executionErrorSchema = z.strictObject({

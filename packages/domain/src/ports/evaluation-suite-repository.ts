@@ -1,4 +1,5 @@
 import type {
+  AgentVersionId,
   EvaluationCaseId,
   EvaluationRunId,
   EvaluationRunState,
@@ -12,6 +13,29 @@ import type { EvaluationCaseResult } from "../evaluation-case-result.js";
 import type { EvaluationRun } from "../evaluation-run.js";
 import type { EvaluationSuite } from "../evaluation-suite.js";
 import type { EvaluationSuiteVersion } from "../evaluation-suite-version.js";
+
+export const DEFAULT_EVALUATION_RUN_LIST_LIMIT = 50;
+export const MAX_EVALUATION_RUN_LIST_LIMIT = 100;
+
+export interface EvaluationRunListCursor {
+  readonly createdAt: Date;
+  readonly id: EvaluationRunId;
+}
+
+export interface ListEvaluationRunsQuery {
+  readonly workspaceId: WorkspaceId;
+  readonly limit: number;
+  readonly cursor?: EvaluationRunListCursor;
+  readonly evaluationSuiteId?: EvaluationSuiteId;
+  readonly evaluationSuiteVersionId?: EvaluationSuiteVersionId;
+  readonly agentVersionId?: AgentVersionId;
+  readonly status?: EvaluationRunState;
+}
+
+export interface ListEvaluationRunsResult {
+  readonly evaluationRuns: readonly EvaluationRun[];
+  readonly nextCursor?: EvaluationRunListCursor;
+}
 
 export interface EvaluationSuiteRepository {
   saveSuite(suite: EvaluationSuite): Promise<void>;
@@ -36,6 +60,9 @@ export interface EvaluationSuiteRepository {
     workspaceId: WorkspaceId,
     id: EvaluationRunId,
   ): Promise<EvaluationRun | null>;
+  listEvaluationRuns(
+    query: ListEvaluationRunsQuery,
+  ): Promise<ListEvaluationRunsResult>;
   transitionEvaluationRun(
     expectedStatus: EvaluationRunState,
     next: EvaluationRun,

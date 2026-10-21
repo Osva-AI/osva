@@ -18,8 +18,10 @@ import {
   type EvaluationRun,
   type EvaluationSuite,
   type EvaluationSuiteRepository,
+  type ListEvaluationRunsQuery,
+  type ListEvaluationRunsResult,
 } from "@osva/domain";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, or, type SQL } from "drizzle-orm";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -245,6 +247,86 @@ export class PostgresEvaluationSuiteRepository implements EvaluationSuiteReposit
         evaluation_runs_pkey: `An EvaluationRun with id '${evaluationRun.id}' already exists.`,
       },
     );
+  }
+
+  async listEvaluationRuns(
+    query: ListEvaluationRunsQuery,
+  ): Promise<ListEvaluationRunsResult> {
+    const conditions: SQL[] = [
+      eq(evaluationRuns.workspaceId, query.workspaceId),
+    ];
+
+    if (query.evaluationSuiteVersionId !== undefined) {
+      conditions.push(
+        eq(
+          evaluationRuns.evaluationSuiteVersionId,
+          query.evaluationSuiteVersionId,
+        ),
+      );
+    } else if (query.evaluationSuiteId !== undefined) {
+      const versionRows = await this.database.db
+        .select({ id: evaluationSuiteVersions.id })
+        .from(evaluationSuiteVersions)
+        .where(
+          and(
+            eq(
+              evaluationSuiteVersions.evaluationSuiteId,
+              query.evaluationSuiteId,
+            ),
+            eq(evaluationSuiteVersions.workspaceId, query.workspaceId),
+          ),
+        );
+
+      const versionIds = versionRows.map((row) => row.id);
+      if (versionIds.length === 0) {
+        return { evaluationRuns: [] };
+      }
+
+      conditions.push(
+        inArray(evaluationRuns.evaluationSuiteVersionId, versionIds),
+      );
+    }
+
+    if (query.agentVersionId !== undefined) {
+      conditions.push(eq(evaluationRuns.targetType, "AGENT_VERSION"));
+      conditions.push(eq(evaluationRuns.targetVersionId, query.agentVersionId));
+    }
+
+    if (query.status !== undefined) {
+      conditions.push(eq(evaluationRuns.status, query.status));
+    }
+
+    if (query.cursor !== undefined) {
+      const cursorCondition = or(
+        lt(evaluationRuns.createdAt, query.cursor.createdAt),
+        and(
+          eq(evaluationRuns.createdAt, query.cursor.createdAt),
+          lt(evaluationRuns.id, query.cursor.id),
+        ),
+      );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
+    }
+
+    const rows = await this.database.db
+      .select()
+      .from(evaluationRuns)
+      .where(and(...conditions))
+      .orderBy(desc(evaluationRuns.createdAt), desc(evaluationRuns.id))
+      .limit(query.limit + 1);
+
+    const hasMore = rows.length > query.limit;
+    const page = hasMore ? rows.slice(0, query.limit) : rows;
+    const last = page[page.length - 1];
+
+    return {
+      evaluationRuns: page.map(evaluationRunFromRow),
+      nextCursor:
+        hasMore && last !== undefined
+          ? { createdAt: last.createdAt, id: last.id as EvaluationRunId }
+          : undefined,
+    };
   }
 
   async findEvaluationRunById(

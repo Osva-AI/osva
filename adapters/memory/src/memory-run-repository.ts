@@ -625,6 +625,9 @@ function applyRunLifecycle(current: Run, next: Run): Run {
     createdAt: current.createdAt,
     updatedAt: next.updatedAt,
     idempotencyKey: current.idempotencyKey,
+    evaluationRunId: current.evaluationRunId,
+    evaluationCaseId: current.evaluationCaseId,
+    restrictPersistentMemory: current.restrictPersistentMemory,
   });
 }
 

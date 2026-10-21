@@ -18,6 +18,8 @@ import {
   type EvaluationRun,
   type EvaluationSuite,
   type EvaluationSuiteRepository,
+  type ListEvaluationRunsQuery,
+  type ListEvaluationRunsResult,
 } from "@osva/domain";
 
 export class MemoryEvaluationSuiteRepository implements EvaluationSuiteRepository {
@@ -152,6 +154,86 @@ export class MemoryEvaluationSuiteRepository implements EvaluationSuiteRepositor
     }
 
     return evaluationRun;
+  }
+
+  async listEvaluationRuns(
+    query: ListEvaluationRunsQuery,
+  ): Promise<ListEvaluationRunsResult> {
+    let matched = [...this.evaluationRuns.values()].filter(
+      (evaluationRun) => evaluationRun.workspaceId === query.workspaceId,
+    );
+
+    if (query.evaluationSuiteVersionId !== undefined) {
+      matched = matched.filter(
+        (evaluationRun) =>
+          evaluationRun.evaluationSuiteVersionId ===
+          query.evaluationSuiteVersionId,
+      );
+    } else if (query.evaluationSuiteId !== undefined) {
+      const versionIds = new Set(
+        [...this.versions.values()]
+          .filter(
+            (version) =>
+              version.evaluationSuiteId === query.evaluationSuiteId &&
+              version.workspaceId === query.workspaceId,
+          )
+          .map((version) => version.id),
+      );
+      matched = matched.filter((evaluationRun) =>
+        versionIds.has(evaluationRun.evaluationSuiteVersionId),
+      );
+    }
+
+    if (query.agentVersionId !== undefined) {
+      matched = matched.filter(
+        (evaluationRun) =>
+          evaluationRun.targetType === "AGENT_VERSION" &&
+          evaluationRun.targetVersionId === query.agentVersionId,
+      );
+    }
+
+    if (query.status !== undefined) {
+      matched = matched.filter(
+        (evaluationRun) => evaluationRun.status === query.status,
+      );
+    }
+
+    matched.sort((left, right) => {
+      const createdAtCompare =
+        right.createdAt.getTime() - left.createdAt.getTime();
+      if (createdAtCompare !== 0) {
+        return createdAtCompare;
+      }
+      return right.id.localeCompare(left.id);
+    });
+
+    if (query.cursor !== undefined) {
+      matched = matched.filter((evaluationRun) => {
+        if (
+          evaluationRun.createdAt.getTime() < query.cursor!.createdAt.getTime()
+        ) {
+          return true;
+        }
+        if (
+          evaluationRun.createdAt.getTime() > query.cursor!.createdAt.getTime()
+        ) {
+          return false;
+        }
+        return evaluationRun.id < query.cursor!.id;
+      });
+    }
+
+    const hasMore = matched.length > query.limit;
+    const page = hasMore ? matched.slice(0, query.limit) : matched;
+    const last = page[page.length - 1];
+
+    return {
+      evaluationRuns: page,
+      nextCursor:
+        hasMore && last !== undefined
+          ? { createdAt: last.createdAt, id: last.id }
+          : undefined,
+    };
   }
 
   async transitionEvaluationRun(

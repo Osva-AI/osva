@@ -17,7 +17,9 @@ describe("migration history verification", () => {
   it("accepts the committed manifest and drizzle journal", () => {
     const result = verifyMigrationHistory();
     expect(result.ok, JSON.stringify(result.issues, null, 2)).toBe(true);
-    expect(result.repositoryHead).toBe("0027_model_provider_connections");
+    expect(result.repositoryHead).toBe(
+      readDrizzleJournal().entries.at(-1)?.tag,
+    );
   });
 
   it("detects modified historical SQL in fixture copies", () => {

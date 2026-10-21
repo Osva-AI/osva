@@ -44,7 +44,12 @@ import { memoryNamespaceBindingsFromManifest } from "./memory-bindings.js";
 import { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
 import { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 import type { AgentRepository } from "./ports/agent-repository.js";
-import type { EvaluationSuiteRepository } from "./ports/evaluation-suite-repository.js";
+import type {
+  EvaluationSuiteRepository,
+  ListEvaluationRunsQuery,
+  ListEvaluationRunsResult,
+} from "./ports/evaluation-suite-repository.js";
+import { MAX_EVALUATION_RUN_LIST_LIMIT } from "./ports/evaluation-suite-repository.js";
 import type { RunRepository } from "./ports/run-repository.js";
 import { Run } from "./run.js";
 import { RunAttempt } from "./run-attempt.js";
@@ -224,6 +229,27 @@ export class LaunchEvaluationRun {
   }
 }
 
+export class ListEvaluationRuns {
+  constructor(private readonly deps: EvaluationRunApplicationDependencies) {}
+
+  async execute(
+    scope: ControlPlaneScope,
+    query: Omit<ListEvaluationRunsQuery, "workspaceId">,
+  ): Promise<ListEvaluationRunsResult> {
+    requireControlPlaneAuthorization(
+      scope,
+      AUTHORIZATION_ACTIONS.READ,
+      EVALUATION_RUN_RESOURCE,
+    );
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    assertEvaluationRunListLimit(query.limit);
+    return this.deps.evaluationSuites.listEvaluationRuns({
+      ...query,
+      workspaceId,
+    });
+  }
+}
+
 export class GetEvaluationRun {
   constructor(private readonly deps: EvaluationRunApplicationDependencies) {}
 
@@ -400,6 +426,7 @@ export interface EvaluationRunSummary {
 
 export interface EvaluationRunApplication {
   readonly launchEvaluationRun: LaunchEvaluationRun;
+  readonly listEvaluationRuns: ListEvaluationRuns;
   readonly getEvaluationRun: GetEvaluationRun;
   readonly listEvaluationCaseResults: ListEvaluationCaseResults;
   readonly reconcileEvaluationCase: ReconcileEvaluationCase;
@@ -410,10 +437,23 @@ export function createEvaluationRunApplication(
 ): EvaluationRunApplication {
   return {
     launchEvaluationRun: new LaunchEvaluationRun(deps),
+    listEvaluationRuns: new ListEvaluationRuns(deps),
     getEvaluationRun: new GetEvaluationRun(deps),
     listEvaluationCaseResults: new ListEvaluationCaseResults(deps),
     reconcileEvaluationCase: new ReconcileEvaluationCase(deps),
   };
+}
+
+function assertEvaluationRunListLimit(limit: number): void {
+  if (
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > MAX_EVALUATION_RUN_LIST_LIMIT
+  ) {
+    throw new Error(
+      `Evaluation run list limit must be an integer between 1 and ${String(MAX_EVALUATION_RUN_LIST_LIMIT)}.`,
+    );
+  }
 }
 
 function evaluationCaseIdempotencyKey(

@@ -5,6 +5,9 @@ import type {
   ArtifactId,
   ConnectorId,
   ConnectorVersionId,
+  EvaluationRunId,
+  EvaluationSuiteId,
+  EvaluationSuiteVersionId,
   RunAttemptId,
   RunId,
   RunStepId,
@@ -220,6 +223,39 @@ export interface ConsoleOsvaClient {
       readonly limit?: number;
       readonly cursor?: string;
     },
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listEvaluationSuites(): Promise<ConsoleUpstreamResponse<unknown>>;
+  createEvaluationSuite(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getEvaluationSuite(
+    evaluationSuiteId: EvaluationSuiteId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listEvaluationSuiteVersions(
+    evaluationSuiteId: EvaluationSuiteId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createEvaluationSuiteVersion(
+    evaluationSuiteId: EvaluationSuiteId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getEvaluationSuiteVersion(
+    evaluationSuiteId: EvaluationSuiteId,
+    evaluationSuiteVersionId: EvaluationSuiteVersionId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listEvaluationRuns(params: {
+    readonly evaluationSuiteId?: string;
+    readonly evaluationSuiteVersionId?: string;
+    readonly agentVersionId?: string;
+    readonly status?: string;
+    readonly limit?: number;
+    readonly cursor?: string;
+  }): Promise<ConsoleUpstreamResponse<unknown>>;
+  getEvaluationRun(
+    evaluationRunId: EvaluationRunId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createEvaluationRun(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  listEvaluationCaseResults(
+    evaluationRunId: EvaluationRunId,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
 }
 
@@ -632,6 +668,67 @@ export function createConsoleOsvaClient(
           limit: params.limit === undefined ? undefined : String(params.limit),
           cursor: params.cursor,
         },
+      }),
+    listEvaluationSuites: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/evaluation-suites",
+      }),
+    createEvaluationSuite: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/evaluation-suites",
+        body,
+      }),
+    getEvaluationSuite: (evaluationSuiteId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}`,
+      }),
+    listEvaluationSuiteVersions: (evaluationSuiteId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}/versions`,
+      }),
+    createEvaluationSuiteVersion: (evaluationSuiteId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}/versions`,
+        body,
+      }),
+    getEvaluationSuiteVersion: (evaluationSuiteId, evaluationSuiteVersionId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}/versions/${encodeURIComponent(evaluationSuiteVersionId)}`,
+      }),
+    listEvaluationRuns: (params) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/evaluation-runs",
+        query: {
+          evaluationSuiteId: params.evaluationSuiteId,
+          evaluationSuiteVersionId: params.evaluationSuiteVersionId,
+          agentVersionId: params.agentVersionId,
+          status: params.status,
+          limit: params.limit === undefined ? undefined : String(params.limit),
+          cursor: params.cursor,
+        },
+      }),
+    getEvaluationRun: (evaluationRunId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/evaluation-runs/${encodeURIComponent(evaluationRunId)}`,
+      }),
+    createEvaluationRun: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/evaluation-runs",
+        body,
+      }),
+    listEvaluationCaseResults: (evaluationRunId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/evaluation-runs/${encodeURIComponent(evaluationRunId)}/case-results`,
       }),
   };
 }

@@ -26,6 +26,7 @@ export interface RunCreateProps {
   readonly idempotencyKey?: string;
   readonly evaluationRunId?: EvaluationRunId;
   readonly evaluationCaseId?: EvaluationCaseId;
+  readonly restrictPersistentMemory?: boolean;
 }
 
 export interface RunRehydrateProps {
@@ -40,6 +41,7 @@ export interface RunRehydrateProps {
   readonly idempotencyKey?: string;
   readonly evaluationRunId?: EvaluationRunId;
   readonly evaluationCaseId?: EvaluationCaseId;
+  readonly restrictPersistentMemory?: boolean;
 }
 
 export class Run {
@@ -54,6 +56,7 @@ export class Run {
   readonly idempotencyKey: string | undefined;
   readonly evaluationRunId: EvaluationRunId | undefined;
   readonly evaluationCaseId: EvaluationCaseId | undefined;
+  readonly restrictPersistentMemory: boolean;
 
   private constructor(props: {
     readonly id: RunId;
@@ -67,6 +70,7 @@ export class Run {
     readonly idempotencyKey: string | undefined;
     readonly evaluationRunId: EvaluationRunId | undefined;
     readonly evaluationCaseId: EvaluationCaseId | undefined;
+    readonly restrictPersistentMemory: boolean;
   }) {
     this.id = props.id;
     this.workspaceId = props.workspaceId;
@@ -79,6 +83,7 @@ export class Run {
     this.idempotencyKey = props.idempotencyKey;
     this.evaluationRunId = props.evaluationRunId;
     this.evaluationCaseId = props.evaluationCaseId;
+    this.restrictPersistentMemory = props.restrictPersistentMemory;
   }
 
   get isEvaluationChildRun(): boolean {
@@ -100,6 +105,7 @@ export class Run {
       idempotencyKey: props.idempotencyKey,
       evaluationRunId: props.evaluationRunId,
       evaluationCaseId: props.evaluationCaseId,
+      restrictPersistentMemory: props.restrictPersistentMemory === true,
     });
   }
 
@@ -116,6 +122,7 @@ export class Run {
       idempotencyKey: props.idempotencyKey,
       evaluationRunId: props.evaluationRunId,
       evaluationCaseId: props.evaluationCaseId,
+      restrictPersistentMemory: props.restrictPersistentMemory === true,
     });
   }
 
@@ -134,6 +141,7 @@ export class Run {
       idempotencyKey: this.idempotencyKey,
       evaluationRunId: this.evaluationRunId,
       evaluationCaseId: this.evaluationCaseId,
+      restrictPersistentMemory: this.restrictPersistentMemory,
     });
   }
 
@@ -149,6 +157,7 @@ export class Run {
     readonly idempotencyKey: string | undefined;
     readonly evaluationRunId: EvaluationRunId | undefined;
     readonly evaluationCaseId: EvaluationCaseId | undefined;
+    readonly restrictPersistentMemory: boolean;
   }): Run {
     if (!props.id) {
       throw new DomainInvariantError("Run.id is required.");
@@ -197,6 +206,7 @@ export class Run {
             : requireNonEmptyString(props.idempotencyKey, "Run.idempotencyKey"),
         evaluationRunId: props.evaluationRunId,
         evaluationCaseId: props.evaluationCaseId,
+        restrictPersistentMemory: props.restrictPersistentMemory,
       }),
     );
   }

@@ -46,6 +46,7 @@ export interface CreateRunCommand {
   readonly idempotencyKey?: string;
   readonly evaluationRunId?: EvaluationRunId;
   readonly evaluationCaseId?: EvaluationCaseId;
+  readonly restrictPersistentMemory?: boolean;
   readonly now: Date;
 }
 
@@ -127,6 +128,10 @@ export class CreateRun {
       idempotencyKey: command.idempotencyKey,
       evaluationRunId: command.evaluationRunId,
       evaluationCaseId: command.evaluationCaseId,
+      restrictPersistentMemory:
+        command.evaluationRunId === undefined &&
+        command.evaluationCaseId === undefined &&
+        command.restrictPersistentMemory === true,
     });
     const attempt = RunAttempt.createFirst({
       id: command.runAttemptId,

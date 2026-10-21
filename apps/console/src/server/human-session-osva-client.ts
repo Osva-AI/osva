@@ -576,6 +576,95 @@ export function createHumanSessionOsvaClient(
           },
         })
         .then(toDataOnly),
+
+    listEvaluationSuites: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/evaluation-suites" })
+        .then(toDataOnly),
+
+    createEvaluationSuite: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/evaluation-suites",
+          body,
+        })
+        .then(toDataOnly),
+
+    getEvaluationSuite: (evaluationSuiteId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}`,
+        })
+        .then(toDataOnly),
+
+    listEvaluationSuiteVersions: (evaluationSuiteId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}/versions`,
+        })
+        .then(toDataOnly),
+
+    createEvaluationSuiteVersion: (evaluationSuiteId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}/versions`,
+          body,
+        })
+        .then(toDataOnly),
+
+    getEvaluationSuiteVersion: (evaluationSuiteId, evaluationSuiteVersionId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}/versions/${encodeURIComponent(evaluationSuiteVersionId)}`,
+        })
+        .then(toDataOnly),
+
+    listEvaluationRuns: (params) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: "/v1/evaluation-runs",
+          query: {
+            evaluationSuiteId: params.evaluationSuiteId,
+            evaluationSuiteVersionId: params.evaluationSuiteVersionId,
+            agentVersionId: params.agentVersionId,
+            status: params.status,
+            limit:
+              params.limit === undefined ? undefined : String(params.limit),
+            cursor: params.cursor,
+          },
+        })
+        .then(toDataOnly),
+
+    getEvaluationRun: (evaluationRunId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/evaluation-runs/${encodeURIComponent(evaluationRunId)}`,
+        })
+        .then(toDataOnly),
+
+    createEvaluationRun: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/evaluation-runs",
+          body,
+        })
+        .then(toDataOnly),
+
+    listEvaluationCaseResults: (evaluationRunId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/evaluation-runs/${encodeURIComponent(evaluationRunId)}/case-results`,
+        })
+        .then(toDataOnly),
   };
 }
 

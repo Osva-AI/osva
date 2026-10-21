@@ -39,6 +39,8 @@ import { KnowledgePage } from "./routes/knowledge-page";
 import { KnowledgeSourcePage } from "./routes/knowledge-source-page";
 import { MemoryPage } from "./routes/memory-page";
 import { MemoryNamespacePage } from "./routes/memory-namespace-page";
+import { AgentPlaygroundPage } from "./routes/agent-playground-page";
+import { TestingStudioPage } from "./routes/testing-studio-page";
 
 const queryClient = createQueryClient();
 
@@ -115,6 +117,11 @@ export function App() {
                     element={<ConnectorDetailPage />}
                   />
                   <Route path="/tools/:toolId" element={<ToolDetailPage />} />
+                  <Route path="/testing" element={<TestingStudioPage />} />
+                  <Route
+                    path="/testing/playground"
+                    element={<AgentPlaygroundPage />}
+                  />
                   <Route path="/runs" element={<RunsPage />} />
                   <Route path="/runs/:runId" element={<RunDetailPage />} />
                   <Route

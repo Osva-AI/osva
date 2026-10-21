@@ -6,6 +6,7 @@ import type {
   WorkspaceId,
 } from "@osva-ai/contracts";
 import {
+  allowsPersistentMemoryMutation,
   ARTIFACT_ERROR_CODES,
   KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
@@ -880,7 +881,7 @@ function memoryAuthorization(execution: ExecutionRequest): MemoryAuthorization {
   return {
     workspaceId: execution.workspaceId,
     memoryNamespaceBindings: execution.memoryNamespaceBindings,
-    allowPersistentMutation: execution.evaluationContext === undefined,
+    allowPersistentMutation: allowsPersistentMemoryMutation(execution),
   };
 }
 

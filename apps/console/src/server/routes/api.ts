@@ -6,6 +6,9 @@ import type {
   ApprovalRequestId,
   ConnectorId,
   ConnectorVersionId,
+  EvaluationRunId,
+  EvaluationSuiteId,
+  EvaluationSuiteVersionId,
   RunAttemptId,
   RunId,
   RunStepId,
@@ -484,6 +487,51 @@ export async function handleConsoleApiRequest(
       if (pathname === "/api/v1/memory/namespaces") {
         const body = await readJsonBody(request);
         const created = await client.createMemoryNamespace(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/evaluation-suites") {
+        const body = await readJsonBody(request);
+        const created = await client.createEvaluationSuite(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const evaluationSuiteVersionPostMatch = pathname.match(
+        /^\/api\/v1\/evaluation-suites\/([^/]+)\/versions$/,
+      );
+      if (evaluationSuiteVersionPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await client.createEvaluationSuiteVersion(
+          evaluationSuiteVersionPostMatch[1] as EvaluationSuiteId,
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/evaluation-runs") {
+        const body = await readJsonBody(request);
+        const created = await client.createEvaluationRun(body);
         sendJson(
           response,
           201,
@@ -1089,6 +1137,124 @@ export async function handleConsoleApiRequest(
         200,
         index.data,
         upstreamRequestIdHeaders(index.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/evaluation-suites") {
+      const listed = await client.listEvaluationSuites();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const evaluationSuiteMatch = pathname.match(
+      /^\/api\/v1\/evaluation-suites\/([^/]+)$/,
+    );
+    if (evaluationSuiteMatch !== null) {
+      const suite = await client.getEvaluationSuite(
+        evaluationSuiteMatch[1] as EvaluationSuiteId,
+      );
+      sendJson(
+        response,
+        200,
+        suite.data,
+        upstreamRequestIdHeaders(suite.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const evaluationSuiteVersionsMatch = pathname.match(
+      /^\/api\/v1\/evaluation-suites\/([^/]+)\/versions$/,
+    );
+    if (evaluationSuiteVersionsMatch !== null) {
+      const versions = await client.listEvaluationSuiteVersions(
+        evaluationSuiteVersionsMatch[1] as EvaluationSuiteId,
+      );
+      sendJson(
+        response,
+        200,
+        versions.data,
+        upstreamRequestIdHeaders(versions.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const evaluationSuiteVersionMatch = pathname.match(
+      /^\/api\/v1\/evaluation-suites\/([^/]+)\/versions\/([^/]+)$/,
+    );
+    if (evaluationSuiteVersionMatch !== null) {
+      const version = await client.getEvaluationSuiteVersion(
+        evaluationSuiteVersionMatch[1] as EvaluationSuiteId,
+        evaluationSuiteVersionMatch[2] as EvaluationSuiteVersionId,
+      );
+      sendJson(
+        response,
+        200,
+        version.data,
+        upstreamRequestIdHeaders(version.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/evaluation-runs") {
+      const listed = await client.listEvaluationRuns({
+        evaluationSuiteId: searchParams.get("evaluationSuiteId") ?? undefined,
+        evaluationSuiteVersionId:
+          searchParams.get("evaluationSuiteVersionId") ?? undefined,
+        agentVersionId: searchParams.get("agentVersionId") ?? undefined,
+        status: searchParams.get("status") ?? undefined,
+        limit: parseOptionalInt(searchParams.get("limit")),
+        cursor: searchParams.get("cursor") ?? undefined,
+      });
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const evaluationRunCaseResultsMatch = pathname.match(
+      /^\/api\/v1\/evaluation-runs\/([^/]+)\/case-results$/,
+    );
+    if (evaluationRunCaseResultsMatch !== null) {
+      const results = await client.listEvaluationCaseResults(
+        evaluationRunCaseResultsMatch[1] as EvaluationRunId,
+      );
+      sendJson(
+        response,
+        200,
+        results.data,
+        upstreamRequestIdHeaders(results.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const evaluationRunMatch = pathname.match(
+      /^\/api\/v1\/evaluation-runs\/([^/]+)$/,
+    );
+    if (evaluationRunMatch !== null) {
+      const evaluationRun = await client.getEvaluationRun(
+        evaluationRunMatch[1] as EvaluationRunId,
+      );
+      sendJson(
+        response,
+        200,
+        evaluationRun.data,
+        upstreamRequestIdHeaders(evaluationRun.requestId),
         deps.security,
       );
       return true;

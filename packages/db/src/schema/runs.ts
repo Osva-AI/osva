@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   foreignKey,
   index,
@@ -44,6 +45,9 @@ export const runs = pgTable(
       .default({}),
     evaluationRunId: text("evaluation_run_id"),
     evaluationCaseId: text("evaluation_case_id"),
+    restrictPersistentMemory: boolean("restrict_persistent_memory")
+      .notNull()
+      .default(false),
     input: jsonb("input").notNull(),
     idempotencyKey: text("idempotency_key"),
     createdAt: timestamp("created_at", {

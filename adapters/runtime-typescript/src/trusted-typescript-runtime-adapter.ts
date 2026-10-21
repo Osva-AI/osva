@@ -19,6 +19,7 @@ import type {
   MemorySetRequest,
 } from "@osva-ai/contracts";
 import {
+  allowsPersistentMemoryMutation,
   KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
@@ -802,7 +803,7 @@ function memoryAuthorization(execution: ExecutionRequest): MemoryAuthorization {
   return {
     workspaceId: execution.workspaceId,
     memoryNamespaceBindings: execution.memoryNamespaceBindings,
-    allowPersistentMutation: execution.evaluationContext === undefined,
+    allowPersistentMutation: allowsPersistentMemoryMutation(execution),
   };
 }
 
