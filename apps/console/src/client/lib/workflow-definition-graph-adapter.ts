@@ -1,3 +1,4 @@
+import type { WorkflowDefinitionNodeV3 } from "@osva-ai/contracts";
 import type { Edge, Node } from "@xyflow/react";
 
 import {
@@ -5,6 +6,10 @@ import {
   workflowEdgeId,
   type WorkflowDefinitionView,
 } from "./workflow-definition";
+import {
+  resolveWorkflowCanvasLabel,
+  type WorkflowCanvasLabelContext,
+} from "./workflow-canvas-labels";
 
 export interface WorkflowNodeLayout {
   readonly x: number;
@@ -19,6 +24,7 @@ export interface DefinitionToFlowOptions {
   readonly errorNodeKeys?: ReadonlySet<string>;
   readonly executionStatusByNodeKey?: Readonly<Record<string, string>>;
   readonly edgeAppearanceById?: Readonly<Record<string, string>>;
+  readonly canvasLabelContext?: WorkflowCanvasLabelContext;
 }
 
 export interface WorkflowGraphNodeData extends Record<string, unknown> {
@@ -111,24 +117,6 @@ export function computeAutoLayoutByNodeKey(
   return layout;
 }
 
-function workflowGraphNodeLabel(
-  node: WorkflowDefinitionView["nodes"][number],
-): string {
-  if (node.type === "AGENT" && typeof node.agentVersionId === "string") {
-    return node.agentVersionId;
-  }
-  if (node.type === "APPROVAL" && typeof node.title === "string") {
-    return node.title;
-  }
-  if (node.type === "BRANCH" && typeof node.selector === "string") {
-    return node.selector;
-  }
-  if (node.type === "WAIT" && node.wait !== undefined) {
-    return JSON.stringify(node.wait);
-  }
-  return node.key;
-}
-
 function resolveLayout(
   definition: WorkflowDefinitionView,
   layoutByNodeKey: Readonly<Record<string, WorkflowNodeLayout>> | undefined,
@@ -156,9 +144,25 @@ export function definitionToFlow(
 ): WorkflowDefinitionFlowModel {
   const layout = resolveLayout(definition, options.layoutByNodeKey);
   const editable = options.interaction === "editable";
+  const labelContext = options.canvasLabelContext ?? {
+    agentNameByVersionId: {},
+    agentVersionNumberByVersionId: {},
+  };
 
   const nodes: Node<WorkflowGraphNodeData>[] = definition.nodes.map((node) => {
     const position = layout[node.key] ?? { x: ORIGIN_X, y: ORIGIN_Y };
+    const canvasLabel =
+      node.type === "AGENT" ||
+      node.type === "APPROVAL" ||
+      node.type === "BRANCH" ||
+      node.type === "WAIT" ||
+      node.type === "PARALLEL" ||
+      node.type === "JOIN"
+        ? resolveWorkflowCanvasLabel(
+            node as WorkflowDefinitionNodeV3,
+            labelContext,
+          )
+        : node.key;
     return {
       id: node.key,
       type: WORKFLOW_GRAPH_NODE_TYPE,
@@ -166,7 +170,7 @@ export function definitionToFlow(
       data: {
         nodeKey: node.key,
         nodeType: node.type,
-        label: workflowGraphNodeLabel(node),
+        label: canvasLabel,
         hasError: options.errorNodeKeys?.has(node.key) === true,
         ...(options.executionStatusByNodeKey?.[node.key] !== undefined
           ? { executionStatus: options.executionStatusByNodeKey[node.key] }

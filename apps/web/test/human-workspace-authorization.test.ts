@@ -198,6 +198,195 @@ describe("human workspace authorization", () => {
     });
   });
 
+  it("denies VIEWER human principals for workflow creation at the gate", async () => {
+    const user = User.create({
+      id: USER,
+      email: "viewer-workflow@example.com",
+      displayName: "Viewer",
+      status: USER_STATUSES.ACTIVE,
+      createdAt: NOW,
+    });
+    const membership = WorkspaceMembership.create({
+      id: "wm-viewer-workflow" as WorkspaceMembershipId,
+      workspaceId: WS,
+      userId: USER,
+      role: HUMAN_WORKSPACE_ROLES.VIEWER,
+      createdAt: NOW,
+    });
+    const services = {
+      users: {
+        async save() {},
+        async findById(id: UserId) {
+          return id === USER ? user : null;
+        },
+        async findByEmail() {
+          return user;
+        },
+      },
+      workspaceMemberships: {
+        async save() {},
+        async findById() {
+          return null;
+        },
+        async findByWorkspaceAndUser(workspaceId: WorkspaceId, userId: UserId) {
+          return workspaceId === WS && userId === USER ? membership : null;
+        },
+        async listByWorkspaceId() {
+          return [];
+        },
+        async listByUserId(userId: UserId) {
+          return userId === USER ? [membership] : [];
+        },
+        async countByWorkspaceAndRole() {
+          return 0;
+        },
+      },
+    } as unknown as import("../src/human-auth-http.js").HumanAuthHttpServices;
+
+    await expect(
+      authorizeHumanControlPlaneRequest(
+        {
+          headers: { "x-osva-workspace-id": WS },
+        } as unknown as import("node:http").IncomingMessage,
+        "POST",
+        "/v1/workflows",
+        services,
+        {
+          authenticationMethod: "HUMAN_SESSION",
+          userId: USER,
+          sessionId: "sess-viewer-workflow",
+          workspaceId: WS,
+        },
+      ),
+    ).rejects.toMatchObject({ name: "PermissionDeniedError" });
+  });
+
+  it("denies VIEWER human principals for workflow version append at the gate", async () => {
+    const user = User.create({
+      id: USER,
+      email: "viewer-workflow-version@example.com",
+      displayName: "Viewer",
+      status: USER_STATUSES.ACTIVE,
+      createdAt: NOW,
+    });
+    const membership = WorkspaceMembership.create({
+      id: "wm-viewer-workflow-version" as WorkspaceMembershipId,
+      workspaceId: WS,
+      userId: USER,
+      role: HUMAN_WORKSPACE_ROLES.VIEWER,
+      createdAt: NOW,
+    });
+    const services = {
+      users: {
+        async save() {},
+        async findById(id: UserId) {
+          return id === USER ? user : null;
+        },
+        async findByEmail() {
+          return user;
+        },
+      },
+      workspaceMemberships: {
+        async save() {},
+        async findById() {
+          return null;
+        },
+        async findByWorkspaceAndUser(workspaceId: WorkspaceId, userId: UserId) {
+          return workspaceId === WS && userId === USER ? membership : null;
+        },
+        async listByWorkspaceId() {
+          return [];
+        },
+        async listByUserId(userId: UserId) {
+          return userId === USER ? [membership] : [];
+        },
+        async countByWorkspaceAndRole() {
+          return 0;
+        },
+      },
+    } as unknown as import("../src/human-auth-http.js").HumanAuthHttpServices;
+
+    await expect(
+      authorizeHumanControlPlaneRequest(
+        {
+          headers: { "x-osva-workspace-id": WS },
+        } as unknown as import("node:http").IncomingMessage,
+        "POST",
+        "/v1/workflows/wf-1/versions",
+        services,
+        {
+          authenticationMethod: "HUMAN_SESSION",
+          userId: USER,
+          sessionId: "sess-viewer-workflow-version",
+          workspaceId: WS,
+        },
+      ),
+    ).rejects.toMatchObject({ name: "PermissionDeniedError" });
+  });
+
+  it("denies VIEWER human principals for workflow run launch at the gate", async () => {
+    const user = User.create({
+      id: USER,
+      email: "viewer-workflow-run@example.com",
+      displayName: "Viewer",
+      status: USER_STATUSES.ACTIVE,
+      createdAt: NOW,
+    });
+    const membership = WorkspaceMembership.create({
+      id: "wm-viewer-workflow-run" as WorkspaceMembershipId,
+      workspaceId: WS,
+      userId: USER,
+      role: HUMAN_WORKSPACE_ROLES.VIEWER,
+      createdAt: NOW,
+    });
+    const services = {
+      users: {
+        async save() {},
+        async findById(id: UserId) {
+          return id === USER ? user : null;
+        },
+        async findByEmail() {
+          return user;
+        },
+      },
+      workspaceMemberships: {
+        async save() {},
+        async findById() {
+          return null;
+        },
+        async findByWorkspaceAndUser(workspaceId: WorkspaceId, userId: UserId) {
+          return workspaceId === WS && userId === USER ? membership : null;
+        },
+        async listByWorkspaceId() {
+          return [];
+        },
+        async listByUserId(userId: UserId) {
+          return userId === USER ? [membership] : [];
+        },
+        async countByWorkspaceAndRole() {
+          return 0;
+        },
+      },
+    } as unknown as import("../src/human-auth-http.js").HumanAuthHttpServices;
+
+    await expect(
+      authorizeHumanControlPlaneRequest(
+        {
+          headers: { "x-osva-workspace-id": WS },
+        } as unknown as import("node:http").IncomingMessage,
+        "POST",
+        "/v1/workflow-runs",
+        services,
+        {
+          authenticationMethod: "HUMAN_SESSION",
+          userId: USER,
+          sessionId: "sess-viewer-workflow-run",
+          workspaceId: WS,
+        },
+      ),
+    ).rejects.toMatchObject({ name: "PermissionDeniedError" });
+  });
+
   it("denies VIEWER human principals for agent creation at the gate", async () => {
     const user = User.create({
       id: USER,

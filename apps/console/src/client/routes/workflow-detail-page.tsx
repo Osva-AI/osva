@@ -4,6 +4,7 @@ import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { StatusChip } from "../components/status/status-chip";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useWorkflowQuery,
   useWorkflowVersionsQuery,
@@ -12,6 +13,10 @@ import { useWorkflowRunsListQuery } from "../hooks/use-workflow-runs";
 import { formatTimestamp } from "../lib/formatting";
 import { workflowRunStatusCategory } from "../lib/statuses";
 import { ConsoleApiError } from "../lib/console-api";
+import {
+  roleCanExecuteControlPlaneActions,
+  roleCanWriteControlPlaneResources,
+} from "../lib/permissions";
 
 export function WorkflowDetailPage() {
   const { workflowId } = useParams<{ workflowId: string }>();
@@ -21,6 +26,16 @@ export function WorkflowDetailPage() {
     workflowId,
     limit: 10,
   });
+  const authQuery = useAuthContextQuery();
+  const canWrite =
+    authQuery.data !== undefined &&
+    roleCanWriteControlPlaneResources(authQuery.data.role);
+  const canExecute =
+    authQuery.data !== undefined &&
+    roleCanExecuteControlPlaneActions(authQuery.data.role);
+  const latestVersionId = [...(versionsQuery.data?.versions ?? [])].sort(
+    (left, right) => right.version - left.version,
+  )[0]?.id;
 
   const notFound =
     workflowQuery.isError &&
@@ -40,12 +55,36 @@ export function WorkflowDetailPage() {
     <>
       <header className="page-header">
         <div>
-          <h1 className="page-title">Workflow</h1>
-          <p className="page-subtitle mono">{workflowId}</p>
+          <h1 className="page-title">
+            {workflowQuery.data?.name ?? "Workflow"}
+          </h1>
+          <p className="page-subtitle">
+            {workflowQuery.data?.description ??
+              "Published versions and recent runs for this workflow."}
+          </p>
+          <p className="muted mono">ID: {workflowId}</p>
         </div>
-        <Link className="button" to="/workflows">
-          All workflows
-        </Link>
+        <div className="toolbar">
+          {canWrite ? (
+            <Link
+              className="button primary"
+              to={`/workflows/${workflowId}/versions/new`}
+            >
+              Publish new version
+            </Link>
+          ) : null}
+          {canExecute && latestVersionId !== undefined ? (
+            <Link
+              className="button"
+              to={`/workflows/${workflowId}/versions/${latestVersionId}`}
+            >
+              Run workflow
+            </Link>
+          ) : null}
+          <Link className="button" to="/workflows">
+            All workflows
+          </Link>
+        </div>
       </header>
 
       {workflowQuery.isLoading ? (

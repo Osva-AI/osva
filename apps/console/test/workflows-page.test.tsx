@@ -55,7 +55,7 @@ describe("Workflows UI", () => {
     await waitFor(() => {
       expect(screen.getByText("Demo Workflow")).toBeTruthy();
     });
-    expect(screen.getByRole("link", { name: "wf-1" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open workflow" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Create workflow" })).toBeTruthy();
   });
 

@@ -90,7 +90,7 @@ export function describeWorkflowWaitReason(
   }
 
   if (node.type === "APPROVAL") {
-    return `Waiting for a human approval decision on ${node.key}.`;
+    return `Waiting for human approval (${node.key}).`;
   }
 
   if (node.type === "WAIT" && node.wait !== undefined) {
@@ -102,17 +102,17 @@ export function describeWorkflowWaitReason(
       readonly until?: string;
     };
     if (wait.kind === "EVENT") {
-      return `Waiting for event ${String(wait.source ?? "")}/${String(wait.eventType ?? "")} on ${node.key}.`;
+      return `Waiting for external event ${String(wait.source ?? "")}/${String(wait.eventType ?? "")} (${node.key}).`;
     }
     if (wait.kind === "DURATION") {
-      return `Waiting for a duration of ${String(wait.durationMs)} ms on ${node.key}.`;
+      return `Waiting for a timer (${node.key}).`;
     }
     if (wait.kind === "UNTIL") {
-      return `Waiting until ${String(wait.until ?? "")} on ${node.key}.`;
+      return `Waiting until ${String(wait.until ?? "")} (${node.key}).`;
     }
   }
 
-  return `Waiting at ${node.key} (${node.type}).`;
+  return `Waiting at ${node.key}.`;
 }
 
 export const WORKFLOW_SUSPENDED_COPY =

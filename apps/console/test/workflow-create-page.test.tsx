@@ -120,7 +120,7 @@ describe("Workflow create page", () => {
 
     await user.type(screen.getByLabelText("Key"), "demo-wf");
     await user.type(screen.getByLabelText("Name"), "Demo WF");
-    await user.click(screen.getByRole("button", { name: "Add AGENT" }));
+    await user.click(screen.getByRole("button", { name: "Add Run AI agent" }));
     await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
     await waitFor(() => {
       expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
@@ -223,7 +223,7 @@ describe("Workflow create page", () => {
 
     await user.type(screen.getByLabelText("Key"), "partial");
     await user.type(screen.getByLabelText("Name"), "Partial");
-    await user.click(screen.getByRole("button", { name: "Add AGENT" }));
+    await user.click(screen.getByRole("button", { name: "Add Run AI agent" }));
     await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
     await waitFor(() => {
       expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
@@ -247,7 +247,7 @@ describe("Workflow create page", () => {
     expect(screen.getByTestId("workflow-publish-upstream-error")).toBeTruthy();
 
     await user.click(
-      screen.getByRole("button", { name: "Confirm retry publish" }),
+      screen.getByRole("button", { name: "Confirm publish new version" }),
     );
     await waitFor(() => {
       expect(screen.getByText("Published version")).toBeTruthy();
@@ -308,8 +308,13 @@ describe("Workflow create page", () => {
       screen.getByRole("button", { name: "Restore saved draft" }),
     );
 
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Demo Agent \(v1\)/i }),
+      ).toBeTruthy();
+    });
     await user.click(
-      screen.getByRole("button", { name: /agent-step-1 · AGENT/i }),
+      screen.getByRole("button", { name: /Demo Agent \(v1\)/i }),
     );
 
     await waitFor(() => {
@@ -377,13 +382,13 @@ describe("Workflow create page", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /agent-step-1 · AGENT/i }),
+      screen.getByRole("button", { name: /Agent version unavailable/i }),
     );
 
     await waitFor(() => {
       expect(screen.getByText(/not visible in this workspace/i)).toBeTruthy();
     });
-    expect(screen.getByText("av-missing")).toBeTruthy();
+    expect(screen.getAllByText(/av-missing/).length).toBeGreaterThan(0);
     const versionSelect = screen.getByLabelText(
       "Agent version (immutable)",
     ) as HTMLSelectElement;
@@ -428,7 +433,7 @@ describe("Workflow create page", () => {
     });
     await user.type(screen.getByLabelText("Key"), "demo-wf");
     await user.type(screen.getByLabelText("Name"), "Demo WF");
-    await user.click(screen.getByRole("button", { name: "Add AGENT" }));
+    await user.click(screen.getByRole("button", { name: "Add Run AI agent" }));
 
     await waitFor(() => {
       expect(screen.getByTestId("workflow-validation-panel")).toBeTruthy();

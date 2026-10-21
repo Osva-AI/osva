@@ -21,7 +21,8 @@ export function WorkflowsPage() {
         <div>
           <h1 className="page-title">Workflows</h1>
           <p className="page-subtitle">
-            Workflow registry definitions in the authenticated workspace.
+            Design and publish business workflows with agents, approvals, and
+            waits.
           </p>
         </div>
         <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
@@ -67,7 +68,7 @@ export function WorkflowsPage() {
               <tr>
                 <th>Name</th>
                 <th>Key</th>
-                <th>Workflow ID</th>
+                <th>Details</th>
                 <th>Created</th>
                 <th>Updated</th>
               </tr>
@@ -78,9 +79,8 @@ export function WorkflowsPage() {
                   <td>{workflow.name}</td>
                   <td className="mono">{workflow.key}</td>
                   <td>
-                    <Link className="mono" to={`/workflows/${workflow.id}`}>
-                      {workflow.id}
-                    </Link>
+                    <Link to={`/workflows/${workflow.id}`}>Open workflow</Link>
+                    <div className="muted mono">{workflow.id}</div>
                   </td>
                   <td>{formatTimestamp(workflow.createdAt)}</td>
                   <td>{formatTimestamp(workflow.updatedAt)}</td>

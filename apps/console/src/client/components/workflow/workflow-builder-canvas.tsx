@@ -15,6 +15,7 @@ import {
   disconnectWorkflowEdge,
   setNodeLayout,
 } from "../../lib/workflow-builder-graph";
+import type { WorkflowCanvasLabelContext } from "../../lib/workflow-canvas-labels";
 import {
   definitionToFlow,
   type WorkflowGraphNodeData,
@@ -31,6 +32,7 @@ export interface WorkflowBuilderCanvasProps {
   readonly selectedNodeKey: string | undefined;
   readonly onSelectNodeKey: (nodeKey: string | undefined) => void;
   readonly errorNodeKeys?: ReadonlySet<string>;
+  readonly canvasLabelContext?: WorkflowCanvasLabelContext;
 }
 
 export function WorkflowBuilderCanvas(props: WorkflowBuilderCanvasProps) {
@@ -48,6 +50,7 @@ function WorkflowBuilderCanvasInner({
   selectedNodeKey,
   onSelectNodeKey,
   errorNodeKeys,
+  canvasLabelContext,
 }: WorkflowBuilderCanvasProps) {
   const { nodes, edges } = useMemo(
     () =>
@@ -55,8 +58,9 @@ function WorkflowBuilderCanvasInner({
         layoutByNodeKey: draft.layoutByNodeKey,
         interaction: disabled ? "readonly" : "editable",
         errorNodeKeys,
+        canvasLabelContext,
       }),
-    [draft, disabled, errorNodeKeys],
+    [draft, disabled, errorNodeKeys, canvasLabelContext],
   );
 
   const nodesWithSelection = useMemo(

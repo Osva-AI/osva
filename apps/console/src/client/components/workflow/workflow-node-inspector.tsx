@@ -14,19 +14,37 @@ import {
 import type { WorkflowBuilderDraft } from "../../lib/workflow-builder-draft";
 import type { WorkflowBuilderValidationIssue } from "../../lib/workflow-builder-validation";
 import {
+  BRANCH_SELECTOR_PRESETS,
+  branchCaseValueKind,
+  formatBranchCaseForInput,
+  parseBranchCaseInput,
+  type BranchCaseValueKind,
+} from "../../lib/workflow-branch-case";
+import type { WorkflowCanvasLabelContext } from "../../lib/workflow-canvas-labels";
+import { resolveWorkflowCanvasLabel } from "../../lib/workflow-canvas-labels";
+import {
   outgoingTargets,
   removeWorkflowNode,
   setAgentNodeVersion,
   updateWorkflowNode,
 } from "../../lib/workflow-builder-graph";
+import { workflowNodePresentation } from "../../lib/workflow-node-catalog";
+import {
+  durationMsToMinutes,
+  localDatetimeInputValueFromUtcIso,
+  minutesToDurationMs,
+  utcIsoFromLocalDatetimeInput,
+} from "../../lib/workflow-wait-editor";
 
 interface WorkflowNodeInspectorProps {
   readonly draft: WorkflowBuilderDraft;
   readonly nodeKey: string | undefined;
   readonly onDraftChange: (draft: WorkflowBuilderDraft) => void;
   readonly disabled: boolean;
+  readonly showAdvanced: boolean;
   readonly agentIdByNodeKey: Readonly<Record<string, string>>;
   readonly unavailableVersionByNodeKey: Readonly<Record<string, boolean>>;
+  readonly canvasLabelContext: WorkflowCanvasLabelContext;
   readonly onManualAgentIdChange: (nodeKey: string, agentId: string) => void;
   readonly nodeIssues?: readonly WorkflowBuilderValidationIssue[];
 }
@@ -38,6 +56,8 @@ export function WorkflowNodeInspector({
   disabled,
   agentIdByNodeKey,
   unavailableVersionByNodeKey,
+  canvasLabelContext,
+  showAdvanced,
   onManualAgentIdChange,
   nodeIssues = [],
 }: WorkflowNodeInspectorProps) {
@@ -57,12 +77,21 @@ export function WorkflowNodeInspector({
     return <p className="muted">Node {nodeKey} is not in the draft.</p>;
   }
 
+  const presentation = workflowNodePresentation(node.type);
+  const canvasLabel = resolveWorkflowCanvasLabel(node, canvasLabelContext);
+
   return (
     <div className="stack">
       <div className="page-header">
-        <strong className="mono">
-          {node.key} · {node.type}
-        </strong>
+        <div>
+          <strong>{presentation.label}</strong>
+          <p className="muted">{canvasLabel}</p>
+          {showAdvanced ? (
+            <p className="mono">
+              {node.key} · {node.type}
+            </p>
+          ) : null}
+        </div>
         <button
           type="button"
           className="button"
@@ -122,10 +151,24 @@ export function WorkflowNodeInspector({
           }
         />
       ) : null}
-      {node.type === "PARALLEL" || node.type === "JOIN" ? (
+      {node.type === "PARALLEL" ? (
+        <ParallelJoinGuidance
+          nodeType="PARALLEL"
+          nodeKey={node.key}
+          draft={draft}
+        />
+      ) : null}
+      {node.type === "JOIN" ? (
+        <ParallelJoinGuidance
+          nodeType="JOIN"
+          nodeKey={node.key}
+          draft={draft}
+        />
+      ) : null}
+      {node.type === "AGENT" ? (
         <p className="muted">
-          Connect edges on the canvas. {node.type} requires valid fan-out/fan-in
-          degree before publish.
+          This step receives the previous step&apos;s output automatically (or
+          the workflow run input when it is the first step).
         </p>
       ) : null}
     </div>
@@ -149,7 +192,7 @@ export function WorkflowNodePalette({
           disabled={disabled}
           onClick={() => onAddNode(type)}
         >
-          Add {type}
+          Add {workflowNodePresentation(type).paletteLabel}
         </button>
       ))}
     </div>
@@ -218,7 +261,7 @@ function AgentNodeInspector({
           <option value="">Select version…</option>
           {versions.map((version: AgentVersionResource) => (
             <option key={version.id} value={version.id}>
-              v{version.version} — {version.id}
+              Version {version.version}
             </option>
           ))}
           {showUnavailableBinding && node.agentVersionId.trim().length > 0 ? (
@@ -235,6 +278,56 @@ function AgentNodeInspector({
           </p>
         ) : null}
       </div>
+      {node.agentVersionId.trim().length > 0 ? (
+        <p className="muted">
+          Canonical binding: <span className="mono">{node.agentVersionId}</span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ParallelJoinGuidance({
+  nodeType,
+  nodeKey,
+  draft,
+}: {
+  readonly nodeType: "PARALLEL" | "JOIN";
+  readonly nodeKey: string;
+  readonly draft: WorkflowBuilderDraft;
+}) {
+  const outgoing = outgoingTargets(draft, nodeKey);
+  const incomingCount = draft.definition.edges.filter(
+    (edge) => edge.to === nodeKey,
+  ).length;
+  const outgoingCount = outgoing.length;
+
+  if (nodeType === "PARALLEL") {
+    return (
+      <div className="stack">
+        <p className="muted">
+          <strong>Run steps together</strong> starts multiple paths at once.
+          Connect exactly one incoming edge into this fork, then connect two or
+          more outgoing edges to the parallel steps.
+        </p>
+        <p className="muted">
+          Incoming: {incomingCount}. Outgoing: {outgoingCount}.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="stack">
+      <p className="muted">
+        <strong>Merge parallel paths</strong> waits for connected parallel
+        branches to finish, then passes their outputs to the next step. Connect
+        one or more incoming edges from parallel paths and one outgoing edge to
+        continue.
+      </p>
+      <p className="muted">
+        Incoming: {incomingCount}. Outgoing: {outgoingCount}.
+      </p>
     </div>
   );
 }
@@ -265,9 +358,36 @@ function BranchNodeInspector({
 
   return (
     <div className="stack">
+      <p className="muted">
+        Compares a field on the previous step&apos;s JSON output using a JSON
+        Pointer (for example <span className="mono">/status</span>).
+      </p>
+      <div className="field">
+        <label htmlFor={`branch-preset-${node.key}`}>Common fields</label>
+        <select
+          id={`branch-preset-${node.key}`}
+          value=""
+          disabled={disabled}
+          onChange={(event) => {
+            const preset = BRANCH_SELECTOR_PRESETS.find(
+              (entry) => entry.pointer === event.target.value,
+            );
+            if (preset !== undefined) {
+              patchBranch({ selector: preset.pointer });
+            }
+          }}
+        >
+          <option value="">Choose a preset…</option>
+          {BRANCH_SELECTOR_PRESETS.map((preset) => (
+            <option key={preset.pointer} value={preset.pointer}>
+              {preset.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="field">
         <label htmlFor={`branch-selector-${node.key}`}>
-          Selector (JSON Pointer)
+          Field to check (JSON Pointer)
         </label>
         <input
           id={`branch-selector-${node.key}`}
@@ -277,7 +397,9 @@ function BranchNodeInspector({
         />
       </div>
       <div className="field">
-        <label htmlFor={`branch-default-${node.key}`}>Default target</label>
+        <label htmlFor={`branch-default-${node.key}`}>
+          Otherwise go to step
+        </label>
         <select
           id={`branch-default-${node.key}`}
           value={node.defaultTo}
@@ -305,59 +427,111 @@ function BranchNodeInspector({
               })
             }
           >
-            Add case
+            Add rule
           </button>
         </div>
         <div className="stack">
-          {node.cases.map((branchCase, index) => (
-            <div key={`${node.key}-case-${index}`} className="field">
-              <label>Case {index + 1}</label>
-              <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
-                <input
-                  aria-label={`Case ${index + 1} equals`}
-                  value={String(branchCase.equals)}
-                  disabled={disabled}
-                  onChange={(event) => {
-                    const cases = [...node.cases];
-                    cases[index] = {
-                      ...branchCase,
-                      equals: event.target.value,
-                    };
-                    patchBranch({ cases });
-                  }}
-                />
-                <select
-                  aria-label={`Case ${index + 1} target`}
-                  value={branchCase.to}
-                  disabled={disabled}
-                  onChange={(event) => {
-                    const cases = [...node.cases];
-                    cases[index] = { ...branchCase, to: event.target.value };
-                    patchBranch({ cases });
-                  }}
-                >
-                  {targets.map((target) => (
-                    <option key={target} value={target}>
-                      {target}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="button"
-                  disabled={disabled}
-                  onClick={() => {
-                    const cases = node.cases.filter(
-                      (_, caseIndex) => caseIndex !== index,
-                    );
-                    patchBranch({ cases });
-                  }}
-                >
-                  Remove
-                </button>
+          {node.cases.map((branchCase, index) => {
+            const valueKind = branchCaseValueKind(branchCase.equals);
+            return (
+              <div key={`${node.key}-case-${index}`} className="field">
+                <label>Rule {index + 1}</label>
+                <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
+                  <select
+                    aria-label={`Rule ${index + 1} value type`}
+                    value={valueKind}
+                    disabled={disabled}
+                    onChange={(event) => {
+                      const kind = event.target.value as BranchCaseValueKind;
+                      const parsed =
+                        kind === "null"
+                          ? null
+                          : (parseBranchCaseInput("", kind) ?? "");
+                      const cases = [...node.cases];
+                      cases[index] = { ...branchCase, equals: parsed };
+                      patchBranch({ cases });
+                    }}
+                  >
+                    <option value="string">Text</option>
+                    <option value="number">Number</option>
+                    <option value="boolean">Yes/No</option>
+                    <option value="null">Empty (null)</option>
+                  </select>
+                  {valueKind === "boolean" ? (
+                    <select
+                      aria-label={`Rule ${index + 1} value`}
+                      value={formatBranchCaseForInput(branchCase.equals)}
+                      disabled={disabled}
+                      onChange={(event) => {
+                        const parsed = parseBranchCaseInput(
+                          event.target.value,
+                          "boolean",
+                        );
+                        if (parsed === undefined) {
+                          return;
+                        }
+                        const cases = [...node.cases];
+                        cases[index] = { ...branchCase, equals: parsed };
+                        patchBranch({ cases });
+                      }}
+                    >
+                      <option value="true">Yes (true)</option>
+                      <option value="false">No (false)</option>
+                    </select>
+                  ) : valueKind === "null" ? (
+                    <span className="muted">null</span>
+                  ) : (
+                    <input
+                      aria-label={`Rule ${index + 1} value`}
+                      value={formatBranchCaseForInput(branchCase.equals)}
+                      disabled={disabled}
+                      onChange={(event) => {
+                        const parsed = parseBranchCaseInput(
+                          event.target.value,
+                          valueKind,
+                        );
+                        if (parsed === undefined) {
+                          return;
+                        }
+                        const cases = [...node.cases];
+                        cases[index] = { ...branchCase, equals: parsed };
+                        patchBranch({ cases });
+                      }}
+                    />
+                  )}
+                  <select
+                    aria-label={`Rule ${index + 1} target step`}
+                    value={branchCase.to}
+                    disabled={disabled}
+                    onChange={(event) => {
+                      const cases = [...node.cases];
+                      cases[index] = { ...branchCase, to: event.target.value };
+                      patchBranch({ cases });
+                    }}
+                  >
+                    {targets.map((target) => (
+                      <option key={target} value={target}>
+                        {target}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={disabled}
+                    onClick={() => {
+                      const cases = node.cases.filter(
+                        (_, caseIndex) => caseIndex !== index,
+                      );
+                      patchBranch({ cases });
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -377,8 +551,12 @@ function ApprovalNodeInspector({
 }) {
   return (
     <div className="stack">
+      <p className="muted">
+        Operators with execute permission approve or reject while the workflow
+        is paused. Workers are not kept alive during the wait.
+      </p>
       <div className="field">
-        <label htmlFor={`approval-title-${node.key}`}>Title</label>
+        <label htmlFor={`approval-title-${node.key}`}>Approval title</label>
         <input
           id={`approval-title-${node.key}`}
           value={node.title}
@@ -388,7 +566,7 @@ function ApprovalNodeInspector({
       </div>
       <div className="field">
         <label htmlFor={`approval-desc-${node.key}`}>
-          Description (optional)
+          Instructions for reviewers (optional)
         </label>
         <textarea
           id={`approval-desc-${node.key}`}
@@ -427,8 +605,12 @@ function WaitNodeInspector({
 
   return (
     <div className="stack">
+      <p className="muted">
+        The workflow pauses here until the timer completes or the configured
+        event is received. Execution resumes automatically afterward.
+      </p>
       <div className="field">
-        <label htmlFor={`wait-kind-${node.key}`}>Wait kind</label>
+        <label htmlFor={`wait-kind-${node.key}`}>Wait type</label>
         <select
           id={`wait-kind-${node.key}`}
           value={wait.kind}
@@ -449,46 +631,57 @@ function WaitNodeInspector({
             }
           }}
         >
-          <option value="DURATION">DURATION</option>
-          <option value="UNTIL">UNTIL</option>
-          <option value="EVENT">EVENT</option>
+          <option value="DURATION">Wait for a duration</option>
+          <option value="UNTIL">Wait until a date and time</option>
+          <option value="EVENT">Wait for an external event</option>
         </select>
       </div>
       {wait.kind === "DURATION" ? (
         <div className="field">
-          <label htmlFor={`wait-duration-${node.key}`}>durationMs</label>
+          <label htmlFor={`wait-duration-${node.key}`}>Minutes</label>
           <input
             id={`wait-duration-${node.key}`}
             type="number"
             min={1}
-            value={wait.durationMs}
+            value={durationMsToMinutes(wait.durationMs)}
             disabled={disabled}
             onChange={(event) =>
               setWait({
                 kind: "DURATION",
-                durationMs: Number.parseInt(event.target.value, 10) || 1,
+                durationMs: minutesToDurationMs(
+                  Number.parseInt(event.target.value, 10) || 1,
+                ),
               })
             }
           />
         </div>
       ) : null}
       {wait.kind === "UNTIL" ? (
-        <div className="field">
-          <label htmlFor={`wait-until-${node.key}`}>until (UTC ISO-8601)</label>
-          <input
-            id={`wait-until-${node.key}`}
-            value={wait.until}
-            disabled={disabled}
-            onChange={(event) =>
-              setWait({ kind: "UNTIL", until: event.target.value })
-            }
-          />
+        <div className="stack">
+          <div className="field">
+            <label htmlFor={`wait-until-local-${node.key}`}>
+              Date and time (local)
+            </label>
+            <input
+              id={`wait-until-local-${node.key}`}
+              type="datetime-local"
+              value={localDatetimeInputValueFromUtcIso(wait.until)}
+              disabled={disabled}
+              onChange={(event) => {
+                const iso = utcIsoFromLocalDatetimeInput(event.target.value);
+                if (iso !== undefined) {
+                  setWait({ kind: "UNTIL", until: iso });
+                }
+              }}
+            />
+          </div>
+          <p className="muted mono">Stored as UTC: {wait.until}</p>
         </div>
       ) : null}
       {wait.kind === "EVENT" ? (
         <>
           <div className="field">
-            <label htmlFor={`wait-source-${node.key}`}>source</label>
+            <label htmlFor={`wait-source-${node.key}`}>Event source</label>
             <input
               id={`wait-source-${node.key}`}
               value={wait.source}
@@ -499,7 +692,7 @@ function WaitNodeInspector({
             />
           </div>
           <div className="field">
-            <label htmlFor={`wait-event-type-${node.key}`}>eventType</label>
+            <label htmlFor={`wait-event-type-${node.key}`}>Event type</label>
             <input
               id={`wait-event-type-${node.key}`}
               value={wait.eventType}
@@ -509,9 +702,14 @@ function WaitNodeInspector({
               }
             />
           </div>
+          <p className="muted">
+            When a matching workflow event is ingested with the same source,
+            type, and correlation, this wait completes and the workflow
+            continues.
+          </p>
           <div className="field">
             <label htmlFor={`wait-corr-kind-${node.key}`}>
-              Correlation kind
+              Match events by
             </label>
             <select
               id={`wait-corr-kind-${node.key}`}
@@ -531,8 +729,10 @@ function WaitNodeInspector({
                 }
               }}
             >
-              <option value="LITERAL">LITERAL</option>
-              <option value="INPUT_POINTER">INPUT_POINTER</option>
+              <option value="LITERAL">Fixed correlation value</option>
+              <option value="INPUT_POINTER">
+                Value from workflow run input (JSON Pointer)
+              </option>
             </select>
           </div>
           {wait.correlation.kind === "LITERAL" ? (

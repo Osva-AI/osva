@@ -10,6 +10,10 @@ import {
   describeWorkflowRunInputSyntax,
   parseWorkflowRunInputJson,
 } from "../../lib/workflow-run-input";
+import {
+  buildJsonFromGuidedValues,
+  listGuidedRunInputFields,
+} from "../../lib/workflow-run-input-guided";
 import { JsonView } from "../json-view/json-view";
 
 export interface WorkflowRunLaunchFormProps {
@@ -39,6 +43,15 @@ export function WorkflowRunLaunchForm({
   const [confirming, setConfirming] = useState(false);
   const [feedback, setFeedback] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
+  const [guidedValues, setGuidedValues] = useState<Record<string, string>>({});
+  const [useAdvancedJson, setUseAdvancedJson] = useState(false);
+
+  const guidedFields =
+    contract.status === "available"
+      ? listGuidedRunInputFields(contract.schema)
+      : undefined;
+  const guidedSupported =
+    guidedFields !== undefined && guidedFields.length > 0 && !useAdvancedJson;
 
   useEffect(() => {
     if (inputTouched || contract.status !== "available") {
@@ -51,7 +64,18 @@ export function WorkflowRunLaunchForm({
     setInputText(JSON.stringify(example, null, 2));
   }, [contract, inputTouched]);
 
-  const parsed = parseWorkflowRunInputJson(inputText);
+  const guidedBuilt =
+    guidedSupported && guidedFields !== undefined
+      ? buildJsonFromGuidedValues(guidedFields, guidedValues)
+      : undefined;
+  const parsed = guidedSupported
+    ? guidedBuilt?.ok === true
+      ? { ok: true as const, value: guidedBuilt.value }
+      : {
+          ok: false as const,
+          message: guidedBuilt?.message ?? "Invalid input.",
+        }
+    : parseWorkflowRunInputJson(inputText);
   const syntax = describeWorkflowRunInputSyntax(parsed, contract);
   const canSubmit = canExecute && parsed.ok && !mutation.isPending;
 
@@ -120,22 +144,88 @@ export function WorkflowRunLaunchForm({
         </p>
       ) : null}
 
-      <div className="field">
-        <label htmlFor="workflow-run-input-json">Run input (JSON)</label>
-        <textarea
-          id="workflow-run-input-json"
-          rows={8}
-          value={inputText}
-          onChange={(event) => {
-            setInputText(event.target.value);
-            setInputTouched(true);
-            setConfirming(false);
-            setFeedback(undefined);
-          }}
-          spellCheck={false}
-          disabled={!canExecute || mutation.isPending}
-        />
-      </div>
+      {guidedFields !== undefined ? (
+        <div className="toolbar">
+          <button
+            type="button"
+            className={`button${guidedSupported ? " primary" : ""}`}
+            disabled={!canExecute}
+            onClick={() => setUseAdvancedJson(false)}
+          >
+            Guided form
+          </button>
+          <button
+            type="button"
+            className={`button${useAdvancedJson ? " primary" : ""}`}
+            disabled={!canExecute}
+            onClick={() => setUseAdvancedJson(true)}
+          >
+            Advanced JSON
+          </button>
+        </div>
+      ) : null}
+
+      {guidedSupported && guidedFields !== undefined ? (
+        <div className="stack">
+          {guidedFields.map((field) => (
+            <div className="field" key={field.key}>
+              <label htmlFor={`guided-${field.key}`}>
+                {field.label}
+                {field.required ? " *" : ""}
+              </label>
+              {field.kind === "boolean" ? (
+                <select
+                  id={`guided-${field.key}`}
+                  value={guidedValues[field.key] ?? ""}
+                  disabled={!canExecute}
+                  onChange={(event) =>
+                    setGuidedValues((current) => ({
+                      ...current,
+                      [field.key]: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Select…</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              ) : (
+                <input
+                  id={`guided-${field.key}`}
+                  type={field.kind === "number" ? "number" : "text"}
+                  value={guidedValues[field.key] ?? ""}
+                  disabled={!canExecute}
+                  onChange={(event) =>
+                    setGuidedValues((current) => ({
+                      ...current,
+                      [field.key]: event.target.value,
+                    }))
+                  }
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {!guidedSupported ? (
+        <div className="field">
+          <label htmlFor="workflow-run-input-json">Run input (JSON)</label>
+          <textarea
+            id="workflow-run-input-json"
+            rows={8}
+            value={inputText}
+            onChange={(event) => {
+              setInputText(event.target.value);
+              setInputTouched(true);
+              setConfirming(false);
+              setFeedback(undefined);
+            }}
+            spellCheck={false}
+            disabled={!canExecute || mutation.isPending}
+          />
+        </div>
+      ) : null}
       <p
         className={syntax.kind === "error" ? "error-inline" : "muted"}
         role={syntax.kind === "error" ? "alert" : undefined}
@@ -224,11 +314,10 @@ function RootAgentInputContractBody({
       return (
         <>
           <p className="muted">
-            Root AGENT node <span className="mono">{contract.nodeKey}</span>{" "}
-            binds AgentVersion{" "}
-            <span className="mono">{contract.agentVersionId}</span>. The Console
-            checks JSON syntax only; the first child agent validates this
-            payload at execution time.
+            The first agent step (
+            <span className="mono">{contract.nodeKey}</span>) defines the input
+            expected when the workflow starts. The agent validates this payload
+            at execution time.
           </p>
           <JsonView label="Input schema" value={contract.schema} />
         </>

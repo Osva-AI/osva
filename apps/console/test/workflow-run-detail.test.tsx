@@ -300,7 +300,7 @@ describe("WorkflowRunDetailPage", () => {
       expect(screen.getByText(/Request ID: req-event-9/)).toBeTruthy();
     });
     expect(
-      screen.getByText(/Waiting for event billing\/invoice\.paid/),
+      screen.getByText(/Waiting for external event billing\/invoice\.paid/),
     ).toBeTruthy();
   });
 

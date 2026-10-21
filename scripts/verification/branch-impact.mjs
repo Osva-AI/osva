@@ -425,9 +425,10 @@ export async function buildVerificationPlan(paths, options = {}) {
         "--config",
         "vitest.integration.browser.config.ts",
         "test/integration/m13-5-browser.integration.test.ts",
+        "test/integration/m13-6-browser.integration.test.ts",
       ],
       command:
-        "pnpm --filter @osva/console exec vitest run --config vitest.integration.browser.config.ts test/integration/m13-5-browser.integration.test.ts",
+        "pnpm --filter @osva/console exec vitest run --config vitest.integration.browser.config.ts test/integration/m13-6-browser.integration.test.ts",
       reason:
         "Browser harness or Console route changes require a fresh client build and browser smoke.",
       runInIntegrationProfile: true,
