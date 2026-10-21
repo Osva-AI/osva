@@ -12,7 +12,7 @@ import {
   setSelectedWorkspaceId,
 } from "../src/client/lib/workspace-selection";
 
-function renderOverview(role: string) {
+function renderOverview() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -130,7 +130,7 @@ describe("OverviewPage", () => {
       return undefined;
     });
 
-    renderOverview("DEVELOPER");
+    renderOverview();
 
     await waitFor(() => {
       expect(screen.getByText("2")).toBeTruthy();
@@ -164,7 +164,7 @@ describe("OverviewPage", () => {
       return undefined;
     });
 
-    renderOverview("VIEWER");
+    renderOverview();
 
     await waitFor(() => {
       expect(
@@ -217,69 +217,67 @@ describe("OverviewPage", () => {
       return undefined;
     });
 
-    fetchMock.mockImplementation(
-      async (input: RequestInfo, init?: RequestInit) => {
-        const url = String(input);
-        const workspaceId = getSelectedWorkspaceId();
-        if (url.includes("/api/v1/auth/workspaces")) {
-          return json({
-            workspaces: [
-              { workspaceId: "ws-1", name: "Workspace One", role: "DEVELOPER" },
-              { workspaceId: "ws-2", name: "Workspace Two", role: "DEVELOPER" },
-            ],
-          });
+    fetchMock.mockImplementation(async (input: RequestInfo) => {
+      const url = String(input);
+      const workspaceId = getSelectedWorkspaceId();
+      if (url.includes("/api/v1/auth/workspaces")) {
+        return json({
+          workspaces: [
+            { workspaceId: "ws-1", name: "Workspace One", role: "DEVELOPER" },
+            { workspaceId: "ws-2", name: "Workspace Two", role: "DEVELOPER" },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/agents")) {
+        if (workspaceId === "ws-2") {
+          return json({ agents: [] });
         }
-        if (url.includes("/api/v1/agents")) {
-          if (workspaceId === "ws-2") {
-            return json({ agents: [] });
-          }
-          return json({
-            agents: [
-              {
-                id: "ws1-agent",
-                workspaceId: "ws-1",
-                key: "a",
-                name: "A",
-                createdAt: "2026-01-01T00:00:00.000Z",
-              },
-            ],
-          });
-        }
-        if (url.includes("/api/v1/workflows")) {
-          return json({ workflows: [] });
-        }
-        if (url.includes("/api/v1/runs")) {
-          return json({ runs: [] });
-        }
-        if (url.includes("/api/v1/workflow-runs")) {
-          return json({ workflowRuns: [] });
-        }
-        if (url.includes("/api/v1/model-profiles")) {
-          return json({ modelProfiles: [] });
-        }
-        if (url.includes("/api/v1/model-provider-connections")) {
-          return json({ connections: [] });
-        }
-        if (url.includes("/api/v1/auth/session")) {
-          return json({
-            userId: "user-1",
-            sessionId: "session-1",
-            expiresAt: "2099-01-01T00:00:00.000Z",
-          });
-        }
-        if (url.includes("/api/v1/auth/me")) {
-          return json({
-            userId: "user-1",
-            email: "operator@example.com",
-            displayName: "Operator",
-            status: "ACTIVE",
-          });
-        }
-        return json({ error: "not found" }, 404);
-      },
-    );
+        return json({
+          agents: [
+            {
+              id: "ws1-agent",
+              workspaceId: "ws-1",
+              key: "a",
+              name: "A",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/workflows")) {
+        return json({ workflows: [] });
+      }
+      if (url.includes("/api/v1/runs")) {
+        return json({ runs: [] });
+      }
+      if (url.includes("/api/v1/workflow-runs")) {
+        return json({ workflowRuns: [] });
+      }
+      if (url.includes("/api/v1/model-profiles")) {
+        return json({ modelProfiles: [] });
+      }
+      if (url.includes("/api/v1/model-provider-connections")) {
+        return json({ connections: [] });
+      }
+      if (url.includes("/api/v1/auth/session")) {
+        return json({
+          userId: "user-1",
+          sessionId: "session-1",
+          expiresAt: "2099-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/auth/me")) {
+        return json({
+          userId: "user-1",
+          email: "operator@example.com",
+          displayName: "Operator",
+          status: "ACTIVE",
+        });
+      }
+      return json({ error: "not found" }, 404);
+    });
 
-    renderOverview("DEVELOPER");
+    renderOverview();
 
     await waitFor(() => {
       expect(screen.getByText("1")).toBeTruthy();

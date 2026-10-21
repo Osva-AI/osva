@@ -319,7 +319,19 @@ export function firstAgentOnboardingSteps(
     sampleRunReady: false,
     inspectRunReady: false,
     workflowOptionalReady: false,
-  }).map(({ status: _s, statusDetail: _d, ...step }) => step);
+  }).map((step) => ({
+    id: step.id,
+    title: step.title,
+    description: step.description,
+    to: step.to,
+    actionLabel: step.actionLabel,
+    ...(step.requiresWrite === undefined
+      ? {}
+      : { requiresWrite: step.requiresWrite }),
+    ...(step.requiresExecute === undefined
+      ? {}
+      : { requiresExecute: step.requiresExecute }),
+  }));
 }
 
 function findDeclarativePublishedVersion(
