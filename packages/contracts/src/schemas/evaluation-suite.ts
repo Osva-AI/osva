@@ -18,6 +18,7 @@ import {
   workflowVersionIdSchema,
   workspaceIdSchema,
 } from "./ids.js";
+import { utcIso8601TimestampSchema } from "./utc-instant.js";
 
 export const createEvaluationSuiteRequestSchema = z.strictObject({
   key: z.string().min(1),
@@ -127,4 +128,26 @@ export const evaluationCaseResultResourceSchema = z.strictObject({
 
 export const evaluationCaseResultListResourceSchema = z.strictObject({
   items: z.array(evaluationCaseResultResourceSchema),
+});
+
+export const evaluationRunListCursorPayloadSchema = z.strictObject({
+  createdAt: utcIso8601TimestampSchema,
+  id: evaluationRunIdSchema,
+});
+
+export const listEvaluationRunsQuerySchema = z.strictObject({
+  limit: z
+    .string()
+    .regex(/^[1-9]\d*$/, "limit must be a positive integer")
+    .optional(),
+  cursor: z.string().min(1).optional(),
+  evaluationSuiteId: evaluationSuiteIdSchema.optional(),
+  evaluationSuiteVersionId: evaluationSuiteVersionIdSchema.optional(),
+  agentVersionId: agentVersionIdSchema.optional(),
+  status: z.enum(EVALUATION_RUN_STATES).optional(),
+});
+
+export const evaluationRunListResourceSchema = z.strictObject({
+  items: z.array(evaluationRunResourceSchema),
+  nextCursor: z.string().min(1).optional(),
 });

@@ -38,6 +38,7 @@ const navSections: readonly NavSection[] = [
   {
     title: "Operate",
     items: [
+      { label: "Testing Studio", to: "/testing" },
       { label: "Runs", to: "/runs" },
       { label: "Workflow Runs", to: "/workflow-runs" },
     ],

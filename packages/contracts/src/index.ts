@@ -491,6 +491,8 @@ export type {
   RuntimeAdapter,
 } from "./runtime-protocol.js";
 
+export { allowsPersistentMemoryMutation } from "./runtime-protocol.js";
+
 export {
   MEMORY_ACCESS_MODES,
   MEMORY_BINDING_NAME_PATTERN,

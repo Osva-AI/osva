@@ -422,7 +422,10 @@ export type {
   ModelProviderConnectionRepository,
   DeleteMemoryRecordInput,
   EvaluationRepository,
+  EvaluationRunListCursor,
   EvaluationSuiteRepository,
+  ListEvaluationRunsQuery,
+  ListEvaluationRunsResult,
   OfficeRepository,
   ListMemoryRecordsQuery,
   ListMemoryRecordsResult,
@@ -471,8 +474,10 @@ export type {
 } from "./ports/index.js";
 
 export {
+  DEFAULT_EVALUATION_RUN_LIST_LIMIT,
   DEFAULT_RUN_LIST_LIMIT,
   DEFAULT_RUN_STEP_LIST_LIMIT,
+  MAX_EVALUATION_RUN_LIST_LIMIT,
   MAX_RUN_LIST_LIMIT,
   MAX_RUN_STEP_LIST_LIMIT,
   DEFAULT_WORKFLOW_RUN_LIST_LIMIT,
@@ -561,6 +566,7 @@ export {
   GetEvaluationRun,
   LaunchEvaluationRun,
   ListEvaluationCaseResults,
+  ListEvaluationRuns,
   ReconcileEvaluationCase,
   createEvaluationRunApplication,
   type EvaluationRunApplication,

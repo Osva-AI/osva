@@ -1,4 +1,5 @@
 import type {
+  AgentVersionId,
   EvaluationRunId,
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
@@ -9,6 +10,7 @@ import {
   createEvaluationSuiteVersionRequestSchema,
   evaluationCaseResultListResourceSchema,
   evaluationRunDetailResourceSchema,
+  evaluationRunListResourceSchema,
   evaluationSuiteListResourceSchema,
   evaluationSuiteResourceSchema,
   evaluationSuiteVersionListResourceSchema,
@@ -40,9 +42,21 @@ type CreateEvaluationRunRequest = z.infer<
 type EvaluationRunDetailResource = z.infer<
   typeof evaluationRunDetailResourceSchema
 >;
+type EvaluationRunListResource = z.infer<
+  typeof evaluationRunListResourceSchema
+>;
 type EvaluationCaseResultListResource = z.infer<
   typeof evaluationCaseResultListResourceSchema
 >;
+
+export interface ListEvaluationRunsParams {
+  readonly evaluationSuiteId?: EvaluationSuiteId;
+  readonly evaluationSuiteVersionId?: EvaluationSuiteVersionId;
+  readonly agentVersionId?: AgentVersionId;
+  readonly status?: string;
+  readonly limit?: number;
+  readonly cursor?: string;
+}
 
 export class EvaluationSuitesResource {
   constructor(private readonly client: OsvaHttpClient) {}
@@ -104,6 +118,23 @@ export class EvaluationSuitesResource {
 
 export class EvaluationRunsResource {
   constructor(private readonly client: OsvaHttpClient) {}
+
+  list(
+    params: ListEvaluationRunsParams = {},
+  ): Promise<EvaluationRunListResource> {
+    return this.client.request({
+      method: "GET",
+      path: "/v1/evaluation-runs",
+      query: {
+        evaluationSuiteId: params.evaluationSuiteId,
+        evaluationSuiteVersionId: params.evaluationSuiteVersionId,
+        agentVersionId: params.agentVersionId,
+        status: params.status,
+        limit: params.limit === undefined ? undefined : String(params.limit),
+        cursor: params.cursor,
+      },
+    });
+  }
 
   create(
     input: CreateEvaluationRunRequest,

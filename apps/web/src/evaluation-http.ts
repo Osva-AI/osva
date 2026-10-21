@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type {
+  AgentVersionId,
   EvaluationRunId,
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
@@ -10,24 +11,36 @@ import {
   createEvaluationSuiteVersionRequestSchema,
   evaluationCaseResultListResourceSchema,
   evaluationRunDetailResourceSchema,
+  evaluationRunListResourceSchema,
+  evaluationRunResourceSchema,
   evaluationSuiteListResourceSchema,
   evaluationSuiteResourceSchema,
   evaluationSuiteVersionListResourceSchema,
   evaluationSuiteVersionResourceSchema,
+  listEvaluationRunsQuerySchema,
 } from "@osva-ai/contracts/schemas";
 import type {
   EvaluationCase,
   EvaluationCaseResult,
+  EvaluationRun,
   EvaluationRunApplication,
   EvaluationSuite,
   EvaluationSuiteApplication,
   EvaluationSuiteVersion,
+} from "@osva/domain";
+import {
+  DEFAULT_EVALUATION_RUN_LIST_LIMIT,
+  MAX_EVALUATION_RUN_LIST_LIMIT,
 } from "@osva/domain";
 
 import {
   requireControlPlaneScope,
   requireControlPlaneWorkspaceId,
 } from "./control-plane-http.js";
+import {
+  decodeEvaluationRunListCursor,
+  encodeEvaluationRunListCursor,
+} from "./evaluation-run-cursor.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
@@ -209,12 +222,17 @@ async function dispatchEvaluationRoute(
   }
 
   if (route.kind === "runs") {
+    if (method === "GET") {
+      await handleListEvaluationRuns(response, searchParams, services.runs);
+      return;
+    }
+
     if (method !== "POST") {
       sendJson(
         response,
         405,
         { status: "method_not_allowed" },
-        { allow: "POST" },
+        { allow: "GET, POST" },
       );
       return;
     }
@@ -361,6 +379,95 @@ function matchEvaluationRoute(path: string): EvaluationRoute | undefined {
   return undefined;
 }
 
+async function handleListEvaluationRuns(
+  response: ServerResponse,
+  searchParams: URLSearchParams,
+  runs: EvaluationRunApplication,
+): Promise<void> {
+  const scope = requireControlPlaneScope();
+  const parsed = listEvaluationRunsQuerySchema.safeParse(
+    Object.fromEntries(searchParams.entries()),
+  );
+  if (!parsed.success) {
+    sendJson(response, 400, { status: "invalid_request" });
+    return;
+  }
+
+  let limit = DEFAULT_EVALUATION_RUN_LIST_LIMIT;
+  if (parsed.data.limit !== undefined) {
+    limit = Number(parsed.data.limit);
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > MAX_EVALUATION_RUN_LIST_LIMIT
+    ) {
+      sendJson(response, 400, { status: "invalid_request" });
+      return;
+    }
+  }
+
+  let cursor: { createdAt: Date; id: EvaluationRunId } | undefined;
+  if (parsed.data.cursor !== undefined) {
+    const decoded = decodeEvaluationRunListCursor(parsed.data.cursor);
+    if (decoded === null) {
+      sendJson(response, 400, { status: "invalid_request" });
+      return;
+    }
+
+    cursor = {
+      createdAt: new Date(decoded.createdAt),
+      id: decoded.id as EvaluationRunId,
+    };
+  }
+
+  const page = await runs.listEvaluationRuns.execute(scope, {
+    limit,
+    cursor,
+    evaluationSuiteId: parsed.data.evaluationSuiteId,
+    evaluationSuiteVersionId: parsed.data.evaluationSuiteVersionId,
+    agentVersionId: parsed.data.agentVersionId as AgentVersionId | undefined,
+    status: parsed.data.status,
+  });
+
+  sendJson(
+    response,
+    200,
+    toEvaluationRunListResource(page.evaluationRuns, page.nextCursor),
+  );
+}
+
+function toEvaluationRunResource(evaluationRun: EvaluationRun) {
+  return evaluationRunResourceSchema.parse({
+    id: evaluationRun.id,
+    workspaceId: evaluationRun.workspaceId,
+    evaluationSuiteVersionId: evaluationRun.evaluationSuiteVersionId,
+    targetType: evaluationRun.targetType,
+    targetVersionId: evaluationRun.targetVersionId,
+    status: evaluationRun.status,
+    createdAt: evaluationRun.createdAt.toISOString(),
+    startedAt: evaluationRun.startedAt?.toISOString(),
+    completedAt: evaluationRun.completedAt?.toISOString(),
+    cancelledAt: evaluationRun.cancelledAt?.toISOString(),
+  });
+}
+
+function toEvaluationRunListResource(
+  page: readonly EvaluationRun[],
+  nextCursor:
+    { readonly createdAt: Date; readonly id: EvaluationRunId } | undefined,
+) {
+  return evaluationRunListResourceSchema.parse({
+    items: page.map((evaluationRun) => toEvaluationRunResource(evaluationRun)),
+    nextCursor:
+      nextCursor === undefined
+        ? undefined
+        : encodeEvaluationRunListCursor({
+            createdAt: nextCursor.createdAt.toISOString(),
+            id: nextCursor.id,
+          }),
+  });
+}
+
 function toEvaluationSuiteResource(suite: EvaluationSuite) {
   return evaluationSuiteResourceSchema.parse({
     id: suite.id,
@@ -421,16 +528,7 @@ function toEvaluationRunDetailResource(
   >["summary"],
 ) {
   return evaluationRunDetailResourceSchema.parse({
-    id: evaluationRun.id,
-    workspaceId: evaluationRun.workspaceId,
-    evaluationSuiteVersionId: evaluationRun.evaluationSuiteVersionId,
-    targetType: evaluationRun.targetType,
-    targetVersionId: evaluationRun.targetVersionId,
-    status: evaluationRun.status,
-    createdAt: evaluationRun.createdAt.toISOString(),
-    startedAt: evaluationRun.startedAt?.toISOString(),
-    completedAt: evaluationRun.completedAt?.toISOString(),
-    cancelledAt: evaluationRun.cancelledAt?.toISOString(),
+    ...toEvaluationRunResource(evaluationRun),
     summary,
   });
 }
@@ -461,6 +559,7 @@ export const V1_HTTP_ROUTES = [
     method: "GET",
     path: "/v1/evaluation-suites/:evaluationSuiteId/versions/:evaluationSuiteVersionId",
   },
+  { method: "GET", path: "/v1/evaluation-runs" },
   { method: "POST", path: "/v1/evaluation-runs" },
   { method: "GET", path: "/v1/evaluation-runs/:evaluationRunId" },
   { method: "GET", path: "/v1/evaluation-runs/:evaluationRunId/case-results" },

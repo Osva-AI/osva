@@ -5,9 +5,11 @@ import type {
   JsonValue,
   WorkspaceId,
 } from "@osva-ai/contracts";
+import type { AgentVersionId, EvaluationRunId } from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   EvaluationCase,
+  EvaluationRun,
   EvaluationSuite,
   EvaluationSuiteVersion,
   Workspace,
@@ -222,6 +224,101 @@ describe("PostgreSQL evaluation suite repository", () => {
     ]);
     expect(await suites.listSuiteVersionsBySuite(suiteB.id)).toEqual([
       versionB,
+    ]);
+  });
+
+  it("lists evaluation runs with workspace scope, filters, and cursor pagination", async () => {
+    const ids = createIds("evaluation-run-list");
+    await seedWorkspace(ids.workspaceId);
+
+    const suite = EvaluationSuite.create({
+      id: "evaluation-suite-list" as EvaluationSuiteId,
+      workspaceId: ids.workspaceId,
+      key: "list",
+      name: "List",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await suites.saveSuite(suite);
+
+    const version = await seedVersion({
+      suite,
+      versionNumber: 1,
+      versionId: "evaluation-suite-version-list" as EvaluationSuiteVersionId,
+      caseDefinitions: [
+        {
+          id: "evaluation-case-list" as EvaluationCaseId,
+          key: "one",
+          input: { prompt: "x" },
+        },
+      ],
+    });
+
+    const agentVersionId = "agent-version-list" as AgentVersionId;
+    const runs = [
+      EvaluationRun.create({
+        id: "evaluation-run-1" as EvaluationRunId,
+        workspaceId: ids.workspaceId,
+        evaluationSuiteVersionId: version.id,
+        targetType: "AGENT_VERSION",
+        targetVersionId: agentVersionId,
+        createdAt: new Date("2026-01-03T00:00:00.000Z"),
+      }),
+      EvaluationRun.create({
+        id: "evaluation-run-2" as EvaluationRunId,
+        workspaceId: ids.workspaceId,
+        evaluationSuiteVersionId: version.id,
+        targetType: "AGENT_VERSION",
+        targetVersionId: agentVersionId,
+        createdAt: new Date("2026-01-02T00:00:00.000Z"),
+      }),
+      EvaluationRun.create({
+        id: "evaluation-run-3" as EvaluationRunId,
+        workspaceId: ids.workspaceId,
+        evaluationSuiteVersionId: version.id,
+        targetType: "AGENT_VERSION",
+        targetVersionId: "other-agent-version" as AgentVersionId,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      }),
+    ];
+
+    for (const evaluationRun of runs) {
+      await suites.saveEvaluationRun(evaluationRun);
+      const running = evaluationRun.transitionTo("RUNNING", {
+        updatedAt: NOW,
+        startedAt: NOW,
+      });
+      await suites.transitionEvaluationRun(evaluationRun.status, running);
+    }
+
+    const filtered = await suites.listEvaluationRuns({
+      workspaceId: ids.workspaceId,
+      limit: 10,
+      agentVersionId,
+      evaluationSuiteId: suite.id,
+      status: "RUNNING",
+    });
+    expect(filtered.evaluationRuns.map((item) => item.id)).toEqual([
+      "evaluation-run-1",
+      "evaluation-run-2",
+    ]);
+
+    const pageOne = await suites.listEvaluationRuns({
+      workspaceId: ids.workspaceId,
+      limit: 1,
+    });
+    expect(pageOne.evaluationRuns.map((item) => item.id)).toEqual([
+      "evaluation-run-1",
+    ]);
+    expect(pageOne.nextCursor).toBeDefined();
+
+    const pageTwo = await suites.listEvaluationRuns({
+      workspaceId: ids.workspaceId,
+      limit: 1,
+      cursor: pageOne.nextCursor,
+    });
+    expect(pageTwo.evaluationRuns.map((item) => item.id)).toEqual([
+      "evaluation-run-2",
     ]);
   });
 

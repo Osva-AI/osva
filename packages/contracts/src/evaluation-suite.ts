@@ -144,3 +144,8 @@ export interface EvaluationCaseResultResourceV1 {
 export interface EvaluationCaseResultListResourceV1 {
   readonly items: readonly EvaluationCaseResultResourceV1[];
 }
+
+export interface EvaluationRunListResourceV1 {
+  readonly items: readonly EvaluationRunResourceV1[];
+  readonly nextCursor?: string;
+}

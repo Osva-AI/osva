@@ -284,6 +284,40 @@ function createMockClient(
       data: { items: [] },
       requestId: "req-memory-records",
     }),
+    listEvaluationSuites: async () => ({
+      data: { items: [] },
+      requestId: "req-evaluation-suites",
+    }),
+    createEvaluationSuite: async () => {
+      throw new Error("not implemented");
+    },
+    getEvaluationSuite: async () => {
+      throw new Error("not implemented");
+    },
+    listEvaluationSuiteVersions: async () => ({
+      data: { items: [] },
+      requestId: "req-evaluation-suite-versions",
+    }),
+    createEvaluationSuiteVersion: async () => {
+      throw new Error("not implemented");
+    },
+    getEvaluationSuiteVersion: async () => {
+      throw new Error("not implemented");
+    },
+    listEvaluationRuns: async () => ({
+      data: { items: [] },
+      requestId: "req-evaluation-runs",
+    }),
+    getEvaluationRun: async () => {
+      throw new Error("not implemented");
+    },
+    createEvaluationRun: async () => {
+      throw new Error("not implemented");
+    },
+    listEvaluationCaseResults: async () => ({
+      data: { items: [] },
+      requestId: "req-evaluation-case-results",
+    }),
     ...overrides,
   };
 }
@@ -864,6 +898,22 @@ describe("console server API", () => {
     if (address === null || typeof address === "string") {
       throw new Error("expected server address");
     }
+
+    const evaluationSuitesResponse = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/evaluation-suites`,
+    );
+    expect(evaluationSuitesResponse.status).toBe(200);
+    expect(evaluationSuitesResponse.headers.get("x-osva-request-id")).toBe(
+      "req-evaluation-suites",
+    );
+
+    const evaluationRunsResponse = await fetch(
+      `http://127.0.0.1:${address.port}/api/v1/evaluation-runs`,
+    );
+    expect(evaluationRunsResponse.status).toBe(200);
+    expect(evaluationRunsResponse.headers.get("x-osva-request-id")).toBe(
+      "req-evaluation-runs",
+    );
 
     const agentsResponse = await fetch(
       `http://127.0.0.1:${address.port}/api/v1/agents`,

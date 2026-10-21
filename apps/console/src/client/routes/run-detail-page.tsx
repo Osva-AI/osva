@@ -148,6 +148,18 @@ export function RunDetailPage() {
             <dt>Updated</dt>
             <dd>{formatTimestamp(run.updatedAt)}</dd>
           </div>
+          {run.evaluationRunId !== undefined ? (
+            <div>
+              <dt>Evaluation run ID</dt>
+              <dd className="mono">{run.evaluationRunId}</dd>
+            </div>
+          ) : null}
+          {run.evaluationCaseId !== undefined ? (
+            <div>
+              <dt>Evaluation case ID</dt>
+              <dd className="mono">{run.evaluationCaseId}</dd>
+            </div>
+          ) : null}
         </dl>
       </section>
 
