@@ -34,6 +34,9 @@ Modes:
   doctor      Environment diagnostics
   quick       Format changed files, then cached lint/typecheck/unit tests
   changed     Check changed files, then cached lint/typecheck/test/build for affected packages
+
+Branch gate (canonical before push): pnpm verify:branch
+  node scripts/verification/branch-verify.mjs [--base=origin/main] [--profile=fast|integration]
   docker      Fail if Docker CLI, Compose, or engine is unavailable
   ci          Current GitHub verify job (fail-fast, non-mutating)
   python      Current GitHub python-sdk job

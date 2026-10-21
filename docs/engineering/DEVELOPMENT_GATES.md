@@ -9,7 +9,10 @@ not the first place to discover a failure.
 During implementation:
 pnpm verify:quick
 
-Before asking for review:
+Before push / asking for review:
+pnpm verify:branch
+
+Before merge-ready sign-off:
 pnpm verify:ci:clean
 
 After verification:
@@ -30,6 +33,7 @@ passes or a concrete environmental limitation is explicitly reported.
 | --- | --- | --- |
 | `pnpm verify:doctor` | Anytime | Prints Node, pnpm, Turbo, Python, Git, and Docker diagnostics. Does not install software. |
 | `pnpm verify:quick` | Inner loop | Formats **changed** Prettier files only, then cached lint, typecheck, and unit tests. No full build, integration, Python package build, or clean. |
+| `pnpm verify:branch` | Before push (local) | **Canonical branch gate.** Merge-base-aware changed paths, Prettier write+check on touched files, affected lint → typecheck → build → tests, impact-map regressions, obligations for integration/browser work, patch check. See [BRANCH_VERIFICATION.md](./BRANCH_VERIFICATION.md). |
 | `pnpm verify:changed` | Pre-review (local) | Prettier **check** on changed files, cached lint/typecheck/test/**build** for affected workspace packages (or full cached tasks when root config changes), then `git diff --check`. Non-mutating. |
 | `pnpm verify:docker` | Before `infra:up` | Fails with actionable diagnostics when Docker CLI, Compose, or the engine is unavailable. |
 | `pnpm verify:ci` | Same as GitHub `verify` | Fail-fast: format check, lint, typecheck, unit tests, **then** build, integration (including Python SDK runtime E2E), `git diff --check`. Non-mutating. |

@@ -9,6 +9,7 @@ coverage/
 .turbo/
 .osva/
 .acceptance-evidence/
+artifacts/
 
 .env
 .env.*

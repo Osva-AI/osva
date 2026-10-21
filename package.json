@@ -17,6 +17,7 @@
     "verify:doctor": "node scripts/verification/verify.mjs doctor",
     "verify:quick": "node scripts/verification/verify.mjs quick",
     "verify:changed": "node scripts/verification/verify.mjs changed",
+    "verify:branch": "node scripts/verification/branch-verify.mjs",
     "verify:docker": "node scripts/verification/verify.mjs docker",
     "verify:ci": "node scripts/verification/verify.mjs ci",
     "verify:python": "node scripts/verification/verify.mjs python",
