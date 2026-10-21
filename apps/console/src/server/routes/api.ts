@@ -1019,36 +1019,22 @@ export async function handleConsoleApiRequest(
     }
 
     if (pathname === "/api/v1/knowledge-sources") {
-      if (method === "GET") {
-        const limitParam = searchParams.get("limit");
-        const limit =
-          limitParam === null ? undefined : Number.parseInt(limitParam, 10);
-        const listed = await client.listKnowledgeSources({
-          limit:
-            limit !== undefined && Number.isInteger(limit) ? limit : undefined,
-          cursor: searchParams.get("cursor") ?? undefined,
-        });
-        sendJson(
-          response,
-          200,
-          listed.data,
-          upstreamRequestIdHeaders(listed.requestId),
-          deps.security,
-        );
-        return true;
-      }
-      if (method === "POST") {
-        const body = await readJsonBody(request);
-        const created = await client.createKnowledgeSource(body);
-        sendJson(
-          response,
-          201,
-          created.data,
-          upstreamRequestIdHeaders(created.requestId),
-          deps.security,
-        );
-        return true;
-      }
+      const limitParam = searchParams.get("limit");
+      const limit =
+        limitParam === null ? undefined : Number.parseInt(limitParam, 10);
+      const listed = await client.listKnowledgeSources({
+        limit:
+          limit !== undefined && Number.isInteger(limit) ? limit : undefined,
+        cursor: searchParams.get("cursor") ?? undefined,
+      });
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
     }
 
     const knowledgeSourceItemMatch = pathname.match(
@@ -1073,36 +1059,22 @@ export async function handleConsoleApiRequest(
     );
     if (knowledgeSourceIndexesMatch !== null) {
       const sourceId = knowledgeSourceIndexesMatch[1] as KnowledgeSourceId;
-      if (method === "GET") {
-        const limitParam = searchParams.get("limit");
-        const limit =
-          limitParam === null ? undefined : Number.parseInt(limitParam, 10);
-        const listed = await client.listKnowledgeIndexes(sourceId, {
-          limit:
-            limit !== undefined && Number.isInteger(limit) ? limit : undefined,
-          cursor: searchParams.get("cursor") ?? undefined,
-        });
-        sendJson(
-          response,
-          200,
-          listed.data,
-          upstreamRequestIdHeaders(listed.requestId),
-          deps.security,
-        );
-        return true;
-      }
-      if (method === "POST") {
-        const body = await readJsonBody(request);
-        const created = await client.createKnowledgeIndex(sourceId, body);
-        sendJson(
-          response,
-          201,
-          created.data,
-          upstreamRequestIdHeaders(created.requestId),
-          deps.security,
-        );
-        return true;
-      }
+      const limitParam = searchParams.get("limit");
+      const limit =
+        limitParam === null ? undefined : Number.parseInt(limitParam, 10);
+      const listed = await client.listKnowledgeIndexes(sourceId, {
+        limit:
+          limit !== undefined && Number.isInteger(limit) ? limit : undefined,
+        cursor: searchParams.get("cursor") ?? undefined,
+      });
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
     }
 
     const knowledgeIndexItemMatch = pathname.match(
@@ -1122,60 +1094,16 @@ export async function handleConsoleApiRequest(
       return true;
     }
 
-    const knowledgeIndexRetryMatch = pathname.match(
-      /^\/api\/v1\/knowledge-indexes\/([^/]+)\/retry$/,
-    );
-    if (knowledgeIndexRetryMatch !== null && method === "POST") {
-      const retried = await client.retryKnowledgeIndex(
-        knowledgeIndexRetryMatch[1] as KnowledgeIndexId,
-      );
-      sendJson(
-        response,
-        200,
-        retried.data,
-        upstreamRequestIdHeaders(retried.requestId),
-        deps.security,
-      );
-      return true;
-    }
-
-    if (pathname === "/api/v1/knowledge/retrieve" && method === "POST") {
-      const body = await readJsonBody(request);
-      const retrieved = await client.retrieveKnowledge(body);
-      sendJson(
-        response,
-        200,
-        retrieved.data,
-        upstreamRequestIdHeaders(retrieved.requestId),
-        deps.security,
-      );
-      return true;
-    }
-
     if (pathname === "/api/v1/memory/namespaces") {
-      if (method === "GET") {
-        const listed = await client.listMemoryNamespaces();
-        sendJson(
-          response,
-          200,
-          listed.data,
-          upstreamRequestIdHeaders(listed.requestId),
-          deps.security,
-        );
-        return true;
-      }
-      if (method === "POST") {
-        const body = await readJsonBody(request);
-        const created = await client.createMemoryNamespace(body);
-        sendJson(
-          response,
-          201,
-          created.data,
-          upstreamRequestIdHeaders(created.requestId),
-          deps.security,
-        );
-        return true;
-      }
+      const listed = await client.listMemoryNamespaces();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
     }
 
     const memoryNamespaceItemMatch = pathname.match(

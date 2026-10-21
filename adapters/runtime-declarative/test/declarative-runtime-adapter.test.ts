@@ -292,22 +292,24 @@ describe("DeclarativeRuntimeAdapter", () => {
           finishReason: "stop",
         };
       }),
-      createScopedKnowledgeGateway: (): DeclarativeRuntimeKnowledgeGateway => ({
-        search: async (_execution, _bindingName, _request) => [
-          {
-            knowledgeChunkId: "kc-1" as never,
-            knowledgeIndexId: "ki-1" as never,
-            knowledgeSourceId: "ks-1" as never,
-            artifactReference: {
-              type: "artifact",
-              artifactId: "art-1" as never,
+      createScopedKnowledgeGateway: (): DeclarativeRuntimeKnowledgeGateway => {
+        const search: DeclarativeRuntimeKnowledgeGateway["search"] =
+          async () => [
+            {
+              knowledgeChunkId: "kc-1" as never,
+              knowledgeIndexId: "ki-1" as never,
+              knowledgeSourceId: "ks-1" as never,
+              artifactReference: {
+                type: "artifact",
+                artifactId: "art-1" as never,
+              },
+              text: "Policy excerpt about refunds.",
+              score: 0.91,
+              attributes: {},
             },
-            text: "Policy excerpt about refunds.",
-            score: 0.91,
-            attributes: {},
-          },
-        ],
-      }),
+          ];
+        return { search };
+      },
       resolveToolMetadata: vi.fn(),
     });
 

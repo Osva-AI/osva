@@ -459,6 +459,123 @@ export function createHumanSessionOsvaClient(
           body,
         })
         .then(toDataOnly),
+
+    listKnowledgeSources: (params) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: "/v1/knowledge-sources",
+          query: {
+            limit:
+              params.limit === undefined ? undefined : String(params.limit),
+            cursor: params.cursor,
+          },
+        })
+        .then(toDataOnly),
+
+    createKnowledgeSource: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/knowledge-sources",
+          body,
+        })
+        .then(toDataOnly),
+
+    getKnowledgeSource: (knowledgeSourceId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/knowledge-sources/${encodeURIComponent(knowledgeSourceId)}`,
+        })
+        .then(toDataOnly),
+
+    listKnowledgeIndexes: (knowledgeSourceId, params) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/knowledge-sources/${encodeURIComponent(knowledgeSourceId)}/indexes`,
+          query: {
+            limit:
+              params.limit === undefined ? undefined : String(params.limit),
+            cursor: params.cursor,
+          },
+        })
+        .then(toDataOnly),
+
+    createKnowledgeIndex: (knowledgeSourceId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/knowledge-sources/${encodeURIComponent(knowledgeSourceId)}/indexes`,
+          body,
+        })
+        .then(toDataOnly),
+
+    getKnowledgeIndex: (knowledgeIndexId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/knowledge-indexes/${encodeURIComponent(knowledgeIndexId)}`,
+        })
+        .then(toDataOnly),
+
+    retryKnowledgeIndex: (knowledgeIndexId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/knowledge-indexes/${encodeURIComponent(knowledgeIndexId)}/retry`,
+          body: {},
+        })
+        .then(toDataOnly),
+
+    retrieveKnowledge: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/knowledge/retrieve",
+          body,
+        })
+        .then(toDataOnly),
+
+    listMemoryNamespaces: () =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: "/v1/memory/namespaces",
+        })
+        .then(toDataOnly),
+
+    createMemoryNamespace: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/memory/namespaces",
+          body,
+        })
+        .then(toDataOnly),
+
+    getMemoryNamespace: (namespaceId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/memory/namespaces/${encodeURIComponent(namespaceId)}`,
+        })
+        .then(toDataOnly),
+
+    listMemoryRecords: (namespaceId, params) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/memory/namespaces/${encodeURIComponent(namespaceId)}/records`,
+          query: {
+            prefix: params.prefix,
+            limit:
+              params.limit === undefined ? undefined : String(params.limit),
+            cursor: params.cursor,
+          },
+        })
+        .then(toDataOnly),
   };
 }
 
