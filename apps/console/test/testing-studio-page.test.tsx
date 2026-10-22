@@ -3,7 +3,20 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
+import { HUMAN_WORKSPACE_ROLES } from "@osva-ai/contracts";
+
 import { TestingStudioPage } from "../src/client/routes/testing-studio-page";
+
+vi.mock("../src/client/hooks/use-auth-context", () => ({
+  useAuthContextQuery: () => ({
+    isLoading: false,
+    isError: false,
+    data: {
+      workspaceId: "ws-test",
+      role: HUMAN_WORKSPACE_ROLES.ADMIN,
+    },
+  }),
+}));
 
 vi.mock("../src/client/hooks/use-evaluations", () => ({
   useEvaluationSuitesQuery: () => ({
@@ -39,6 +52,11 @@ describe("TestingStudioPage", () => {
     expect(
       screen.getByRole("heading", { name: "Evaluation suites" }),
     ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Create evaluation suite" })
+        .getAttribute("href"),
+    ).toBe("/testing/suites/new");
     expect(
       screen.getByRole("heading", { name: "Recent evaluation runs" }),
     ).toBeTruthy();

@@ -41,6 +41,10 @@ import { MemoryPage } from "./routes/memory-page";
 import { MemoryNamespacePage } from "./routes/memory-namespace-page";
 import { AgentPlaygroundPage } from "./routes/agent-playground-page";
 import { TestingStudioPage } from "./routes/testing-studio-page";
+import { EvaluationSuiteCreatePage } from "./routes/evaluation-suite-create-page";
+import { EvaluationSuiteDetailPage } from "./routes/evaluation-suite-detail-page";
+import { EvaluationSuiteVersionCreatePage } from "./routes/evaluation-suite-version-create-page";
+import { EvaluationSuiteVersionPage } from "./routes/evaluation-suite-version-page";
 
 const queryClient = createQueryClient();
 
@@ -118,6 +122,22 @@ export function App() {
                   />
                   <Route path="/tools/:toolId" element={<ToolDetailPage />} />
                   <Route path="/testing" element={<TestingStudioPage />} />
+                  <Route
+                    path="/testing/suites/new"
+                    element={<EvaluationSuiteCreatePage />}
+                  />
+                  <Route
+                    path="/testing/suites/:evaluationSuiteId"
+                    element={<EvaluationSuiteDetailPage />}
+                  />
+                  <Route
+                    path="/testing/suites/:evaluationSuiteId/versions/new"
+                    element={<EvaluationSuiteVersionCreatePage />}
+                  />
+                  <Route
+                    path="/testing/suites/:evaluationSuiteId/versions/:evaluationSuiteVersionId"
+                    element={<EvaluationSuiteVersionPage />}
+                  />
                   <Route
                     path="/testing/playground"
                     element={<AgentPlaygroundPage />}

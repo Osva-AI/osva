@@ -5,11 +5,13 @@ import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { StatusChip } from "../components/status/status-chip";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useEvaluationRunsListQuery,
   useEvaluationSuitesQuery,
 } from "../hooks/use-evaluations";
 import { formatTimestamp } from "../lib/formatting";
+import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
 const EVALUATION_RUN_STATUSES = [
   "",
@@ -37,9 +39,13 @@ export function TestingStudioPage() {
     [status, evaluationSuiteId, agentVersionId, cursorStack],
   );
 
+  const authQuery = useAuthContextQuery();
   const suitesQuery = useEvaluationSuitesQuery();
   const runsQuery = useEvaluationRunsListQuery(runFilters);
   const nextCursor = runsQuery.data?.nextCursor;
+  const canWrite =
+    authQuery.data !== undefined &&
+    roleCanWriteControlPlaneResources(authQuery.data.role);
 
   return (
     <>
@@ -47,11 +53,16 @@ export function TestingStudioPage() {
         <div>
           <h1 className="page-title">Testing Studio</h1>
           <p className="page-subtitle">
-            Workspace evaluation suites and batch evaluation run history from
-            OSVA. Suite editing and launch wizards arrive in a later slice.
+            Build JSON test suites, publish immutable versions, and review
+            evaluation run history for this workspace.
           </p>
         </div>
         <div className="toolbar">
+          {canWrite ? (
+            <Link className="button primary" to="/testing/suites/new">
+              Create evaluation suite
+            </Link>
+          ) : null}
           <Link className="button" to="/testing/playground">
             Agent playground
           </Link>
@@ -92,7 +103,14 @@ export function TestingStudioPage() {
           />
         ) : null}
         {suitesQuery.data?.items.length === 0 ? (
-          <EmptyState title="No evaluation suites yet." />
+          <EmptyState
+            title="No evaluation suites yet."
+            description={
+              canWrite
+                ? "Create a suite to author JSON test cases."
+                : "Suites created in this workspace will appear here."
+            }
+          />
         ) : null}
         {suitesQuery.data !== undefined && suitesQuery.data.items.length > 0 ? (
           <table className="data-table">
@@ -100,8 +118,8 @@ export function TestingStudioPage() {
               <tr>
                 <th>Key</th>
                 <th>Name</th>
-                <th>Suite ID</th>
                 <th>Updated</th>
+                <th>Details</th>
               </tr>
             </thead>
             <tbody>
@@ -109,8 +127,15 @@ export function TestingStudioPage() {
                 <tr key={suite.id}>
                   <td className="mono">{suite.key}</td>
                   <td>{suite.name}</td>
-                  <td className="mono">{suite.id}</td>
                   <td>{formatTimestamp(suite.updatedAt)}</td>
+                  <td>
+                    <Link
+                      className="button button-secondary"
+                      to={`/testing/suites/${suite.id}`}
+                    >
+                      Open
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
