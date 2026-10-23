@@ -1,8 +1,10 @@
+import type { EvaluationQualityGatePolicyV1 } from "@osva-ai/contracts";
 import { sql } from "drizzle-orm";
 import {
   check,
   foreignKey,
   index,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -45,6 +47,9 @@ export const evaluationRuns = pgTable(
       withTimezone: true,
       mode: "date",
     }).notNull(),
+    qualityGatePolicy: jsonb(
+      "quality_gate_policy",
+    ).$type<EvaluationQualityGatePolicyV1 | null>(),
   },
   (table) => [
     unique("evaluation_runs_workspace_id_id_unique").on(

@@ -182,6 +182,12 @@ export function wrapRunRepository(
     aggregateRunAttemptUsage:
       overrides.aggregateRunAttemptUsage?.bind(overrides) ??
       inner.aggregateRunAttemptUsage.bind(inner),
+    listRunAttemptsForRuns:
+      overrides.listRunAttemptsForRuns?.bind(overrides) ??
+      inner.listRunAttemptsForRuns.bind(inner),
+    aggregateRunAttemptUsageBatch:
+      overrides.aggregateRunAttemptUsageBatch?.bind(overrides) ??
+      inner.aggregateRunAttemptUsageBatch.bind(inner),
     transitionRun:
       overrides.transitionRun?.bind(overrides) ??
       inner.transitionRun.bind(inner),

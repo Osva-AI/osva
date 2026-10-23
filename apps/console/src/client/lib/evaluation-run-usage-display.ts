@@ -8,16 +8,15 @@ export interface EvaluationRunUsageSummaryFields {
   readonly pricedCostUsdMicros: number;
   readonly unpricedModelCalls: number;
   readonly durationMs?: number;
+  readonly usageMeasured?: boolean;
 }
 
-/**
- * Domain evaluation-run usage totals are placeholders until batch usage
- * aggregation ships. When aggregation runs, it is expected to set durationMs
- * and/or non-zero usage fields; measured all-zero usage is shown as 0.
- */
 export function evaluationRunUsageSummaryIsMeasured(
   summary: EvaluationRunUsageSummaryFields,
 ): boolean {
+  if (summary.usageMeasured !== undefined) {
+    return summary.usageMeasured;
+  }
   if (summary.durationMs !== undefined) {
     return true;
   }

@@ -5,6 +5,7 @@ import {
   buildEvaluationCaseRows,
   EvaluationCaseResultsTable,
 } from "../components/evaluation/evaluation-case-results-table";
+import { EvaluationQualityGatePanel } from "../components/evaluation/evaluation-quality-gate-panel";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
@@ -22,6 +23,13 @@ import {
   evaluationRunUsageSummaryIsMeasured,
   EVALUATION_RUN_USAGE_PENDING_LABEL,
 } from "../lib/evaluation-run-usage-display";
+import {
+  ESTIMATED_COST_DISCLAIMER,
+  formatCompletionCoverage,
+  formatQualityScore,
+  formatSummaryDurationMs,
+  shouldShowUnpricedCostWarning,
+} from "../lib/evaluation-quality-gate-display";
 import { formatTimestamp, formatDurationMs } from "../lib/formatting";
 import {
   evaluationRunStatusCategory,
@@ -100,10 +108,13 @@ export function EvaluationRunDetailPage() {
   }
 
   const summary = evaluationRun.summary;
-  const durationLabel =
-    summary.durationMs !== undefined
-      ? `${summary.durationMs} ms`
-      : formatDurationMs(evaluationRun.startedAt, evaluationRun.completedAt);
+  const durationLabel = formatSummaryDurationMs(
+    summary.durationMs,
+    evaluationRun.status,
+    evaluationRun.startedAt,
+    evaluationRun.completedAt,
+    formatDurationMs(evaluationRun.startedAt, evaluationRun.completedAt),
+  );
 
   return (
     <>
@@ -214,6 +225,14 @@ export function EvaluationRunDetailPage() {
             <dd>{formatPassRate(summary.passRate)}</dd>
           </div>
           <div>
+            <dt>Quality score</dt>
+            <dd>{formatQualityScore(summary.qualityScore)}</dd>
+          </div>
+          <div>
+            <dt>Completion coverage</dt>
+            <dd>{formatCompletionCoverage(summary.completionCoverage)}</dd>
+          </div>
+          <div>
             <dt>Input tokens</dt>
             <dd
               className={
@@ -265,12 +284,24 @@ export function EvaluationRunDetailPage() {
         {!evaluationRunUsageSummaryIsMeasured(summary) ? (
           <p className="muted">{EVALUATION_RUN_USAGE_PENDING_LABEL}</p>
         ) : null}
+        {shouldShowUnpricedCostWarning(
+          summary.unpricedModelCalls,
+          summary.usageMeasured,
+        ) ? (
+          <p className="muted" role="status">
+            {summary.unpricedModelCalls} model call
+            {summary.unpricedModelCalls === 1 ? "" : "s"} lack pricing — gate
+            cost rules may be indeterminate. {ESTIMATED_COST_DISCLAIMER}
+          </p>
+        ) : null}
         <p className="muted">
           Batch status reflects orchestration progress. Individual case outcomes
           may be PASS, FAIL, or ERROR while the run is still{" "}
           {evaluationRun.status}.
         </p>
       </section>
+
+      <EvaluationQualityGatePanel evaluationRun={evaluationRun} />
 
       <section className="panel">
         <h2 className="panel-title">Case results</h2>

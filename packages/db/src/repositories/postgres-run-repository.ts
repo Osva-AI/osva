@@ -38,6 +38,7 @@ import {
   desc,
   eq,
   gt,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -256,6 +257,22 @@ export class PostgresRunRepository implements RunRepository {
     return rows.map(runAttemptFromRow);
   }
 
+  async listRunAttemptsForRuns(
+    runIds: readonly RunId[],
+  ): Promise<readonly RunAttempt[]> {
+    if (runIds.length === 0) {
+      return [];
+    }
+
+    const rows = await this.database.db
+      .select()
+      .from(runAttempts)
+      .where(inArray(runAttempts.runId, [...runIds]))
+      .orderBy(asc(runAttempts.runId), asc(runAttempts.sequence));
+
+    return rows.map(runAttemptFromRow);
+  }
+
   async insertRunningRunStep(step: RunStep): Promise<void> {
     if (step.status !== "RUNNING") {
       throw new DomainInvariantError(
@@ -366,38 +383,46 @@ export class PostgresRunRepository implements RunRepository {
   async aggregateRunAttemptUsage(
     runAttemptId: RunAttemptId,
   ): Promise<RunAttemptUsageSummary> {
+    return this.aggregateRunAttemptUsageBatch([runAttemptId]);
+  }
+
+  async aggregateRunAttemptUsageBatch(
+    runAttemptIds: readonly RunAttemptId[],
+  ): Promise<RunAttemptUsageSummary> {
+    if (runAttemptIds.length === 0) {
+      return {
+        modelCalls: 0,
+        toolCalls: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        cachedInputTokens: 0,
+        estimatedCostUsdMicros: null,
+        pricedModelCalls: 0,
+        unpricedModelCalls: 0,
+      };
+    }
+
+    const measurableModel = measurableModelRunStepSql();
+
     const [row] = await this.database.db
       .select({
-        modelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED')`,
+        modelCalls: sql<number>`count(*) filter (where ${measurableModel})`,
         toolCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'TOOL' and ${runSteps.status} = 'SUCCEEDED')`,
-        inputTokens: sql<number>`coalesce(sum(${runSteps.inputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
-        outputTokens: sql<number>`coalesce(sum(${runSteps.outputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
-        totalTokens: sql<number>`coalesce(sum(${runSteps.totalTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
-        cachedInputTokens: sql<number>`coalesce(sum(${runSteps.cachedInputTokens}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED'), 0)`,
+        inputTokens: sql<number>`coalesce(sum(${runSteps.inputTokens}) filter (where ${measurableModel}), 0)`,
+        outputTokens: sql<number>`coalesce(sum(${runSteps.outputTokens}) filter (where ${measurableModel}), 0)`,
+        totalTokens: sql<number>`coalesce(sum(${runSteps.totalTokens}) filter (where ${measurableModel}), 0)`,
+        cachedInputTokens: sql<number>`coalesce(sum(${runSteps.cachedInputTokens}) filter (where ${measurableModel}), 0)`,
         estimatedCostUsdMicros: sql<
           number | null
-        >`sum(${runSteps.estimatedCostUsdMicros}) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is not null)`,
-        pricedModelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is not null)`,
-        unpricedModelCalls: sql<number>`count(*) filter (where ${runSteps.kind} = 'MODEL' and ${runSteps.status} = 'SUCCEEDED' and ${runSteps.estimatedCostUsdMicros} is null)`,
+        >`sum(${runSteps.estimatedCostUsdMicros}) filter (where ${measurableModel} and ${runSteps.estimatedCostUsdMicros} is not null)`,
+        pricedModelCalls: sql<number>`count(*) filter (where ${measurableModel} and ${runSteps.estimatedCostUsdMicros} is not null)`,
+        unpricedModelCalls: sql<number>`count(*) filter (where ${measurableModel} and ${runSteps.estimatedCostUsdMicros} is null)`,
       })
       .from(runSteps)
-      .where(eq(runSteps.runAttemptId, runAttemptId));
+      .where(inArray(runSteps.runAttemptId, [...runAttemptIds]));
 
-    return {
-      modelCalls: Number(row?.modelCalls ?? 0),
-      toolCalls: Number(row?.toolCalls ?? 0),
-      inputTokens: Number(row?.inputTokens ?? 0),
-      outputTokens: Number(row?.outputTokens ?? 0),
-      totalTokens: Number(row?.totalTokens ?? 0),
-      cachedInputTokens: Number(row?.cachedInputTokens ?? 0),
-      estimatedCostUsdMicros:
-        row?.estimatedCostUsdMicros === null ||
-        row?.estimatedCostUsdMicros === undefined
-          ? null
-          : Number(row.estimatedCostUsdMicros),
-      pricedModelCalls: Number(row?.pricedModelCalls ?? 0),
-      unpricedModelCalls: Number(row?.unpricedModelCalls ?? 0),
-    };
+    return runAttemptUsageSummaryFromRow(row);
   }
 
   async transitionRun(expectedStatus: RunState, next: Run): Promise<Run> {
@@ -699,6 +724,55 @@ function runAttemptTransitionWhere(
     throw new DomainInvariantError("Attempt transition predicate is required.");
   }
   return unfenced;
+}
+
+function measurableModelRunStepSql(): SQL {
+  return sql`(
+    ${runSteps.kind} = 'MODEL'
+    AND (
+      ${runSteps.status} = 'SUCCEEDED'
+      OR (
+        ${runSteps.status} = 'FAILED'
+        AND (
+          coalesce(${runSteps.inputTokens}, 0) > 0
+          OR coalesce(${runSteps.outputTokens}, 0) > 0
+          OR ${runSteps.estimatedCostUsdMicros} IS NOT NULL
+        )
+      )
+    )
+  )`;
+}
+
+function runAttemptUsageSummaryFromRow(
+  row:
+    | {
+        readonly modelCalls: number;
+        readonly toolCalls: number;
+        readonly inputTokens: number;
+        readonly outputTokens: number;
+        readonly totalTokens: number;
+        readonly cachedInputTokens: number;
+        readonly estimatedCostUsdMicros: number | null;
+        readonly pricedModelCalls: number;
+        readonly unpricedModelCalls: number;
+      }
+    | undefined,
+): RunAttemptUsageSummary {
+  return {
+    modelCalls: Number(row?.modelCalls ?? 0),
+    toolCalls: Number(row?.toolCalls ?? 0),
+    inputTokens: Number(row?.inputTokens ?? 0),
+    outputTokens: Number(row?.outputTokens ?? 0),
+    totalTokens: Number(row?.totalTokens ?? 0),
+    cachedInputTokens: Number(row?.cachedInputTokens ?? 0),
+    estimatedCostUsdMicros:
+      row?.estimatedCostUsdMicros === null ||
+      row?.estimatedCostUsdMicros === undefined
+        ? null
+        : Number(row.estimatedCostUsdMicros),
+    pricedModelCalls: Number(row?.pricedModelCalls ?? 0),
+    unpricedModelCalls: Number(row?.unpricedModelCalls ?? 0),
+  };
 }
 
 function runInsertMessages(run: Run): Record<string, string> {

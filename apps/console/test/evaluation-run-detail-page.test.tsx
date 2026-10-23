@@ -25,10 +25,14 @@ const evaluationRunDetail = {
     failedCases: 0,
     errorCases: 0,
     passRate: 1,
+    completionCoverage: 1,
+    validScoredCaseCount: 1,
+    qualityScore: 1,
     inputTokens: 0,
     outputTokens: 0,
     pricedCostUsdMicros: 0,
     unpricedModelCalls: 0,
+    usageMeasured: false,
   },
 };
 

@@ -360,6 +360,28 @@ export class EvaluationRunNotFoundError extends DomainError {
   }
 }
 
+export class EvaluationGateAssessmentConflictError extends DomainInvariantError {
+  readonly evaluationRunId: EvaluationRunId;
+
+  constructor(evaluationRunId: EvaluationRunId) {
+    super(
+      `EvaluationRunGateAssessment for run '${evaluationRunId}' is immutable and cannot be replaced with different content.`,
+    );
+    this.evaluationRunId = evaluationRunId;
+  }
+}
+
+export class InconsistentEvaluationCaseResultsError extends DomainInvariantError {
+  readonly evaluationCaseId: EvaluationCaseId;
+
+  constructor(evaluationCaseId: EvaluationCaseId) {
+    super(
+      `EvaluationCaseResult rows for case '${evaluationCaseId}' disagree on outcome.`,
+    );
+    this.evaluationCaseId = evaluationCaseId;
+  }
+}
+
 export class InvalidEvaluationRunTransitionError extends DomainError {
   readonly from: EvaluationRunState;
   readonly to: EvaluationRunState;

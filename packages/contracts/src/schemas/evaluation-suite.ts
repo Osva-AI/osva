@@ -6,6 +6,10 @@ import {
   EVALUATION_RUN_TARGET_TYPES,
 } from "../evaluation-suite.js";
 import { evaluatorConfigSchema } from "./evaluation.js";
+import {
+  evaluationQualityGatePolicySchema,
+  evaluationRunQualityGateSchema,
+} from "./evaluation-quality-gate.js";
 import { jsonValueSchema } from "./json-value.js";
 import {
   agentVersionIdSchema,
@@ -79,6 +83,7 @@ export const createEvaluationRunRequestSchema = z.strictObject({
   evaluationSuiteVersionId: evaluationSuiteVersionIdSchema,
   targetType: z.enum(EVALUATION_RUN_TARGET_TYPES),
   targetVersionId: z.union([agentVersionIdSchema, workflowVersionIdSchema]),
+  qualityGatePolicy: evaluationQualityGatePolicySchema.optional(),
 });
 
 export const evaluationRunResourceSchema = z.strictObject({
@@ -103,16 +108,21 @@ export const evaluationRunSummarySchema = z.strictObject({
   failedCases: z.number().int().min(0),
   errorCases: z.number().int().min(0),
   passRate: z.number().min(0).max(1),
+  completionCoverage: z.number().min(0).max(1),
+  validScoredCaseCount: z.number().int().min(0),
+  qualityScore: z.number().min(0).max(1).optional(),
   durationMs: z.number().int().min(0).optional(),
   inputTokens: z.number().int().min(0),
   outputTokens: z.number().int().min(0),
   pricedCostUsdMicros: z.number().int().min(0),
   unpricedModelCalls: z.number().int().min(0),
+  usageMeasured: z.boolean(),
 });
 
 export const evaluationRunDetailResourceSchema =
   evaluationRunResourceSchema.extend({
     summary: evaluationRunSummarySchema,
+    qualityGate: evaluationRunQualityGateSchema.optional(),
   });
 
 export const evaluationCaseResultResourceSchema = z.strictObject({

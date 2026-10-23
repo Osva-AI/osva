@@ -1,4 +1,5 @@
 import type {
+  EvaluationQualityGatePolicyV1,
   EvaluationRunId,
   EvaluationRunState,
   EvaluationRunTargetType,
@@ -20,6 +21,7 @@ export interface EvaluationRunCreateProps {
   readonly evaluationSuiteVersionId: EvaluationSuiteVersionId;
   readonly targetType: EvaluationRunTargetType;
   readonly targetVersionId: string;
+  readonly qualityGatePolicy?: EvaluationQualityGatePolicyV1;
   readonly createdAt: Date;
 }
 
@@ -29,6 +31,7 @@ export interface EvaluationRunRehydrateProps {
   readonly evaluationSuiteVersionId: EvaluationSuiteVersionId;
   readonly targetType: EvaluationRunTargetType;
   readonly targetVersionId: string;
+  readonly qualityGatePolicy?: EvaluationQualityGatePolicyV1;
   readonly status: EvaluationRunState;
   readonly startedAt?: Date;
   readonly completedAt?: Date;
@@ -49,6 +52,7 @@ export class EvaluationRun {
   readonly cancelledAt: Date | undefined;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly qualityGatePolicy: EvaluationQualityGatePolicyV1 | undefined;
 
   private constructor(props: {
     readonly id: EvaluationRunId;
@@ -62,6 +66,7 @@ export class EvaluationRun {
     readonly cancelledAt: Date | undefined;
     readonly createdAt: Date;
     readonly updatedAt: Date;
+    readonly qualityGatePolicy: EvaluationQualityGatePolicyV1 | undefined;
   }) {
     this.id = props.id;
     this.workspaceId = props.workspaceId;
@@ -74,6 +79,7 @@ export class EvaluationRun {
     this.cancelledAt = props.cancelledAt;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.qualityGatePolicy = props.qualityGatePolicy;
   }
 
   static create(props: EvaluationRunCreateProps): EvaluationRun {
@@ -83,6 +89,7 @@ export class EvaluationRun {
       evaluationSuiteVersionId: props.evaluationSuiteVersionId,
       targetType: props.targetType,
       targetVersionId: props.targetVersionId,
+      qualityGatePolicy: props.qualityGatePolicy,
       status: "PENDING",
       startedAt: undefined,
       completedAt: undefined,
@@ -99,6 +106,7 @@ export class EvaluationRun {
       evaluationSuiteVersionId: props.evaluationSuiteVersionId,
       targetType: props.targetType,
       targetVersionId: props.targetVersionId,
+      qualityGatePolicy: props.qualityGatePolicy,
       status: props.status,
       startedAt: props.startedAt,
       completedAt: props.completedAt,
@@ -125,6 +133,7 @@ export class EvaluationRun {
       evaluationSuiteVersionId: this.evaluationSuiteVersionId,
       targetType: this.targetType,
       targetVersionId: this.targetVersionId,
+      qualityGatePolicy: this.qualityGatePolicy,
       status: nextStatus,
       startedAt: timestamps.startedAt ?? this.startedAt,
       completedAt: timestamps.completedAt ?? this.completedAt,
@@ -140,6 +149,7 @@ export class EvaluationRun {
     readonly evaluationSuiteVersionId: EvaluationSuiteVersionId;
     readonly targetType: EvaluationRunTargetType;
     readonly targetVersionId: string;
+    readonly qualityGatePolicy: EvaluationQualityGatePolicyV1 | undefined;
     readonly status: EvaluationRunState;
     readonly startedAt: Date | undefined;
     readonly completedAt: Date | undefined;
@@ -183,6 +193,7 @@ export class EvaluationRun {
           props.targetVersionId,
           "EvaluationRun.targetVersionId",
         ),
+        qualityGatePolicy: props.qualityGatePolicy,
         status: props.status,
         startedAt:
           props.startedAt === undefined

@@ -1,3 +1,4 @@
+import type { EvaluationQualityGatePolicyV1 } from "@osva-ai/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { consoleFetch, ConsoleApiError } from "../lib/console-api";
@@ -54,11 +55,15 @@ export interface EvaluationRunSummaryResource {
   readonly failedCases: number;
   readonly errorCases: number;
   readonly passRate: number;
+  readonly completionCoverage: number;
+  readonly validScoredCaseCount: number;
+  readonly qualityScore?: number;
   readonly durationMs?: number;
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly pricedCostUsdMicros: number;
   readonly unpricedModelCalls: number;
+  readonly usageMeasured: boolean;
 }
 
 export interface EvaluationRunResource {
@@ -74,8 +79,23 @@ export interface EvaluationRunResource {
   readonly cancelledAt?: string;
 }
 
+export interface EvaluationRunQualityGateResource {
+  readonly policy: {
+    readonly schemaVersion: number;
+    readonly rules: readonly Readonly<Record<string, unknown>>[];
+  };
+  readonly assessment?: {
+    readonly schemaVersion: number;
+    readonly overallVerdict: string;
+    readonly lifecycleVerdict: string;
+    readonly ruleResults: readonly Readonly<Record<string, unknown>>[];
+    readonly assessedAt: string;
+  };
+}
+
 export interface EvaluationRunDetailResource extends EvaluationRunResource {
   readonly summary: EvaluationRunSummaryResource;
+  readonly qualityGate?: EvaluationRunQualityGateResource;
 }
 
 export interface EvaluationCaseResultResource {
@@ -320,6 +340,7 @@ export interface PublishEvaluationSuiteVersionInput {
 export interface LaunchEvaluationRunInput {
   readonly evaluationSuiteVersionId: string;
   readonly targetVersionId: string;
+  readonly qualityGatePolicy?: EvaluationQualityGatePolicyV1;
 }
 
 export function useLaunchEvaluationRunMutation() {
@@ -334,6 +355,9 @@ export function useLaunchEvaluationRunMutation() {
           evaluationSuiteVersionId: input.evaluationSuiteVersionId,
           targetType: "AGENT_VERSION",
           targetVersionId: input.targetVersionId,
+          ...(input.qualityGatePolicy !== undefined
+            ? { qualityGatePolicy: input.qualityGatePolicy }
+            : {}),
         }),
       }),
     onSuccess: async () => {

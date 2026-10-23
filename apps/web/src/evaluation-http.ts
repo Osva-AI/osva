@@ -253,11 +253,7 @@ async function dispatchEvaluationRoute(
       scope,
       launched.id,
     );
-    sendJson(
-      response,
-      201,
-      toEvaluationRunDetailResource(detail.evaluationRun, detail.summary),
-    );
+    sendJson(response, 201, toEvaluationRunDetailResource(detail));
     return;
   }
 
@@ -289,11 +285,7 @@ async function dispatchEvaluationRoute(
     scope,
     route.evaluationRunId,
   );
-  sendJson(
-    response,
-    200,
-    toEvaluationRunDetailResource(detail.evaluationRun, detail.summary),
-  );
+  sendJson(response, 200, toEvaluationRunDetailResource(detail));
 }
 
 function matchEvaluationRoute(path: string): EvaluationRoute | undefined {
@@ -520,16 +512,14 @@ function toEvaluationSuiteVersionListResource(
 }
 
 function toEvaluationRunDetailResource(
-  evaluationRun: Awaited<
+  detail: Awaited<
     ReturnType<EvaluationRunApplication["getEvaluationRun"]["execute"]>
-  >["evaluationRun"],
-  summary: Awaited<
-    ReturnType<EvaluationRunApplication["getEvaluationRun"]["execute"]>
-  >["summary"],
+  >,
 ) {
   return evaluationRunDetailResourceSchema.parse({
-    ...toEvaluationRunResource(evaluationRun),
-    summary,
+    ...toEvaluationRunResource(detail.evaluationRun),
+    summary: detail.summary,
+    qualityGate: detail.qualityGate,
   });
 }
 

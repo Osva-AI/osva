@@ -9,9 +9,12 @@ import type {
 import {
   DomainInvariantError,
   DuplicateEvaluationSuiteKeyError,
+  EvaluationGateAssessmentConflictError,
+  EvaluationRunGateAssessment,
   EvaluationRunNotFoundError,
   EvaluationSuiteVersion,
   LifecycleConflictError,
+  isSameEvaluationRunGateAssessment,
   assertLegalEvaluationRunTransition,
   type EvaluationCase,
   type EvaluationCaseResult,
@@ -30,6 +33,10 @@ export class MemoryEvaluationSuiteRepository implements EvaluationSuiteRepositor
   >();
   private readonly cases = new Map<EvaluationCaseId, EvaluationCase>();
   private readonly evaluationRuns = new Map<EvaluationRunId, EvaluationRun>();
+  private readonly gateAssessments = new Map<
+    EvaluationRunId,
+    EvaluationRunGateAssessment
+  >();
   private readonly caseResults = new Map<
     EvaluationCaseResult["id"],
     EvaluationCaseResult
@@ -290,5 +297,37 @@ export class MemoryEvaluationSuiteRepository implements EvaluationSuiteRepositor
 
   async findCaseById(id: EvaluationCaseId): Promise<EvaluationCase | null> {
     return this.cases.get(id) ?? null;
+  }
+
+  async saveGateAssessment(
+    assessment: EvaluationRunGateAssessment,
+  ): Promise<void> {
+    const existing = this.gateAssessments.get(assessment.evaluationRunId);
+    if (existing !== undefined) {
+      if (isSameEvaluationRunGateAssessment(existing, assessment)) {
+        return;
+      }
+      throw new EvaluationGateAssessmentConflictError(
+        assessment.evaluationRunId,
+      );
+    }
+    this.gateAssessments.set(assessment.evaluationRunId, assessment);
+  }
+
+  async findGateAssessmentByEvaluationRunId(
+    evaluationRunId: EvaluationRunId,
+  ): Promise<EvaluationRunGateAssessment | null> {
+    return this.gateAssessments.get(evaluationRunId) ?? null;
+  }
+
+  async findGateAssessmentByWorkspaceAndEvaluationRunId(
+    workspaceId: WorkspaceId,
+    evaluationRunId: EvaluationRunId,
+  ): Promise<EvaluationRunGateAssessment | null> {
+    const assessment = this.gateAssessments.get(evaluationRunId);
+    if (assessment === undefined || assessment.workspaceId !== workspaceId) {
+      return null;
+    }
+    return assessment;
   }
 }

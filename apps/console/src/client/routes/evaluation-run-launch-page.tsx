@@ -12,6 +12,13 @@ import {
   useLaunchEvaluationRunMutation,
 } from "../hooks/use-evaluations";
 import { uniqueEvaluatorTypes } from "../lib/evaluation-case-expected";
+import { EvaluationQualityGateRulesEditor } from "../components/evaluation/evaluation-quality-gate-rules-editor";
+import {
+  buildQualityGatePolicyFromDrafts,
+  formatCanonicalThresholdForDisplay,
+  validateQualityGateRuleDrafts,
+  type QualityGateRuleDraft,
+} from "../lib/evaluation-quality-gate-config";
 import {
   validateEvaluationLaunchDraft,
   type EvaluationLaunchValidationIssue,
@@ -41,6 +48,10 @@ export function EvaluationRunLaunchPage() {
   );
   const [submitError, setSubmitError] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
+  const [gatesEnabled, setGatesEnabled] = useState(false);
+  const [gateRules, setGateRules] = useState<readonly QualityGateRuleDraft[]>(
+    [],
+  );
 
   const suitesQuery = useEvaluationSuitesQuery();
   const versionsQuery = useEvaluationSuiteVersionsQuery(
@@ -89,6 +100,17 @@ export function EvaluationRunLaunchPage() {
     ],
   );
 
+  const gateIssues = useMemo(
+    () => validateQualityGateRuleDrafts(gatesEnabled, gateRules),
+    [gatesEnabled, gateRules],
+  );
+
+  const qualityGatePolicy = useMemo(
+    () =>
+      gatesEnabled ? buildQualityGatePolicyFromDrafts(gateRules) : undefined,
+    [gatesEnabled, gateRules],
+  );
+
   const issuesByField = useMemo(() => {
     const map = new Map<string, string>();
     for (const issue of validationIssues) {
@@ -98,7 +120,12 @@ export function EvaluationRunLaunchPage() {
   }, [validationIssues]);
 
   async function handleLaunch() {
-    if (!canExecute || validationIssues.length > 0 || submittingRef.current) {
+    if (
+      !canExecute ||
+      validationIssues.length > 0 ||
+      gateIssues.length > 0 ||
+      submittingRef.current
+    ) {
       return;
     }
     submittingRef.current = true;
@@ -108,6 +135,7 @@ export function EvaluationRunLaunchPage() {
       const created = await launchMutation.mutateAsync({
         evaluationSuiteVersionId,
         targetVersionId: agentVersionId,
+        qualityGatePolicy,
       });
       navigate(`/testing/runs/${created.id}`);
     } catch (error) {
@@ -284,6 +312,30 @@ export function EvaluationRunLaunchPage() {
         </section>
       ) : null}
 
+      {canExecute ? (
+        <section className="panel">
+          <h2 className="panel-title">Quality gates</h2>
+          <EvaluationQualityGateRulesEditor
+            enabled={gatesEnabled}
+            rules={gateRules}
+            issues={gateIssues}
+            onEnabledChange={(enabled) => {
+              setGatesEnabled(enabled);
+              if (enabled && gateRules.length === 0) {
+                setGateRules([
+                  {
+                    localId: "rule-initial",
+                    metric: "PASS_RATE",
+                    thresholdDisplay: "",
+                  },
+                ]);
+              }
+            }}
+            onRulesChange={setGateRules}
+          />
+        </section>
+      ) : null}
+
       {canExecute && selectedVersion !== undefined ? (
         <section className="panel">
           <h2 className="panel-title">Launch summary</h2>
@@ -320,7 +372,41 @@ export function EvaluationRunLaunchPage() {
                 {evaluatorTypes.length > 0 ? evaluatorTypes.join(", ") : "—"}
               </dd>
             </div>
+            <div>
+              <dt>Quality gates</dt>
+              <dd>
+                {!gatesEnabled
+                  ? "Disabled"
+                  : qualityGatePolicy === undefined
+                    ? "Invalid — fix gate rules"
+                    : `${qualityGatePolicy.rules.length} rule${
+                        qualityGatePolicy.rules.length === 1 ? "" : "s"
+                      }`}
+              </dd>
+            </div>
           </dl>
+          {gatesEnabled && qualityGatePolicy !== undefined ? (
+            <ul className="muted" style={{ marginTop: 8 }}>
+              {qualityGatePolicy.rules.map((rule) => (
+                <li key={rule.metric}>
+                  {rule.metric} {rule.operator}{" "}
+                  {formatCanonicalThresholdForDisplay(
+                    rule.metric,
+                    rule.threshold,
+                  )}
+                  {rule.metric === "PASS_RATE" ||
+                  rule.metric === "QUALITY_SCORE" ||
+                  rule.metric === "COMPLETION_COVERAGE"
+                    ? "%"
+                    : rule.metric === "ESTIMATED_COST_USD_MICROS"
+                      ? " (USD → µUSD)"
+                      : rule.metric === "DURATION_MS"
+                        ? " ms"
+                        : ""}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <p className="muted">
             Launching executes real agent Runs for every case. Model and tool
             usage may incur cost in your environment.
@@ -342,6 +428,7 @@ export function EvaluationRunLaunchPage() {
             disabled={
               !canExecute ||
               validationIssues.length > 0 ||
+              gateIssues.length > 0 ||
               launchMutation.isPending
             }
             onClick={() => {
