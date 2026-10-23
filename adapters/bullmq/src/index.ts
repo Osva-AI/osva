@@ -11,7 +11,10 @@ export {
   EXECUTE_RUN_ATTEMPT_JOB_NAME,
   OSVA_EXECUTION_QUEUE_NAME,
 } from "./constants.js";
-export { createValkeyConnection } from "./connection.js";
+export {
+  createValkeyConnection,
+  isIgnorableValkeyTeardownError,
+} from "./connection.js";
 export {
   InvalidQueuePayloadError,
   JobQueueShutdownError,

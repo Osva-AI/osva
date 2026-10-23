@@ -45,6 +45,8 @@ import { EvaluationSuiteCreatePage } from "./routes/evaluation-suite-create-page
 import { EvaluationSuiteDetailPage } from "./routes/evaluation-suite-detail-page";
 import { EvaluationSuiteVersionCreatePage } from "./routes/evaluation-suite-version-create-page";
 import { EvaluationSuiteVersionPage } from "./routes/evaluation-suite-version-page";
+import { EvaluationRunLaunchPage } from "./routes/evaluation-run-launch-page";
+import { EvaluationRunDetailPage } from "./routes/evaluation-run-detail-page";
 
 const queryClient = createQueryClient();
 
@@ -141,6 +143,14 @@ export function App() {
                   <Route
                     path="/testing/playground"
                     element={<AgentPlaygroundPage />}
+                  />
+                  <Route
+                    path="/testing/runs/new"
+                    element={<EvaluationRunLaunchPage />}
+                  />
+                  <Route
+                    path="/testing/runs/:evaluationRunId"
+                    element={<EvaluationRunDetailPage />}
                   />
                   <Route path="/runs" element={<RunsPage />} />
                   <Route path="/runs/:runId" element={<RunDetailPage />} />

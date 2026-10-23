@@ -11,7 +11,10 @@ import {
 } from "../hooks/use-evaluations";
 import { formatTimestamp } from "../lib/formatting";
 import { ConsoleApiError } from "../lib/console-api";
-import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import {
+  roleCanExecuteControlPlaneActions,
+  roleCanWriteControlPlaneResources,
+} from "../lib/permissions";
 
 export function EvaluationSuiteVersionPage() {
   const { evaluationSuiteId, evaluationSuiteVersionId } = useParams<{
@@ -28,6 +31,9 @@ export function EvaluationSuiteVersionPage() {
   const canWrite =
     authQuery.data !== undefined &&
     roleCanWriteControlPlaneResources(authQuery.data.role);
+  const canExecute =
+    authQuery.data !== undefined &&
+    roleCanExecuteControlPlaneActions(authQuery.data.role);
 
   const notFound =
     versionQuery.isError &&
@@ -66,9 +72,17 @@ export function EvaluationSuiteVersionPage() {
           ) : null}
         </div>
         <div className="toolbar">
-          {canWrite ? (
+          {canExecute ? (
             <Link
               className="button primary"
+              to={`/testing/runs/new?suiteId=${encodeURIComponent(evaluationSuiteId)}&suiteVersionId=${encodeURIComponent(evaluationSuiteVersionId)}`}
+            >
+              Launch evaluation
+            </Link>
+          ) : null}
+          {canWrite ? (
+            <Link
+              className="button"
               to={`/testing/suites/${evaluationSuiteId}/versions/new?from=${encodeURIComponent(evaluationSuiteVersionId)}`}
             >
               Create new version
