@@ -54,4 +54,4 @@ M13.7.5 builds on Console batch evaluation from **M13.7.4** (`apps/console/test/
 ## M13.7.5 readiness
 
 - **M13.7.5:** **PASS** for in-repository scope and recorded verification.
-- **Overall M13:** **Not complete** — milestone-level closeout, cross-studio acceptance packaging, and several architecture/contract doc updates remain open (see closeout summary).
+- **Overall M13:** see [`M13_ACCEPTANCE_SUMMARY.md`](M13_ACCEPTANCE_SUMMARY.md) and [`M13_CLOSEOUT_SUMMARY.md`](M13_CLOSEOUT_SUMMARY.md).

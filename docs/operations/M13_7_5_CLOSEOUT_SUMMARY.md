@@ -64,9 +64,6 @@ Full evidence table: [`M13_7_5_ACCEPTANCE_SUMMARY.md`](M13_7_5_ACCEPTANCE_SUMMAR
 - LLM-as-judge evaluators, human review workflows, and regression baselines beyond deterministic JSON-style case outcomes (product scope mentions; not M13.7.5).
 - Dedicated Playwright acceptance for M13.7.5 gate UI (M13.7.4 browser suite does not cover gates).
 - Manual browser verification of INDETERMINATE presentation.
-- REST contract doc refresh for new evaluation-run fields in [`REST_API_V1.md`](../contracts/REST_API_V1.md) (implementation and Zod schemas are authoritative today).
-- Architecture flow doc refresh for scoring, usage aggregation, and gate persistence in [`evaluation-run.md`](../architecture/flows/evaluation-run.md).
-- Full **M13** milestone closeout (Agent Studio, Knowledge Studio, Workflow Studio, Testing Studio cross-cutting acceptance and operator narrative).
 
 ## Key implementation references
 
@@ -94,4 +91,4 @@ Full evidence table: [`M13_7_5_ACCEPTANCE_SUMMARY.md`](M13_7_5_ACCEPTANCE_SUMMAR
 
 **Overall M13.7.5:** **PASS** and ready for operator use within the delivered scope above.
 
-**Overall M13:** **Incomplete** until milestone-level closeout and remaining documentation/acceptance gaps are addressed.
+**Overall M13:** **COMPLETE** — see [`M13_CLOSEOUT_SUMMARY.md`](M13_CLOSEOUT_SUMMARY.md).

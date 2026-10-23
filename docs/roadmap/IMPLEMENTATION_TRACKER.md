@@ -72,7 +72,7 @@ Status is recorded after locally verifiable checks for each slice.
   - ✅ M12.2 Tool/connector management and MCP discovery — [`../operations/M12_2_ACCEPTANCE_SUMMARY.md`](../operations/M12_2_ACCEPTANCE_SUMMARY.md)
   - ✅ M12.3 Cross-capability integration and self-hosted acceptance — [`../operations/M12_3_ACCEPTANCE_SUMMARY.md`](../operations/M12_3_ACCEPTANCE_SUMMARY.md)
   - ✅ M12.4 External ecosystem and registered artifact storage — [`../operations/M12_4_CLOSEOUT_SUMMARY.md`](../operations/M12_4_CLOSEOUT_SUMMARY.md)
-- ⏳ M13 No-code product Console (Agent, Knowledge, Workflow, Testing studios)
+- ✅ M13 No-code product Console (Agent, Knowledge, Workflow, Testing studios) — [`../operations/M13_CLOSEOUT_SUMMARY.md`](../operations/M13_CLOSEOUT_SUMMARY.md) · [`../operations/M13_ACCEPTANCE_SUMMARY.md`](../operations/M13_ACCEPTANCE_SUMMARY.md)
   - ✅ M13.1A Declarative agent manifest contracts — [`../adr/ADR-009-declarative-agent-runtime.md`](../adr/ADR-009-declarative-agent-runtime.md)
   - ✅ M13.2 Declarative runtime adapter (`@osva/adapters-runtime-declarative`)
   - ✅ M13.3 No-code Agent Studio — `apps/console/test/integration/m13-3-browser.integration.test.ts`
