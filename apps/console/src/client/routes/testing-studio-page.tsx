@@ -11,7 +11,11 @@ import {
   useEvaluationSuitesQuery,
 } from "../hooks/use-evaluations";
 import { formatTimestamp } from "../lib/formatting";
-import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import {
+  roleCanExecuteControlPlaneActions,
+  roleCanWriteControlPlaneResources,
+} from "../lib/permissions";
+import { evaluationRunStatusCategory } from "../lib/evaluation-run-status";
 
 const EVALUATION_RUN_STATUSES = [
   "",
@@ -46,6 +50,9 @@ export function TestingStudioPage() {
   const canWrite =
     authQuery.data !== undefined &&
     roleCanWriteControlPlaneResources(authQuery.data.role);
+  const canExecute =
+    authQuery.data !== undefined &&
+    roleCanExecuteControlPlaneActions(authQuery.data.role);
 
   return (
     <>
@@ -58,8 +65,13 @@ export function TestingStudioPage() {
           </p>
         </div>
         <div className="toolbar">
+          {canExecute ? (
+            <Link className="button primary" to="/testing/runs/new">
+              Launch evaluation
+            </Link>
+          ) : null}
           {canWrite ? (
-            <Link className="button primary" to="/testing/suites/new">
+            <Link className="button" to="/testing/suites/new">
               Create evaluation suite
             </Link>
           ) : null}
@@ -86,9 +98,20 @@ export function TestingStudioPage() {
           Launch single-agent test Runs, inspect output, and open the canonical
           Run detail without leaving the Console.
         </p>
-        <Link className="button" to="/testing/playground">
-          Open Agent playground
-        </Link>
+        <div className="toolbar">
+          <Link className="button" to="/testing/playground">
+            Open Agent playground
+          </Link>
+          {canExecute ? (
+            <Link className="button" to="/testing/runs/new">
+              Launch batch evaluation
+            </Link>
+          ) : (
+            <p className="muted">
+              Your workspace role cannot EXECUTE evaluations.
+            </p>
+          )}
+        </div>
       </section>
 
       <section className="panel">
@@ -211,6 +234,7 @@ export function TestingStudioPage() {
                   <th>Suite version</th>
                   <th>Target</th>
                   <th>Created</th>
+                  <th>Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -219,7 +243,9 @@ export function TestingStudioPage() {
                     <td>
                       <StatusChip
                         status={evaluationRun.status}
-                        category="neutral"
+                        category={evaluationRunStatusCategory(
+                          evaluationRun.status,
+                        )}
                       />
                     </td>
                     <td className="mono">{evaluationRun.id}</td>
@@ -230,6 +256,14 @@ export function TestingStudioPage() {
                       {evaluationRun.targetType} {evaluationRun.targetVersionId}
                     </td>
                     <td>{formatTimestamp(evaluationRun.createdAt)}</td>
+                    <td>
+                      <Link
+                        className="button button-secondary"
+                        to={`/testing/runs/${evaluationRun.id}`}
+                      >
+                        Open
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

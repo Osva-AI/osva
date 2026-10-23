@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import { consoleFetch, ConsoleApiError } from "../lib/console-api";
+import { ACTIVE_RUN_POLL_MS } from "../lib/query-client";
+import { isEvaluationRunLive } from "../lib/evaluation-run-status";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface EvaluationSuiteResource {
@@ -43,6 +45,22 @@ export interface EvaluationSuiteVersionListResource {
   readonly items: readonly EvaluationSuiteVersionResource[];
 }
 
+export interface EvaluationRunSummaryResource {
+  readonly totalCases: number;
+  readonly pendingCases: number;
+  readonly runningCases: number;
+  readonly completedCases: number;
+  readonly passedCases: number;
+  readonly failedCases: number;
+  readonly errorCases: number;
+  readonly passRate: number;
+  readonly durationMs?: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly pricedCostUsdMicros: number;
+  readonly unpricedModelCalls: number;
+}
+
 export interface EvaluationRunResource {
   readonly id: string;
   readonly workspaceId: string;
@@ -54,6 +72,25 @@ export interface EvaluationRunResource {
   readonly startedAt?: string;
   readonly completedAt?: string;
   readonly cancelledAt?: string;
+}
+
+export interface EvaluationRunDetailResource extends EvaluationRunResource {
+  readonly summary: EvaluationRunSummaryResource;
+}
+
+export interface EvaluationCaseResultResource {
+  readonly id: string;
+  readonly evaluationRunId: string;
+  readonly evaluationCaseId: string;
+  readonly runId: string;
+  readonly outcome: string;
+  readonly evaluatorResults: Readonly<Record<string, unknown>>;
+  readonly createdAt: string;
+  readonly completedAt?: string;
+}
+
+export interface EvaluationCaseResultListResource {
+  readonly items: readonly EvaluationCaseResultResource[];
 }
 
 export interface EvaluationRunListResource {
@@ -130,6 +167,84 @@ export function useEvaluationSuiteVersionQuery(
   });
 }
 
+export function evaluationRunRefetchInterval(
+  status: string | undefined,
+): number | false {
+  return status !== undefined && isEvaluationRunLive(status)
+    ? ACTIVE_RUN_POLL_MS
+    : false;
+}
+
+export function useEvaluationRunQuery(evaluationRunId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: ["evaluation-runs", workspaceId, evaluationRunId],
+    enabled: workspaceId !== undefined && evaluationRunId !== undefined,
+    queryFn: () =>
+      consoleFetch<EvaluationRunDetailResource>(
+        `/api/v1/evaluation-runs/${encodeURIComponent(evaluationRunId!)}`,
+      ),
+    refetchInterval: (query) =>
+      evaluationRunRefetchInterval(query.state.data?.status),
+  });
+}
+
+export function useEvaluationCaseResultsQuery(
+  evaluationRunId: string | undefined,
+  evaluationRunStatus: string | undefined,
+) {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: ["evaluation-runs", workspaceId, evaluationRunId, "case-results"],
+    enabled: workspaceId !== undefined && evaluationRunId !== undefined,
+    queryFn: () =>
+      consoleFetch<EvaluationCaseResultListResource>(
+        `/api/v1/evaluation-runs/${encodeURIComponent(evaluationRunId!)}/case-results`,
+      ),
+    refetchInterval: evaluationRunRefetchInterval(evaluationRunStatus),
+  });
+}
+
+export interface ResolvedEvaluationSuiteVersion {
+  readonly suite: EvaluationSuiteResource;
+  readonly version: EvaluationSuiteVersionResource;
+}
+
+export function useResolvedEvaluationSuiteVersionQuery(
+  evaluationSuiteVersionId: string | undefined,
+) {
+  const workspaceId = useWorkspaceQueryScope();
+  const suitesQuery = useEvaluationSuitesQuery();
+  return useQuery({
+    queryKey: [
+      "evaluation-suites",
+      workspaceId,
+      "resolve-version",
+      evaluationSuiteVersionId,
+    ],
+    enabled:
+      workspaceId !== undefined &&
+      evaluationSuiteVersionId !== undefined &&
+      suitesQuery.data !== undefined,
+    queryFn: async (): Promise<ResolvedEvaluationSuiteVersion> => {
+      for (const suite of suitesQuery.data!.items) {
+        const versions = await consoleFetch<EvaluationSuiteVersionListResource>(
+          `/api/v1/evaluation-suites/${encodeURIComponent(suite.id)}/versions`,
+        );
+        const version = versions.items.find(
+          (item) => item.id === evaluationSuiteVersionId,
+        );
+        if (version !== undefined) {
+          return { suite, version };
+        }
+      }
+      throw new ConsoleApiError(404, {
+        error: "Evaluation suite version not found in this workspace.",
+      });
+    },
+  });
+}
+
 export function useEvaluationRunsListQuery(filters: ListEvaluationRunsFilters) {
   const workspaceId = useWorkspaceQueryScope();
   const params = new URLSearchParams();
@@ -200,6 +315,33 @@ export interface PublishEvaluationSuiteVersionInput {
       readonly expected: unknown;
     };
   }[];
+}
+
+export interface LaunchEvaluationRunInput {
+  readonly evaluationSuiteVersionId: string;
+  readonly targetVersionId: string;
+}
+
+export function useLaunchEvaluationRunMutation() {
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
+  return useMutation({
+    mutationFn: (input: LaunchEvaluationRunInput) =>
+      consoleFetch<EvaluationRunDetailResource>("/api/v1/evaluation-runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          evaluationSuiteVersionId: input.evaluationSuiteVersionId,
+          targetType: "AGENT_VERSION",
+          targetVersionId: input.targetVersionId,
+        }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["evaluation-runs", workspaceId],
+      });
+    },
+  });
 }
 
 export function usePublishEvaluationSuiteVersionMutation() {

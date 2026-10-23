@@ -54,6 +54,11 @@ describe("TestingStudioPage", () => {
     ).toBeTruthy();
     expect(
       screen
+        .getByRole("link", { name: "Launch evaluation" })
+        .getAttribute("href"),
+    ).toBe("/testing/runs/new");
+    expect(
+      screen
         .getByRole("link", { name: "Create evaluation suite" })
         .getAttribute("href"),
     ).toBe("/testing/suites/new");

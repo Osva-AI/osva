@@ -10,7 +10,10 @@ import {
 } from "../hooks/use-evaluations";
 import { formatTimestamp } from "../lib/formatting";
 import { ConsoleApiError } from "../lib/console-api";
-import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import {
+  roleCanExecuteControlPlaneActions,
+  roleCanWriteControlPlaneResources,
+} from "../lib/permissions";
 
 export function EvaluationSuiteDetailPage() {
   const { evaluationSuiteId } = useParams<{ evaluationSuiteId: string }>();
@@ -21,6 +24,9 @@ export function EvaluationSuiteDetailPage() {
   const canWrite =
     authQuery.data !== undefined &&
     roleCanWriteControlPlaneResources(authQuery.data.role);
+  const canExecute =
+    authQuery.data !== undefined &&
+    roleCanExecuteControlPlaneActions(authQuery.data.role);
 
   const sortedVersions = [...(versionsQuery.data?.items ?? [])].sort(
     (left, right) => right.version - left.version,
@@ -131,7 +137,7 @@ export function EvaluationSuiteDetailPage() {
                 <th>Version</th>
                 <th>Cases</th>
                 <th>Published</th>
-                <th>Details</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -141,12 +147,22 @@ export function EvaluationSuiteDetailPage() {
                   <td>{version.cases.length}</td>
                   <td>{formatTimestamp(version.createdAt)}</td>
                   <td>
-                    <Link
-                      className="button button-secondary"
-                      to={`/testing/suites/${evaluationSuiteId}/versions/${version.id}`}
-                    >
-                      View
-                    </Link>
+                    <div className="toolbar">
+                      <Link
+                        className="button button-secondary"
+                        to={`/testing/suites/${evaluationSuiteId}/versions/${version.id}`}
+                      >
+                        View
+                      </Link>
+                      {canExecute && version.cases.length > 0 ? (
+                        <Link
+                          className="button button-secondary"
+                          to={`/testing/runs/new?suiteId=${encodeURIComponent(evaluationSuiteId)}&suiteVersionId=${encodeURIComponent(version.id)}`}
+                        >
+                          Launch
+                        </Link>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}

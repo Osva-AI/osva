@@ -80,6 +80,116 @@ export async function seedEchoAgent(
   };
 }
 
+export const M13_7_ECHO_INPUT_AGENT_KEY = "m13-7-echo-input";
+
+export async function seedEchoInputAgent(
+  stack: M12_3Stack,
+): Promise<SeededEchoAgent> {
+  const integrity = await stack.copyAgentFixture("echo-input-agent.ts");
+  const agent = await consoleJson(stack, stack.workspaceA, "/api/v1/agents", {
+    method: "POST",
+    body: { key: M13_7_ECHO_INPUT_AGENT_KEY, name: "M13.7 Echo Input Agent" },
+  });
+  if (agent.status !== 201) {
+    throw new Error(`Failed to create agent: ${agent.status} ${agent.text}`);
+  }
+  const agentId = (agent.body as { id: string }).id;
+  const version = await consoleJson(
+    stack,
+    stack.workspaceA,
+    `/api/v1/agents/${encodeURIComponent(agentId)}/versions`,
+    {
+      method: "POST",
+      body: {
+        manifest: {
+          schemaVersion: "1",
+          key: M13_7_ECHO_INPUT_AGENT_KEY,
+          name: "M13.7 Echo Input Agent",
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "echo-input-agent.ts",
+            integrity,
+          },
+          input: { schema: {} },
+          output: { schema: {} },
+          execution: { timeoutMs: 30_000, maxAttempts: 1 },
+          capabilities: { model: false, tools: [] },
+        },
+      },
+    },
+  );
+  if (version.status !== 201) {
+    throw new Error(
+      `Failed to create agent version: ${version.status} ${version.text}`,
+    );
+  }
+  return {
+    agentId,
+    agentVersionId: (version.body as { id: string }).id,
+  };
+}
+
+export interface SeededEvaluationSuiteVersion {
+  readonly evaluationSuiteId: string;
+  readonly evaluationSuiteVersionId: string;
+}
+
+export async function seedPublishedEvaluationSuite(
+  stack: M12_3Stack,
+  options: {
+    readonly suiteKey: string;
+    readonly cases: readonly {
+      readonly key: string;
+      readonly input: unknown;
+      readonly expected: unknown;
+    }[];
+  },
+): Promise<SeededEvaluationSuiteVersion> {
+  const suite = await consoleJson(
+    stack,
+    stack.workspaceA,
+    "/api/v1/evaluation-suites",
+    {
+      method: "POST",
+      body: {
+        key: options.suiteKey,
+        name: "Browser evaluation suite",
+      },
+    },
+  );
+  if (suite.status !== 201) {
+    throw new Error(`Failed to create suite: ${suite.status} ${suite.text}`);
+  }
+  const evaluationSuiteId = (suite.body as { id: string }).id;
+  const version = await consoleJson(
+    stack,
+    stack.workspaceA,
+    `/api/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId)}/versions`,
+    {
+      method: "POST",
+      body: {
+        cases: options.cases.map((evaluationCase) => ({
+          key: evaluationCase.key,
+          input: evaluationCase.input,
+          evaluator: {
+            type: "JSON_EXACT_MATCH",
+            expected: evaluationCase.expected,
+          },
+        })),
+      },
+    },
+  );
+  if (version.status !== 201) {
+    throw new Error(
+      `Failed to publish suite version: ${version.status} ${version.text}`,
+    );
+  }
+  return {
+    evaluationSuiteId,
+    evaluationSuiteVersionId: (version.body as { id: string }).id,
+  };
+}
+
 async function applyCookieJarToPage(
   page: Page,
   consoleOrigin: string,
