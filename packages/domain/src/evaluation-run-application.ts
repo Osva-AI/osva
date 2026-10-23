@@ -3,7 +3,9 @@ import type {
   AgentVersionId,
   EvaluationCaseId,
   EvaluationCaseOutcome,
+  EvaluationQualityGatePolicyV1,
   EvaluationRunId,
+  EvaluationRunQualityGateV1,
   EvaluationRunTargetType,
   EvaluationSuiteVersionId,
   JsonValue,
@@ -29,6 +31,17 @@ const EVALUATION_RUN_RESOURCE = {
 };
 import { EvaluationCaseResult } from "./evaluation-case-result.js";
 import { EvaluationRun } from "./evaluation-run.js";
+import {
+  buildEvaluationRunSummaryForRun,
+  persistTerminalEvaluationRunGateAssessment,
+  resolveEvaluationRunQualityGate,
+} from "./evaluation-run-quality-gate.js";
+import { loadEvaluationRunUsageMeasurement } from "./evaluation-run-usage-loader.js";
+import {
+  aggregateEvaluationRunSummary,
+  reconcileCaseResultsForScoring,
+  type EvaluationRunSummary,
+} from "./evaluation-run-scoring.js";
 import {
   AgentNotFoundError,
   AgentVersionNotFoundError,
@@ -77,6 +90,7 @@ export interface LaunchEvaluationRunCommand {
   readonly evaluationSuiteVersionId: EvaluationSuiteVersionId;
   readonly targetType: EvaluationRunTargetType;
   readonly targetVersionId: string;
+  readonly qualityGatePolicy?: EvaluationQualityGatePolicyV1;
 }
 
 export interface ReconcileEvaluationCaseCommand {
@@ -122,6 +136,7 @@ export class LaunchEvaluationRun {
       evaluationSuiteVersionId: command.evaluationSuiteVersionId,
       targetType: command.targetType,
       targetVersionId: command.targetVersionId,
+      qualityGatePolicy: command.qualityGatePolicy,
       createdAt: now,
     });
 
@@ -259,6 +274,7 @@ export class GetEvaluationRun {
   ): Promise<{
     readonly evaluationRun: EvaluationRun;
     readonly summary: EvaluationRunSummary;
+    readonly qualityGate?: EvaluationRunQualityGateV1;
   }> {
     requireControlPlaneAuthorization(
       scope,
@@ -288,12 +304,31 @@ export class GetEvaluationRun {
         evaluationRunId,
       );
 
+    const reconciled = reconcileCaseResultsForScoring(caseResults);
+    const usage = await loadEvaluationRunUsageMeasurement(
+      this.deps.runs,
+      controlPlaneWorkspaceId(scope),
+      evaluationRun,
+      reconciled,
+    );
+
+    const summary = aggregateEvaluationRunSummary(
+      suiteVersion.cases.length,
+      caseResults,
+      usage,
+    );
+    const now = this.deps.clock.now();
+    const qualityGate = await resolveEvaluationRunQualityGate(
+      this.deps,
+      evaluationRun,
+      summary,
+      now,
+    );
+
     return {
       evaluationRun,
-      summary: buildEvaluationRunSummary(
-        suiteVersion.cases.length,
-        caseResults,
-      ),
+      summary,
+      qualityGate,
     };
   }
 }
@@ -408,21 +443,7 @@ export class ReconcileEvaluationCase {
   }
 }
 
-export interface EvaluationRunSummary {
-  readonly totalCases: number;
-  readonly pendingCases: number;
-  readonly runningCases: number;
-  readonly completedCases: number;
-  readonly passedCases: number;
-  readonly failedCases: number;
-  readonly errorCases: number;
-  readonly passRate: number;
-  readonly durationMs?: number;
-  readonly inputTokens: number;
-  readonly outputTokens: number;
-  readonly pricedCostUsdMicros: number;
-  readonly unpricedModelCalls: number;
-}
+export type { EvaluationRunSummary } from "./evaluation-run-scoring.js";
 
 export interface EvaluationRunApplication {
   readonly launchEvaluationRun: LaunchEvaluationRun;
@@ -558,36 +579,14 @@ async function reconcileEvaluationRunStatus(
     evaluationRun.status,
     next,
   );
-}
 
-function buildEvaluationRunSummary(
-  totalCases: number,
-  caseResults: readonly EvaluationCaseResult[],
-): EvaluationRunSummary {
-  const passedCases = caseResults.filter(
-    (result) => result.outcome === "PASS",
-  ).length;
-  const failedCases = caseResults.filter(
-    (result) => result.outcome === "FAIL",
-  ).length;
-  const errorCases = caseResults.filter(
-    (result) => result.outcome === "ERROR",
-  ).length;
-  const completedCases = caseResults.length;
-  const pendingCases = Math.max(totalCases - completedCases, 0);
-
-  return {
-    totalCases,
-    pendingCases,
-    runningCases: 0,
-    completedCases,
-    passedCases,
-    failedCases,
-    errorCases,
-    passRate: totalCases === 0 ? 0 : passedCases / totalCases,
-    inputTokens: 0,
-    outputTokens: 0,
-    pricedCostUsdMicros: 0,
-    unpricedModelCalls: 0,
-  };
+  if (next.qualityGatePolicy !== undefined) {
+    const summary = await buildEvaluationRunSummaryForRun(
+      deps,
+      next.workspaceId,
+      next,
+      suiteVersion.cases.length,
+    );
+    await persistTerminalEvaluationRunGateAssessment(deps, next, summary, now);
+  }
 }

@@ -60,8 +60,10 @@ export {
   DuplicateScheduleKeyError,
   DuplicateWorkflowKeyError,
   EvaluationCaseNotFoundError,
+  InconsistentEvaluationCaseResultsError,
   EvaluationNotFoundError,
   EvaluationRunNotFoundError,
+  EvaluationGateAssessmentConflictError,
   EvaluationSuiteNotFoundError,
   EvaluationSuiteVersionNotFoundError,
   InvalidApprovalRequestTransitionError,
@@ -573,10 +575,51 @@ export {
   type EvaluationRunApplicationClock,
   type EvaluationRunApplicationDependencies,
   type EvaluationRunApplicationIds,
-  type EvaluationRunSummary,
   type LaunchEvaluationRunCommand,
   type ReconcileEvaluationCaseCommand,
 } from "./evaluation-run-application.js";
+
+export {
+  aggregateEvaluationRunSummary,
+  dedupeEvaluationCaseResultsForScoring,
+  meanNormalizedQualityScore,
+  reconcileCaseResultsForScoring,
+  scoreForEvaluationCaseOutcome,
+  type EvaluationCaseResultForScoring,
+  type EvaluationRunSummary,
+} from "./evaluation-run-scoring.js";
+
+export {
+  assessEvaluationQualityGate,
+  lifecycleReasonCodeForStatus,
+  type AssessEvaluationQualityGateInput,
+} from "./evaluation-quality-gate-assessment.js";
+
+export {
+  EvaluationRunGateAssessment,
+  isSameEvaluationRunGateAssessment,
+} from "./evaluation-run-gate-assessment.js";
+
+export {
+  allowFinalQualityGatePass,
+  buildEvaluationRunSummaryForRun,
+  persistTerminalEvaluationRunGateAssessment,
+  resolveEvaluationRunQualityGate,
+  suppressUnpersistedQualityGatePass,
+} from "./evaluation-run-quality-gate.js";
+
+export {
+  computeEvaluationRunDurationMs,
+  emptyRunAttemptUsageSummary,
+  mergeRunAttemptUsageSummaries,
+  assertChildRunsHaveAttempts,
+  collectRunAttemptIdsForUsageAccounting,
+  isMeasurableModelRunStep,
+  UNMEASURED_EVALUATION_RUN_USAGE,
+  type EvaluationRunUsageMeasurement,
+} from "./evaluation-run-usage.js";
+
+export { loadEvaluationRunUsageMeasurement } from "./evaluation-run-usage-loader.js";
 
 export {
   CreateMemoryNamespace,

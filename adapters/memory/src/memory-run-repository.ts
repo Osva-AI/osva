@@ -16,6 +16,7 @@ import {
   RunStepNotFoundError,
   assertLegalRunAttemptTransition,
   assertLegalRunTransition,
+  isMeasurableModelRunStep,
   selectCapabilityEligibleRunAttempt,
 } from "@osva/domain";
 import type {
@@ -186,6 +187,22 @@ export class MemoryRunRepository implements RunRepository {
       .sort((left, right) => left.sequence - right.sequence);
   }
 
+  async listRunAttemptsForRuns(
+    runIds: readonly RunId[],
+  ): Promise<readonly RunAttempt[]> {
+    if (runIds.length === 0) {
+      return [];
+    }
+    const runIdSet = new Set(runIds);
+    return [...this.attempts.values()]
+      .filter((attempt) => runIdSet.has(attempt.runId))
+      .sort(
+        (left, right) =>
+          left.runId.localeCompare(right.runId) ||
+          left.sequence - right.sequence,
+      );
+  }
+
   async insertRunningRunStep(step: RunStep): Promise<void> {
     if (step.status !== "RUNNING") {
       throw new DomainInvariantError(
@@ -258,9 +275,29 @@ export class MemoryRunRepository implements RunRepository {
   async aggregateRunAttemptUsage(
     runAttemptId: RunAttemptId,
   ): Promise<RunAttemptUsageSummary> {
-    const succeeded = [...this.steps.values()].filter(
-      (step) =>
-        step.runAttemptId === runAttemptId && step.status === "SUCCEEDED",
+    return this.aggregateRunAttemptUsageBatch([runAttemptId]);
+  }
+
+  async aggregateRunAttemptUsageBatch(
+    runAttemptIds: readonly RunAttemptId[],
+  ): Promise<RunAttemptUsageSummary> {
+    if (runAttemptIds.length === 0) {
+      return {
+        modelCalls: 0,
+        toolCalls: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        cachedInputTokens: 0,
+        estimatedCostUsdMicros: null,
+        pricedModelCalls: 0,
+        unpricedModelCalls: 0,
+      };
+    }
+
+    const attemptIdSet = new Set(runAttemptIds);
+    const selected = [...this.steps.values()].filter((step) =>
+      attemptIdSet.has(step.runAttemptId),
     );
 
     let modelCalls = 0;
@@ -274,9 +311,13 @@ export class MemoryRunRepository implements RunRepository {
     let unpricedModelCalls = 0;
     let hasPricedCost = false;
 
-    for (const step of succeeded) {
-      if (step.kind === "TOOL") {
+    for (const step of selected) {
+      if (step.kind === "TOOL" && step.status === "SUCCEEDED") {
         toolCalls += 1;
+        continue;
+      }
+
+      if (!isMeasurableModelRunStep(step)) {
         continue;
       }
 

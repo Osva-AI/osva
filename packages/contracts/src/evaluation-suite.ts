@@ -11,6 +11,10 @@ import type {
 } from "./ids.js";
 import type { JsonValue } from "./json-value.js";
 import type { EvaluatorConfig } from "./evaluation.js";
+import type {
+  EvaluationQualityGatePolicyV1,
+  EvaluationRunQualityGateV1,
+} from "./evaluation-quality-gate.js";
 
 export const EVALUATION_RUN_STATES = [
   "PENDING",
@@ -95,6 +99,7 @@ export interface CreateEvaluationRunRequestV1 {
   readonly evaluationSuiteVersionId: EvaluationSuiteVersionId;
   readonly targetType: EvaluationRunTargetType;
   readonly targetVersionId: AgentVersionId | WorkflowVersionId;
+  readonly qualityGatePolicy?: EvaluationQualityGatePolicyV1;
 }
 
 export interface EvaluationRunResourceV1 {
@@ -119,15 +124,20 @@ export interface EvaluationRunSummaryV1 {
   readonly failedCases: number;
   readonly errorCases: number;
   readonly passRate: number;
+  readonly completionCoverage: number;
+  readonly validScoredCaseCount: number;
+  readonly qualityScore?: number;
   readonly durationMs?: number;
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly pricedCostUsdMicros: number;
   readonly unpricedModelCalls: number;
+  readonly usageMeasured: boolean;
 }
 
 export interface EvaluationRunDetailResourceV1 extends EvaluationRunResourceV1 {
   readonly summary: EvaluationRunSummaryV1;
+  readonly qualityGate?: EvaluationRunQualityGateV1;
 }
 
 export interface EvaluationCaseResultResourceV1 {

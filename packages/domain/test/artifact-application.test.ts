@@ -401,6 +401,14 @@ class FakeRunRepository implements RunRepository {
     throw new Error("not used");
   }
 
+  async listRunAttemptsForRuns(): Promise<[]> {
+    return [];
+  }
+
+  async aggregateRunAttemptUsageBatch(): Promise<never> {
+    throw new Error("not used");
+  }
+
   async transitionRun(): Promise<never> {
     throw new Error("not used");
   }

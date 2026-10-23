@@ -658,6 +658,32 @@ export {
 } from "./run-step.js";
 export type { RunStepKind, RunStepStatus } from "./run-step.js";
 
+export {
+  EVALUATION_QUALITY_GATE_ASSESSMENT_SCHEMA_VERSION,
+  EVALUATION_QUALITY_GATE_MAX_METRICS,
+  EVALUATION_QUALITY_GATE_METRICS,
+  EVALUATION_QUALITY_GATE_MIN_METRICS,
+  EVALUATION_QUALITY_GATE_POLICY_SCHEMA_VERSION,
+  EVALUATION_QUALITY_GATE_REASON_CODES,
+  EVALUATION_QUALITY_GATE_RULE_OPERATORS,
+  EVALUATION_QUALITY_GATE_VERDICTS,
+} from "./evaluation-quality-gate.js";
+export type {
+  EvaluationQualityGateAssessmentV1,
+  EvaluationQualityGateMaxMetric,
+  EvaluationQualityGateMetric,
+  EvaluationQualityGateMinMetric,
+  EvaluationQualityGateMinRuleV1,
+  EvaluationQualityGateMaxRuleV1,
+  EvaluationQualityGatePolicyV1,
+  EvaluationQualityGateReasonCode,
+  EvaluationQualityGateRuleOperator,
+  EvaluationQualityGateRuleResultV1,
+  EvaluationQualityGateRuleV1,
+  EvaluationQualityGateVerdict,
+  EvaluationRunQualityGateV1,
+} from "./evaluation-quality-gate.js";
+
 export { EVALUATOR_TYPES, isEvaluatorType } from "./evaluation.js";
 export type {
   EvaluatorConfig,

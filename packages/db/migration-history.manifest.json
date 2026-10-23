@@ -175,6 +175,12 @@
       "tag": "0028_playground_memory_restriction",
       "file": "0028_playground_memory_restriction.sql",
       "sha256": "d1a3f8f2af4b2bdc337aafc650a75506096bee2cad5b47feaabad8b0a97b57d4"
+    },
+    {
+      "idx": 29,
+      "tag": "0029_evaluation_quality_gate_slice",
+      "file": "0029_evaluation_quality_gate_slice.sql",
+      "sha256": "6092023bfa884cd71912da821df640ef5c3790c353d9bd6989fab099af8d29ad"
     }
   ]
 }

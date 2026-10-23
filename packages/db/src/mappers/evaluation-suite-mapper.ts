@@ -2,6 +2,7 @@ import type {
   EvaluationCaseId,
   EvaluationCaseOutcome,
   EvaluationCaseResultId,
+  EvaluationQualityGatePolicyV1,
   EvaluationRunId,
   EvaluationRunState,
   EvaluationRunTargetType,
@@ -16,11 +17,14 @@ import {
   EvaluationCase,
   EvaluationCaseResult,
   EvaluationRun,
+  EvaluationRunGateAssessment,
   EvaluationSuite,
   EvaluationSuiteVersion,
+  isSameEvaluationRunGateAssessment,
 } from "@osva/domain";
 
 import type { evaluationCaseResults } from "../schema/evaluation-case-results.js";
+import type { evaluationRunGateAssessments } from "../schema/evaluation-run-gate-assessments.js";
 import type { evaluationCases } from "../schema/evaluation-cases.js";
 import type { evaluationRuns } from "../schema/evaluation-runs.js";
 import type { evaluationSuiteVersions } from "../schema/evaluation-suite-versions.js";
@@ -150,6 +154,7 @@ export function evaluationRunToRow(evaluationRun: EvaluationRun) {
     cancelledAt: evaluationRun.cancelledAt ?? null,
     createdAt: evaluationRun.createdAt,
     updatedAt: evaluationRun.updatedAt,
+    qualityGatePolicy: evaluationRun.qualityGatePolicy ?? null,
   };
 }
 
@@ -161,6 +166,9 @@ export function evaluationRunFromRow(row: EvaluationRunRow): EvaluationRun {
       row.evaluationSuiteVersionId as EvaluationSuiteVersionId,
     targetType: row.targetType as EvaluationRunTargetType,
     targetVersionId: row.targetVersionId,
+    qualityGatePolicy:
+      (row.qualityGatePolicy as EvaluationQualityGatePolicyV1 | null) ??
+      undefined,
     status: row.status as EvaluationRunState,
     startedAt: row.startedAt === null ? undefined : toDomainDate(row.startedAt),
     completedAt:
@@ -200,6 +208,34 @@ export function evaluationCaseResultFromRow(
       row.completedAt === null ? undefined : toDomainDate(row.completedAt),
   });
 }
+
+type EvaluationRunGateAssessmentRow =
+  typeof evaluationRunGateAssessments.$inferSelect;
+
+export function evaluationRunGateAssessmentToRow(
+  record: EvaluationRunGateAssessment,
+) {
+  return {
+    evaluationRunId: record.evaluationRunId,
+    workspaceId: record.workspaceId,
+    policySnapshot: record.policySnapshot,
+    assessment: record.assessment,
+    assessedAt: new Date(record.assessment.assessedAt),
+  };
+}
+
+export function evaluationRunGateAssessmentFromRow(
+  row: EvaluationRunGateAssessmentRow,
+): EvaluationRunGateAssessment {
+  return EvaluationRunGateAssessment.create({
+    evaluationRunId: row.evaluationRunId as EvaluationRunId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    policySnapshot: row.policySnapshot,
+    assessment: row.assessment,
+  });
+}
+
+export { isSameEvaluationRunGateAssessment };
 
 export function isSameEvaluationCaseResult(
   left: EvaluationCaseResult,

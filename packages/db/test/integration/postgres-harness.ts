@@ -32,6 +32,7 @@ const STAGE0_TABLES = [
   "workflow_events",
   "approval_requests",
   "evaluation_case_results",
+  "evaluation_run_gate_assessments",
   "evaluation_runs",
   "evaluation_cases",
   "evaluation_suite_versions",

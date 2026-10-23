@@ -10,12 +10,14 @@ import {
   DomainInvariantError,
   DuplicateEvaluationSuiteKeyError,
   EvaluationCase,
+  EvaluationGateAssessmentConflictError,
   EvaluationRunNotFoundError,
   LifecycleConflictError,
   assertLegalEvaluationRunTransition,
   EvaluationSuiteVersion,
   type EvaluationCaseResult,
   type EvaluationRun,
+  type EvaluationRunGateAssessment,
   type EvaluationSuite,
   type EvaluationSuiteRepository,
   type ListEvaluationRunsQuery,
@@ -32,8 +34,11 @@ import {
   evaluationCaseResultToRow,
   evaluationCaseToRow,
   evaluationRunFromRow,
+  evaluationRunGateAssessmentFromRow,
+  evaluationRunGateAssessmentToRow,
   evaluationRunToRow,
   evaluationSuiteFromRow,
+  isSameEvaluationRunGateAssessment,
   evaluationSuiteToRow,
   evaluationSuiteVersionToRow,
   isSameEvaluationCase,
@@ -48,6 +53,7 @@ import {
   withMappedDatabaseErrors,
 } from "../postgres-errors.js";
 import { evaluationCaseResults } from "../schema/evaluation-case-results.js";
+import { evaluationRunGateAssessments } from "../schema/evaluation-run-gate-assessments.js";
 import { evaluationCases } from "../schema/evaluation-cases.js";
 import { evaluationRuns } from "../schema/evaluation-runs.js";
 import { evaluationSuiteVersions } from "../schema/evaluation-suite-versions.js";
@@ -464,6 +470,76 @@ export class PostgresEvaluationSuiteRepository implements EvaluationSuiteReposit
       .limit(1);
 
     return row === undefined ? null : evaluationCaseFromRow(row);
+  }
+
+  async saveGateAssessment(
+    assessment: EvaluationRunGateAssessment,
+  ): Promise<void> {
+    const existing = await this.findGateAssessmentByEvaluationRunId(
+      assessment.evaluationRunId,
+    );
+    if (existing !== null) {
+      if (isSameEvaluationRunGateAssessment(existing, assessment)) {
+        return;
+      }
+      throw new EvaluationGateAssessmentConflictError(
+        assessment.evaluationRunId,
+      );
+    }
+
+    try {
+      await this.database.db
+        .insert(evaluationRunGateAssessments)
+        .values(evaluationRunGateAssessmentToRow(assessment));
+    } catch (error) {
+      if (postgresErrorCode(error) === POSTGRES_UNIQUE_VIOLATION) {
+        const stored = await this.findGateAssessmentByEvaluationRunId(
+          assessment.evaluationRunId,
+        );
+        if (
+          stored !== null &&
+          isSameEvaluationRunGateAssessment(stored, assessment)
+        ) {
+          return;
+        }
+        throw new EvaluationGateAssessmentConflictError(
+          assessment.evaluationRunId,
+        );
+      }
+      throw mapDatabaseError(error, {
+        evaluation_run_gate_assessments_pkey: `EvaluationRunGateAssessment already exists for run '${assessment.evaluationRunId}'.`,
+      });
+    }
+  }
+
+  async findGateAssessmentByEvaluationRunId(
+    evaluationRunId: EvaluationRunId,
+  ): Promise<EvaluationRunGateAssessment | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(evaluationRunGateAssessments)
+      .where(eq(evaluationRunGateAssessments.evaluationRunId, evaluationRunId))
+      .limit(1);
+
+    return row === undefined ? null : evaluationRunGateAssessmentFromRow(row);
+  }
+
+  async findGateAssessmentByWorkspaceAndEvaluationRunId(
+    workspaceId: WorkspaceId,
+    evaluationRunId: EvaluationRunId,
+  ): Promise<EvaluationRunGateAssessment | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(evaluationRunGateAssessments)
+      .where(
+        and(
+          eq(evaluationRunGateAssessments.evaluationRunId, evaluationRunId),
+          eq(evaluationRunGateAssessments.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    return row === undefined ? null : evaluationRunGateAssessmentFromRow(row);
   }
 
   private async insertEvaluationCase(

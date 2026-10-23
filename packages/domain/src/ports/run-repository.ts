@@ -114,6 +114,9 @@ export interface RunRepository {
     id: RunAttemptId,
   ): Promise<RunAttempt | null>;
   listRunAttempts(runId: RunId): Promise<readonly RunAttempt[]>;
+  listRunAttemptsForRuns(
+    runIds: readonly RunId[],
+  ): Promise<readonly RunAttempt[]>;
   insertRunningRunStep(step: RunStep): Promise<void>;
   finalizeRunStep(
     runStepId: RunStepId,
@@ -123,6 +126,9 @@ export interface RunRepository {
   listRunSteps(query: ListRunStepsQuery): Promise<ListRunStepsResult>;
   aggregateRunAttemptUsage(
     runAttemptId: RunAttemptId,
+  ): Promise<RunAttemptUsageSummary>;
+  aggregateRunAttemptUsageBatch(
+    runAttemptIds: readonly RunAttemptId[],
   ): Promise<RunAttemptUsageSummary>;
   transitionRun(expectedStatus: RunState, next: Run): Promise<Run>;
   transitionRunAttempt(

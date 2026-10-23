@@ -11,6 +11,7 @@ import type {
 import type { EvaluationCase } from "../evaluation-case.js";
 import type { EvaluationCaseResult } from "../evaluation-case-result.js";
 import type { EvaluationRun } from "../evaluation-run.js";
+import type { EvaluationRunGateAssessment } from "../evaluation-run-gate-assessment.js";
 import type { EvaluationSuite } from "../evaluation-suite.js";
 import type { EvaluationSuiteVersion } from "../evaluation-suite-version.js";
 
@@ -76,4 +77,12 @@ export interface EvaluationSuiteRepository {
     evaluationRunId: EvaluationRunId,
   ): Promise<readonly EvaluationCaseResult[]>;
   findCaseById(id: EvaluationCaseId): Promise<EvaluationCase | null>;
+  saveGateAssessment(assessment: EvaluationRunGateAssessment): Promise<void>;
+  findGateAssessmentByEvaluationRunId(
+    evaluationRunId: EvaluationRunId,
+  ): Promise<EvaluationRunGateAssessment | null>;
+  findGateAssessmentByWorkspaceAndEvaluationRunId(
+    workspaceId: WorkspaceId,
+    evaluationRunId: EvaluationRunId,
+  ): Promise<EvaluationRunGateAssessment | null>;
 }

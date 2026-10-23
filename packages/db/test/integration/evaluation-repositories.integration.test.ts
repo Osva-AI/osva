@@ -9,11 +9,16 @@ import type { AgentVersionId, EvaluationRunId } from "@osva-ai/contracts";
 import {
   DomainInvariantError,
   EvaluationCase,
+  EvaluationGateAssessmentConflictError,
   EvaluationRun,
+  EvaluationRunGateAssessment,
   EvaluationSuite,
   EvaluationSuiteVersion,
   Workspace,
+  assessEvaluationQualityGate,
+  isSameEvaluationRunGateAssessment,
 } from "@osva/domain";
+import { EVALUATION_QUALITY_GATE_POLICY_SCHEMA_VERSION } from "@osva-ai/contracts";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createDatabase, type Database } from "../../src/database.js";
@@ -320,6 +325,121 @@ describe("PostgreSQL evaluation suite repository", () => {
     expect(pageTwo.evaluationRuns.map((item) => item.id)).toEqual([
       "evaluation-run-2",
     ]);
+  });
+
+  it("persists evaluation run gate policy snapshots and terminal assessments", async () => {
+    const ids = createIds("evaluation-gate");
+    await seedWorkspace(ids.workspaceId);
+
+    const suite = EvaluationSuite.create({
+      id: "evaluation-suite-gate" as EvaluationSuiteId,
+      workspaceId: ids.workspaceId,
+      key: "gate",
+      name: "Gate",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await suites.saveSuite(suite);
+    const version = await seedVersion({
+      suite,
+      versionNumber: 1,
+      versionId: "evaluation-suite-version-gate" as EvaluationSuiteVersionId,
+      caseDefinitions: [
+        {
+          id: "evaluation-case-gate" as EvaluationCaseId,
+          key: "one",
+          input: { prompt: "x" },
+        },
+      ],
+    });
+
+    const gatePolicy = {
+      schemaVersion: EVALUATION_QUALITY_GATE_POLICY_SCHEMA_VERSION,
+      rules: [
+        {
+          metric: "PASS_RATE" as const,
+          operator: "MIN" as const,
+          threshold: 1,
+        },
+      ],
+    };
+
+    const evaluationRun = EvaluationRun.create({
+      id: "evaluation-run-gate" as EvaluationRunId,
+      workspaceId: ids.workspaceId,
+      evaluationSuiteVersionId: version.id,
+      targetType: "AGENT_VERSION",
+      targetVersionId: "agent-version-gate" as AgentVersionId,
+      qualityGatePolicy: gatePolicy,
+      createdAt: NOW,
+    });
+
+    await suites.saveEvaluationRun(evaluationRun);
+    const loaded = await suites.findEvaluationRunById(evaluationRun.id);
+    expect(loaded?.qualityGatePolicy).toEqual(gatePolicy);
+
+    const assessmentBody = assessEvaluationQualityGate({
+      policy: gatePolicy,
+      evaluationRunStatus: "COMPLETED",
+      summary: {
+        totalCases: 1,
+        pendingCases: 0,
+        runningCases: 0,
+        completedCases: 1,
+        passedCases: 1,
+        failedCases: 0,
+        errorCases: 0,
+        passRate: 1,
+        completionCoverage: 1,
+        validScoredCaseCount: 1,
+        qualityScore: 1,
+        durationMs: 10,
+        inputTokens: 0,
+        outputTokens: 0,
+        pricedCostUsdMicros: 0,
+        unpricedModelCalls: 0,
+        usageMeasured: true,
+      },
+      assessedAt: NOW,
+      allowFinalPass: true,
+    });
+
+    const record = EvaluationRunGateAssessment.create({
+      evaluationRunId: evaluationRun.id,
+      workspaceId: ids.workspaceId,
+      policySnapshot: gatePolicy,
+      assessment: assessmentBody,
+    });
+
+    await suites.saveGateAssessment(record);
+    await suites.saveGateAssessment(record);
+
+    const stored = await suites.findGateAssessmentByWorkspaceAndEvaluationRunId(
+      ids.workspaceId,
+      evaluationRun.id,
+    );
+    expect(stored).not.toBeNull();
+    expect(isSameEvaluationRunGateAssessment(record, stored!)).toBe(true);
+
+    const otherWorkspace =
+      await suites.findGateAssessmentByWorkspaceAndEvaluationRunId(
+        "workspace-other" as WorkspaceId,
+        evaluationRun.id,
+      );
+    expect(otherWorkspace).toBeNull();
+
+    const conflicting = EvaluationRunGateAssessment.create({
+      evaluationRunId: evaluationRun.id,
+      workspaceId: ids.workspaceId,
+      policySnapshot: gatePolicy,
+      assessment: {
+        ...assessmentBody,
+        overallVerdict: "FAIL",
+      },
+    });
+    await expect(suites.saveGateAssessment(conflicting)).rejects.toBeInstanceOf(
+      EvaluationGateAssessmentConflictError,
+    );
   });
 
   it("returns cases in deterministic key order regardless of insertion order", async () => {

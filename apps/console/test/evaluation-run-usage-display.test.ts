@@ -12,6 +12,7 @@ const placeholderSummary = {
   outputTokens: 0,
   pricedCostUsdMicros: 0,
   unpricedModelCalls: 0,
+  usageMeasured: false,
 };
 
 describe("evaluation run usage display", () => {
@@ -25,15 +26,19 @@ describe("evaluation run usage display", () => {
     );
   });
 
-  it("shows measured zeros when durationMs indicates aggregation ran", () => {
-    const measuredZero = { ...placeholderSummary, durationMs: 1200 };
+  it("shows measured zeros when usageMeasured is true", () => {
+    const measuredZero = { ...placeholderSummary, usageMeasured: true };
     expect(evaluationRunUsageSummaryIsMeasured(measuredZero)).toBe(true);
     expect(formatEvaluationRunInputTokens(measuredZero)).toBe("0");
     expect(formatEvaluationRunPricedCost(measuredZero)).toBe("$0.000000");
   });
 
-  it("shows non-zero usage without durationMs", () => {
-    const withTokens = { ...placeholderSummary, outputTokens: 42 };
+  it("shows non-zero usage when usageMeasured is true", () => {
+    const withTokens = {
+      ...placeholderSummary,
+      outputTokens: 42,
+      usageMeasured: true,
+    };
     expect(evaluationRunUsageSummaryIsMeasured(withTokens)).toBe(true);
     expect(formatEvaluationRunInputTokens(withTokens)).toBe("0");
   });

@@ -299,6 +299,15 @@ export {
 } from "./evaluation-suite.js";
 
 export {
+  MAX_EVALUATION_QUALITY_GATE_RULES,
+  evaluationQualityGateAssessmentSchema,
+  evaluationQualityGatePolicySchema,
+  evaluationQualityGateRuleResultSchema,
+  evaluationQualityGateRuleSchema,
+  evaluationRunQualityGateSchema,
+} from "./evaluation-quality-gate.js";
+
+export {
   createScheduleRequestSchema,
   listScheduleOccurrencesQuerySchema,
   listSchedulesQuerySchema,

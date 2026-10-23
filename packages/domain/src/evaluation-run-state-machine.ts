@@ -5,6 +5,12 @@ import {
 
 import { InvalidEvaluationRunTransitionError } from "./errors.js";
 
+export const TERMINAL_EVALUATION_RUN_STATES = [
+  "COMPLETED",
+  "FAILED",
+  "CANCELLED",
+] as const satisfies readonly EvaluationRunState[];
+
 export const LEGAL_EVALUATION_RUN_TRANSITIONS: ReadonlyArray<
   readonly [EvaluationRunState, EvaluationRunState]
 > = [

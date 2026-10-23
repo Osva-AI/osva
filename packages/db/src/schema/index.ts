@@ -42,6 +42,7 @@ export { evaluationSuites } from "./evaluation-suites.js";
 export { evaluationSuiteVersions } from "./evaluation-suite-versions.js";
 export { evaluationCases } from "./evaluation-cases.js";
 export { evaluationRuns } from "./evaluation-runs.js";
+export { evaluationRunGateAssessments } from "./evaluation-run-gate-assessments.js";
 export { evaluationCaseResults } from "./evaluation-case-results.js";
 export { officeWorkers } from "./office-workers.js";
 export { roles } from "./roles.js";
