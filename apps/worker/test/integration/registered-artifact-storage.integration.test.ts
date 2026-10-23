@@ -4,6 +4,10 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { BullMqJobQueue } from "@osva/adapters-bullmq";
+import {
+  loadArtifactStorageConfig,
+  resolveArtifactBlobStoreFromConfig,
+} from "@osva/adapters-artifact-storage";
 import { createDatabase, migrateDatabase, type Database } from "@osva/db";
 import type { WorkspaceId } from "@osva-ai/contracts";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -163,7 +167,9 @@ describe("registered artifact storage cross-process", () => {
     }
   });
 
-  it("fails web listen when registered module export is invalid", async () => {
+  // Same rejection as web listen() for registered storage (see resolve in
+  // apps/web/src/process.ts); unit coverage in registered-loader.test.ts.
+  it("rejects invalid registered artifact module before web listen", async () => {
     const artifactRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), "osva-registered-artifact-invalid-"),
     );
@@ -173,24 +179,17 @@ describe("registered artifact storage cross-process", () => {
         "../../../../adapters/artifact-storage/test/fixtures/registered-invalid-module.js",
       ),
     ).href;
-    const web = createWebProcess(
-      withTestAuthEnv({
-        OSVA_DATABASE_URL: postgres.connectionString,
-        OSVA_VALKEY_URL: valkey.url,
-        OSVA_WEB_HOST: "127.0.0.1",
-        OSVA_WEB_PORT: "0",
+
+    try {
+      const config = loadArtifactStorageConfig({
         OSVA_ARTIFACT_STORAGE_DRIVER: "registered",
         OSVA_ARTIFACT_BLOB_STORE_REGISTER_MODULE: invalidModuleUrl,
         OSVA_ARTIFACT_FILESYSTEM_ROOT: artifactRoot,
-      }),
-    );
-
-    try {
-      await expect(web.listen()).rejects.toThrow(
+      });
+      await expect(resolveArtifactBlobStoreFromConfig(config)).rejects.toThrow(
         /must export createArtifactBlobStore/,
       );
     } finally {
-      await web.stop();
       await fs.rm(artifactRoot, { recursive: true, force: true });
     }
   });

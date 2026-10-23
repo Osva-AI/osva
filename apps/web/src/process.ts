@@ -4,6 +4,7 @@ import type { Server } from "node:http";
 import {
   BullMqJobQueue,
   BullMqKnowledgeIndexQueue,
+  isIgnorableValkeyTeardownError,
   ValkeyFixedWindowRateLimiter,
   type PingableJobQueue,
 } from "@osva/adapters-bullmq";
@@ -101,12 +102,31 @@ import {
   modelProviderEnvApiKeys,
 } from "./model-provider-wiring.js";
 import { defaultHttpRateLimitContext } from "./http-rate-limit.js";
-import { logEvent } from "./log.js";
+import { logError, logEvent } from "./log.js";
 import { resolveHumanSessionPrincipal } from "./human-auth-http.js";
 import { createWebSecurityServices } from "./web-security-services.js";
 import { postgresAndValkeyReadinessCheck } from "./readiness.js";
 import { closeHttpServer, listenHttpServer } from "./server.js";
 import { loadKnowledgeEmbeddingDefaults } from "./knowledge-config.js";
+
+async function stopValkeyBackedResource(
+  step: string,
+  stop: () => Promise<void>,
+): Promise<void> {
+  try {
+    await stop();
+  } catch (error) {
+    if (isIgnorableValkeyTeardownError(error)) {
+      logEvent("web.shutdown_warning", {
+        step,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+    logError(`web.shutdown_failed.${step}`, error);
+    throw error;
+  }
+}
 
 export interface WebProcess {
   readonly config: WebConfig;
@@ -503,12 +523,18 @@ export function createWebProcess(
 
       stopping = (async () => {
         logEvent("web.shutting_down");
-        await knowledgeIndexQueue.stop();
+        await stopValkeyBackedResource("knowledge_index_queue", () =>
+          knowledgeIndexQueue.stop(),
+        );
         if (server !== undefined) {
           await closeHttpServer(server);
         }
-        await queue.shutdown();
-        await rateLimiter.close();
+        await stopValkeyBackedResource("execution_queue", () =>
+          queue.shutdown(),
+        );
+        await stopValkeyBackedResource("rate_limiter", () =>
+          rateLimiter.close(),
+        );
         await database.close();
         await telemetryLifecycle.shutdown();
         logEvent("web.shutdown_complete");

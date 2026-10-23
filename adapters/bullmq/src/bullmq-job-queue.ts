@@ -15,6 +15,7 @@ import {
 } from "@osva/observability";
 
 import { checkValkeyConnection } from "./check-valkey-connection.js";
+import { closeValkeyResource } from "./connection.js";
 import {
   DEFAULT_WORKER_CONCURRENCY,
   EXECUTE_RUN_ATTEMPT_JOB_NAME,
@@ -80,6 +81,7 @@ export class BullMqJobQueue implements PingableJobQueue {
   private worker: Worker | undefined;
   private handler: JobQueueHandler | undefined;
   private closed = false;
+  private shutdownPromise: Promise<void> | undefined;
   private metricsTimer: ReturnType<typeof setInterval> | undefined;
   private metricsPoll: Promise<void> | undefined;
   private readonly enqueueClaimTestHooks: EnqueueClaimTestHooksInput;
@@ -201,6 +203,15 @@ export class BullMqJobQueue implements PingableJobQueue {
   }
 
   async shutdown(): Promise<void> {
+    if (this.shutdownPromise !== undefined) {
+      return this.shutdownPromise;
+    }
+
+    this.shutdownPromise = this.runShutdown();
+    return this.shutdownPromise;
+  }
+
+  private async runShutdown(): Promise<void> {
     this.closed = true;
     this.stopMetricsPolling();
     if (this.metricsPoll !== undefined) {
@@ -211,11 +222,15 @@ export class BullMqJobQueue implements PingableJobQueue {
     this.worker = undefined;
     this.handler = undefined;
 
-    if (worker !== undefined) {
-      await worker.close();
-    }
+    await closeValkeyResource(async () => {
+      if (worker !== undefined) {
+        await worker.close();
+      }
+    });
 
-    await this.queue.close();
+    await closeValkeyResource(async () => {
+      await this.queue.close();
+    });
   }
 
   private async clearEnqueueClaim(jobId: string): Promise<void> {

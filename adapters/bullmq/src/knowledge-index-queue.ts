@@ -6,7 +6,11 @@ export type KnowledgeIndexQueueHandler = (
 ) => Promise<void>;
 
 import { checkValkeyConnection } from "./check-valkey-connection.js";
-import { createValkeyConnection } from "./connection.js";
+import {
+  closeValkeyConnection,
+  closeValkeyResource,
+  createValkeyConnection,
+} from "./connection.js";
 import { JobQueueShutdownError } from "./errors.js";
 
 export const OSVA_KNOWLEDGE_INDEX_QUEUE_NAME = "osva-knowledge-index";
@@ -28,6 +32,7 @@ export class BullMqKnowledgeIndexQueue {
   private readonly queue: Queue;
   private worker: Worker | undefined;
   private closed = false;
+  private stopPromise: Promise<void> | undefined;
 
   constructor(options: BullMqKnowledgeIndexQueueOptions) {
     this.url = options.url;
@@ -88,12 +93,30 @@ export class BullMqKnowledgeIndexQueue {
   }
 
   async stop(): Promise<void> {
+    if (this.stopPromise !== undefined) {
+      return this.stopPromise;
+    }
+
+    this.stopPromise = this.runStop();
+    return this.stopPromise;
+  }
+
+  private async runStop(): Promise<void> {
     if (this.closed) {
       return;
     }
     this.closed = true;
-    await this.worker?.close();
-    await this.queue.close();
+    const worker = this.worker;
+    this.worker = undefined;
+    await closeValkeyResource(async () => {
+      if (worker !== undefined) {
+        await worker.close();
+      }
+    });
+    await closeValkeyResource(async () => {
+      await this.queue.close();
+    });
+    await closeValkeyConnection(this.connection);
   }
 
   private assertOpen(operation: string): void {
