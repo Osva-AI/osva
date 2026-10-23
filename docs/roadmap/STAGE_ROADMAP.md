@@ -71,5 +71,7 @@ Delivered in the Community **`1.1.x`** line (see [`IMPLEMENTATION_TRACKER.md`](I
 
 - Developer experience (M7–M10): canonical examples, Console product surfaces, CLI agent workflow, release packaging.
 - **M11:** human identity, Better Auth password sessions, fixed workspace roles, Console login and membership administration ([`../operations/M11_CLOSEOUT_SUMMARY.md`](../operations/M11_CLOSEOUT_SUMMARY.md)).
+- **M12:** model/tool/connector capability foundation and registered artifact storage ([`../operations/M12_4_CLOSEOUT_SUMMARY.md`](../operations/M12_4_CLOSEOUT_SUMMARY.md)).
+- **M13:** no-code Console studios (Agent, Knowledge, Workflow, Testing) including evaluation scoring and quality gates ([`../operations/M13_CLOSEOUT_SUMMARY.md`](../operations/M13_CLOSEOUT_SUMMARY.md)).
 
 Still ahead: deeper isolation, richer AI Office, ecosystem scale, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).

@@ -1,6 +1,6 @@
 # ADR-009: Declarative Agent Runtime Descriptor (M13.1A)
 
-**Status:** Accepted (M13.1A descriptor; M13.2 execution)
+**Status:** Accepted — M13.1A descriptor, M13.1B append validation, M13.2 execution, M13.3 Console Agent Studio delivered (see [`../operations/M13_CLOSEOUT_SUMMARY.md`](../operations/M13_CLOSEOUT_SUMMARY.md))
 
 ## Context
 
@@ -21,13 +21,17 @@ M13.1A deferred execution. **M13.2** registers `@osva/adapters-runtime-declarati
 on production workers. Unregistered worker builds still fail closed with
 `UNSUPPORTED_RUNTIME`.
 
-## Non-goals (M13.1A)
+## Non-goals (original M13.1A contract slice)
 
-- Console Agent Studio UI
-- Declarative executor / loop implementation (M13.2)
-- Runtime Protocol V1 changes
-- Database migration (manifest remains JSON on `agent_versions`)
-- Dynamic plugin registry or arbitrary executable configuration in the manifest
+These were out of scope for the **descriptor-only** slice; several have since shipped in later M13 work:
+
+- ~~Console Agent Studio UI~~ — **Delivered (M13.3)**; Playwright acceptance in `apps/console/test/integration/m13-3-browser.integration.test.ts`
+- ~~Declarative executor / loop implementation~~ — **Delivered (M13.2)** via `@osva/adapters-runtime-declarative`
+- Runtime Protocol V1 changes — **still deferred**
+- Database migration (manifest remains JSON on `agent_versions`) — **unchanged**
+- Dynamic plugin registry or arbitrary executable configuration in the manifest — **still deferred**
+
+Other Console milestones (M13.4–M13.7 Testing Studio, workflow builder, etc.) are **product UI** on top of existing control-plane APIs; they are not extensions to the declarative manifest decision in this ADR.
 
 ## Declarative versus code-based agents
 
@@ -35,8 +39,8 @@ on production workers. Unregistered worker builds still fail closed with
 | --- | --- | --- |
 | Behavior source | Operator-supplied executable artifacts | Natural-language instructions + bounded budgets |
 | Model/tools | Optional binding maps + capabilities | Required logical model binding; explicit allowed tool bindings |
-| Trust boundary | Operator-installed code / images | OSVA-mediated ModelGateway and ToolGateway only (future executor) |
-| Execution | Registered `RuntimeAdapter` | In-process declarative loop (M13.2) |
+| Trust boundary | Operator-installed code / images | OSVA-mediated ModelGateway and ToolGateway only |
+| Execution | Registered `RuntimeAdapter` | In-process declarative loop (`DeclarativeRuntimeAdapter`, M13.2) |
 
 `BUILTIN_PACKAGE` remains the in-process test runtime and is **not** overloaded
 for declarative configuration.
@@ -91,7 +95,7 @@ through the domain application path; they do not re-parse Zod at read time.
 
 ## Execution budget model
 
-Budget fields cap future declarative loops (M13.2). They do not grant unbounded
+Budget fields cap declarative loops (M13.2). They do not grant unbounded
 model or tool calls. Combined with `execution.timeoutMs` and existing RunAttempt
 attempt limits, they bound cost and side effects.
 
@@ -107,7 +111,7 @@ attempt limits, they bound cost and side effects.
 - No plaintext secrets in the manifest.
 - Tool permissions remain policy-mediated via `capabilities.tools`; prompts/instructions
   cannot grant tools.
-- Future execution must route model, tool, and memory access through existing gateways.
+- Declarative execution routes model, tool, and memory access through existing gateways (M13.2).
 
 ## Compatibility and migration
 
@@ -117,9 +121,20 @@ attempt limits, they bound cost and side effects.
   receive `400 invalid_request` like other schema failures.
 - PostgreSQL JSON storage requires no migration.
 
-## Deferred work
+## M13 delivery status (related slices)
 
-| Slice | Responsibility |
+| Slice | Status | Notes |
+| --- | --- | --- |
+| M13.1A | **Done** | `DECLARATIVE` manifest type and `runtime.config` v1 |
+| M13.1B | **Done** | Append-time `validateAgentManifest` / domain authorization ordering |
+| M13.2 | **Done** | `DeclarativeRuntimeAdapter`, budgets, gateway observability — `adapters/runtime-declarative/test/` |
+| M13.3 | **Done** | No-code Agent Studio — browser acceptance `m13-3-browser.integration.test.ts` |
+
+## Deferred work (still out of scope)
+
+| Topic | Notes |
 | --- | --- |
-| M13.2 | **Done:** `DeclarativeRuntimeAdapter`, `ModelGateway.generateCompletion` (native tool calls), budget enforcement, scoped gateway observability |
-| M13.3 | Console Studio for declarative authoring and validation UX |
+| Runtime Protocol V1 changes for declarative remote runtimes | No change to this ADR |
+| Dynamic plugin registry / executable manifest fields | Still rejected by schema |
+| Arbitrary network endpoints in declarative config | Still rejected |
+| LLM-as-judge evaluation, semantic evaluators | Testing Studio uses JSON exact match only (M13.7) |
