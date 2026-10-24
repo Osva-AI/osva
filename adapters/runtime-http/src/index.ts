@@ -33,6 +33,14 @@ export {
   type BootstrapTokenClaims,
   type CapabilityTokenClaims,
 } from "./capability-token.js";
+export {
+  classifyCapabilityBindHost,
+  isLoopbackCapabilityBindHost,
+  isPublicCapabilityBindHost,
+  resolveRuntimeCapabilityListenHost,
+  validateRuntimeCapabilityListenerConfig,
+  type CapabilityBindHostKind,
+} from "./capability-listener-bind.js";
 export { OversizedBodyError, SecretNotFoundError } from "./errors.js";
 export {
   REMOTE_HTTP_FORBIDDEN_DESTINATION_MESSAGE,

@@ -101,9 +101,10 @@ Bootstrap and recovery CLIs (`pnpm identity:bootstrap`, `pnpm identity:recover`)
 | `OSVA_EXECUTION_RECOVERY_BATCH_LIMIT` | worker | no | `50` | no | Expired RUNNING scan batch. |
 | `OSVA_TRANSPORT_REPAIR_BATCH_LIMIT` | worker | no | `50` | no | QUEUED/PENDING transport repair batch. |
 | `OSVA_RUNTIME_CAPABILITY_SECRET` | worker | optional | — | yes | Remote HTTP runtime bridge authentication. |
-| `OSVA_RUNTIME_CAPABILITY_HOST` | worker | no | `127.0.0.1` | no | Capability server bind host. |
+| `OSVA_RUNTIME_CAPABILITY_HOST` | worker | no | `127.0.0.1` | no | Capability server bind host. Non-container workers allow only loopback IP literals (`127.0.0.0/8`, `::1`) or `localhost` unless `OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND=true`. Other hostnames are rejected. |
 | `OSVA_RUNTIME_CAPABILITY_PORT` | worker | no | `0` | no | `0` = ephemeral port. |
 | `OSVA_RUNTIME_CAPABILITY_BASE_URL` | worker | optional | — | no | Advertised capability base URL. |
+| `OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND` | worker | no | `false` | no | Operator acknowledgement for non-loopback binds without container mode. Does not add TLS or isolation. |
 | `OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS` | worker | no | `false` | no | Operator opt-in for private REMOTE_HTTP targets. |
 | `OSVA_CONTAINER_ENABLED` | worker | no | `false` | no | **Helm defaults to false.** Requires Docker Engine (not normal Kubernetes). |
 | `OSVA_CONTAINER_NETWORK_MODE` | worker | no | `bridge` | no | Must not be `host`/`none` when container runtime enabled. |

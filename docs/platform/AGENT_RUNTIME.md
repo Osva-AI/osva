@@ -75,7 +75,15 @@ Production workers compose `@osva/adapters-runtime-typescript` behind
 - Optional worker configuration: `OSVA_RUNTIME_CAPABILITY_SECRET`,
   `OSVA_RUNTIME_CAPABILITY_HOST` (default `127.0.0.1`),
   `OSVA_RUNTIME_CAPABILITY_PORT` (default `0`),
-  `OSVA_RUNTIME_CAPABILITY_BASE_URL`. Trusted-only workers may omit them.
+  `OSVA_RUNTIME_CAPABILITY_BASE_URL`,
+  `OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND` (default `false`). Trusted-only
+  workers may omit the secret and listener entirely. Non-container deployments
+  keep the capability bridge on loopback unless the operator explicitly opts in
+  to a non-loopback bind (any non-loopback IP literal requires
+  `OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND=true`; opt-in acknowledges exposure
+  only, not TLS or isolation). Container mode binds `0.0.0.0` so bridge
+  containers can reach the worker through Docker networking and skips the
+  non-container bind gate.
 - Outbound network policy is worker-owned. By default `REMOTE_HTTP` may
   connect only to public unicast destinations. Loopback, link-local,
   private, unspecified, and multicast addresses are rejected after DNS

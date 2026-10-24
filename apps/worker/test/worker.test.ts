@@ -100,6 +100,35 @@ describe("loadWorkerConfig", () => {
     });
   });
 
+  it("rejects a public capability bind without explicit operator opt-in", () => {
+    const env = {
+      OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+      OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+      OSVA_RUNTIME_CAPABILITY_SECRET: "capability-secret",
+      OSVA_RUNTIME_CAPABILITY_HOST: "0.0.0.0",
+    };
+    expect(() => loadWorkerConfig(env)).toThrow(
+      "OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND",
+    );
+    expect(
+      loadWorkerConfig({
+        ...env,
+        OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND: "true",
+      }).runtimeCapabilityAllowPublicBind,
+    ).toBe(true);
+  });
+
+  it("rejects a private LAN capability bind without explicit operator opt-in", () => {
+    expect(() =>
+      loadWorkerConfig({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+        OSVA_RUNTIME_CAPABILITY_SECRET: "capability-secret",
+        OSVA_RUNTIME_CAPABILITY_HOST: "192.168.1.10",
+      }),
+    ).toThrow("OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND");
+  });
+
   it("enables REMOTE_HTTP private networks only from explicit operator env", () => {
     const env = {
       OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
