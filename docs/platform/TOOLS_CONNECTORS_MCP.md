@@ -72,6 +72,12 @@ ConnectorVersion must belong to `authorization.workspaceId`. Foreign and
 missing resources fail with the same stable error codes without leaking
 connector endpoints or credentials.
 
+Malicious **tool result payloads** are untrusted model context. They cannot
+expand bindings or bypass ToolGateway; a model may still misuse an **already
+authorized** tool with attacker-influenced arguments (M14.4
+`AUTHORIZED_BUT_UNSAFE` measurements). Repeat regression coverage:
+`packages/adversarial-acceptance` and `packages/tool-gateway/test/tool-gateway.test.ts`.
+
 ## Supported in Stage 2.7
 
 - Streamable HTTP MCP transport
