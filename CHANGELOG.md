@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **M11 (documentation closeout):** Human identity, Better Auth password sessions, fixed workspace roles, Console login and membership administration. Migration head **`0026_better_auth_user_image`**. See [`docs/operations/M11_CLOSEOUT_SUMMARY.md`](docs/operations/M11_CLOSEOUT_SUMMARY.md).
 
+## [1.1.0-rc.3] - 2026-10-24
+
+Release candidate prepared for npm publication (A1.3.2). Aligns all public `@osva-ai/*` npm packages to the same version. **Not published** until maintainer tag and registry publish.
+
+### Fixed
+
+- **`@osva-ai/contracts`:** Published **`1.1.0-rc.2`** npm tarball omitted M12.4.3 artifact blob storage exports (`ArtifactBlobStore`, `RegisteredArtifactBlobStoreModule`, `ARTIFACT_STORAGE_DRIVER_REGISTERED`, and related config types) that exist in repository source. RC.3 restores these symbols on the public root entry in the packed artifact.
+
+### Added
+
+- Release regression: packed `@osva-ai/contracts` root export check for artifact blob storage (`scripts/release/contracts-pack-artifact-exports.mjs`).
+
 ## [1.1.0-rc.2] - 2026-10-17
 
 Corrected release candidate published to npm, PyPI, GHCR, and GitHub Releases (tag **`v1.1.0-rc.2`**; registry acceptance in [`docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md)). Supersedes incomplete **`1.1.0-rc.1`** npm CLI packaging for the M10.2 agent developer workflow.

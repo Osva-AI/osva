@@ -1,6 +1,6 @@
 {
   "name": "@osva-ai/connector-sdk",
-  "version": "1.1.0-rc.2",
+  "version": "1.1.0-rc.3",
   "description": "Build OSVA Connector Profile V1 compatible MCP connectors",
   "license": "Apache-2.0",
   "repository": {

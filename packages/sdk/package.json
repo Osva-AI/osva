@@ -1,6 +1,6 @@
 {
   "name": "@osva-ai/sdk",
-  "version": "1.1.0-rc.2",
+  "version": "1.1.0-rc.3",
   "description": "Official OSVA SDK for TypeScript and JavaScript",
   "license": "Apache-2.0",
   "repository": {
