@@ -16,8 +16,8 @@ For MCP tools, see [mcp-tool-call.md](./mcp-tool-call.md).
 1. **Runtime request:** Agent supplies logical tool binding name and JSON arguments.
 2. **Resolve ToolVersionId:** From `ExecutionRequest.toolVersionBindings` snapshot on Run.
 3. **Build ToolInvokeRequest:** Includes toolVersionId, arguments, authorization context, optional idempotency key for logical side effects.
-4. **Policy check:** `DefaultToolPolicy.authorizeToolInvocation` — permissions are server-side; prompts cannot grant access.
-5. **Load ToolVersion:** Immutable snapshot from `ToolRepository`.
+4. **Policy check:** `DefaultToolPolicy.authorizeToolInvocation` — extension hook; binding membership is enforced by the runtime from frozen `toolVersionBindings` before invoke.
+5. **Gateway authorization:** Match request vs authorization `toolVersionId`; load immutable ToolVersion from `ToolRepository`; verify parent Tool `workspaceId` matches trusted authorization (foreign tools appear as not found).
 6. **Dispatch internal:** `resolveInternalToolImplementation` maps ToolVersion to allowlisted executor.
 7. **Execute:** Internal executor runs with canonical JSON arguments.
 8. **RunStep:** Recorder persists TOOL step with normalized result or error.
@@ -39,8 +39,8 @@ For MCP tools, see [mcp-tool-call.md](./mcp-tool-call.md).
 
 ## Failure behavior
 
-- Unauthorized → TOOL_NOT_AUTHORIZED.
-- Unknown ToolVersion → TOOL_VERSION_NOT_FOUND.
+- Unauthorized / identity mismatch → TOOL_NOT_AUTHORIZED.
+- Unknown or foreign-workspace ToolVersion → TOOL_VERSION_NOT_FOUND (same message; no existence leak).
 - Missing implementation → TOOL_IMPLEMENTATION_NOT_FOUND.
 - Executor errors normalized to ToolGatewayError codes; recorded on RunStep.
 

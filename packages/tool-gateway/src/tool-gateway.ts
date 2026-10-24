@@ -12,6 +12,10 @@ import { ToolGatewayError, toolGatewayError } from "./errors.js";
 import type { Clock } from "./internal/clock.js";
 import { systemClock } from "./internal/clock.js";
 import { getInternalToolCatalogEntry } from "./internal/catalog.js";
+import {
+  assertToolInvokeIdentity,
+  assertToolVersionInWorkspace,
+} from "./internal/invoke-authorization.js";
 import { invokeMcpToolVersion } from "./internal/mcp-tool-executor.js";
 import { resolveInternalToolImplementation } from "./internal/registry.js";
 
@@ -60,6 +64,8 @@ export class ToolGateway implements ToolGatewayPort {
       );
     }
 
+    assertToolInvokeIdentity(request);
+
     const version = await this.deps.tools.findToolVersionById(
       request.toolVersionId,
     );
@@ -69,6 +75,9 @@ export class ToolGateway implements ToolGatewayPort {
         "ToolVersion was not found.",
       );
     }
+
+    const parentTool = await this.deps.tools.findToolById(version.toolId);
+    assertToolVersionInWorkspace(parentTool, request.authorization.workspaceId);
 
     if (version.type === "MCP") {
       if (
