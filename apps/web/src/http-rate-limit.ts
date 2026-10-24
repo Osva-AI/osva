@@ -2,6 +2,7 @@ import type { IncomingMessage } from "node:http";
 import type { RequestPrincipal } from "@osva-ai/contracts";
 import {
   isApiKeyRequestPrincipal,
+  isHumanSessionRequestPrincipal,
   OSVA_AUTHENTICATED_RATE_LIMIT_PER_MINUTE,
   OSVA_RATE_LIMIT_WINDOW_SECONDS,
   OSVA_UNAUTHENTICATED_RATE_LIMIT_PER_MINUTE,
@@ -61,16 +62,12 @@ export async function consumeHttpRateLimit(
   context: HttpRateLimitContext,
 ): Promise<HttpRateLimitDecision> {
   const sourceIp = resolveRequestSourceIp(request, context.trustedProxies);
-  const bucket =
-    principal === undefined || !isApiKeyRequestPrincipal(principal)
-      ? {
-          key: `osva:rl:unauth:v1:${sourceIp}`,
-          limit: context.unauthenticatedPerMinute,
-        }
-      : {
-          key: `osva:rl:key:v1:${requestPrincipalRateLimitKey(principal)}`,
-          limit: context.authenticatedPerMinute,
-        };
+  const bucket = resolveHttpRateLimitBucket(
+    principal,
+    sourceIp,
+    context.unauthenticatedPerMinute,
+    context.authenticatedPerMinute,
+  );
 
   try {
     const result = await context.limiter.consume(
@@ -91,4 +88,28 @@ export async function consumeHttpRateLimit(
     }
     return { kind: "unavailable" };
   }
+}
+
+function resolveHttpRateLimitBucket(
+  principal: RequestPrincipal | undefined,
+  sourceIp: string,
+  unauthenticatedPerMinute: number,
+  authenticatedPerMinute: number,
+): { readonly key: string; readonly limit: number } {
+  if (principal !== undefined && isApiKeyRequestPrincipal(principal)) {
+    return {
+      key: `osva:rl:key:v1:${requestPrincipalRateLimitKey(principal)}`,
+      limit: authenticatedPerMinute,
+    };
+  }
+  if (principal !== undefined && isHumanSessionRequestPrincipal(principal)) {
+    return {
+      key: `osva:rl:human:v1:${requestPrincipalRateLimitKey(principal)}`,
+      limit: authenticatedPerMinute,
+    };
+  }
+  return {
+    key: `osva:rl:unauth:v1:${sourceIp}`,
+    limit: unauthenticatedPerMinute,
+  };
 }

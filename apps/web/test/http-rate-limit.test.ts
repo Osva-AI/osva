@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { PUBLIC_API_ERROR_CODES } from "@osva-ai/contracts";
+import {
+  AUTHENTICATION_METHODS,
+  PUBLIC_API_ERROR_CODES,
+  type UserId,
+} from "@osva-ai/contracts";
 import { ValkeyUnavailableError } from "@osva/adapters-bullmq";
 
 import { closeHttpServer, listenHttpServer } from "../src/server.js";
@@ -192,6 +196,104 @@ describe("HTTP rate limiting", () => {
     expect(
       limiter.keys.every((key) => key.startsWith("osva:rl:unauth:v1:")),
     ).toBe(true);
+  });
+
+  it("uses stable human user buckets for authenticated session traffic", async () => {
+    const limiter = new CountingRateLimiter();
+    const userA = "user-rate-a" as UserId;
+    const userB = "user-rate-b" as UserId;
+    const ctx = await createTestWebApplication({
+      rateLimit: defaultHttpRateLimitContext(limiter, {
+        unauthenticatedPerMinute: 100,
+        authenticatedPerMinute: 2,
+      }),
+      authenticateHumanSession: async (request) => {
+        const cookie = request.headers.cookie ?? "";
+        if (cookie.includes("session-user-a")) {
+          return {
+            authenticationMethod: AUTHENTICATION_METHODS.HUMAN_SESSION,
+            userId: userA,
+            sessionId: "sess-a-1",
+          };
+        }
+        if (cookie.includes("session-user-b")) {
+          return {
+            authenticationMethod: AUTHENTICATION_METHODS.HUMAN_SESSION,
+            userId: userB,
+            sessionId: "sess-b-1",
+          };
+        }
+        if (cookie.includes("session-user-a-alt")) {
+          return {
+            authenticationMethod: AUTHENTICATION_METHODS.HUMAN_SESSION,
+            userId: userA,
+            sessionId: "sess-a-2",
+          };
+        }
+        return null;
+      },
+    });
+    servers.push(ctx.server);
+    const port = await listenHttpServer(ctx.server, "127.0.0.1", 0);
+    const origin = `http://127.0.0.1:${String(port)}`;
+    const cookieA = { cookie: "osva.session_token=session-user-a" };
+    const cookieB = { cookie: "osva.session_token=session-user-b" };
+    const cookieAAlt = { cookie: "osva.session_token=session-user-a-alt" };
+
+    expect(
+      (await fetch(`${origin}/v1/me/workspaces`, { headers: cookieA })).status,
+    ).toBe(404);
+    expect(
+      (await fetch(`${origin}/v1/me/workspaces`, { headers: cookieA })).status,
+    ).toBe(404);
+    expect(
+      (await fetch(`${origin}/v1/me/workspaces`, { headers: cookieA })).status,
+    ).toBe(429);
+    expect(
+      (await fetch(`${origin}/v1/me/workspaces`, { headers: cookieB })).status,
+    ).toBe(404);
+    expect(
+      (
+        await fetch(`${origin}/v1/me/workspaces`, {
+          headers: cookieAAlt,
+        })
+      ).status,
+    ).toBe(429);
+    expect(
+      limiter.keys.filter((key) => key === `osva:rl:human:v1:${userA}`).length,
+    ).toBeGreaterThan(0);
+    expect(
+      limiter.keys.filter((key) => key === `osva:rl:human:v1:${userB}`).length,
+    ).toBeGreaterThan(0);
+    expect(limiter.keys.every((key) => !key.includes("session-user"))).toBe(
+      true,
+    );
+  });
+
+  it("does not assign human buckets from spoofed identity headers", async () => {
+    const limiter = new CountingRateLimiter();
+    const ctx = await createTestWebApplication({
+      rateLimit: defaultHttpRateLimitContext(limiter, {
+        unauthenticatedPerMinute: 2,
+        authenticatedPerMinute: 100,
+      }),
+      authenticateHumanSession: async () => null,
+    });
+    servers.push(ctx.server);
+    const port = await listenHttpServer(ctx.server, "127.0.0.1", 0);
+    const origin = `http://127.0.0.1:${String(port)}`;
+    const headers = {
+      "x-osva-user-id": "user-spoof",
+      cookie: "osva.session_token=invalid",
+    };
+    await fetch(`${origin}/v1/auth/context`, { headers });
+    await fetch(`${origin}/v1/auth/context`, { headers });
+    const limited = await fetch(`${origin}/v1/auth/context`, { headers });
+    expect(limited.status).toBe(429);
+    expect(
+      limiter.keys.every((key) => key.startsWith("osva:rl:unauth:v1:")),
+    ).toBe(true);
+    expect(limiter.keys.some((key) => key.includes("human"))).toBe(false);
   });
 
   it("isolates authenticated buckets by API key and workspace", async () => {

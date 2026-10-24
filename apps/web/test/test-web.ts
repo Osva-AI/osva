@@ -91,6 +91,8 @@ export async function createTestWebApplication(options?: {
   readonly stdioConnectorsEnabled?: boolean;
   readonly secretResolver?: SecretResolver;
   readonly rateLimit?: import("../src/http-rate-limit.js").HttpRateLimitContext;
+  readonly humanAuth?: import("../src/human-auth-http.js").HumanAuthHttpServices;
+  readonly authenticateHumanSession?: import("../src/http-security.js").WebSecurityServices["authenticateHumanSession"];
   readonly instrumentation?: import("@osva/observability").OsvaInstrumentation;
   readonly logEvent?: (
     event: string,
@@ -168,7 +170,12 @@ export async function createTestWebApplication(options?: {
     apiKeys,
     clock: { now: () => TEST_NOW },
   });
-  const security = createTestWebSecurityServices(authenticateApiKey);
+  const security = {
+    ...createTestWebSecurityServices(authenticateApiKey),
+    ...(options?.authenticateHumanSession === undefined
+      ? {}
+      : { authenticateHumanSession: options.authenticateHumanSession }),
+  };
 
   const createRun = new CreateRun({ runs, agents, queue });
   const reconcileAssignment = new ReconcileAssignment({
@@ -375,6 +382,7 @@ export async function createTestWebApplication(options?: {
       ids,
     }),
     security,
+    humanAuth: options?.humanAuth,
     rateLimit: options?.rateLimit,
     instrumentation: options?.instrumentation,
     logEvent: options?.logEvent,

@@ -115,7 +115,7 @@ export function requestPrincipalRateLimitKey(
     return `${principal.workspaceId}:${principal.subjectId}`;
   }
   if (isHumanSessionRequestPrincipal(principal)) {
-    return `human:${principal.userId}:${principal.sessionId}`;
+    return principal.userId;
   }
   return `system:${principal.subjectId}:${principal.workspaceId}`;
 }

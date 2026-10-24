@@ -8,6 +8,7 @@ import {
   type HumanSessionRequestPrincipal,
   isApiKeyRequestPrincipal,
   isHumanSessionRequestPrincipal,
+  requestPrincipalRateLimitKey,
 } from "../src/security.js";
 
 describe("discriminated request principals", () => {
@@ -28,5 +29,7 @@ describe("discriminated request principals", () => {
     };
     expect(isHumanSessionRequestPrincipal(human)).toBe(true);
     expect(isApiKeyRequestPrincipal(human)).toBe(false);
+    expect(requestPrincipalRateLimitKey(human)).toBe("user-1");
+    expect(requestPrincipalRateLimitKey(apiKey)).toBe("ws-1:ak-1");
   });
 });
