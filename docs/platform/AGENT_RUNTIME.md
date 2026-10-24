@@ -125,7 +125,11 @@ in the worker process (no child process or remote hop).
   would tighten `ToolGateway` for all runtimes; that redesign is out of scope
   for M13.2.
 - Run input, tool output, and knowledge are treated as untrusted user/tool content;
-  instructions are trusted operator configuration only.
+  instructions are trusted operator configuration only. Instructions and allowlists
+  do **not** constitute a security boundary against prompt injection; platform
+  enforcement is binding checks, gateway authorization, capability tokens, and
+  budgets (see M14.4 adversarial acceptance fixtures in
+  `@osva/adversarial-acceptance`).
 - Cooperative `cancel()` aborts in-flight model calls; completed tool side effects
   are not rolled back (same as other runtimes).
 - Workers still require `OSVA_TRUSTED_RUNTIME_ROOT` readiness today because the
