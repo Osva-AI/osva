@@ -65,7 +65,12 @@ create Connector
 ```
 
 Discovery does not grant permission. Unbound MCP tools are rejected by
-ToolGateway before any MCP network/process invocation.
+trusted runtimes from `ExecutionRequest.toolVersionBindings` before
+ToolGateway.invoke. ToolGateway adds defense-in-depth checks: request and
+authorization ToolVersion identity must match; parent Tool and MCP
+ConnectorVersion must belong to `authorization.workspaceId`. Foreign and
+missing resources fail with the same stable error codes without leaking
+connector endpoints or credentials.
 
 ## Supported in Stage 2.7
 

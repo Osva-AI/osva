@@ -23,7 +23,7 @@ Execute an MCP-backed tool through ToolGateway using immutable MCP ToolVersion a
 1. Agent runtime invokes tool by logical binding name (identical to internal tool path).
 2. **ToolGateway.invoke** loads ToolVersion; detects `type === "MCP"`.
 3. **Policy** runs before MCP dispatch (same authorization path as internal tools).
-4. **invokeMcpToolVersion** loads **ConnectorVersion** from ToolVersion.mcp.connectorVersionId.
+4. **invokeMcpToolVersion** loads **ConnectorVersion** from ToolVersion.mcp.connectorVersionId, resolves parent Connector, and verifies connector workspace matches authorization before building execution config or resolving secrets.
 5. **McpClientPool** acquires client for transport (STREAMABLE_HTTP or STDIO) and resolved secrets.
 6. **MCP tools/call** executed against external MCP server.
 7. Result normalized to canonical JSON; **RunStep** recorded.
@@ -47,7 +47,7 @@ Execute an MCP-backed tool through ToolGateway using immutable MCP ToolVersion a
 ## Failure behavior
 
 - MCP not configured in worker → TOOL_IMPLEMENTATION_NOT_FOUND.
-- Missing ConnectorVersion → TOOL_IMPLEMENTATION_NOT_FOUND.
+- Missing or foreign-workspace ConnectorVersion → TOOL_IMPLEMENTATION_NOT_FOUND (same message; no endpoint or credential leak).
 - MCP adapter errors mapped through ToolGatewayError.
 - Discovery failures are control-plane errors; do not affect in-flight Runs.
 

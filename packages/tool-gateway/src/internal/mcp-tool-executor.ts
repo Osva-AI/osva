@@ -3,6 +3,7 @@ import { toMcpConnectorExecutionConfig } from "@osva/domain";
 import type { McpClientPool, ToolInvokeRequest } from "@osva-ai/contracts";
 import { isMcpAdapterError } from "@osva/adapters-mcp-client";
 
+import { assertConnectorInWorkspace } from "./invoke-authorization.js";
 import { ToolGatewayError, toolGatewayError } from "../errors.js";
 
 export interface McpToolExecutorDependencies {
@@ -32,6 +33,14 @@ export async function invokeMcpToolVersion(
       "ConnectorVersion was not found.",
     );
   }
+
+  const parentConnector = await deps.connectors.findConnectorById(
+    connectorVersion.connectorId,
+  );
+  assertConnectorInWorkspace(
+    parentConnector,
+    request.authorization.workspaceId,
+  );
 
   const executionConfig = toMcpConnectorExecutionConfig(connectorVersion);
 

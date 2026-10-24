@@ -92,6 +92,11 @@ export interface ToolAuthorizationContext {
 /**
  * Stage 1 ToolGateway request. Authorization context is required for every
  * invocation. The gateway does not derive permissions from prompt text.
+ *
+ * Trusted runtimes populate `authorization` from ExecutionRequest snapshots.
+ * ToolGateway verifies `toolVersionId` matches `authorization.toolVersionId`,
+ * resolves parent Tool / Connector workspace ownership, and rejects foreign or
+ * missing resources before internal or MCP execution.
  */
 export interface ToolInvokeRequest {
   readonly toolVersionId: ToolVersionId;
