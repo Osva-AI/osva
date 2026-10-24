@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -63,4 +65,43 @@ describe("capability tokens", () => {
     });
     expect(verifyCapabilityToken(SECRET, bootstrap, NOW)).toBeUndefined();
   });
+
+  it("rejects execution tokens that carry an audience claim with a valid HMAC", () => {
+    const exp = NOW.getTime() + 30_000;
+    const tokenWithAud = signExecutionCapabilityTokenPayloadForTest(SECRET, {
+      v: 1,
+      aud: "execution",
+      executionId: "attempt-1",
+      workspaceId: "ws-1",
+      runId: "run-1",
+      exp,
+    });
+
+    expect(verifyCapabilityToken(SECRET, tokenWithAud, NOW)).toBeUndefined();
+    expect(
+      verifyCapabilityToken(
+        SECRET,
+        issueCapabilityToken(SECRET, {
+          executionId: "attempt-1",
+          workspaceId: "ws-1",
+          runId: "run-1",
+          exp,
+        }),
+        NOW,
+      ),
+    ).toMatchObject({ executionId: "attempt-1" });
+  });
 });
+
+function signExecutionCapabilityTokenPayloadForTest(
+  secret: string,
+  claims: Record<string, unknown>,
+): string {
+  const payload = Buffer.from(JSON.stringify(claims), "utf8").toString(
+    "base64url",
+  );
+  const signature = createHmac("sha256", secret)
+    .update(payload)
+    .digest("base64url");
+  return `${payload}.${signature}`;
+}

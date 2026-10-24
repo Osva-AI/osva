@@ -55,6 +55,8 @@ async function seedRunningExecution(options?: {
   readonly attemptId?: RunAttemptId;
   readonly workspaceId?: WorkspaceId;
   readonly succeedAttempt?: boolean;
+  readonly terminalStatus?: "FAILED" | "CANCELLED" | "TIMED_OUT";
+  readonly terminalError?: { readonly code: string; readonly message: string };
   readonly knowledgeIndexBindings?: Readonly<
     Record<string, readonly import("@osva-ai/contracts").KnowledgeIndexId[]>
   >;
@@ -125,6 +127,13 @@ async function seedRunningExecution(options?: {
   if (options?.succeedAttempt === true) {
     attempt = attempt.transitionTo("SUCCEEDED", EVEN_LATER, {
       output: { done: true },
+    });
+  } else if (options?.terminalStatus !== undefined) {
+    attempt = attempt.transitionTo(options.terminalStatus, EVEN_LATER, {
+      error: options.terminalError ?? {
+        code: "EXECUTION_INTERRUPTED",
+        message: "execution ended",
+      },
     });
   }
 
@@ -379,6 +388,142 @@ describe("RuntimeCapabilityBridge", () => {
         runAttemptId,
       );
       expect(response.status).toBe(200);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects unauthenticated capability requests", async () => {
+    const seeded = await seedRunningExecution();
+    const bridge = new RuntimeCapabilityBridge({
+      secret: SECRET,
+      runs: seeded.runs,
+      agents: seeded.agents,
+      clock: { now: () => NOW },
+      createScopedModelGateway: () => undefined,
+      createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
+    });
+    const server = await startRuntimeCapabilityServer({
+      handler: bridge.handle,
+    });
+    try {
+      const response = await fetch(
+        `${server.origin}${RUNTIME_CAPABILITY_PATHS.generateText}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            protocolVersion: "1",
+            executionId: runAttemptId,
+            bindingName: "primary",
+            input: { messages: [{ role: "user", content: "hi" }] },
+          }),
+        },
+      );
+      expect(response.status).toBe(401);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects capability tokens whose run claim does not match persisted state", async () => {
+    const seeded = await seedRunningExecution();
+    const bridge = new RuntimeCapabilityBridge({
+      secret: SECRET,
+      runs: seeded.runs,
+      agents: seeded.agents,
+      clock: { now: () => NOW },
+      createScopedModelGateway: () => undefined,
+      createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
+    });
+    const server = await startRuntimeCapabilityServer({
+      handler: bridge.handle,
+    });
+    try {
+      const response = await invokeModel(
+        server.origin,
+        tokenFor(runAttemptId, { runId: "other-run" }),
+        runAttemptId,
+      );
+      expect(response.status).toBe(403);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it.each([
+    ["FAILED", { code: "AGENT_EXECUTION_FAILED", message: "failed" }],
+    ["CANCELLED", { code: "EXECUTION_CANCELLED", message: "cancelled" }],
+    ["TIMED_OUT", { code: "EXECUTION_TIMED_OUT", message: "timed out" }],
+    ["FAILED", { code: "EXECUTION_INTERRUPTED", message: "lease lost" }],
+  ] as const)(
+    "rejects capability calls when the attempt is %s",
+    async (terminalStatus, terminalError) => {
+      const seeded = await seedRunningExecution({
+        terminalStatus,
+        terminalError,
+      });
+      const bridge = new RuntimeCapabilityBridge({
+        secret: SECRET,
+        runs: seeded.runs,
+        agents: seeded.agents,
+        clock: { now: () => NOW },
+        createScopedModelGateway: () => undefined,
+        createScopedToolGateway: () => undefined,
+        createScopedMemoryGateway: () => undefined,
+        createScopedKnowledgeGateway: () => undefined,
+      });
+      const server = await startRuntimeCapabilityServer({
+        handler: bridge.handle,
+      });
+      try {
+        const response = await invokeModel(
+          server.origin,
+          tokenFor(runAttemptId),
+          runAttemptId,
+        );
+        expect(response.status).toBe(403);
+      } finally {
+        await server.close();
+      }
+    },
+  );
+
+  it("allows repeated capability calls during one active execution", async () => {
+    const seeded = await seedRunningExecution();
+    let calls = 0;
+    const bridge = new RuntimeCapabilityBridge({
+      secret: SECRET,
+      runs: seeded.runs,
+      agents: seeded.agents,
+      clock: { now: () => NOW },
+      createScopedModelGateway: () => ({
+        async generateText() {
+          calls += 1;
+          return { text: `ok-${String(calls)}` };
+        },
+        async generateCompletion() {
+          return { text: "ok", toolCalls: [], finishReason: "stop" };
+        },
+      }),
+      createScopedToolGateway: () => undefined,
+      createScopedMemoryGateway: () => undefined,
+      createScopedKnowledgeGateway: () => undefined,
+    });
+    const server = await startRuntimeCapabilityServer({
+      handler: bridge.handle,
+    });
+    const token = tokenFor(runAttemptId);
+    try {
+      for (let index = 0; index < 3; index += 1) {
+        const response = await invokeModel(server.origin, token, runAttemptId);
+        expect(response.status).toBe(200);
+      }
+      expect(calls).toBe(3);
     } finally {
       await server.close();
     }

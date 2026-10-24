@@ -29,6 +29,7 @@ import {
   RuntimeCapabilityBridge,
   RuntimeExecutionBootstrapStore,
   createArtifactCapabilityRawHandler,
+  resolveRuntimeCapabilityListenHost,
   startRuntimeCapabilityServer,
   type RuntimeCapabilityServer,
 } from "@osva/adapters-runtime-http";
@@ -339,9 +340,10 @@ export function createWorkerProcess(
           artifactApplication: runtimeArtifactApplication,
           maxArtifactBytes: artifactStorage.maxBytes,
         });
-        const capabilityHost = config.containerEnabled
-          ? "0.0.0.0"
-          : config.runtimeCapabilityHost;
+        const capabilityHost = resolveRuntimeCapabilityListenHost({
+          containerEnabled: config.containerEnabled,
+          configuredHost: config.runtimeCapabilityHost,
+        });
         capabilityServer = await startRuntimeCapabilityServer({
           host: capabilityHost,
           port: config.runtimeCapabilityPort,

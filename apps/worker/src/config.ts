@@ -3,6 +3,7 @@ import {
   validateContainerCapabilityBaseUrl,
   type ContainerResourcePolicy,
 } from "@osva/adapters-runtime-container";
+import { validateRuntimeCapabilityListenerConfig } from "@osva/adapters-runtime-http";
 import {
   DEFAULT_EXECUTION_HEARTBEAT_INTERVAL_MS,
   DEFAULT_EXECUTION_LEASE_TTL_MS,
@@ -20,6 +21,7 @@ export interface WorkerConfig {
   readonly runtimeCapabilityHost: string;
   readonly runtimeCapabilityPort: number;
   readonly runtimeCapabilityBaseUrl?: string;
+  readonly runtimeCapabilityAllowPublicBind: boolean;
   readonly health: ProcessProbeBind;
   readonly leaseTtlMs: number;
   readonly heartbeatIntervalMs: number;
@@ -88,6 +90,10 @@ export function loadWorkerConfig(
       runtimeCapabilityBaseUrl.length === 0
         ? undefined
         : runtimeCapabilityBaseUrl,
+    runtimeCapabilityAllowPublicBind: readOptionalBoolean(
+      env.OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND,
+      "OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND",
+    ),
     remoteHttpAllowPrivateNetworks: readOptionalBoolean(
       env.OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS,
       "OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS",
@@ -156,6 +162,13 @@ export function loadWorkerConfig(
       );
     }
   }
+
+  validateRuntimeCapabilityListenerConfig({
+    runtimeCapabilitySecret: config.runtimeCapabilitySecret,
+    runtimeCapabilityHost: config.runtimeCapabilityHost,
+    containerEnabled: config.containerEnabled,
+    allowPublicBind: config.runtimeCapabilityAllowPublicBind,
+  });
 
   return config;
 }

@@ -66,8 +66,7 @@ export function verifyCapabilityToken(
     Array.isArray(parsed) ||
     !("v" in parsed) ||
     parsed.v !== 1 ||
-    ("aud" in parsed &&
-      (parsed as { aud?: unknown }).aud === RUNTIME_BOOTSTRAP_TOKEN_AUD)
+    "aud" in parsed
   ) {
     return undefined;
   }
