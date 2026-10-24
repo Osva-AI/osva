@@ -32,8 +32,9 @@ export function loadWebConfig(env: NodeJS.ProcessEnv = process.env): WebConfig {
     throw new Error("OSVA_AUTH_SECRET must be at least 32 characters.");
   }
 
-  const authBaseUrl =
-    readOptional(env.OSVA_AUTH_BASE_URL) ?? `http://${host}:${String(port)}`;
+  const authBaseUrl = validateAuthBaseUrl(
+    readOptional(env.OSVA_AUTH_BASE_URL) ?? `http://${host}:${String(port)}`,
+  );
   const authTrustedOrigins = parseTrustedOrigins(
     env.OSVA_AUTH_TRUSTED_ORIGINS,
     authBaseUrl,
@@ -94,23 +95,68 @@ function parsePositiveInt(
   return parsed;
 }
 
+function validateAuthBaseUrl(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    throw new Error("OSVA_AUTH_BASE_URL must be a valid absolute URL.");
+  }
+  assertAllowedAuthUrl(url, "OSVA_AUTH_BASE_URL");
+  return value.trim();
+}
+
 function parseTrustedOrigins(
   value: string | undefined,
   authBaseUrl: string,
 ): readonly string[] {
+  const baseOrigin = new URL(authBaseUrl).origin;
   const trimmed = value?.trim() ?? "";
   if (trimmed.length === 0) {
-    try {
-      return [new URL(authBaseUrl).origin];
-    } catch {
-      return [];
-    }
+    return [baseOrigin];
   }
 
-  return trimmed
-    .split(",")
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
+  const origins = new Set<string>();
+  for (const segment of trimmed.split(",")) {
+    const entry = segment.trim();
+    if (entry.length === 0) {
+      continue;
+    }
+    origins.add(parseTrustedOriginEntry(entry));
+  }
+
+  if (origins.size === 0) {
+    throw new Error(
+      "OSVA_AUTH_TRUSTED_ORIGINS must include at least one valid origin.",
+    );
+  }
+
+  return [...origins];
+}
+
+function parseTrustedOriginEntry(entry: string): string {
+  let url: URL;
+  try {
+    url = new URL(entry);
+  } catch {
+    throw new Error(
+      "OSVA_AUTH_TRUSTED_ORIGINS entries must be valid absolute URLs.",
+    );
+  }
+  assertAllowedAuthUrl(url, "OSVA_AUTH_TRUSTED_ORIGINS");
+  return url.origin;
+}
+
+function assertAllowedAuthUrl(url: URL, fieldName: string): void {
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`${fieldName} must use http or https.`);
+  }
+  if (url.username.length > 0 || url.password.length > 0) {
+    throw new Error(`${fieldName} must not include user credentials.`);
+  }
+  if (url.hostname.includes("*")) {
+    throw new Error(`${fieldName} must not use wildcard hostnames.`);
+  }
 }
 
 function parsePort(value: string | undefined, fallback: number): number {

@@ -5,12 +5,16 @@ export function assertTrustedOrigin(
   trustedOrigins: readonly string[],
 ): boolean {
   if (trustedOrigins.length === 0) {
-    return true;
+    return false;
   }
 
   const origin = readHeader(request, "origin");
-  if (origin !== undefined && trustedOrigins.includes(origin)) {
-    return true;
+  if (origin !== undefined) {
+    const normalized = normalizeOriginValue(origin);
+    if (normalized === undefined) {
+      return false;
+    }
+    return trustedOrigins.includes(normalized);
   }
 
   const referer = readHeader(request, "referer");
@@ -20,10 +24,29 @@ export function assertTrustedOrigin(
 
   try {
     const refererOrigin = new URL(referer).origin;
+    if (!isAllowedScheme(refererOrigin)) {
+      return false;
+    }
     return trustedOrigins.includes(refererOrigin);
   } catch {
     return false;
   }
+}
+
+function normalizeOriginValue(value: string): string | undefined {
+  try {
+    const url = new URL(value);
+    if (!isAllowedScheme(url.origin)) {
+      return undefined;
+    }
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function isAllowedScheme(origin: string): boolean {
+  return origin.startsWith("http://") || origin.startsWith("https://");
 }
 
 function readHeader(

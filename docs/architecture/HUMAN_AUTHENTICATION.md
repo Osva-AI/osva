@@ -80,6 +80,10 @@ Tokens expire per Better Auth `emailAndPassword.resetPasswordTokenExpiresIn`. Ex
 | `OSVA_AUTH_BASE_URL` | Public base URL for auth callbacks |
 | `OSVA_AUTH_TRUSTED_ORIGINS` | CSRF/trusted Origin allow list for mutating human routes |
 
+Mutating `/v1/auth/*` routes (all non-`GET` methods) require a trusted `Origin`, or a trusted `Referer` origin when `Origin` is absent. An empty allowlist **denies** requests (fail-closed). Startup validates `OSVA_AUTH_BASE_URL` and trusted-origin entries (`http`/`https` only; no wildcards or credentials). When `OSVA_AUTH_TRUSTED_ORIGINS` is unset, the web process defaults to the origin of `OSVA_AUTH_BASE_URL`.
+
+Human session traffic on `/v1/*` is rate-limited in Valkey under `osva:rl:human:v1:<userId>` (stable user id, not session token). API keys continue to use `osva:rl:key:v1:*`; unauthenticated callers remain on `osva:rl:unauth:v1:<source-ip>`.
+
 See root `.env.example`.
 
 ## Bootstrap and recovery

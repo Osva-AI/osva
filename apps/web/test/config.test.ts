@@ -58,6 +58,61 @@ describe("loadWebConfig", () => {
     expect(config.trustedProxies).toEqual([]);
     expect(config.authSecret).toBe(TEST_AUTH_SECRET);
     expect(config.authBaseUrl).toBe("http://127.0.0.1:3000");
+    expect(config.authTrustedOrigins).toEqual(["http://127.0.0.1:3000"]);
+  });
+
+  it("parses and normalizes OSVA_AUTH_TRUSTED_ORIGINS to canonical origins", () => {
+    const config = loadWebConfig(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+        OSVA_AUTH_TRUSTED_ORIGINS:
+          "http://127.0.0.1:4174/path, https://console.example",
+      }),
+    );
+
+    expect(config.authTrustedOrigins).toEqual([
+      "http://127.0.0.1:4174",
+      "https://console.example",
+    ]);
+  });
+
+  it("rejects invalid OSVA_AUTH_BASE_URL at startup", () => {
+    expect(() =>
+      loadWebConfig(
+        withTestAuthEnv({
+          OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+          OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+          OSVA_AUTH_BASE_URL: "not-a-url",
+        }),
+      ),
+    ).toThrow("OSVA_AUTH_BASE_URL must be a valid absolute URL.");
+  });
+
+  it("rejects invalid trusted-origin entries", () => {
+    expect(() =>
+      loadWebConfig(
+        withTestAuthEnv({
+          OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+          OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+          OSVA_AUTH_TRUSTED_ORIGINS: "javascript:alert(1)",
+        }),
+      ),
+    ).toThrow("OSVA_AUTH_TRUSTED_ORIGINS must use http or https.");
+  });
+
+  it("allows localhost http origins", () => {
+    const config = loadWebConfig(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+        OSVA_AUTH_BASE_URL: "http://localhost:3000",
+        OSVA_AUTH_TRUSTED_ORIGINS: "http://localhost:4174",
+      }),
+    );
+
+    expect(config.authTrustedOrigins).toEqual(["http://localhost:4174"]);
+    expect(config.authBaseUrl).toBe("http://localhost:3000");
   });
 
   it("reads rate-limit and trusted-proxy overrides", () => {

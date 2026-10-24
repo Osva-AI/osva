@@ -20,7 +20,7 @@ Sensitive values must be supplied by the operator. Examples below use placeholde
 | `OSVA_WEB_HOST` | web | no | `127.0.0.1` | no | Bind address; use `0.0.0.0` in containers. |
 | `OSVA_WEB_PORT` | web | no | `3000` | no | HTTP port (TLS terminates at ingress/proxy). |
 | `OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE` | web | no | `60` | no | Unauthenticated `/v1` requests per source IP per minute. Abuse protection, not billing. |
-| `OSVA_RATE_LIMIT_AUTH_PER_MINUTE` | web | no | `600` | no | Authenticated `/v1` requests per API key per minute. |
+| `OSVA_RATE_LIMIT_AUTH_PER_MINUTE` | web | no | `600` | no | Authenticated `/v1` requests per API key or human user per minute (separate Valkey buckets). |
 | `OSVA_TRUSTED_PROXIES` | web | no | (none) | no | Comma-separated proxy IPs/CIDRs allowed to supply `X-Forwarded-For` / `Forwarded`. Default uses the peer socket address. |
 
 Public routes: `/health`, `/ready` (not rate-limited as API traffic). Product `/v1/*` routes require authentication (API key and/or human session per route inventory). Machine callers use Bearer API keys. Human browser routes under `/v1/auth/*` use session cookies and CSRF/trusted-origin checks. Valkey rate-limit store outage fails closed with `503 SERVICE_UNAVAILABLE`.
@@ -30,8 +30,8 @@ Public routes: `/health`, `/ready` (not rate-limited as API traffic). Product `/
 | Variable | Processes | Required | Default | Sensitive | Notes |
 |----------|-----------|----------|---------|-----------|-------|
 | `OSVA_AUTH_SECRET` | web | yes (human auth) | — | yes | ≥ 32 characters. Better Auth signing secret. |
-| `OSVA_AUTH_BASE_URL` | web | no | derived from web bind | no | Public base URL for auth (for example `http://127.0.0.1:8080` in Compose). |
-| `OSVA_AUTH_TRUSTED_ORIGINS` | web | yes for Console mutations | — | no | Comma-separated browser origins (include Console dev `http://127.0.0.1:5173` and BFF `http://127.0.0.1:4174` when used). |
+| `OSVA_AUTH_BASE_URL` | web | no | derived from web bind | no | Public base URL for auth (`http` or `https` only; validated at startup). |
+| `OSVA_AUTH_TRUSTED_ORIGINS` | web | yes for Console mutations | base URL origin | no | Comma-separated browser origins (`http`/`https`, normalized to origin). Startup fails if empty after validation. Required for CSRF on mutating `/v1/auth/*` routes. |
 
 Bootstrap and recovery CLIs (`pnpm identity:bootstrap`, `pnpm identity:recover`) require the same `OSVA_AUTH_SECRET` and `OSVA_DATABASE_URL`. See [`../architecture/HUMAN_AUTHENTICATION.md`](../architecture/HUMAN_AUTHENTICATION.md).
 
