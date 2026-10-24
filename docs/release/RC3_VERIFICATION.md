@@ -2,7 +2,17 @@
 
 **M10.4 for RC2 is complete** — see [`M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md) and [`RELEASE_CANDIDATE_INVENTORY.json`](RELEASE_CANDIDATE_INVENTORY.json) (`pendingReleaseGates`: empty). Do not treat RC2 as GA.
 
-This document is a **future maintainer checklist** for the next RC or GA line (for example RC.3 / GA readiness on a **new** version bump). It does **not** list pending gates for published **`1.1.0-rc.2`**.
+This document is the **maintainer checklist** for RC.3 / GA readiness on a **new** version bump. Published **`1.1.0-rc.2`** gates are complete below; **`1.1.0-rc.3`** is prepared in repository (`VERSION`) but **not yet published**.
+
+### RC.3 preparation (A1.3.2, in progress)
+
+| Item | Status |
+| --- | --- |
+| Bump aligned **`1.1.0-rc.3`** on five npm packages + `VERSION` + Helm + Python | **Prepared** (local branch) |
+| Packed `@osva-ai/contracts` artifact blob root export regression | **Added** (`scripts/release/contracts-pack-artifact-exports.mjs`) |
+| Maintainer tag / npm **`rc`** dist-tag publish | **Pending** |
+| GitHub `release-readiness` on publish commit | **Pending** |
+| M10.4-style published-registry acceptance for **`1.1.0-rc.3`** | **Pending** |
 
 ## RC2 / M10.4 gate record (complete)
 

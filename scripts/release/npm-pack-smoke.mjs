@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { validateContractsTarballArtifactExports } from "./contracts-pack-artifact-exports.mjs";
 import { PUBLIC_NPM_PACKAGES, readReleaseVersion } from "./read-version.mjs";
 
 const REPO_ROOT = path.resolve(
@@ -82,6 +83,12 @@ function main() {
       throw new Error(`Tarball missing for ${name}: ${tarballPath}`);
     }
     tarballs.set(name, tarballPath);
+    if (name === "@osva-ai/contracts") {
+      validateContractsTarballArtifactExports(tarballPath);
+      console.log(
+        "validated @osva-ai/contracts packed artifact blob root exports",
+      );
+    }
     const dry = run("npm", ["pack", "--dry-run"], {
       cwd: path.join(REPO_ROOT, "packages", dir),
     });
