@@ -1,6 +1,7 @@
 import type {
   ApiKeyId,
   CommunityEditionRole,
+  SecurityAuditEventId,
   WorkspaceId,
 } from "@osva-ai/contracts";
 import {
@@ -12,6 +13,11 @@ import { ApiKey } from "./api-key.js";
 import { generateApiKeySecretMaterial } from "./api-key-credential.js";
 import { WorkspaceNotFoundError } from "./errors.js";
 import {
+  buildApiKeyCreatedAuditEvent,
+  buildApiKeyRevokedAuditEvent,
+} from "./control-plane-audit-events.js";
+import {
+  controlPlaneAuditActor,
   controlPlaneWorkspaceId,
   requireControlPlaneAuthorization,
   type ControlPlaneScope,
@@ -186,13 +192,45 @@ export class CreateWorkspaceApiKey {
       API_KEY_RESOURCE,
     );
 
-    const createApiKey = new CreateApiKey(this.deps);
-    return createApiKey.execute({
-      workspaceId: controlPlaneWorkspaceId(scope),
+    const workspaceId = controlPlaneWorkspaceId(scope);
+    const workspace = await this.deps.workspaces.findById(workspaceId);
+    if (workspace === null) {
+      throw new WorkspaceNotFoundError(workspaceId);
+    }
+
+    const now = this.deps.clock.now();
+    const apiKeyId = this.deps.ids.createId() as ApiKeyId;
+    const apiKey = ApiKey.create({
+      id: apiKeyId,
+      workspaceId,
       name: command.name,
       role: command.role,
+      now,
       expiresAt: command.expiresAt,
     });
+    const secretMaterial = generateApiKeySecretMaterial(apiKeyId);
+    const auditActor = controlPlaneAuditActor(scope);
+    const auditEvent = buildApiKeyCreatedAuditEvent({
+      id: this.deps.ids.createId() as SecurityAuditEventId,
+      occurredAt: now,
+      workspaceId,
+      actorSubjectId: auditActor.subjectId,
+      apiKeyId,
+      role: command.role,
+    });
+
+    await this.deps.apiKeys.createWithAudit({
+      record: {
+        apiKey,
+        secretDigest: secretMaterial.secretDigest,
+      },
+      auditEvent,
+    });
+
+    return {
+      apiKey,
+      plaintextToken: secretMaterial.plaintextToken,
+    };
   }
 }
 
@@ -229,16 +267,23 @@ export class RevokeWorkspaceApiKey {
       throw new ApiKeyNotFoundError(apiKeyId);
     }
 
-    await this.deps.apiKeys.revoke(apiKeyId, this.deps.clock.now());
-    const revoked = await this.deps.apiKeys.findByWorkspaceAndId(
+    const now = this.deps.clock.now();
+    const auditActor = controlPlaneAuditActor(scope);
+    const auditEvent = buildApiKeyRevokedAuditEvent({
+      id: this.deps.ids.createId() as SecurityAuditEventId,
+      occurredAt: now,
+      workspaceId,
+      actorSubjectId: auditActor.subjectId,
+      apiKeyId,
+      role: existing.role,
+    });
+
+    return this.deps.apiKeys.revokeWithAudit({
       workspaceId,
       apiKeyId,
-    );
-    if (revoked === null) {
-      throw new ApiKeyNotFoundError(apiKeyId);
-    }
-
-    return revoked;
+      revokedAt: now,
+      auditEvent,
+    });
   }
 }
 

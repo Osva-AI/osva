@@ -5,7 +5,9 @@ import type {
   WorkflowRunId,
   WorkflowVersionId,
 } from "@osva-ai/contracts";
+import { APPROVAL_OPERATION_KINDS } from "@osva-ai/contracts";
 import {
+  assertApprovalDecisionAuthorizesOperation,
   ApprovalRequest,
   LifecycleConflictError,
   Workflow,
@@ -140,6 +142,97 @@ describe("PostgreSQL approval request repository", () => {
     expect(stored?.status === "APPROVED" || stored?.status === "REJECTED").toBe(
       true,
     );
+  });
+
+  it("persists operation binding columns from migration 0030", async () => {
+    const seeded = await seedGraph("binding");
+    const expiresAt = new Date("2026-06-01T00:00:00.000Z");
+    const bound = ApprovalRequest.createForWorkflowNodeProgression({
+      id: "approval-bound" as ApprovalRequestId,
+      workspaceId: seeded.workspaceId,
+      workflowRunId: seeded.workflowRunId,
+      workflowNodeRunId: seeded.workflowNodeRunId,
+      nodeInput: { campaign: "launch", tier: 1 },
+      createdAt: NOW,
+      expiresAt,
+    });
+    await approvals.saveApprovalRequest(bound);
+
+    const loaded = await approvals.findApprovalRequestById(bound.id);
+    expect(loaded?.operationKind).toBe(
+      APPROVAL_OPERATION_KINDS.WORKFLOW_NODE_PROGRESSION,
+    );
+    expect(loaded?.operationDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(loaded?.expiresAt).toEqual(expiresAt);
+
+    const approved = await approvals.saveApprovalRequestTransition(
+      "PENDING",
+      bound.markApproved(LATER, "bound ok"),
+    );
+    expect(approved.operationKind).toBe(loaded?.operationKind);
+    expect(approved.operationDigest).toBe(loaded?.operationDigest);
+    expect(approved.expiresAt).toEqual(expiresAt);
+  });
+
+  it("loads legacy rows with null binding columns", async () => {
+    const seeded = await seedGraph("legacy");
+    const legacy = ApprovalRequest.create({
+      id: "approval-legacy" as ApprovalRequestId,
+      workspaceId: seeded.workspaceId,
+      workflowRunId: seeded.workflowRunId,
+      workflowNodeRunId: seeded.workflowNodeRunId,
+      createdAt: NOW,
+    });
+    await approvals.saveApprovalRequest(legacy);
+
+    const loaded = await approvals.findApprovalRequestById(legacy.id);
+    expect(loaded?.operationKind).toBeUndefined();
+    expect(loaded?.operationDigest).toBeUndefined();
+    expect(loaded?.expiresAt).toBeUndefined();
+  });
+
+  it("rejects approval when node input no longer matches bound digest", async () => {
+    const seeded = await seedGraph("tamper");
+    const bound = ApprovalRequest.createForWorkflowNodeProgression({
+      id: "approval-tamper" as ApprovalRequestId,
+      workspaceId: seeded.workspaceId,
+      workflowRunId: seeded.workflowRunId,
+      workflowNodeRunId: seeded.workflowNodeRunId,
+      nodeInput: { campaign: "launch" },
+      createdAt: NOW,
+    });
+    await approvals.saveApprovalRequest(bound);
+
+    const nodeRun = await workflowRuns.findWorkflowNodeRunById(
+      seeded.workflowNodeRunId,
+    );
+    expect(nodeRun).not.toBeNull();
+    const tampered = WorkflowNodeRun.rehydrate({
+      id: nodeRun!.id,
+      workspaceId: nodeRun!.workspaceId,
+      workflowRunId: nodeRun!.workflowRunId,
+      workflowNodeKey: nodeRun!.workflowNodeKey,
+      sequence: nodeRun!.sequence,
+      status: nodeRun!.status,
+      input: { campaign: "changed" },
+      output: nodeRun!.output,
+      childRunId: nodeRun!.childRunId,
+      selectedTargetKey: nodeRun!.selectedTargetKey,
+      error: nodeRun!.error,
+      startedAt: nodeRun!.startedAt,
+      completedAt: nodeRun!.completedAt,
+      createdAt: nodeRun!.createdAt,
+      updatedAt: nodeRun!.updatedAt,
+    });
+
+    expect(() =>
+      assertApprovalDecisionAuthorizesOperation({
+        request: bound,
+        nodeRun: tampered,
+        decision: "APPROVED",
+        now: LATER,
+      }),
+    ).toThrow();
   });
 
   it("scopes lookup by workspace", async () => {

@@ -2,6 +2,7 @@ import type {
   AgentVersionId,
   ApprovalDecision,
   ApprovalRequestId,
+  SecurityAuditEventId,
   WorkflowDefinition,
   WorkflowId,
   WorkflowRunId,
@@ -12,6 +13,7 @@ import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import { ApprovalRequest } from "./approval-request.js";
 import {
+  controlPlaneAuditActor,
   controlPlaneWorkspaceId,
   requireControlPlaneAuthorization,
   type ControlPlaneScope,
@@ -25,12 +27,15 @@ const WORKFLOW_RUN_RESOURCE = {
 const APPROVAL_RESOURCE = {
   kind: CONTROL_PLANE_RESOURCE_KINDS.approvalRequest,
 };
+import { assertApprovalDecisionAuthorizesOperation } from "./approval-operation-binding.js";
+import { buildApprovalRequestDecidedAuditEvent } from "./control-plane-audit-events.js";
 import { isTerminalApprovalRequestState } from "./approval-request-state-machine.js";
 import {
   AgentVersionNotFoundError,
   ApprovalRequestNotFoundError,
   DomainInvariantError,
   LifecycleConflictError,
+  WorkflowNodeRunNotFoundError,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
   WorkflowVersionNotFoundError,
@@ -437,16 +442,52 @@ export class DecideApprovalRequest {
       );
     }
 
+    const nodeRun = await this.deps.workflowRuns.findWorkflowNodeRunById(
+      existing.workflowNodeRunId,
+    );
+    if (nodeRun === null) {
+      throw new WorkflowNodeRunNotFoundError(existing.workflowNodeRunId);
+    }
+
     const now = this.deps.clock.now();
+    assertApprovalDecisionAuthorizesOperation({
+      request: existing,
+      nodeRun,
+      decision: command.decision,
+      now,
+    });
+
     const next =
       command.decision === "APPROVED"
         ? existing.markApproved(now, command.comment)
         : existing.markRejected(now, command.comment);
 
+    const auditActor = controlPlaneAuditActor(scope);
+    const auditEvent = buildApprovalRequestDecidedAuditEvent({
+      id: this.deps.ids.createId() as SecurityAuditEventId,
+      occurredAt: now,
+      workspaceId,
+      actorUserId: auditActor.actorUserId,
+      actorSubjectId: auditActor.subjectId,
+      approvalRequestId: existing.id,
+      workflowRunId: existing.workflowRunId,
+      workflowNodeRunId: existing.workflowNodeRunId,
+      decision: next.status,
+      detailsExtension: {
+        ...(next.operationKind === undefined
+          ? {}
+          : { operationKind: next.operationKind }),
+        ...(next.operationDigest === undefined
+          ? {}
+          : { operationDigest: next.operationDigest }),
+      },
+    });
+
     try {
-      return await this.deps.approvalRequests.saveApprovalRequestTransition(
+      return await this.deps.approvalRequests.saveApprovalRequestTransitionWithAudit(
         "PENDING",
         next,
+        auditEvent,
       );
     } catch (error) {
       if (!(error instanceof LifecycleConflictError)) {

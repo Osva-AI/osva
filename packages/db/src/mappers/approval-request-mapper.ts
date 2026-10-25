@@ -1,4 +1,5 @@
 import type {
+  ApprovalOperationKind,
   ApprovalRequestId,
   ApprovalRequestState,
   WorkflowNodeRunId,
@@ -23,6 +24,9 @@ export function approvalRequestToRow(request: ApprovalRequest) {
     decidedAt: request.decidedAt ?? null,
     createdAt: request.createdAt,
     updatedAt: request.updatedAt,
+    operationKind: request.operationKind ?? null,
+    operationDigest: request.operationDigest ?? null,
+    expiresAt: request.expiresAt ?? null,
   };
 }
 
@@ -39,5 +43,9 @@ export function approvalRequestFromRow(
     decidedAt: toOptionalDomainDate(row.decidedAt),
     createdAt: toDomainDate(row.createdAt),
     updatedAt: toDomainDate(row.updatedAt),
+    operationKind: (row.operationKind ?? undefined) as
+      ApprovalOperationKind | undefined,
+    operationDigest: row.operationDigest ?? undefined,
+    expiresAt: toOptionalDomainDate(row.expiresAt),
   });
 }

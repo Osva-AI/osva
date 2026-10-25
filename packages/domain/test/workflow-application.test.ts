@@ -20,6 +20,7 @@ import {
 import type { ApprovalRequest } from "../src/approval-request.js";
 import type { AgentRepository } from "../src/ports/agent-repository.js";
 import type { ApprovalRequestRepository } from "../src/ports/approval-request-repository.js";
+import type { SecurityAuditEvent } from "../src/security-audit-event.js";
 import type { WorkflowRepository } from "../src/ports/workflow-repository.js";
 import type { WorkflowRunRepository } from "../src/ports/workflow-run-repository.js";
 import type { WorkspaceRepository } from "../src/ports/workspace-repository.js";
@@ -543,5 +544,14 @@ class InMemoryApprovalRequestRepository implements ApprovalRequestRepository {
     next: ApprovalRequest,
   ): Promise<ApprovalRequest> {
     return next;
+  }
+
+  async saveApprovalRequestTransitionWithAudit(
+    expectedStatus: ApprovalRequestState,
+    next: ApprovalRequest,
+    auditEvent: SecurityAuditEvent,
+  ): Promise<ApprovalRequest> {
+    void auditEvent;
+    return this.saveApprovalRequestTransition(expectedStatus, next);
   }
 }

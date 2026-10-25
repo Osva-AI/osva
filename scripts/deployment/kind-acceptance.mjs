@@ -156,6 +156,18 @@ function isOsvaApplicationPod(pod) {
   );
 }
 
+/** Kubelet/configmap races on kind; pods often recover within the readiness budget. */
+function isTransientPodWaitingState(waiting) {
+  if (waiting?.reason !== "CreateContainerConfigError") {
+    return false;
+  }
+  const message = waiting.message ?? "";
+  return (
+    message.includes("failed to sync configmap cache") ||
+    message.includes("timed out waiting for the condition")
+  );
+}
+
 function collectPodFailure(pod) {
   const reasons = [];
   const podReady =
@@ -164,6 +176,9 @@ function collectPodFailure(pod) {
   for (const status of statuses) {
     const waiting = status.state?.waiting;
     if (waiting?.reason && POD_FAIL_WAITING_REASONS.has(waiting.reason)) {
+      if (isTransientPodWaitingState(waiting)) {
+        continue;
+      }
       reasons.push(
         `${pod.metadata.name}/${status.name}: ${waiting.reason}${waiting.message ? ` (${waiting.message})` : ""}`,
       );

@@ -31,6 +31,7 @@ paths. Outcomes are reported as:
 - **TEST_LIMITATION** — fake-model harness; not proof of production LLM behavior.
 
 Human approval remains workflow state in PostgreSQL; narrative “already approved”
-text in run input or tool output does not substitute for a persisted decision
-(operation-hash binding is planned for M14.5). See
-`docs/operations/M14_4_ACCEPTANCE_SUMMARY.md`.
+text in run input or tool output does not substitute for a persisted decision.
+Workflow APPROVAL nodes bind decisions to an immutable operation digest over the
+frozen node input (M14.5). Tool-call approval binding helpers exist but are not
+enforced in ToolGateway yet. See `docs/operations/M14_5_ACCEPTANCE_SUMMARY.md`.

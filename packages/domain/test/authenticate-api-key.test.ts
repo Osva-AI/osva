@@ -11,8 +11,10 @@ import { AuthenticateApiKey } from "../src/authenticate-api-key.js";
 import { DuplicateApiKeyIdError } from "../src/security-errors.js";
 import type {
   ApiKeyCreateRecord,
+  ApiKeyCreateWithAuditInput,
   ApiKeyPersistedRecord,
   ApiKeyRepository,
+  ApiKeyRevokeWithAuditInput,
 } from "../src/ports/api-key-repository.js";
 
 class MemoryApiKeyRepository implements ApiKeyRepository {
@@ -27,6 +29,10 @@ class MemoryApiKeyRepository implements ApiKeyRepository {
       apiKey: record.apiKey,
       secretDigest: Buffer.from(record.secretDigest),
     });
+  }
+
+  async createWithAudit(input: ApiKeyCreateWithAuditInput): Promise<void> {
+    await this.create(input.record);
   }
 
   async findById(id: ApiKeyId): Promise<ApiKeyPersistedRecord | null> {
@@ -62,6 +68,26 @@ class MemoryApiKeyRepository implements ApiKeyRepository {
       ...record,
       apiKey: record.apiKey.revoke(revokedAt),
     });
+  }
+
+  async revokeWithAudit(input: ApiKeyRevokeWithAuditInput): Promise<ApiKey> {
+    const record = await this.findByWorkspaceAndId(
+      input.workspaceId,
+      input.apiKeyId,
+    );
+    if (record === null) {
+      throw new Error("not found");
+    }
+
+    if (record.revokedAt !== undefined) {
+      return record;
+    }
+
+    await this.revoke(input.apiKeyId, input.revokedAt);
+    return (await this.findByWorkspaceAndId(
+      input.workspaceId,
+      input.apiKeyId,
+    ))!;
   }
 
   async countAll(): Promise<number> {

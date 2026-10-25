@@ -4,6 +4,7 @@ import type {
   AuthorizationAction,
   HumanSessionRequestPrincipal,
   SystemRequestPrincipal,
+  UserId,
   WorkspaceId,
 } from "@osva-ai/contracts";
 import {
@@ -101,4 +102,25 @@ export function requireControlPlaneAuthorization(
 
   const principal = asApiKeyAuthorizationPrincipal(scope.principal);
   authorizeApiKeyPrincipal(principal, action, resource, context);
+}
+
+export function controlPlaneAuditActor(scope: ControlPlaneScope): {
+  readonly workspaceId: WorkspaceId;
+  readonly subjectId: string;
+  readonly actorUserId: UserId | undefined;
+} {
+  const workspaceId = controlPlaneWorkspaceId(scope);
+  const principal = scope.principal;
+  if (isHumanSessionRequestPrincipal(principal)) {
+    return {
+      workspaceId,
+      subjectId: principal.userId,
+      actorUserId: principal.userId,
+    };
+  }
+  return {
+    workspaceId,
+    subjectId: principal.subjectId,
+    actorUserId: undefined,
+  };
 }

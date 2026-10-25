@@ -181,6 +181,12 @@
       "tag": "0029_evaluation_quality_gate_slice",
       "file": "0029_evaluation_quality_gate_slice.sql",
       "sha256": "6092023bfa884cd71912da821df640ef5c3790c353d9bd6989fab099af8d29ad"
+    },
+    {
+      "idx": 30,
+      "tag": "0030_approval_operation_binding_slice",
+      "file": "0030_approval_operation_binding_slice.sql",
+      "sha256": "6364b613a3258aae20a310c0c250c70ee36842c040885deaf42e65b7a3bc4366"
     }
   ]
 }

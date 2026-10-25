@@ -1,15 +1,25 @@
+import { createHash } from "node:crypto";
+
 import type { JsonValue } from "@osva-ai/contracts";
+import { APPROVAL_OPERATION_DIGEST_PREFIX } from "@osva-ai/contracts";
 
 /**
  * Structural canonical JSON equality. Object property order does not affect
  * the result.
  */
 export function jsonValuesEqual(left: JsonValue, right: JsonValue): boolean {
-  return canonicalJson(left) === canonicalJson(right);
+  return canonicalJsonStringify(left) === canonicalJsonStringify(right);
 }
 
-function canonicalJson(value: JsonValue): string {
+export function canonicalJsonStringify(value: JsonValue): string {
   return JSON.stringify(sortKeys(value));
+}
+
+export function digestCanonicalJsonValue(value: JsonValue): string {
+  const digest = createHash("sha256")
+    .update(canonicalJsonStringify(value), "utf8")
+    .digest("hex");
+  return `${APPROVAL_OPERATION_DIGEST_PREFIX}${digest}`;
 }
 
 function sortKeys(value: JsonValue): unknown {

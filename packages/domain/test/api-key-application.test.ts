@@ -12,8 +12,10 @@ import {
 } from "../src/security-errors.js";
 import type {
   ApiKeyCreateRecord,
+  ApiKeyCreateWithAuditInput,
   ApiKeyPersistedRecord,
   ApiKeyRepository,
+  ApiKeyRevokeWithAuditInput,
 } from "../src/ports/api-key-repository.js";
 import type { ApiKey } from "../src/api-key.js";
 import type { WorkspaceRepository } from "../src/ports/workspace-repository.js";
@@ -32,6 +34,10 @@ class MemoryApiKeyRepository implements ApiKeyRepository {
       apiKey: record.apiKey,
       secretDigest: Buffer.from(record.secretDigest),
     });
+  }
+
+  async createWithAudit(input: ApiKeyCreateWithAuditInput): Promise<void> {
+    await this.create(input.record);
   }
 
   async findById(id: ApiKeyId): Promise<ApiKeyPersistedRecord | null> {
@@ -67,6 +73,31 @@ class MemoryApiKeyRepository implements ApiKeyRepository {
       ...this.records[index]!,
       apiKey: this.records[index]!.apiKey.revoke(revokedAt),
     };
+  }
+
+  async revokeWithAudit(input: ApiKeyRevokeWithAuditInput): Promise<ApiKey> {
+    const record = await this.findByWorkspaceAndId(
+      input.workspaceId,
+      input.apiKeyId,
+    );
+    if (record === null) {
+      throw new ApiKeyNotFoundError(input.apiKeyId);
+    }
+
+    if (record.revokedAt !== undefined) {
+      return record;
+    }
+
+    await this.revoke(input.apiKeyId, input.revokedAt);
+    const updated = await this.findByWorkspaceAndId(
+      input.workspaceId,
+      input.apiKeyId,
+    );
+    if (updated === null) {
+      throw new ApiKeyNotFoundError(input.apiKeyId);
+    }
+
+    return updated;
   }
 
   async countAll(): Promise<number> {
