@@ -4,12 +4,15 @@ import {
   DuplicateApiKeyIdError,
   type ApiKey,
   type ApiKeyCreateRecord,
+  type ApiKeyCreateWithAuditInput,
   type ApiKeyPersistedRecord,
   type ApiKeyRepository,
+  type ApiKeyRevokeWithAuditInput,
 } from "@osva/domain";
 import { and, count, eq } from "drizzle-orm";
 
 import type { Database } from "../database.js";
+import { securityAuditEventToRow } from "../mappers/identity-mapper.js";
 import { apiKeyCreateToRow, apiKeyFromRow } from "../mappers/api-key-mapper.js";
 import {
   mapDatabaseError,
@@ -18,6 +21,7 @@ import {
   withMappedDatabaseErrors,
 } from "../postgres-errors.js";
 import { apiKeys } from "../schema/api-keys.js";
+import { securityAuditEvents } from "../schema/security-audit-events.js";
 
 export class PostgresApiKeyRepository implements ApiKeyRepository {
   constructor(private readonly database: Database) {}
@@ -30,6 +34,24 @@ export class PostgresApiKeyRepository implements ApiKeyRepository {
     } catch (error) {
       if (postgresErrorCode(error) === POSTGRES_UNIQUE_VIOLATION) {
         throw new DuplicateApiKeyIdError(record.apiKey.id);
+      }
+
+      throw mapDatabaseError(error);
+    }
+  }
+
+  async createWithAudit(input: ApiKeyCreateWithAuditInput): Promise<void> {
+    const row = apiKeyCreateToRow(input.record);
+    const auditRow = securityAuditEventToRow(input.auditEvent);
+
+    try {
+      await this.database.db.transaction(async (tx) => {
+        await tx.insert(apiKeys).values(row);
+        await tx.insert(securityAuditEvents).values(auditRow);
+      });
+    } catch (error) {
+      if (postgresErrorCode(error) === POSTGRES_UNIQUE_VIOLATION) {
+        throw new DuplicateApiKeyIdError(input.record.apiKey.id);
       }
 
       throw mapDatabaseError(error);
@@ -86,6 +108,45 @@ export class PostgresApiKeyRepository implements ApiKeyRepository {
         .set({ revokedAt })
         .where(eq(apiKeys.id, id)),
     );
+  }
+
+  async revokeWithAudit(input: ApiKeyRevokeWithAuditInput): Promise<ApiKey> {
+    const auditRow = securityAuditEventToRow(input.auditEvent);
+
+    return await this.database.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(apiKeys)
+        .where(
+          and(
+            eq(apiKeys.id, input.apiKeyId),
+            eq(apiKeys.workspaceId, input.workspaceId),
+          ),
+        )
+        .limit(1);
+
+      if (row === undefined) {
+        throw new ApiKeyNotFoundError(input.apiKeyId);
+      }
+
+      const current = apiKeyFromRow(row).apiKey;
+      if (current.revokedAt !== undefined) {
+        return current;
+      }
+
+      const [updated] = await tx
+        .update(apiKeys)
+        .set({ revokedAt: input.revokedAt })
+        .where(eq(apiKeys.id, input.apiKeyId))
+        .returning();
+
+      if (updated === undefined) {
+        throw new ApiKeyNotFoundError(input.apiKeyId);
+      }
+
+      await tx.insert(securityAuditEvents).values(auditRow);
+      return apiKeyFromRow(updated).apiKey;
+    });
   }
 
   async countAll(): Promise<number> {

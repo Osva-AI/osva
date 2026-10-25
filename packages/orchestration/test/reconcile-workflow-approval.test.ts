@@ -18,9 +18,11 @@ import {
   MemoryWorkflowWaitRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
+import { APPROVAL_OPERATION_MISMATCH_ERROR_CODE } from "@osva-ai/contracts";
 import {
   APPROVAL_REJECTED_ERROR_CODE,
   LifecycleConflictError,
+  WorkflowNodeRun,
   createWorkflowApplication,
 } from "@osva/domain";
 import { describe, expect, it } from "vitest";
@@ -401,6 +403,71 @@ describe("approval and multi-agent workflow orchestration", () => {
         )
       ).workflowRun.status,
     ).toBe("FAILED");
+  });
+
+  it("fails resume when approved operation payload no longer matches binding", async () => {
+    const harness = await createHarness();
+    const agents = await seedAgents(harness);
+    const version = await createVersion(
+      harness,
+      sequentialApprovalDefinition(
+        agents.research,
+        agents.analysis,
+        agents.publish,
+      ),
+    );
+    const workflowRun = await harness.app.createWorkflowRun.execute(
+      orchScope(),
+      {
+        workspaceId,
+        workflowVersionId: version.id,
+        input: { campaign: "launch" },
+      },
+    );
+    await waitUntilWaiting(harness, workflowRun.id);
+    const waiting = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
+    const reviewNode = byNodeKey(waiting.nodeRuns).review!;
+    expect(waiting.approvalRequests[0]?.operationDigest).toBeTruthy();
+
+    await harness.app.decideApprovalRequest.execute(orchScope(), {
+      workspaceId,
+      approvalRequestId: waiting.approvalRequests[0]!.id,
+      decision: "APPROVED",
+    });
+
+    await harness.workflowRuns.saveWorkflowNodeRun(
+      WorkflowNodeRun.rehydrate({
+        id: reviewNode.id,
+        workspaceId: reviewNode.workspaceId,
+        workflowRunId: reviewNode.workflowRunId,
+        workflowNodeKey: reviewNode.workflowNodeKey,
+        sequence: reviewNode.sequence,
+        status: reviewNode.status,
+        input: { campaign: "tampered" },
+        output: reviewNode.output,
+        childRunId: reviewNode.childRunId,
+        selectedTargetKey: reviewNode.selectedTargetKey,
+        error: reviewNode.error,
+        startedAt: reviewNode.startedAt,
+        completedAt: reviewNode.completedAt,
+        createdAt: reviewNode.createdAt,
+        updatedAt: LATER,
+      }),
+    );
+
+    await runUntilTerminal(harness, workflowRun.id);
+    const failed = await harness.app.getWorkflowRun.execute(
+      orchScope(),
+      workflowRun.id,
+    );
+    expect(failed.workflowRun.status).toBe("FAILED");
+    expect(
+      failed.nodeRuns.find((node) => node.workflowNodeKey === "review")?.error
+        ?.code,
+    ).toBe(APPROVAL_OPERATION_MISMATCH_ERROR_CODE);
   });
 
   it("materializes one ApprovalRequest under concurrent reconcilers", async () => {

@@ -21,3 +21,8 @@ export type ApprovalDecision = (typeof APPROVAL_DECISIONS)[number];
 export const APPROVAL_DECISION_COMMENT_MAX_LENGTH = 4000;
 
 export const APPROVAL_REJECTED_ERROR_CODE = "APPROVAL_REJECTED";
+
+export {
+  APPROVAL_EXPIRED_ERROR_CODE,
+  APPROVAL_OPERATION_MISMATCH_ERROR_CODE,
+} from "./approval-operation.js";

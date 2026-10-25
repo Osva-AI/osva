@@ -43,7 +43,6 @@ import {
   decodeWorkflowRunListCursor,
   encodeWorkflowRunListCursor,
 } from "./workflow-run-cursor.js";
-
 export async function handleWorkflowRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -573,6 +572,9 @@ function toApprovalRequestFields(request: ApprovalRequest) {
     status: request.status,
     decisionComment: request.decisionComment,
     decidedAt: request.decidedAt?.toISOString(),
+    operationKind: request.operationKind,
+    operationDigest: request.operationDigest,
+    expiresAt: request.expiresAt?.toISOString(),
     createdAt: request.createdAt.toISOString(),
     updatedAt: request.updatedAt.toISOString(),
   };

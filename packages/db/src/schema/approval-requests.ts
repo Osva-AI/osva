@@ -35,6 +35,12 @@ export const approvalRequests = pgTable(
       withTimezone: true,
       mode: "date",
     }).notNull(),
+    operationKind: text("operation_kind"),
+    operationDigest: text("operation_digest"),
+    expiresAt: timestamp("expires_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
   },
   (table) => [
     unique("approval_requests_workspace_id_id_unique").on(

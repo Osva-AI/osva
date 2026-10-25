@@ -9,11 +9,16 @@ import type {
   WorkflowDefinitionNodeV3,
   WorkflowNodeRunId,
 } from "@osva-ai/contracts";
+import { APPROVAL_OPERATION_MISMATCH_ERROR_CODE } from "@osva-ai/contracts";
 import {
   APPROVAL_REJECTED_ERROR_CODE,
+  ApprovalExpiredError,
+  ApprovalOperationMismatchError,
   ApprovalRequest,
   DomainInvariantError,
   LifecycleConflictError,
+  assertApprovalNotExpired,
+  assertWorkflowNodeApprovalBinding,
   WorkflowNodeRun,
   assertWorkflowDefinitionExecutable,
   buildExecutableWorkflowGraph,
@@ -816,6 +821,24 @@ export class ReconcileWorkflowRun {
         }
 
         if (request.status === "APPROVED") {
+          try {
+            assertWorkflowNodeApprovalBinding(request, nodeRun);
+            assertApprovalNotExpired(request, command.now);
+          } catch (error) {
+            if (
+              error instanceof ApprovalOperationMismatchError ||
+              error instanceof ApprovalExpiredError
+            ) {
+              await this.transitionNode(
+                nodeRun,
+                nodeRun.markFailed(command.now, approvalOperationDeniedError()),
+              );
+              return;
+            }
+
+            throw error;
+          }
+
           await this.transitionNode(
             nodeRun,
             nodeRun.markSucceeded(command.now, nodeRun.input),
@@ -909,11 +932,12 @@ export class ReconcileWorkflowRun {
       return;
     }
 
-    const request = ApprovalRequest.create({
+    const request = ApprovalRequest.createForWorkflowNodeProgression({
       id: command.ids.createApprovalRequestId(),
       workspaceId: nodeRun.workspaceId,
       workflowRunId: nodeRun.workflowRunId,
       workflowNodeRunId: nodeRun.id,
+      nodeInput: nodeRun.input as import("@osva-ai/contracts").JsonValue,
       createdAt: command.now,
     });
 
@@ -1073,6 +1097,13 @@ function approvalRejectedError(): WorkflowRunError {
   return {
     code: APPROVAL_REJECTED_ERROR_CODE,
     message: "The approval was rejected.",
+  };
+}
+
+function approvalOperationDeniedError(): WorkflowRunError {
+  return {
+    code: APPROVAL_OPERATION_MISMATCH_ERROR_CODE,
+    message: "The approval does not authorize the current workflow operation.",
   };
 }
 

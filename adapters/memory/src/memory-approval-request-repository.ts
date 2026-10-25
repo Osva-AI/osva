@@ -12,6 +12,7 @@ import {
   assertLegalApprovalRequestTransition,
   type ApprovalRequest,
   type ApprovalRequestRepository,
+  type SecurityAuditEvent,
 } from "@osva/domain";
 
 export class MemoryApprovalRequestRepository implements ApprovalRequestRepository {
@@ -94,6 +95,15 @@ export class MemoryApprovalRequestRepository implements ApprovalRequestRepositor
 
     this.requests.set(next.id, next);
     return next;
+  }
+
+  async saveApprovalRequestTransitionWithAudit(
+    expectedStatus: ApprovalRequestState,
+    next: ApprovalRequest,
+    auditEvent: SecurityAuditEvent,
+  ): Promise<ApprovalRequest> {
+    void auditEvent;
+    return this.saveApprovalRequestTransition(expectedStatus, next);
   }
 }
 

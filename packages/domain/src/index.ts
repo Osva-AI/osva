@@ -47,6 +47,8 @@ export {
 export {
   AgentNotFoundError,
   AgentVersionNotFoundError,
+  ApprovalExpiredError,
+  ApprovalOperationMismatchError,
   ApprovalRequestNotFoundError,
   DomainError,
   DomainInvariantError,
@@ -302,6 +304,20 @@ export {
   type ApprovalRequestCreateProps,
   type ApprovalRequestRehydrateProps,
 } from "./approval-request.js";
+export {
+  assertApprovalDecisionAuthorizesOperation,
+  assertApprovalNotExpired,
+  assertToolInvocationMatchesApprovalBinding,
+  assertWorkflowNodeApprovalBinding,
+  buildToolInvocationBinding,
+  buildWorkflowNodeProgressionBinding,
+  digestApprovalOperationBinding,
+  recomputeWorkflowNodeProgressionDigest,
+} from "./approval-operation-binding.js";
+export {
+  canonicalJsonStringify,
+  digestCanonicalJsonValue,
+} from "./json-equality.js";
 export {
   assertDagWorkflowDefinition,
   assertSequentialWorkflowDefinition,
@@ -966,8 +982,10 @@ export {
 } from "./control-plane-resource-kinds.js";
 export type {
   ApiKeyCreateRecord,
+  ApiKeyCreateWithAuditInput,
   ApiKeyPersistedRecord,
   ApiKeyRepository,
+  ApiKeyRevokeWithAuditInput,
 } from "./ports/api-key-repository.js";
 export {
   classifyRestResourceAccess,
@@ -987,6 +1005,12 @@ export { User } from "./user.js";
 export { OrganizationMembership } from "./organization-membership.js";
 export { WorkspaceMembership } from "./workspace-membership.js";
 export { SecurityAuditEvent } from "./security-audit-event.js";
+export { appendSecurityAuditEvent } from "./append-security-audit-event.js";
+export {
+  buildApiKeyCreatedAuditEvent,
+  buildApiKeyRevokedAuditEvent,
+  buildApprovalRequestDecidedAuditEvent,
+} from "./control-plane-audit-events.js";
 export {
   IdentityApplication,
   type AddWorkspaceMembershipCommand,

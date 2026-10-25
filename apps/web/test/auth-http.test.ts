@@ -11,8 +11,10 @@ import {
   Workspace,
   createApiKeyApplication,
   type ApiKeyCreateRecord,
+  type ApiKeyCreateWithAuditInput,
   type ApiKeyPersistedRecord,
   type ApiKeyRepository,
+  type ApiKeyRevokeWithAuditInput,
   type ApiKey,
   type WorkspaceRepository,
 } from "@osva/domain";
@@ -33,6 +35,10 @@ class MemoryApiKeyRepository implements ApiKeyRepository {
       apiKey: record.apiKey,
       secretDigest: Buffer.from(record.secretDigest),
     });
+  }
+
+  async createWithAudit(input: ApiKeyCreateWithAuditInput): Promise<void> {
+    await this.create(input.record);
   }
 
   async findById(id: ApiKeyId): Promise<ApiKeyPersistedRecord | null> {
@@ -68,6 +74,26 @@ class MemoryApiKeyRepository implements ApiKeyRepository {
       ...record,
       apiKey: record.apiKey.revoke(revokedAt),
     });
+  }
+
+  async revokeWithAudit(input: ApiKeyRevokeWithAuditInput): Promise<ApiKey> {
+    const record = await this.findByWorkspaceAndId(
+      input.workspaceId,
+      input.apiKeyId,
+    );
+    if (record === null) {
+      throw new Error("not found");
+    }
+
+    if (record.revokedAt !== undefined) {
+      return record;
+    }
+
+    await this.revoke(input.apiKeyId, input.revokedAt);
+    return (await this.findByWorkspaceAndId(
+      input.workspaceId,
+      input.apiKeyId,
+    ))!;
   }
 
   async countAll(): Promise<number> {

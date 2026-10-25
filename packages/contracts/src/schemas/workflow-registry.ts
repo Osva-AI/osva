@@ -117,6 +117,9 @@ export const approvalRequestResourceSchema = z.strictObject({
     .max(APPROVAL_DECISION_COMMENT_MAX_LENGTH)
     .optional(),
   decidedAt: utcIso8601TimestampSchema.optional(),
+  operationKind: z.string().min(1).optional(),
+  operationDigest: z.string().min(1).optional(),
+  expiresAt: utcIso8601TimestampSchema.optional(),
   createdAt: utcIso8601TimestampSchema,
   updatedAt: utcIso8601TimestampSchema,
 });

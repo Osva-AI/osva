@@ -34,6 +34,8 @@ import {
   RunStepNotFoundError,
   ScheduleNotFoundError,
   WorkspaceNotFoundError,
+  ApprovalExpiredError,
+  ApprovalOperationMismatchError,
   ApprovalRequestNotFoundError,
   WorkflowNotFoundError,
   WorkflowNodeRunNotFoundError,
@@ -74,7 +76,11 @@ import {
 } from "./json.js";
 import { resolveRequestId } from "./security-request-context.js";
 import { sendV1Error } from "./v1-api-error.js";
-import { PUBLIC_API_ERROR_CODES } from "@osva-ai/contracts";
+import {
+  APPROVAL_EXPIRED_ERROR_CODE,
+  APPROVAL_OPERATION_MISMATCH_ERROR_CODE,
+  PUBLIC_API_ERROR_CODES,
+} from "@osva-ai/contracts";
 import { emitSecurityEvent, SECURITY_EVENT_NAMES } from "@osva/observability";
 
 export function sendHttpError(response: ServerResponse, error: unknown): void {
@@ -265,6 +271,22 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
       outcome: "DENIED",
       reasonCode: "secret_resolution_failed",
     });
+  }
+
+  if (error instanceof ApprovalExpiredError) {
+    sendJson(response, 409, {
+      status: "conflict",
+      code: APPROVAL_EXPIRED_ERROR_CODE,
+    });
+    return;
+  }
+
+  if (error instanceof ApprovalOperationMismatchError) {
+    sendJson(response, 409, {
+      status: "conflict",
+      code: APPROVAL_OPERATION_MISMATCH_ERROR_CODE,
+    });
+    return;
   }
 
   if (

@@ -770,6 +770,8 @@ export type { JsonPointerResolution } from "./json-pointer.js";
 export {
   APPROVAL_DECISIONS,
   APPROVAL_DECISION_COMMENT_MAX_LENGTH,
+  APPROVAL_EXPIRED_ERROR_CODE,
+  APPROVAL_OPERATION_MISMATCH_ERROR_CODE,
   APPROVAL_REJECTED_ERROR_CODE,
   APPROVAL_REQUEST_STATES,
   TERMINAL_APPROVAL_REQUEST_STATES,
@@ -779,6 +781,19 @@ export type {
   ApprovalRequestState,
   TerminalApprovalRequestState,
 } from "./approval.js";
+export {
+  APPROVAL_OPERATION_BINDING_SCHEMA_VERSION,
+  APPROVAL_OPERATION_DIGEST_PREFIX,
+  APPROVAL_OPERATION_KINDS,
+} from "./approval-operation.js";
+export type {
+  ApprovalOperationBinding,
+  ApprovalOperationKind,
+  ToolInvocationApprovalBindingContext,
+  ToolInvocationApprovalOperation,
+  WorkflowNodeApprovalBindingContext,
+  WorkflowNodeProgressionApprovalOperation,
+} from "./approval-operation.js";
 
 export {
   TERMINAL_WORKFLOW_NODE_RUN_STATES,

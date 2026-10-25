@@ -57,6 +57,12 @@ export const SECURITY_AUDIT_EVENT_TYPES = {
   USER_PASSWORD_RESET_REQUESTED: "user.password_reset_requested",
   USER_PASSWORD_RESET_COMPLETED: "user.password_reset_completed",
   USER_SESSION_REVOKED: "user.session_revoked",
+  API_KEY_CREATED: "api_key.created",
+  API_KEY_REVOKED: "api_key.revoked",
+  APPROVAL_REQUEST_DECIDED: "approval_request.decided",
+  AUTHORIZATION_DENIED: "authorization.denied",
+  TOOL_INVOCATION_DENIED: "tool.invocation_denied",
+  CAPABILITY_AUTHORIZATION_FAILED: "capability.authorization_failed",
   IDENTITY_BOOTSTRAP_COMPLETED: "identity.bootstrap_completed",
   IDENTITY_RECOVERY_COMPLETED: "identity.recovery_completed",
 } as const;

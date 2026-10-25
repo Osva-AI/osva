@@ -7,6 +7,7 @@ import type {
 } from "@osva-ai/contracts";
 
 import type { ApprovalRequest } from "../approval-request.js";
+import type { SecurityAuditEvent } from "../security-audit-event.js";
 
 export interface ApprovalRequestRepository {
   saveApprovalRequest(request: ApprovalRequest): Promise<void>;
@@ -26,5 +27,10 @@ export interface ApprovalRequestRepository {
   saveApprovalRequestTransition(
     expectedStatus: ApprovalRequestState,
     next: ApprovalRequest,
+  ): Promise<ApprovalRequest>;
+  saveApprovalRequestTransitionWithAudit(
+    expectedStatus: ApprovalRequestState,
+    next: ApprovalRequest,
+    auditEvent: SecurityAuditEvent,
   ): Promise<ApprovalRequest>;
 }

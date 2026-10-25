@@ -588,6 +588,28 @@ export class InvalidApprovalRequestTransitionError extends DomainError {
   }
 }
 
+export class ApprovalOperationMismatchError extends DomainError {
+  readonly approvalRequestId: ApprovalRequestId | undefined;
+
+  constructor(approvalRequestId: ApprovalRequestId | undefined) {
+    super(
+      approvalRequestId === undefined
+        ? "Approval does not authorize the requested operation."
+        : `ApprovalRequest ${approvalRequestId} does not authorize the requested operation.`,
+    );
+    this.approvalRequestId = approvalRequestId;
+  }
+}
+
+export class ApprovalExpiredError extends DomainError {
+  readonly approvalRequestId: ApprovalRequestId;
+
+  constructor(approvalRequestId: ApprovalRequestId) {
+    super(`ApprovalRequest ${approvalRequestId} has expired.`);
+    this.approvalRequestId = approvalRequestId;
+  }
+}
+
 export class InvalidAgentManifestError extends DomainInvariantError {}
 
 export class InvalidWorkflowDefinitionError extends DomainInvariantError {}
