@@ -30,6 +30,7 @@ export {
   runtimeMemoryGetRequestSchema,
   runtimeMemoryGetResponseSchema,
   runtimeMemoryGetSuccessSchema,
+  RUNTIME_MEMORY_LIST_MAX_ITEMS,
   runtimeMemoryListFailureSchema,
   runtimeMemoryListRequestSchema,
   runtimeMemoryListResponseSchema,

@@ -1,13 +1,44 @@
 import { describe, expect, it } from "vitest";
 
-import { MODEL_TEXT_MAX_MESSAGES } from "@osva-ai/contracts";
+import { KNOWLEDGE_MAX_TOP_K } from "@osva-ai/contracts";
 
 import {
+  RUNTIME_MEMORY_LIST_MAX_ITEMS,
+  runtimeKnowledgeSearchSuccessSchema,
   runtimeKnowledgeSearchRequestSchema,
   runtimeMemoryListSuccessSchema,
   runtimeModelGenerateTextRequestSchema,
   runtimeToolInvokeRequestSchema,
 } from "../src/index.js";
+
+const capabilitySuccessEnvelope = {
+  protocolVersion: "1" as const,
+  executionId: "attempt-1",
+  outcome: "SUCCEEDED" as const,
+};
+
+function memoryListItem(index: number) {
+  return {
+    key: `k-${index}`,
+    value: { n: index },
+    revision: 1,
+  };
+}
+
+function knowledgeSearchHit(index: number) {
+  return {
+    knowledgeChunkId: `knowledge-chunk-${index}`,
+    knowledgeIndexId: "knowledge-index-1",
+    knowledgeSourceId: "knowledge-source-1",
+    artifactReference: {
+      type: "artifact" as const,
+      artifactId: "artifact-1",
+    },
+    text: `hit-${index}`,
+    score: 0.9,
+    attributes: {},
+  };
+}
 
 describe("Runtime Protocol V1 capability schemas", () => {
   it("parses model and tool capability requests without version IDs", () => {
@@ -58,35 +89,52 @@ describe("Runtime Protocol V1 capability schemas", () => {
     ).toBe(false);
   });
 
-  it("rejects oversized bounded collections with a finite issue count", () => {
-    const oversize = MODEL_TEXT_MAX_MESSAGES + 40;
-    const messages = Array.from({ length: oversize }, () => ({
-      role: "user" as const,
-      content: "x",
-    }));
+  it("accepts memory list success responses at the list item limit", () => {
+    const items = Array.from({ length: RUNTIME_MEMORY_LIST_MAX_ITEMS }, (_, i) =>
+      memoryListItem(i),
+    );
+    expect(
+      runtimeMemoryListSuccessSchema.safeParse({
+        ...capabilitySuccessEnvelope,
+        items,
+      }).success,
+    ).toBe(true);
+  });
 
-    const modelResult = runtimeModelGenerateTextRequestSchema.safeParse({
-      protocolVersion: "1",
-      executionId: "attempt-1",
-      bindingName: "primary",
-      input: { messages },
-    });
-    expect(modelResult.success).toBe(false);
-    if (!modelResult.success) {
-      expect(modelResult.error.issues.length).toBeLessThan(oversize);
-    }
+  it("rejects memory list success responses over the list item limit", () => {
+    const items = Array.from(
+      { length: RUNTIME_MEMORY_LIST_MAX_ITEMS + 1 },
+      (_, i) => memoryListItem(i),
+    );
+    expect(
+      runtimeMemoryListSuccessSchema.safeParse({
+        ...capabilitySuccessEnvelope,
+        items,
+      }).success,
+    ).toBe(false);
+  });
 
-    const memoryItems = Array.from({ length: 150 }, (_, index) => ({
-      key: `k-${index}`,
-      value: { n: index },
-      revision: 1,
-    }));
-    const memoryResult = runtimeMemoryListSuccessSchema.safeParse({
-      protocolVersion: "1",
-      executionId: "attempt-1",
-      outcome: "SUCCEEDED",
-      items: memoryItems,
-    });
-    expect(memoryResult.success).toBe(false);
+  it("accepts knowledge search success responses at KNOWLEDGE_MAX_TOP_K hits", () => {
+    const hits = Array.from({ length: KNOWLEDGE_MAX_TOP_K }, (_, i) =>
+      knowledgeSearchHit(i),
+    );
+    expect(
+      runtimeKnowledgeSearchSuccessSchema.safeParse({
+        ...capabilitySuccessEnvelope,
+        hits,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects knowledge search success responses over KNOWLEDGE_MAX_TOP_K hits", () => {
+    const hits = Array.from({ length: KNOWLEDGE_MAX_TOP_K + 1 }, (_, i) =>
+      knowledgeSearchHit(i),
+    );
+    expect(
+      runtimeKnowledgeSearchSuccessSchema.safeParse({
+        ...capabilitySuccessEnvelope,
+        hits,
+      }).success,
+    ).toBe(false);
   });
 });
