@@ -184,12 +184,7 @@ export const runtimeMemoryListRequestSchema = z.strictObject({
   executionId: runtimeExecutionIdSchema,
   bindingName: memoryBindingNameSchema,
   prefix: z.string().optional(),
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(RUNTIME_MEMORY_LIST_MAX_ITEMS)
-    .optional(),
+  limit: z.number().int().min(1).max(RUNTIME_MEMORY_LIST_MAX_ITEMS).optional(),
   cursor: z.string().min(1).optional(),
 });
 

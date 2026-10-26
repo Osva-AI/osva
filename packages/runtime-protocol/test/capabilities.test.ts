@@ -90,8 +90,9 @@ describe("Runtime Protocol V1 capability schemas", () => {
   });
 
   it("accepts memory list success responses at the list item limit", () => {
-    const items = Array.from({ length: RUNTIME_MEMORY_LIST_MAX_ITEMS }, (_, i) =>
-      memoryListItem(i),
+    const items = Array.from(
+      { length: RUNTIME_MEMORY_LIST_MAX_ITEMS },
+      (_, i) => memoryListItem(i),
     );
     expect(
       runtimeMemoryListSuccessSchema.safeParse({
