@@ -48,6 +48,15 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | @aws/lambda-invoke-store | 0.0.1 | Apache-2.0 |
 | @babel/runtime | 7.29.7 | MIT |
 | @balena/dockerignore | 1.0.2 | Apache-2.0 |
+| @better-auth/core | 1.7.10 | MIT |
+| @better-auth/drizzle-adapter | 1.7.10 | MIT |
+| @better-auth/kysely-adapter | 1.7.10 | MIT |
+| @better-auth/memory-adapter | 1.7.10 | MIT |
+| @better-auth/mongo-adapter | 1.7.10 | MIT |
+| @better-auth/prisma-adapter | 1.7.10 | MIT |
+| @better-auth/telemetry | 1.7.10 | MIT |
+| @better-auth/utils | 0.5.0 | MIT |
+| @better-fetch/fetch | 1.3.2 | MIT |
 | @grpc/grpc-js | 1.14.4 | Apache-2.0 |
 | @grpc/proto-loader | 0.7.15 | Apache-2.0 |
 | @hono/node-server | 1.19.17 | MIT |
@@ -57,6 +66,8 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | @modelcontextprotocol/core | 2.0.0 | MIT |
 | @modelcontextprotocol/node | 2.0.0 | MIT |
 | @modelcontextprotocol/server | 2.0.0 | MIT |
+| @noble/ciphers | 2.4.0 | MIT |
+| @noble/hashes | 2.4.0 | MIT |
 | @opentelemetry/api | 1.9.0 | Apache-2.0 |
 | @opentelemetry/api-logs | 0.200.0 | Apache-2.0 |
 | @opentelemetry/context-async-hooks | 2.0.0 | Apache-2.0 |
@@ -135,6 +146,7 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | @smithy/util-stream | 4.8.2 | Apache-2.0 |
 | @smithy/util-utf8 | 2.3.0 | Apache-2.0 |
 | @smithy/util-waiter | 4.6.2 | Apache-2.0 |
+| @standard-schema/spec | 1.1.0 | MIT |
 | @tanstack/query-core | 5.104.1 | MIT |
 | @tanstack/react-query | 5.104.1 | MIT |
 | @types/d3-color | 3.1.3 | MIT |
@@ -150,12 +162,15 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | @xyflow/system | 0.0.83 | MIT |
 | acorn | 8.18.0 | MIT |
 | acorn-import-attributes | 1.9.5 | MIT |
+| ajv | 8.20.0 | MIT |
 | ansi-regex | 5.0.1 | MIT |
 | ansi-styles | 4.3.0 | MIT |
 | anynum | 1.0.1 | MIT |
 | asn1 | 0.2.6 | MIT |
 | base64-js | 1.5.1 | MIT |
 | bcrypt-pbkdf | 1.0.2 | BSD-3-Clause |
+| better-auth | 1.7.10 | MIT |
+| better-call | 1.4.2 | MIT |
 | bl | 4.1.0 | MIT |
 | bowser | 2.14.1 | MIT |
 | buffer | 5.6.0 | MIT |
@@ -181,6 +196,7 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | d3-transition | 3.0.1 | ISC |
 | d3-zoom | 3.0.0 | ISC |
 | debug | 4.4.3 | MIT |
+| defu | 6.1.7 | MIT |
 | denque | 2.1.0 | Apache-2.0 |
 | docker-modem | 5.0.7 | Apache-2.0 |
 | dockerode | 4.0.12 | Apache-2.0 |
@@ -192,6 +208,8 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | events | 3.3.0 | MIT |
 | eventsource | 3.0.7 | MIT |
 | eventsource-parser | 3.1.1 | MIT |
+| fast-deep-equal | 3.1.3 | MIT |
+| fast-uri | 3.1.8 | BSD-3-Clause |
 | fast-xml-parser | 5.2.5 | MIT |
 | fs-constants | 1.0.0 | MIT |
 | function-bind | 1.1.2 | MIT |
@@ -207,6 +225,8 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | isexe | 2.0.0 | ISC |
 | jose | 6.2.12 | MIT |
 | json-schema-to-ts | 3.1.1 | MIT |
+| json-schema-traverse | 1.0.0 | MIT |
+| kysely | 0.29.6 | MIT |
 | lodash.camelcase | 4.3.0 | MIT |
 | lodash.defaults | 4.2.0 | MIT |
 | lodash.isarguments | 3.1.0 | MIT |
@@ -216,6 +236,7 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | module-details-from-path | 1.0.4 | MIT |
 | ms | 2.1.3 | MIT |
 | msgpackr | 1.11.5 | MIT |
+| nanostores | 1.5.5 | MIT |
 | node-abort-controller | 3.1.1 | MIT |
 | once | 1.4.0 | ISC |
 | openai | 7.15.0 | Apache-2.0 |
@@ -234,8 +255,10 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | redis-errors | 1.2.0 | MIT |
 | redis-parser | 3.0.0 | MIT |
 | require-directory | 2.1.1 | MIT |
+| require-from-string | 2.0.2 | MIT |
 | require-in-the-middle | 7.5.2 | MIT |
 | resolve | 1.22.12 | MIT |
+| rou3 | 0.9.2 | MIT |
 | safe-buffer | 5.2.1 | MIT |
 | safer-buffer | 2.1.2 | MIT |
 | scheduler | 0.28.0 | MIT |
@@ -269,5 +292,5 @@ Re-generate with `node scripts/release/generate-license-inventory.mjs`.
 | y18n | 5.0.8 | ISC |
 | yargs | 17.7.3 | MIT |
 | yargs-parser | 21.1.1 | ISC |
-| zod | 4.6.5 | MIT |
+| zod | 4.6.7 | MIT |
 | zustand | 4.5.7 | MIT |

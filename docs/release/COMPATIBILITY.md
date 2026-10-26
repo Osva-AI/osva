@@ -1,8 +1,8 @@
 # OSVA Community compatibility and release policy
 
-Target release version: **`1.1.0-rc.3`** (release candidate **prepared in repository**; **unpublished** until maintainer tag and registry publish).
+Target release version: **`1.1.0-rc.4`** (security release candidate **prepared in repository**; **unpublished** until maintainer tag and registry publish).
 
-Last **published and registry-verified** RC line: **`1.1.0-rc.2`** (see [`M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md)). **`@osva-ai/contracts@1.1.0-rc.2`** on npm does **not** include M12.4.3 artifact blob storage root exports; external adapter packages (for example osva-adapters) must use **`1.1.0-rc.3`** (when published) or build contracts from this repository.
+Last **published and registry-verified** RC line: **`1.1.0-rc.2`** (see [`M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md)). External adapter packages (for example osva-adapters) should pin **`1.1.0-rc.4`** (when published) for M12.4.3 artifact blob exports **and** Zod **4.6.7** / bounded collection validation from PR **#56**, or build from this repository.
 
 Published **`1.1.0-rc.1`** npm/PyPI/GHCR artifacts remain on registries for existing pins. **`@osva-ai/cli@1.1.0-rc.1`** is the pre-M10.2 SDK wrapper only (no `init`, `validate`, `deploy`, `run`, `status`, `doctor`, or bundled templates). Use **`1.1.0-rc.2`** or newer from registries (or build from this repository for unreleased commits) for the agent developer CLI.
 
@@ -27,18 +27,18 @@ Versioned documents under `docs/contracts/` define manifests, runtime protocol m
 | Registry state | Artifact blob exports in npm tarball |
 |----------------|--------------------------------------|
 | **`1.1.0-rc.2`** (published) | **Missing** — tarball predates M12.4.3 merge |
-| **`1.1.0-rc.3`** (prepared) | **Present** — verified by packed export regression |
+| **`1.1.0-rc.4`** (prepared) | **Present** — verified by packed export regression |
 
 ## Public SDKs and CLI
 
 | Artifact | Package | Repository `VERSION` | Last published npm | PyPI / notes |
 |----------|---------|----------------------|--------------------|--------------|
-| Contracts | `@osva-ai/contracts` | 1.1.0-rc.3 | 1.1.0-rc.2 | — |
-| Runtime protocol | `@osva-ai/runtime-protocol` | 1.1.0-rc.3 | 1.1.0-rc.2 | — |
-| TypeScript SDK | `@osva-ai/sdk` | 1.1.0-rc.3 | 1.1.0-rc.2 | — |
-| CLI | `@osva-ai/cli` | 1.1.0-rc.3 | 1.1.0-rc.2 | Includes M10.2 agent workflow (not in RC1 npm CLI) |
-| Connector SDK | `@osva-ai/connector-sdk` | 1.1.0-rc.3 | 1.1.0-rc.2 | — |
-| Python SDK | `osva-sdk` | 1.1.0-rc.3 | 1.1.0-rc.2 | **`pip install osva-sdk==1.1.0rc2`** until RC.3 publish; then **`1.1.0rc3`** |
+| Contracts | `@osva-ai/contracts` | 1.1.0-rc.4 | 1.1.0-rc.2 | Zod **4.6.7** in packed runtime deps |
+| Runtime protocol | `@osva-ai/runtime-protocol` | 1.1.0-rc.4 | 1.1.0-rc.2 | Capability collection bounds (V1) |
+| TypeScript SDK | `@osva-ai/sdk` | 1.1.0-rc.4 | 1.1.0-rc.2 | — |
+| CLI | `@osva-ai/cli` | 1.1.0-rc.4 | 1.1.0-rc.2 | Includes M10.2 agent workflow (not in RC1 npm CLI) |
+| Connector SDK | `@osva-ai/connector-sdk` | 1.1.0-rc.4 | 1.1.0-rc.2 | — |
+| Python SDK | `osva-sdk` | 1.1.0-rc.4 | 1.1.0-rc.2 | **`pip install osva-sdk==1.1.0rc2`** until RC.4 PyPI publish; npm RC.4 is independent |
 
 Semver applies to published packages. **Minor** releases (1.0 → 1.1) may include additive `/v1` behavior, new optional fields, and documented adapter-interface changes below.
 
@@ -67,7 +67,7 @@ This is a **TypeScript source-breaking change for implementers**, not an HTTP `/
 
 Root **`VERSION`**, all five public npm packages (`@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`), Python **`osva-sdk`**, and Helm **`Chart.yaml`** `version` / `appVersion` **must match**. `pnpm release:version:check` enforces this. Publishing a contracts-only npm version without bumping the aligned set **fails release readiness** even when platform code is unchanged.
 
-RC.3 is an **npm-focused** correction for external contract consumers; OCI, PyPI, and GHCR publication remain separate maintainer decisions and are **not** implied by this version bump alone.
+RC.4 is a **security-focused npm** release (Zod remediation + validation bounds). OCI, PyPI, and GHCR publication remain separate maintainer decisions and are **not** implied by this version bump alone.
 
 ## Database migrations
 
