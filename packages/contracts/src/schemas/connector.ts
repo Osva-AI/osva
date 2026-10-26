@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { CONNECTOR_KINDS, CONNECTOR_TRANSPORTS } from "../connector.js";
+import {
+  CONNECTOR_KINDS,
+  CONNECTOR_STDIO_MAX_ARGS,
+  CONNECTOR_TRANSPORTS,
+} from "../connector.js";
 import { validateStdioTransportEnvironment } from "../stdio-transport.js";
 import { secretReferenceSchema } from "./secret-reference.js";
 
@@ -15,7 +19,7 @@ export const streamableHttpTransportConfigSchema = z.strictObject({
 export const stdioTransportConfigSchema = z
   .strictObject({
     command: z.string().min(1),
-    args: z.array(z.string()),
+    args: z.array(z.string()).max(CONNECTOR_STDIO_MAX_ARGS),
     cwd: z.string().min(1).optional(),
     environment: z.record(z.string(), z.string()).optional(),
     secretEnvironment: z.record(z.string(), secretReferenceSchema).optional(),

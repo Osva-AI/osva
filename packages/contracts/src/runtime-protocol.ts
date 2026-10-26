@@ -11,6 +11,9 @@ import type {
 import type { MemoryNamespaceBinding } from "./memory-gateway.js";
 import type { ToolGrant } from "./tool.js";
 
+/** Maximum tool grants attached to one execution request envelope. */
+export const EXECUTION_MAX_TOOL_GRANTS = 64;
+
 export interface ExecutionEvaluationContext {
   readonly evaluationRunId: EvaluationRunId;
   readonly evaluationCaseId: EvaluationCaseId;

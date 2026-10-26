@@ -161,7 +161,7 @@ const agentManifestExecutionSchema = z.strictObject({
 
 const agentManifestCapabilitiesSchema = z.strictObject({
   model: z.boolean(),
-  tools: z.array(z.string().min(1)),
+  tools: z.array(z.string().min(1)).max(DECLARATIVE_MAX_ALLOWED_TOOL_BINDINGS),
 });
 
 const agentManifestModelBindingSchema = z.strictObject({

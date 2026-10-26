@@ -6,6 +6,12 @@ export type ConnectorKind = (typeof CONNECTOR_KINDS)[number];
 
 export const CONNECTOR_TRANSPORTS = ["STREAMABLE_HTTP", "STDIO"] as const;
 
+/** Maximum argv entries for MCP stdio connector transport configuration. */
+export const CONNECTOR_STDIO_MAX_ARGS = 256;
+
+/** Maximum tools imported in one MCP connector import request. */
+export const CONNECTOR_MCP_IMPORT_MAX_TOOLS = 64;
+
 export type ConnectorTransport = (typeof CONNECTOR_TRANSPORTS)[number];
 
 export interface StreamableHttpTransportConfig {

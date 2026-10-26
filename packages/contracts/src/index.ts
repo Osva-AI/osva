@@ -125,6 +125,8 @@ export type {
 
 export {
   CONNECTOR_KINDS,
+  CONNECTOR_MCP_IMPORT_MAX_TOOLS,
+  CONNECTOR_STDIO_MAX_ARGS,
   CONNECTOR_TRANSPORTS,
   isConnectorKind,
   isConnectorTransport,
@@ -491,7 +493,10 @@ export type {
   RuntimeAdapter,
 } from "./runtime-protocol.js";
 
-export { allowsPersistentMemoryMutation } from "./runtime-protocol.js";
+export {
+  allowsPersistentMemoryMutation,
+  EXECUTION_MAX_TOOL_GRANTS,
+} from "./runtime-protocol.js";
 
 export {
   MEMORY_ACCESS_MODES,
@@ -571,6 +576,8 @@ export {
   MODEL_FINISH_REASONS,
   MODEL_MAX_OUTPUT_TOKENS_MAX,
   MODEL_MAX_OUTPUT_TOKENS_MIN,
+  MODEL_MAX_TOOL_CALLS,
+  MODEL_MAX_TOOL_DEFINITIONS,
   MODEL_PROVIDER_MODEL_ID_MAX_LENGTH,
   MODEL_PROVIDERS,
   MODEL_TEXT_CONTENT_MAX_LENGTH,

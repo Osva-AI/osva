@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { MEMORY_ACCESS_MODES } from "../memory-gateway.js";
+import { EXECUTION_MAX_TOOL_GRANTS } from "../runtime-protocol.js";
+import { KNOWLEDGE_MAX_INDEX_IDS_PER_BINDING } from "../knowledge-runtime.js";
 import {
   agentIdSchema,
   agentVersionIdSchema,
@@ -43,9 +45,12 @@ export const executionRequestSchema = z.strictObject({
   toolVersionBindings: z.record(z.string(), toolVersionIdSchema),
   memoryNamespaceBindings: z.record(z.string(), memoryNamespaceBindingSchema),
   knowledgeIndexBindings: z
-    .record(z.string(), z.array(knowledgeIndexIdSchema))
+    .record(
+      z.string(),
+      z.array(knowledgeIndexIdSchema).max(KNOWLEDGE_MAX_INDEX_IDS_PER_BINDING),
+    )
     .default({}),
-  toolGrants: z.array(toolGrantSchema),
+  toolGrants: z.array(toolGrantSchema).max(EXECUTION_MAX_TOOL_GRANTS),
   timeoutMs: z.int().positive(),
   policyContext: z.record(z.string(), z.unknown()),
   evaluationContext: executionEvaluationContextSchema.optional(),
