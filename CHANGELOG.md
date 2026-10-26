@@ -10,6 +10,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **M11 (documentation closeout):** Human identity, Better Auth password sessions, fixed workspace roles, Console login and membership administration. Migration head **`0026_better_auth_user_image`**. See [`docs/operations/M11_CLOSEOUT_SUMMARY.md`](docs/operations/M11_CLOSEOUT_SUMMARY.md).
 
+## [1.1.0-rc.4] - 2026-10-26
+
+Security-focused release candidate prepared for npm publication. Aligns all public `@osva-ai/*` npm packages to the same version. **Not published** until maintainer tag and registry publish.
+
+### Security
+
+- **Zod ([GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)):** Workspace dependency upgraded to **Zod 4.6.7**. Collection validation in `@osva-ai/contracts` uses bounded array/object/set/map sizes to mitigate denial-of-service via oversized inputs.
+- **Runtime Protocol V1:** Capability response schemas enforce collection size bounds on inbound capability payloads.
+
+### Fixed
+
+- **Console verification:** Vitest worker concurrency and build-order reliability for Console tests (no product behavior change).
+
+### Compatibility
+
+- **osva-adapters / external consumers:** Pin all `@osva-ai/*` packages to **`1.1.0-rc.4`** together. Includes M12.4.3 artifact blob storage root exports from RC.3 plus this security remediation.
+- **Upgrade from RC.3:** Drop-in npm version bump when all aligned packages move together; no HTTP `/v1` break.
+
+### Known limitations
+
+- npm/PyPI **`latest`** dist-tags remain **`1.0.0`** until GA policy changes.
+- OCI, PyPI, and GHCR publication for **`1.1.0-rc.4`** are separate maintainer decisions (RC.4 is **npm-focused** unless explicitly extended).
+
 ## [1.1.0-rc.3] - 2026-10-24
 
 Release candidate prepared for npm publication (A1.3.2). Aligns all public `@osva-ai/*` npm packages to the same version. **Not published** until maintainer tag and registry publish.

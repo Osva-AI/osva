@@ -1,12 +1,11 @@
 {
-  "releaseVersion": "1.1.0-rc.2",
-  "status": "OSS Community release candidate RC2 published and registry-verified",
-  "publicationStatus": "published",
+  "releaseVersion": "1.1.0-rc.4",
+  "status": "OSS Community release candidate prepared (unpublished)",
+  "publicationStatus": "unpublished",
   "sourceProvenance": {
-    "gitCommit": "6bc970f03d364da35aaeb1fe8aaaa3218986b27f",
+    "gitCommit": "e7dbc2349b4c9661f9922fa16a087dd446f37366",
     "versionFile": "VERSION",
-    "note": "releaseCommit is the git tag target for v1.1.0-rc.2. gitCommit is the tree state when this inventory file was generated.",
-    "releaseCommit": "6bc970f03d364da35aaeb1fe8aaaa3218986b27f"
+    "note": "gitCommit identifies the committed release-content state at generation time. The inventory file may be recorded in a subsequent metadata-only commit."
   },
   "priorPublishedRelease": {
     "version": "1.1.0-rc.1",
@@ -14,50 +13,57 @@
     "cliIncludesM10_2AgentWorkflow": false,
     "note": "npm @osva-ai/cli@1.1.0-rc.1 predates init/validate/deploy/run/status/doctor and bundled templates."
   },
-  "pendingReleaseGates": [],
-  "ociImage": "osva:1.1.0-rc.2",
-  "ociImageGhcr": "ghcr.io/osva-ai/osva:1.1.0-rc.2",
+  "pendingReleaseGates": [
+    "release-readiness verify-core on RC commit",
+    "release-readiness packages (npm/Python pack smoke)",
+    "release-readiness oci-compose-helm",
+    "release-readiness kind",
+    "RC.4 pnpm verify:ci:clean clean-room gate (optional maintainer)",
+    "maintainer authorization for tag and registry publish"
+  ],
+  "ociImage": "osva:1.1.0-rc.4",
+  "ociImageGhcr": "ghcr.io/osva-ai/osva:1.1.0-rc.4",
   "helmChart": {
     "path": "deploy/helm/osva",
-    "chartVersion": "1.1.0-rc.2",
-    "appVersion": "1.1.0-rc.2",
-    "packageCommand": "helm package deploy/helm/osva --version 1.1.0-rc.2 --app-version 1.1.0-rc.2"
+    "chartVersion": "1.1.0-rc.4",
+    "appVersion": "1.1.0-rc.4",
+    "packageCommand": "helm package deploy/helm/osva --version 1.1.0-rc.4 --app-version 1.1.0-rc.4"
   },
   "npmPackages": [
     {
       "name": "@osva-ai/contracts",
-      "version": "1.1.0-rc.2",
+      "version": "1.1.0-rc.4",
       "pack": "pnpm --filter @osva-ai/contracts pack"
     },
     {
       "name": "@osva-ai/runtime-protocol",
-      "version": "1.1.0-rc.2",
+      "version": "1.1.0-rc.4",
       "pack": "pnpm --filter @osva-ai/runtime-protocol pack"
     },
     {
       "name": "@osva-ai/sdk",
-      "version": "1.1.0-rc.2",
+      "version": "1.1.0-rc.4",
       "pack": "pnpm --filter @osva-ai/sdk pack"
     },
     {
       "name": "@osva-ai/cli",
-      "version": "1.1.0-rc.2",
+      "version": "1.1.0-rc.4",
       "pack": "pnpm --filter @osva-ai/cli pack"
     },
     {
       "name": "@osva-ai/connector-sdk",
-      "version": "1.1.0-rc.2",
+      "version": "1.1.0-rc.4",
       "pack": "pnpm --filter @osva-ai/connector-sdk pack"
     }
   ],
   "pythonPackage": {
     "name": "osva-sdk",
-    "version": "1.1.0-rc.2",
-    "pep440ArtifactVersion": "1.1.0rc2",
-    "pipInstallExample": "pip install osva-sdk==1.1.0rc2",
+    "version": "1.1.0-rc.4",
+    "pep440ArtifactVersion": "1.1.0rc4",
+    "pipInstallExample": "pip install osva-sdk==1.1.0rc4",
     "path": "sdks/python"
   },
-  "migrationHead": "0023_execution_lease_slice",
+  "migrationHead": "0030_approval_operation_binding_slice",
   "license": "Apache-2.0",
   "thirdPartyLicenses": [
     "docs/release/THIRD_PARTY_LICENSES_NODE.md",
@@ -78,37 +84,5 @@
     "docs/operations/BACKUP_AND_RECOVERY.md",
     "docs/release/COMPATIBILITY.md",
     "docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md"
-  ],
-  "publishedRelease": {
-    "gitTag": "v1.1.0-rc.2",
-    "gitHubReleaseUrl": "https://github.com/Osva-AI/osva/releases/tag/v1.1.0-rc.2",
-    "publishedAt": "2026-10-17T09:45:21Z",
-    "releaseCommit": "6bc970f03d364da35aaeb1fe8aaaa3218986b27f"
-  },
-  "registryArtifacts": {
-    "npmVersion": "1.1.0-rc.2",
-    "npmDistTagRc": "1.1.0-rc.2",
-    "npmDistTagLatest": "1.0.0",
-    "pypiVersion": "1.1.0rc2",
-    "ghcrTag": "ghcr.io/osva-ai/osva:1.1.0-rc.2",
-    "ociIndexDigest": "sha256:02e11050fe359c7c6e02003ae6d213163191da3e05da42e8fb5a450f2309ac8e",
-    "linuxAmd64ManifestDigest": "sha256:302a505636236b970c3746cb728b0059ae58286f8dcbea90ed4b3275a0c1d04f"
-  },
-  "completedReleaseGates": [
-    "GitHub CI on release commit (merged RC2 PR)",
-    "release-readiness workflow on release commit (verify-core, packages, oci-compose-helm, kind)",
-    "Maintainer tag v1.1.0-rc.2 and registry publication (M10.4D)",
-    "M10.4C local RC2 distribution acceptance",
-    "M10.4E published-registry acceptance"
-  ],
-  "releaseGateQualification": {
-    "pnpmVerifyCiCleanLocalRerun": "not_rerun_during_m10_4_closeout",
-    "note": "pnpm verify:ci:clean was not rerun locally during M10.4 closeout. Required CI and release-readiness checks passed on the release commit before merge and publication; published artifacts passed isolated registry acceptance (M10.4E)."
-  },
-  "acceptance": {
-    "m10_4Status": "complete",
-    "m10_4cLocalDistribution": "passed",
-    "m10_4eRegistryAcceptance": "passed",
-    "summaryDocument": "docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md"
-  }
+  ]
 }

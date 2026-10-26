@@ -87,7 +87,7 @@ function buildInventory(version) {
           "release-readiness packages (npm/Python pack smoke)",
           "release-readiness oci-compose-helm",
           "release-readiness kind",
-          "RC.3 pnpm verify:ci:clean clean-room gate",
+          "RC.4 pnpm verify:ci:clean clean-room gate (optional maintainer)",
           "maintainer authorization for tag and registry publish",
         ],
     ociImage: `osva:${version}`,
