@@ -14,6 +14,10 @@ import {
   connectorTransportSchema,
   streamableHttpTransportConfigSchema,
 } from "./connector.js";
+import {
+  CONNECTOR_MCP_IMPORT_MAX_TOOLS,
+  CONNECTOR_STDIO_MAX_ARGS,
+} from "../connector.js";
 import { jsonSchemaRecordSchema } from "./json-schema.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 
@@ -71,7 +75,7 @@ export const publicConnectorAuthConfigSchema = z.union([
 
 export const publicStdioTransportConfigSchema = z.strictObject({
   command: z.string().min(1),
-  args: z.array(z.string()),
+  args: z.array(z.string()).max(CONNECTOR_STDIO_MAX_ARGS),
   cwd: z.string().min(1).optional(),
   environment: z.record(z.string(), z.string()).optional(),
   secretEnvironment: z.record(z.string(), publicSecretBindingSchema).optional(),
@@ -116,7 +120,10 @@ export const importMcpToolRequestSchema = z.strictObject({
 
 export const importMcpToolsRequestSchema = z.strictObject({
   connectorVersionId: connectorVersionIdSchema,
-  tools: z.array(importMcpToolRequestSchema).min(1),
+  tools: z
+    .array(importMcpToolRequestSchema)
+    .min(1)
+    .max(CONNECTOR_MCP_IMPORT_MAX_TOOLS),
 });
 
 export const importedMcpToolResourceSchema = z.strictObject({

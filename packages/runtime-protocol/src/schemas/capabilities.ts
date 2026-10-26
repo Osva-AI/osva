@@ -27,6 +27,9 @@ import {
   runtimeProtocolVersionSchema,
 } from "./execute.js";
 
+/** Matches runtime list `limit` cap and domain `MAX_MEMORY_RECORD_LIST_LIMIT` (100). */
+export const RUNTIME_MEMORY_LIST_MAX_ITEMS = 100;
+
 const modelBindingNameSchema = z.string().regex(MODEL_BINDING_NAME_PATTERN);
 const toolBindingNameSchema = z.string().regex(TOOL_BINDING_NAME_PATTERN);
 const memoryBindingNameSchema = z.string().regex(MEMORY_BINDING_NAME_PATTERN);
@@ -181,7 +184,7 @@ export const runtimeMemoryListRequestSchema = z.strictObject({
   executionId: runtimeExecutionIdSchema,
   bindingName: memoryBindingNameSchema,
   prefix: z.string().optional(),
-  limit: z.number().int().min(1).max(100).optional(),
+  limit: z.number().int().min(1).max(RUNTIME_MEMORY_LIST_MAX_ITEMS).optional(),
   cursor: z.string().min(1).optional(),
 });
 
@@ -189,7 +192,7 @@ export const runtimeMemoryListSuccessSchema = z.strictObject({
   protocolVersion: runtimeProtocolVersionSchema,
   executionId: runtimeExecutionIdSchema,
   outcome: z.literal("SUCCEEDED"),
-  items: z.array(memoryRecordViewSchema),
+  items: z.array(memoryRecordViewSchema).max(RUNTIME_MEMORY_LIST_MAX_ITEMS),
   nextCursor: z.string().min(1).optional(),
 });
 
@@ -218,7 +221,7 @@ export const runtimeKnowledgeSearchSuccessSchema = z.strictObject({
   protocolVersion: runtimeProtocolVersionSchema,
   executionId: runtimeExecutionIdSchema,
   outcome: z.literal("SUCCEEDED"),
-  hits: z.array(knowledgeHitSchema),
+  hits: z.array(knowledgeHitSchema).max(KNOWLEDGE_MAX_TOP_K),
 });
 
 export const runtimeKnowledgeSearchFailureSchema = z.strictObject({

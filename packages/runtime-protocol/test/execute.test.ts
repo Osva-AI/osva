@@ -48,6 +48,23 @@ describe("Runtime Protocol V1 execute schemas", () => {
     ).toBe(false);
   });
 
+  it("does not include capability tokens in validation error output", () => {
+    const secretToken = "super-secret-runtime-token-value";
+    const result = runtimeExecuteRequestSchema.safeParse({
+      ...validRequest,
+      protocolVersion: "2",
+      capabilities: {
+        endpoint: "http://127.0.0.1:9/v1/runtime/capabilities",
+        token: secretToken,
+      },
+    });
+    expect(result.success).toBe(false);
+    if (result.success) {
+      return;
+    }
+    expect(JSON.stringify(result.error.issues)).not.toContain(secretToken);
+  });
+
   it("requires the remote response to echo protocolVersion and executionId", () => {
     const parsed = runtimeExecuteResponseSchema.parse({
       protocolVersion: "1",

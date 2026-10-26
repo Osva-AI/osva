@@ -35,6 +35,10 @@ export const MODEL_BINDING_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 
 export const MODEL_TEXT_CONTENT_MAX_LENGTH = 32_768;
 export const MODEL_TEXT_MAX_MESSAGES = 64;
+/** Upper bound for tool definitions on a single model request or completion. */
+export const MODEL_MAX_TOOL_DEFINITIONS = 32;
+/** Upper bound for tool calls returned in one completion result. */
+export const MODEL_MAX_TOOL_CALLS = 32;
 export const MODEL_MAX_OUTPUT_TOKENS_MIN = 1;
 export const MODEL_MAX_OUTPUT_TOKENS_MAX = 16_384;
 export const MODEL_PROVIDER_MODEL_ID_MAX_LENGTH = 256;

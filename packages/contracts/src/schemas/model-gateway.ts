@@ -6,6 +6,8 @@ import {
   MODEL_FINISH_REASONS,
   MODEL_MAX_OUTPUT_TOKENS_MAX,
   MODEL_MAX_OUTPUT_TOKENS_MIN,
+  MODEL_MAX_TOOL_CALLS,
+  MODEL_MAX_TOOL_DEFINITIONS,
   MODEL_PROVIDERS,
   MODEL_TEXT_CONTENT_MAX_LENGTH,
   MODEL_TEXT_MAX_MESSAGES,
@@ -24,7 +26,10 @@ export const modelRequestSchema = z.strictObject({
   instructions: z.string(),
   input: z.unknown(),
   structuredOutputSchema: jsonSchemaRecordSchema.optional(),
-  toolDefinitions: z.array(modelToolDefinitionSchema).optional(),
+  toolDefinitions: z
+    .array(modelToolDefinitionSchema)
+    .max(MODEL_MAX_TOOL_DEFINITIONS)
+    .optional(),
   timeoutMs: z.int().positive(),
   metadata: z.record(z.string(), z.unknown()),
 });
@@ -89,7 +94,10 @@ export const generateCompletionInputSchema = z.strictObject({
     .min(MODEL_MAX_OUTPUT_TOKENS_MIN)
     .max(MODEL_MAX_OUTPUT_TOKENS_MAX)
     .optional(),
-  toolDefinitions: z.array(modelToolDefinitionSchema).max(32).optional(),
+  toolDefinitions: z
+    .array(modelToolDefinitionSchema)
+    .max(MODEL_MAX_TOOL_DEFINITIONS)
+    .optional(),
   jsonSchema: jsonSchemaRecordSchema.optional(),
 });
 
@@ -101,7 +109,7 @@ export const modelToolCallSchema = z.strictObject({
 
 export const generateCompletionResultSchema = z.strictObject({
   text: z.string().min(1).optional(),
-  toolCalls: z.array(modelToolCallSchema),
+  toolCalls: z.array(modelToolCallSchema).max(MODEL_MAX_TOOL_CALLS),
   finishReason: z.enum(MODEL_FINISH_REASONS),
 });
 
