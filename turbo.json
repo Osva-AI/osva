@@ -25,6 +25,9 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "@osva/console#test": {
+      "dependsOn": ["build"]
+    },
     "@osva/console#test:integration": {
       "dependsOn": ["build"]
     },
