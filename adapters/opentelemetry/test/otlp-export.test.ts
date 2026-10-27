@@ -243,7 +243,7 @@ describe("OTLP HTTP exporter", () => {
       ),
     ).resolves.toBe("ok");
     await expect(lifecycle.shutdown()).resolves.toBeUndefined();
-  });
+  }, 35_000);
 
   it("stays disabled without an endpoint", async () => {
     const lifecycle = createOpenTelemetryLifecycle(

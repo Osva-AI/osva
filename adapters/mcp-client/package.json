@@ -20,9 +20,9 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/client": "2.0.0",
-    "@modelcontextprotocol/node": "2.0.0",
-    "@modelcontextprotocol/server": "2.0.0",
+    "@modelcontextprotocol/client": "catalog:",
+    "@modelcontextprotocol/node": "catalog:",
+    "@modelcontextprotocol/server": "catalog:",
     "@osva-ai/contracts": "workspace:*",
     "@osva/outbound-network": "workspace:*"
   },
