@@ -42,6 +42,7 @@ const AREA_RULE_IDS = new Set([
   "contracts-schemas",
   "knowledge-memory",
   "browser-harness",
+  "evaluation-studio",
   "db-migrations",
   "compose-deploy",
   "documentation",
@@ -190,6 +191,17 @@ function matchRules(paths, packages) {
       normalized.startsWith("scripts/acceptance/")
     ) {
       note("browser-harness", normalized);
+    }
+    if (
+      normalized.startsWith("apps/console/src/client/components/evaluation/") ||
+      normalized.startsWith("apps/console/src/client/routes/evaluation-") ||
+      normalized.includes("evaluation-quality-gate") ||
+      normalized.includes("evaluation-run-launch") ||
+      normalized.includes("evaluation-run-detail") ||
+      normalized.includes("use-evaluations.ts") ||
+      normalized.includes("m13-7-5-browser")
+    ) {
+      note("evaluation-studio", normalized);
     }
     if (
       normalized.startsWith("packages/db/drizzle/") ||
@@ -403,6 +415,30 @@ export async function buildVerificationPlan(paths, options = {}) {
       command: "pnpm --filter @osva/knowledge-worker test:integration",
       reason:
         "Knowledge or memory surface changes require integration coverage.",
+      runInIntegrationProfile: true,
+      requiresDocker: true,
+    });
+  }
+
+  if (matchedSpecific.has("evaluation-studio")) {
+    addObligation({
+      id: "console-evaluation-quality-gate-browser",
+      label: "Evaluation Studio quality-gate browser acceptance",
+      commandArgv: [
+        "pnpm",
+        "--filter",
+        "@osva/console",
+        "exec",
+        "vitest",
+        "run",
+        "--config",
+        "vitest.integration.browser.config.ts",
+        "test/integration/m13-7-5-browser.integration.test.ts",
+      ],
+      command:
+        "pnpm --filter @osva/console exec vitest run --config vitest.integration.browser.config.ts test/integration/m13-7-5-browser.integration.test.ts",
+      reason:
+        "Evaluation Studio or quality-gate UI changes require M13.7.5 browser acceptance.",
       runInIntegrationProfile: true,
       requiresDocker: true,
     });

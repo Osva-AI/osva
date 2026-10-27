@@ -66,6 +66,20 @@ describe("branch verification planner", () => {
     );
   });
 
+  it("requires evaluation quality-gate browser acceptance for Evaluation Studio changes", async () => {
+    const plan = await buildVerificationPlan([
+      "apps/console/src/client/components/evaluation/evaluation-quality-gate-panel.tsx",
+    ]);
+    assert.ok(
+      plan.obligations.some(
+        (entry) => entry.id === "console-evaluation-quality-gate-browser",
+      ),
+    );
+    assert.ok(
+      plan.impactSummary.some((line) => line.startsWith("evaluation-studio:")),
+    );
+  });
+
   it("includes untracked-style paths in inventory when passed explicitly (case F)", async () => {
     const plan = await buildVerificationPlan([
       "scripts/verification/new-helper.mjs",

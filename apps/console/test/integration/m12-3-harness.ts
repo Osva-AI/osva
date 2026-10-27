@@ -32,8 +32,12 @@ import {
 } from "@osva/db";
 import { startFakeOpenAIResponsesServer } from "../../../../adapters/model-openai/test/fake-openai-server.js";
 
+import { startFakeGeminiGenerateContentServer } from "../../../../adapters/model-gemini/test/fake-gemini-server.js";
 import { createWebProcess } from "../../../web/src/process.js";
-import { createWorkerProcess } from "../../../worker/src/process.js";
+import {
+  createWorkerProcess,
+  type WorkerProcessDependencies,
+} from "../../../worker/src/process.js";
 import { bootstrapIntegrationAuth } from "../../../worker/test/integration/integration-auth.js";
 import {
   resetStage0Tables,
@@ -59,6 +63,7 @@ export const OWNER_EMAIL = "owner.m12-3@test.local";
 export const OPERATOR_EMAIL = "operator.m12-3@test.local";
 export const HUMAN_PASSWORD = "M12-3-Human-Console-Pw-12!";
 export const NOW = new Date("2026-03-01T12:00:00.000Z");
+export const TEST_GEMINI_API_KEY = "osva-m12-3-test-gemini-key";
 
 const FIXTURE_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -120,6 +125,9 @@ export interface M12_3Stack {
     ReturnType<typeof startFakeOpenAIResponsesServer>
   >;
   readonly fakeMcp: Awaited<ReturnType<typeof startFakeHttpMcpServer>>;
+  readonly fakeGemini?: Awaited<
+    ReturnType<typeof startFakeGeminiGenerateContentServer>
+  >;
   consoleHeaders(workspaceId: WorkspaceId): Record<string, string>;
   copyAgentFixture(filename: string): Promise<string>;
   close(): Promise<void>;
@@ -305,6 +313,9 @@ export async function startM12_3HumanConsoleStack(options: {
   readonly database: Database;
   readonly databaseUrl: string;
   readonly valkeyUrl: string;
+  /** Enables fake Gemini for deterministic unpriced model usage in browser tests. */
+  readonly unpricedGemini?: boolean;
+  readonly workerDependencies?: WorkerProcessDependencies;
 }): Promise<M12_3Stack> {
   const { workspaceA, workspaceB } = await bootstrapM12_3Workspaces(
     options.database,
@@ -313,6 +324,9 @@ export async function startM12_3HumanConsoleStack(options: {
 
   const fakeOpenAI = await startFakeOpenAIResponsesServer();
   const fakeMcp = await startFakeHttpMcpServer();
+  const fakeGemini = options.unpricedGemini
+    ? await startFakeGeminiGenerateContentServer()
+    : undefined;
   const trustedRuntimeRoot = await fs.mkdtemp(
     path.join(os.tmpdir(), "osva-m12-3-runtime-"),
   );
@@ -335,15 +349,38 @@ export async function startM12_3HumanConsoleStack(options: {
     OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE: "100000",
     OSVA_RATE_LIMIT_AUTH_PER_MINUTE: "100000",
     OPENAI_API_KEY: SENTINEL_CREDENTIAL,
+    ...(fakeGemini !== undefined
+      ? { GOOGLE_GEMINI_API_KEY: TEST_GEMINI_API_KEY }
+      : {}),
   });
 
-  const worker = createWorkerProcess({
-    OSVA_DATABASE_URL: options.databaseUrl,
-    OSVA_VALKEY_URL: options.valkeyUrl,
-    OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
-    OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
-    OPENAI_API_KEY: SENTINEL_CREDENTIAL,
-  });
+  const workerDependencies: WorkerProcessDependencies = {
+    ...options.workerDependencies,
+    ...(fakeGemini !== undefined
+      ? {
+          gemini: {
+            apiKey: TEST_GEMINI_API_KEY,
+            baseURL: fakeGemini.origin,
+            ...options.workerDependencies?.gemini,
+          },
+        }
+      : {}),
+  };
+
+  const worker = createWorkerProcess(
+    {
+      OSVA_DATABASE_URL: options.databaseUrl,
+      OSVA_VALKEY_URL: options.valkeyUrl,
+      OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
+      OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
+      OPENAI_API_KEY: SENTINEL_CREDENTIAL,
+      ...(fakeGemini !== undefined
+        ? { GOOGLE_GEMINI_API_KEY: TEST_GEMINI_API_KEY }
+        : {}),
+    },
+    (connectionString) => createDatabase({ connectionString, max: 5 }),
+    workerDependencies,
+  );
 
   let consoleServer: Server | undefined;
   try {
@@ -427,6 +464,7 @@ export async function startM12_3HumanConsoleStack(options: {
       trustedRuntimeRoot,
       fakeOpenAI,
       fakeMcp,
+      fakeGemini,
       consoleHeaders,
       copyAgentFixture,
       close: async () => {
@@ -436,6 +474,9 @@ export async function startM12_3HumanConsoleStack(options: {
         await worker.stop();
         await fakeOpenAI.close();
         await fakeMcp.close();
+        if (fakeGemini !== undefined) {
+          await fakeGemini.close();
+        }
         if (consoleServer) {
           await new Promise<void>((resolve, reject) => {
             consoleServer!.close((error) => {
@@ -455,6 +496,9 @@ export async function startM12_3HumanConsoleStack(options: {
     await worker.stop().catch(() => undefined);
     await fakeOpenAI.close().catch(() => undefined);
     await fakeMcp.close().catch(() => undefined);
+    if (fakeGemini !== undefined) {
+      await fakeGemini.close().catch(() => undefined);
+    }
     if (consoleServer) {
       await new Promise<void>((resolve) => {
         consoleServer!.close(() => resolve());
