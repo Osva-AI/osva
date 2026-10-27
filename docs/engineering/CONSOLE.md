@@ -79,6 +79,7 @@ State-changing BFF methods require a loopback `Host` and a same-origin, loopback
 - Agent Detail with immutable AgentVersion table (id, version number, runtime type, created timestamp)
 - Register Agent (`POST /api/v1/agents` → `POST /v1/agents`) — **EDITOR** or **ADMIN** (WRITE)
 - Create AgentVersion from a hybrid guided form + JSON editor that share one Agent Manifest v1 document (`POST /api/v1/agents/:agentId/versions`) — previous versions are never rewritten. TRUSTED_TYPESCRIPT placeholder integrity is rejected before submit
+- **No-code Agent Studio (M13.3):** declarative **`DECLARATIVE`** manifests via guided steps (model/tools/knowledge bindings, budgets) with the same JSON document as the editor; validation errors are shown before submit. Playwright: `apps/console/test/integration/m13-3-browser.integration.test.ts`
 - Individual **Run Agent** from a selected AgentVersion (`POST /api/v1/runs` → `POST /v1/runs`) — **OPERATOR**, **EDITOR**, or **ADMIN** (EXECUTE)
 - Version selection is explicit (URL + version control). The Console never silently substitutes another version
 - Input contract comes from `manifest.input.schema`. JSON syntax is checked in the browser; valid JSON is not presented as executable success
@@ -202,9 +203,67 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 Requires **EDITOR** or **ADMIN** (WRITE) for connector/tool registration and import. Discovery and import follow existing control-plane authorization.
 
+### Models (M12.1)
+
+**Routes:** `/models`, `/models/connections`, `/models/connections/:connectionId`, `/models/:modelProfileId`.
+
+- Model profile registry with immutable ModelProfileVersion history
+- Model provider connection registry (self-hosted and external endpoints) with immutable connection versions
+- Primary model selector when authoring AgentVersions (coexists with JSON manifest editing)
+
+Requires **EDITOR** or **ADMIN** (WRITE) to register connections and profiles.
+
+### Knowledge (M13.5)
+
+**Routes:** `/knowledge`, `/knowledge/sources/:sourceId`.
+
+- Knowledge source registry — bind an existing workspace **Artifact** to a logical source key
+- Knowledge index lifecycle on each source (status, parser, chunk counts, retry on **FAILED**)
+- Operator **retrieve** smoke against a **READY** index (`POST /api/v1/knowledge/retrieve` → `POST /v1/knowledge/retrieve`) — query text and hits stay server-side; Console shows bounded hit summaries only
+- Ingestion still runs on the **knowledge-worker**; Console does not bypass ToolGateway or embedding configuration
+
+Playwright: `apps/console/test/integration/m13-5-browser.integration.test.ts`.
+
+Requires **EDITOR** or **ADMIN** (WRITE) to create sources and indexes; **EXECUTE** (for example **OPERATOR**) for retrieve smoke.
+
+### Memory (M13.5)
+
+**Routes:** `/memory`, `/memory/namespaces/:namespaceId`.
+
+- Memory namespace registry (workspace-scoped keys)
+- Namespace detail with prefix filter and cursor-paginated **record** inspection (JSON values may be sensitive — operator-only surface)
+- Runtime agents access memory through **MemoryGateway** bindings on immutable AgentVersions; Console does not mutate records on behalf of agents
+
+Playwright: `apps/console/test/integration/m13-5-browser.integration.test.ts`.
+
+Requires **EDITOR** or **ADMIN** (WRITE) to create namespaces; record listing follows read authorization on the control plane.
+
+### Testing Studio (M13.7)
+
+**Routes:** `/testing`, `/testing/playground`, `/testing/suites/new`, `/testing/suites/:evaluationSuiteId`, version create/detail routes, `/testing/runs/new`, `/testing/runs/:evaluationRunId`.
+
+- Landing hub linking playground, suite builder, and batch evaluation runs
+- **Agent Playground** — ad hoc Runs against selected AgentVersions (M13.7.2)
+- **Suite builder** — immutable EvaluationSuiteVersion cases (M13.7.3)
+- **Batch evaluation** — launch coordinator runs, case results, usage/cost aggregates (M13.7.4)
+- **Quality gates (M13.7.5)** — optional policy at launch; terminal gate assessment persisted once; Console distinguishes run **lifecycle** from gate **PASS** / **FAIL** / **INDETERMINATE** when pricing is incomplete
+
+Playwright: `apps/console/test/integration/m13-7-2-browser.integration.test.ts` through `m13-7-4-browser.integration.test.ts`. Quality-gate browser acceptance remains a documented gap (see M13.7.5 closeout; planned M15.2).
+
+Requires **EDITOR** or **ADMIN** (WRITE) for suite/version authoring; **EXECUTE** to launch evaluation runs.
+
+### Workspace overview (M13.4)
+
+**Routes:** `/overview`, `/onboarding` (see Agents onboarding).
+
+- Workspace-scoped overview and getting-started shell linking to real Console routes
+
+Playwright: `apps/console/test/integration/m13-4-browser.integration.test.ts`.
+
 ### Not yet in console
 
-- Global Artifact Explorer, knowledge, settings
+- Global Artifact Explorer (cross-run search beyond run/workflow-scoped lists)
+- Workspace/org settings and membership administration beyond existing audit/member routes
 
 ### Artifact retrieval (M8.5.2)
 

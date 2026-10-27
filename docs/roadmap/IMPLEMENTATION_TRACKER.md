@@ -86,3 +86,24 @@ Status is recorded after locally verifiable checks for each slice.
     - ✅ M13.7.3 Test suite builder — `apps/console/test/integration/m13-7-3-browser.integration.test.ts`
     - ✅ M13.7.4 Batch evaluation launch and results — `apps/console/test/integration/m13-7-4-browser.integration.test.ts`
     - ✅ M13.7.5 Scoring and safety gates (Slices A–D) — [`../operations/M13_7_5_CLOSEOUT_SUMMARY.md`](../operations/M13_7_5_CLOSEOUT_SUMMARY.md) · [`../operations/M13_7_5_ACCEPTANCE_SUMMARY.md`](../operations/M13_7_5_ACCEPTANCE_SUMMARY.md)
+- ✅ M14 Security hardening and closeout (Community **`1.1.0-rc.4`** security line) — [`../operations/M14_7_SECURITY_CLOSEOUT.md`](../operations/M14_7_SECURITY_CLOSEOUT.md) · merged **`main`** through PR **#51–#55** (`da9fb21` M14.1 → `6228f91` M14.5–M14.7)
+  - ✅ M14.0 Security audit and evidence reconciliation (prerequisite) — cited in [`../operations/M14_1_ACCEPTANCE_SUMMARY.md`](../operations/M14_1_ACCEPTANCE_SUMMARY.md)
+  - ✅ M14.1 Tool and MCP authorization hardening — [`../operations/M14_1_ACCEPTANCE_SUMMARY.md`](../operations/M14_1_ACCEPTANCE_SUMMARY.md) · PR **#51**
+  - ✅ M14.2 Human auth CSRF origins and session rate limits — [`../operations/M14_2_ACCEPTANCE_SUMMARY.md`](../operations/M14_2_ACCEPTANCE_SUMMARY.md) · PR **#52**
+  - ✅ M14.3 Runtime capability tokens and listener bind hardening — [`../operations/M14_3_ACCEPTANCE_SUMMARY.md`](../operations/M14_3_ACCEPTANCE_SUMMARY.md) · PR **#53**
+  - ✅ M14.4 Adversarial acceptance fixtures and tests — [`../operations/M14_4_ACCEPTANCE_SUMMARY.md`](../operations/M14_4_ACCEPTANCE_SUMMARY.md) · PR **#54**
+  - ✅ M14.5 Operation-bound human approval security — [`../operations/M14_5_ACCEPTANCE_SUMMARY.md`](../operations/M14_5_ACCEPTANCE_SUMMARY.md) · migration **`0030_approval_operation_binding_slice`** · PR **#55**
+  - ✅ M14.6 Security audit durability and incident response — [`../operations/M14_6_ACCEPTANCE_SUMMARY.md`](../operations/M14_6_ACCEPTANCE_SUMMARY.md) · [`../operations/SECURITY_INCIDENT_RESPONSE.md`](../operations/SECURITY_INCIDENT_RESPONSE.md) · PR **#55**
+  - ✅ M14.7 Security closeout — [`../operations/M14_7_SECURITY_CLOSEOUT.md`](../operations/M14_7_SECURITY_CLOSEOUT.md) · PR **#55** · `release-readiness` **success** on merge commit **`6228f910e0c4ad64a68dec15be4b8e92051775d0`**
+
+**Release baseline (M15.1):** Git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`** (`fix(security): remediate RC4 dependency vulnerabilities (#58)`). Repository **`VERSION`**: **`1.1.0-rc.4`**. Drizzle journal head: **`0030_approval_operation_binding_slice`**.
+
+## M15 — Production adoption and operational experience (planned)
+
+See [`../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md`](../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md).
+
+- ✅ M15.1 Baseline and roadmap reconciliation (documentation) — [`../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md`](../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md) · baseline tag **`v1.1.0-rc.4`** / **`cd38eea`**
+- ⬜ M15.2 Evaluation Studio browser acceptance
+- ⬜ M15.3 Operator experience hardening
+- ⬜ M15.4 Unified adoption acceptance
+- ⬜ M15.5 Production adoption closeout
