@@ -14,6 +14,8 @@ import {
   type KnowledgeIndexResource,
 } from "../hooks/use-knowledge-memory";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { describeKnowledgeIndexFailureGuidance } from "../lib/operator-diagnostics";
+import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
 
 function IndexStatusPanel(props: {
   readonly index: KnowledgeIndexResource;
@@ -22,6 +24,11 @@ function IndexStatusPanel(props: {
   readonly retryPending: boolean;
 }) {
   const { index } = props;
+  const failureGuidance = describeKnowledgeIndexFailureGuidance({
+    status: index.status,
+    lastErrorCode: index.lastErrorCode,
+    lastErrorMessage: index.lastErrorMessage,
+  });
   return (
     <div className="panel nested">
       <h3 className="section-title">
@@ -64,6 +71,9 @@ function IndexStatusPanel(props: {
             ? `: ${index.lastErrorMessage}`
             : ""}
         </p>
+      ) : null}
+      {failureGuidance !== undefined ? (
+        <OperatorGuidancePanel guidance={failureGuidance} />
       ) : null}
       {index.status === "FAILED" && props.canWrite ? (
         <button

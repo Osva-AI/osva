@@ -89,17 +89,4 @@ export function describeAgentRunInputSyntax(
   }
 }
 
-export function describeCreateRunFailure(status: number): string | undefined {
-  switch (status) {
-    case 400:
-      return "The control plane rejected this request as invalid. Check AgentVersion identity and JSON input.";
-    case 403:
-      return "This API key cannot execute Runs (OPERATOR, EDITOR, or ADMIN required).";
-    case 404:
-      return "The Agent or AgentVersion was not found in the authenticated workspace.";
-    case 409:
-      return "The control plane reported a conflict. A Run with this idempotency key may already exist.";
-    default:
-      return undefined;
-  }
-}
+export { describeCreateRunFailure } from "./operator-diagnostics.js";

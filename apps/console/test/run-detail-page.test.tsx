@@ -507,6 +507,35 @@ describe("RunDetailPage artifacts", () => {
     expect(screen.getByText("Output")).toBeTruthy();
   });
 
+  it("shows queued guidance without claiming the worker is offline", async () => {
+    stubRunFetch((url) => {
+      if (url.endsWith("/api/v1/runs/run-1") && !url.includes("/attempts")) {
+        return jsonResponse({
+          id: "run-1",
+          status: "QUEUED",
+          agentId: "agent-1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          input: {},
+          effectiveBindings: { agentVersionId: "av-1" },
+        });
+      }
+      const fallback = defaultRunResponses(url, []);
+      if (fallback !== undefined) {
+        return fallback;
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+
+    renderRunDetail();
+    await waitFor(() => {
+      expect(screen.getByTestId("run-lifecycle-guidance")).toBeTruthy();
+    });
+    expect(screen.getByText("Queued for execution")).toBeTruthy();
+    expect(screen.getByText(/cannot determine worker health/i)).toBeTruthy();
+    expect(screen.queryByText(/worker is offline/i)).toBeNull();
+  });
+
   it("renders execution diagnostics for an interrupted attempt without owner secrets", async () => {
     stubRunFetch((url) => {
       if (
@@ -548,7 +577,7 @@ describe("RunDetailPage artifacts", () => {
     await waitFor(() => {
       expect(screen.getByTestId("execution-diagnostics")).toBeTruthy();
     });
-    expect(screen.getByText("Execution interrupted")).toBeTruthy();
+    expect(screen.getByTestId("run-failure-guidance")).toBeTruthy();
     expect(screen.getByText("LEASE_EXPIRED")).toBeTruthy();
     expect(screen.getByText(/PostgreSQL/)).toBeTruthy();
     expect(screen.queryByText(/worker-secret/)).toBeNull();

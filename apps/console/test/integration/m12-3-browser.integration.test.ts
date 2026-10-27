@@ -124,7 +124,10 @@ describe("M12.3 browser acceptance (Playwright)", () => {
 
       await page.fill("#connection-test-model", "gpt-browser-combined");
       await page.getByRole("button", { name: "Test" }).click();
-      await page.getByText(/Last connectivity test:/).waitFor({
+      await page.getByTestId("model-connectivity-guidance").waitFor({
+        timeout: 60_000,
+      });
+      await page.getByText("Connectivity verified").waitFor({
         timeout: 60_000,
       });
 

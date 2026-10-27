@@ -31,6 +31,8 @@ import {
   nodeRunsForKey,
   selectLatestNodeRunByKey,
 } from "../lib/workflow-node-run-overlay";
+import { describeWorkflowRunGuidance } from "../lib/operator-diagnostics";
+import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
 
 const WorkflowGraphViewLazy = lazy(async () => {
   const module = await import("../components/workflow/workflow-graph-view");
@@ -102,6 +104,14 @@ export function WorkflowRunDetailPage() {
           );
           return reason === undefined ? [] : [{ key, reason }];
         });
+
+  const workflowGuidance =
+    runQuery.data !== undefined
+      ? describeWorkflowRunGuidance({
+          status: runQuery.data.status,
+          error: runQuery.data.error,
+        })
+      : undefined;
 
   return (
     <>
@@ -199,9 +209,15 @@ export function WorkflowRunDetailPage() {
               </div>
             </dl>
             {runQuery.data.error !== undefined ? (
-              <p className="error-inline">
+              <p className="error-inline" role="alert">
                 {runQuery.data.error.code}: {runQuery.data.error.message}
               </p>
+            ) : null}
+            {workflowGuidance !== undefined ? (
+              <OperatorGuidancePanel
+                guidance={workflowGuidance}
+                testId="workflow-run-guidance"
+              />
             ) : null}
           </section>
 

@@ -380,6 +380,36 @@ a:hover {
   border-top: 1px solid var(--border);
 }
 
+.operator-guidance {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 0.86rem;
+}
+
+.operator-guidance ul {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.25rem;
+}
+
+.operator-guidance-info {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.operator-guidance-warning {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+}
+
+.operator-guidance-error {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.error-state .operator-guidance {
+  margin-top: var(--space-3);
+  color: var(--text);
+}
+
 .execution-node-card {
   margin: 0;
 }

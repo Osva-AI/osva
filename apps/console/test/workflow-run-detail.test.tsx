@@ -852,6 +852,8 @@ describe("WorkflowRunDetailPage artifacts", () => {
     await waitFor(() => {
       expect(screen.getByText("notes.md")).toBeTruthy();
     });
+    expect(screen.getByTestId("workflow-run-guidance")).toBeTruthy();
+    expect(screen.getByText("Workflow failed")).toBeTruthy();
     expect(screen.getByText("report.md")).toBeTruthy();
     expect(screen.getAllByText("research").length).toBeGreaterThan(0);
     expect(
