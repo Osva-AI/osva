@@ -1,6 +1,6 @@
 # M13.7.5 Acceptance Summary — Scoring & Safety Gates (Slices A–D)
 
-Status: **PASS** (mandatory CI gate, migration integrity, and recorded manual Console verification for PASS/FAIL quality-gate scenarios; INDETERMINATE covered by automated tests only).
+Status: **PASS** (mandatory CI gate, migration integrity, and browser acceptance for quality-gate PASS, FAIL, and INDETERMINATE scenarios; see M13.7.5 browser suite below).
 
 Narrative closeout: [`M13_7_5_CLOSEOUT_SUMMARY.md`](M13_7_5_CLOSEOUT_SUMMARY.md).
 
@@ -29,14 +29,20 @@ Narrative closeout: [`M13_7_5_CLOSEOUT_SUMMARY.md`](M13_7_5_CLOSEOUT_SUMMARY.md)
 | `pnpm verify:ci:clean` | **PASS** | Full clean CI gate on `main` after merge |
 | Console human authentication + deterministic agent execution | **PASS** | Exercised during manual closeout (trusted echo-input agent path) |
 | Two-case evaluation suite (PASS + FAIL cases) | **PASS** | Manual and automated paths against batch evaluation coordinator |
-| Quality-gate **PASS** scenario | **PASS** | Manually verified in Console |
-| Quality-gate **FAIL** scenario | **PASS** | Manually verified in Console (50% pass rate vs 100% minimum threshold) |
+| Quality-gate **PASS** scenario | **PASS** | Browser: `apps/console/test/integration/m13-7-5-browser.integration.test.ts` (scenario A) |
+| Quality-gate **FAIL** scenario | **PASS** | Browser: same suite (scenario B; 100% pass-rate minimum vs mixed case outcomes) |
 | Quality-gate **INDETERMINATE** (missing quality score) | **PASS** | Automated: `packages/domain/test/evaluation-quality-gate-assessment.test.ts` |
 | Quality-gate **INDETERMINATE** (missing duration) | **PASS** | Automated: same suite |
-| Quality-gate **INDETERMINATE** (incomplete pricing / unpriced model calls) | **PASS** | Automated: same suite (`COST_INCONCLUSIVE_UNPRICED`) |
-| Quality-gate **INDETERMINATE** Console scenario | **NOT EXECUTED** | No dedicated manual browser walkthrough recorded for INDETERMINATE UX |
+| Quality-gate **INDETERMINATE** (incomplete pricing / unpriced model calls) | **PASS** | Domain: same suite (`COST_INCONCLUSIVE_UNPRICED`); Console UX: browser scenario C (fake Gemini, no pricing snapshot) |
+| Quality-gate **INDETERMINATE** Console scenario | **PASS** | Browser scenario C + unpriced explanation copy |
+| Lifecycle vs gate verdict (COMPLETED run, FAIL gate) | **PASS** | Browser scenario B |
+| No premature gate PASS while run is live | **PASS** | Browser: `does not show a final gate PASS before the evaluation run completes` |
+| Persisted gate assessment survives refresh | **PASS** | Browser: `persists gate verdict across browser refresh` |
+| Viewer cannot launch gated evaluations | **PASS** | Browser viewer case; REST isolation in `apps/web/test/evaluation-runs-http.test.ts` |
 
-Do not infer full browser end-to-end coverage for quality gates beyond the manual PASS/FAIL steps above.
+Browser command (requires Docker, Playwright, fresh Console client build):
+
+`pnpm --filter @osva/console exec vitest run --config vitest.integration.browser.config.ts test/integration/m13-7-5-browser.integration.test.ts`
 
 ## Automated test map (by slice)
 
@@ -49,7 +55,7 @@ Do not infer full browser end-to-end coverage for quality gates beyond the manua
 
 ## Related prior Testing Studio acceptance (context)
 
-M13.7.5 builds on Console batch evaluation from **M13.7.4** (`apps/console/test/integration/m13-7-4-browser.integration.test.ts`). That Playwright suite does **not** assert quality-gate policy UI or INDETERMINATE presentation.
+M13.7.5 builds on Console batch evaluation from **M13.7.4** (`apps/console/test/integration/m13-7-4-browser.integration.test.ts`). Quality-gate browser acceptance lives in **M13.7.5** (`apps/console/test/integration/m13-7-5-browser.integration.test.ts`).
 
 ## M13.7.5 readiness
 
