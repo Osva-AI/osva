@@ -20,7 +20,12 @@ import {
   formatUsdMicros,
 } from "../lib/formatting";
 import { executionStateLabel } from "../lib/execution-diagnostics";
+import {
+  describeRunAttemptFailureGuidance,
+  describeRunLifecycleGuidance,
+} from "../lib/operator-diagnostics";
 import { attemptStatusCategory, runStatusCategory } from "../lib/statuses";
+import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
 
 export function RunDetailPage() {
   const { runId, runAttemptId } = useParams<{
@@ -77,6 +82,20 @@ export function RunDetailPage() {
   if (run === undefined) {
     return <LoadingBlock label="Loading run…" />;
   }
+
+  const selectedAttemptForGuidance = attemptQuery.data;
+  const lifecycleGuidance = describeRunLifecycleGuidance({
+    runStatus: run.status,
+    attemptStatus: selectedAttemptMeta?.status,
+    execution: selectedAttemptForGuidance?.execution,
+  });
+  const failureGuidance =
+    selectedAttemptForGuidance?.status === "FAILED" || run.status === "FAILED"
+      ? describeRunAttemptFailureGuidance({
+          error: selectedAttemptForGuidance?.error,
+          execution: selectedAttemptForGuidance?.execution,
+        })
+      : undefined;
 
   return (
     <>
@@ -161,6 +180,12 @@ export function RunDetailPage() {
             </div>
           ) : null}
         </dl>
+        {lifecycleGuidance !== undefined ? (
+          <OperatorGuidancePanel
+            guidance={lifecycleGuidance}
+            testId="run-lifecycle-guidance"
+          />
+        ) : null}
       </section>
 
       <section className="panel">
@@ -342,6 +367,12 @@ export function RunDetailPage() {
                       not proof that a worker is down.
                     </p>
                   </div>
+                ) : null}
+                {failureGuidance !== undefined ? (
+                  <OperatorGuidancePanel
+                    guidance={failureGuidance}
+                    testId="run-failure-guidance"
+                  />
                 ) : null}
                 {attemptQuery.data.error !== undefined ? (
                   <JsonView label="Error" value={attemptQuery.data.error} />

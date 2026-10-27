@@ -16,6 +16,13 @@ import {
 } from "../lib/permissions";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
+import type { OperatorGuidance } from "../lib/operator-diagnostics";
+import {
+  describeConsoleApiError,
+  describeModelConnectivityResult,
+} from "../lib/operator-diagnostics";
+import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
+import { ConsoleApiError } from "../lib/console-api";
 
 export function ModelConnectionDetailPage() {
   const { connectionId } = useParams<{ connectionId: string }>();
@@ -51,7 +58,9 @@ export function ModelConnectionDetailPage() {
   const [allowPrivate, setAllowPrivate] = useState(false);
   const [credentialKey, setCredentialKey] = useState("");
   const [testModel, setTestModel] = useState("");
-  const [testResult, setTestResult] = useState<string | undefined>();
+  const [connectivityGuidance, setConnectivityGuidance] = useState<
+    OperatorGuidance | undefined
+  >();
 
   const canWrite =
     authQuery.data !== undefined &&
@@ -194,14 +203,17 @@ export function ModelConnectionDetailPage() {
                     version={version}
                     canExecute={canExecute}
                     testModel={testModel}
-                    onTestResult={setTestResult}
+                    onTestGuidance={setConnectivityGuidance}
                   />
                 ))}
               </tbody>
             </table>
           </div>
-          {testResult !== undefined ? (
-            <p className="muted">Last connectivity test: {testResult}</p>
+          {connectivityGuidance !== undefined ? (
+            <OperatorGuidancePanel
+              guidance={connectivityGuidance}
+              testId="model-connectivity-guidance"
+            />
           ) : null}
         </section>
       ) : null}
@@ -219,7 +231,7 @@ function VersionRow(props: {
   };
   readonly canExecute: boolean;
   readonly testModel: string;
-  readonly onTestResult: (value: string) => void;
+  readonly onTestGuidance: (value: OperatorGuidance | undefined) => void;
 }) {
   const testMutation = useTestModelProviderConnectionVersionMutation(
     props.connectionId,
@@ -241,13 +253,44 @@ function VersionRow(props: {
             disabled={
               testMutation.isPending || props.testModel.trim().length === 0
             }
-            onClick={() =>
+            onClick={() => {
+              props.onTestGuidance(undefined);
               void testMutation
                 .mutateAsync({ model: props.testModel.trim() })
                 .then((result) => {
-                  props.onTestResult(`${result.status} @ ${result.checkedAt}`);
+                  props.onTestGuidance(
+                    describeModelConnectivityResult({
+                      status: result.status,
+                      code: result.code,
+                    }),
+                  );
                 })
-            }
+                .catch((error: unknown) => {
+                  const guidance =
+                    describeConsoleApiError(error, "model_connectivity") ??
+                    (error instanceof ConsoleApiError
+                      ? {
+                          title: "Connectivity test failed",
+                          explanation: error.message,
+                          nextSteps: [
+                            "Verify connection version endpoint and credential references.",
+                          ],
+                          severity: "error" as const,
+                          recoverable: true,
+                        }
+                      : {
+                          title: "Connectivity test failed",
+                          explanation:
+                            error instanceof Error
+                              ? error.message
+                              : "Unexpected error.",
+                          nextSteps: ["Retry the connectivity test."],
+                          severity: "error" as const,
+                          recoverable: true,
+                        });
+                  props.onTestGuidance(guidance);
+                });
+            }}
           >
             Test
           </button>

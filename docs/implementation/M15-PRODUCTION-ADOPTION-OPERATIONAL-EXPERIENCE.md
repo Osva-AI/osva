@@ -14,7 +14,7 @@ Verification policy: [`../engineering/DEVELOPMENT_GATES.md`](../engineering/DEVE
 | --- | --- | --- |
 | M15.1 Baseline and roadmap reconciliation | **Complete** (documentation) | Tracker, stage roadmap, UPGRADE **`0029`/`0030`**, RC.4 verification record, Console surface docs |
 | M15.2 Evaluation Studio browser acceptance | **Planned** | Close M13.7.5 Playwright gap |
-| M15.3 Operator experience hardening | **Planned** | Day-two friction and runbook clarity |
+| M15.3 Operator experience hardening | **Complete** (Console UX) | Shared operator diagnostics on Run, WorkflowRun, connector, model, and knowledge surfaces |
 | M15.4 Unified adoption acceptance | **Planned** | Canonical example + Console on RC.4 artifacts |
 | M15.5 Production adoption closeout | **Planned** | Acceptance summaries and residual risks |
 
@@ -50,13 +50,29 @@ Verification policy: [`../engineering/DEVELOPMENT_GATES.md`](../engineering/DEVE
 
 ## M15.3 — Operator experience hardening
 
-**Scope (product docs + Console UX, no control-plane contract breaks):**
+**Scope (Console UX + docs, no control-plane contract breaks):**
 
-- Reduce setup/upgrade confusion: cross-link UPGRADE, RUNBOOK, LOCAL_DEVELOPMENT, and RC.4 publication status.
-- Console: clearer errors for rate limits, migration-behind `/ready`, knowledge index **FAILED**, evaluation **INDETERMINATE** cost gates.
-- Optional: consolidate “first hour” operator checklist in [`../OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md) when friction is proven in M15.4 replay.
+- Shared operator diagnostics helper (`apps/console/src/client/lib/operator-diagnostics.ts`) and `OperatorGuidancePanel` for consistent severity, next steps, and recoverability copy.
+- **Run Detail:** lifecycle guidance for **QUEUED** / **RUNNING** (without inventing worker health), failure remediation from persisted attempt error codes (including **EXECUTION_INTERRUPTED** and **UNSUPPORTED_RUNTIME**), alongside existing execution lease diagnostics.
+- **WorkflowRun Detail:** terminal **FAILED** and suspended **WAITING** operator copy; no unsupported replay/cancel actions.
+- **Connectors:** discovery/import/append failures use actionable error panels; zero-tool discovery is not treated as silent success.
+- **Model connections:** connectivity test **READY** vs **FAILED** categorization without exposing credentials.
+- **Knowledge index FAILED:** remediation steps plus existing retry control.
+- **ErrorState:** surfaces rate-limit and dependency-unavailable guidance for `ConsoleApiError` responses (aligned with BFF humanization).
 
-**Acceptance:** Documented operator journeys with before/after notes; targeted Console tests where behavior changes.
+**Known limitations (unchanged):**
+
+- Console still cannot verify worker queue consumption or connector reachability without a successful control-plane operation.
+- No generic Run retry button; new logical Runs only where EXECUTE already exists.
+- STDIO connector creation remains restricted; discovery guidance explains read-only Console behavior.
+- Evaluation **INDETERMINATE** quality-gate browser copy remains covered by M15.2; no duplicate gate UX in this slice.
+
+**Verification (M15.3):**
+
+- `pnpm --filter @osva/console exec vitest run test/operator-diagnostics.test.ts test/error-state.test.tsx test/run-detail-page.test.tsx test/workflow-run-detail.test.tsx`
+- `pnpm verify:changed` on the M15.3 branch
+
+**Acceptance:** Documented operator journeys below; focused Console unit tests for changed surfaces.
 
 ## M15.4 — Unified adoption acceptance
 

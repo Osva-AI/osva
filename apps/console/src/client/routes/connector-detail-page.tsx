@@ -16,6 +16,8 @@ import {
   type DiscoveredMcpTool,
 } from "../hooks/use-tools-connectors";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { describeConnectorDiscoveryGuidance } from "../lib/operator-diagnostics";
+import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
 
 type ImportDraft = {
   readonly remoteToolName: string;
@@ -82,6 +84,14 @@ export function ConnectorDetailPage() {
     () => [...versions].sort((a, b) => b.version - a.version),
     [versions],
   );
+
+  const discoveryResultGuidance =
+    discoveredTools !== undefined && selectedVersion !== undefined
+      ? describeConnectorDiscoveryGuidance({
+          transport: selectedVersion.transport,
+          toolCount: discoveredTools.length,
+        })
+      : undefined;
 
   if (connectorId === undefined) {
     return (
@@ -321,6 +331,13 @@ export function ConnectorDetailPage() {
           >
             Append version
           </button>
+          {appendMutation.isError ? (
+            <ErrorState
+              title="Failed to append ConnectorVersion"
+              error={appendMutation.error}
+              guidanceContext="generic"
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -362,12 +379,14 @@ export function ConnectorDetailPage() {
             {discoverMutation.isPending ? "Discovering…" : "Discover tools"}
           </button>
           {discoverMutation.isError ? (
-            <p className="muted">
-              Discovery failed:{" "}
-              {discoverMutation.error instanceof Error
-                ? discoverMutation.error.message
-                : "Unknown error"}
-            </p>
+            <ErrorState
+              title="MCP discovery failed"
+              error={discoverMutation.error}
+              guidanceContext="connector_discover"
+            />
+          ) : null}
+          {discoveryResultGuidance !== undefined ? (
+            <OperatorGuidancePanel guidance={discoveryResultGuidance} />
           ) : null}
           {discoveredTools !== undefined ? (
             <>
@@ -504,6 +523,13 @@ export function ConnectorDetailPage() {
                     Back
                   </button>
                 </section>
+              ) : null}
+              {importMutation.isError ? (
+                <ErrorState
+                  title="Tool import failed"
+                  error={importMutation.error}
+                  guidanceContext="connector_import"
+                />
               ) : null}
               {importPhase === "done" && importResult !== undefined ? (
                 <section className="panel nested">
