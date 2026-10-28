@@ -13,9 +13,9 @@ Verification policy: [`../engineering/DEVELOPMENT_GATES.md`](../engineering/DEVE
 | Slice | Status | Notes |
 | --- | --- | --- |
 | M15.1 Baseline and roadmap reconciliation | **Complete** (documentation) | Tracker, stage roadmap, UPGRADE **`0029`/`0030`**, RC.4 verification record, Console surface docs |
-| M15.2 Evaluation Studio browser acceptance | **Planned** | Close M13.7.5 Playwright gap |
+| M15.2 Evaluation Studio browser acceptance | **Complete** (browser suite) | `m13-7-5-browser.integration.test.ts`; see M13.7.5 / M15.2 evidence |
 | M15.3 Operator experience hardening | **Complete** (Console UX) | Shared operator diagnostics on Run, WorkflowRun, connector, model, and knowledge surfaces |
-| M15.4 Unified adoption acceptance | **Planned** | Canonical example + Console on RC.4 artifacts |
+| M15.4 Unified adoption acceptance | **In progress** (orchestration) | `pnpm acceptance:m15` + [`../operations/M15_4_ACCEPTANCE_SUMMARY.md`](../operations/M15_4_ACCEPTANCE_SUMMARY.md); profile sign-off pending |
 | M15.5 Production adoption closeout | **Planned** | Acceptance summaries and residual risks |
 
 ## M15.1 — Baseline and roadmap reconciliation
@@ -76,14 +76,19 @@ Verification policy: [`../engineering/DEVELOPMENT_GATES.md`](../engineering/DEVE
 
 ## M15.4 — Unified adoption acceptance
 
-**Scope:**
+**Delivered (orchestration):**
 
-- Single maintainer/CI-friendly harness (or documented script sequence) that replays:
-  - [`examples/canonical-dependency-adoption`](../../examples/canonical-dependency-adoption/) (or `pnpm release:acceptance` subset)
-  - Human-session Console smoke: login, Agent or declarative path, workflow publish optional, Testing Studio batch run optional
-- Target artifact line: source-built **`1.1.0-rc.4`** image and/or published npm **`rc`** packages per [`../release/RC4_VERIFICATION.md`](../release/RC4_VERIFICATION.md) availability (PyPI/GHCR gaps documented until closed).
+- `pnpm acceptance:m15` with profiles **`default`**, **`integration`**, **`browser`**, **`full`** and journey groups **A–G** (see [`../operations/M15_4_ACCEPTANCE_SUMMARY.md`](../operations/M15_4_ACCEPTANCE_SUMMARY.md)).
+- Reuses M12.3, M13 browser suites, M15.3 operator unit tests, canonical example integration, M14 adversarial/HTTP/approval DB tests, and RC4 version/pack smoke — no duplicated Vitest implementations.
+- Branch-impact **`operator-diagnostics`** targeted tests for M15.3 Console paths.
 
-**Acceptance:** Secret-free summary doc (M10.4E-style) with migration head **`0030`**, integrity **`applied_and_matches`**, and resource IDs table.
+**Remaining for slice closeout:**
+
+- Record PASS for **integration** and **browser** profiles on Docker/Playwright hosts.
+- Optional npm `@rc` registry check in **`full`** profile (NOT RUN when registry unreachable).
+- Operator **`applied_and_matches`** evidence when `OSVA_DATABASE_URL` points at a migrated stack (not implied by default profile alone).
+
+**Acceptance:** Summary doc + evidence JSON; do not mark M15.4 complete until profile matrix shows mandatory journeys **PASS** (not merely script existence).
 
 ## M15.5 — Production adoption closeout
 

@@ -66,6 +66,22 @@ describe("branch verification planner", () => {
     );
   });
 
+  it("targets operator diagnostics unit tests for M15.3 surface changes", async () => {
+    const plan = await buildVerificationPlan([
+      "apps/console/src/client/lib/operator-diagnostics.ts",
+    ]);
+    assert.ok(
+      plan.targetedUnitTests.some((entry) =>
+        entry.relativeTestFiles.includes("test/operator-diagnostics.test.ts"),
+      ),
+    );
+    assert.ok(
+      plan.impactSummary.some((line) =>
+        line.startsWith("operator-diagnostics:"),
+      ),
+    );
+  });
+
   it("requires evaluation quality-gate browser acceptance for Evaluation Studio changes", async () => {
     const plan = await buildVerificationPlan([
       "apps/console/src/client/components/evaluation/evaluation-quality-gate-panel.tsx",
