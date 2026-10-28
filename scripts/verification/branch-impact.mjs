@@ -43,6 +43,7 @@ const AREA_RULE_IDS = new Set([
   "knowledge-memory",
   "browser-harness",
   "evaluation-studio",
+  "operator-diagnostics",
   "db-migrations",
   "compose-deploy",
   "documentation",
@@ -191,6 +192,18 @@ function matchRules(paths, packages) {
       normalized.startsWith("scripts/acceptance/")
     ) {
       note("browser-harness", normalized);
+    }
+    if (
+      normalized.includes("operator-diagnostics.ts") ||
+      normalized.includes("operator-guidance.tsx") ||
+      normalized.includes("routes/run-detail-page.tsx") ||
+      normalized.includes("routes/workflow-run-detail-page.tsx") ||
+      normalized.includes("routes/connector-detail-page.tsx") ||
+      normalized.includes("routes/model-connection-detail-page.tsx") ||
+      normalized.includes("routes/knowledge-source-page.tsx") ||
+      normalized.includes("components/error-state/error-state.tsx")
+    ) {
+      note("operator-diagnostics", normalized);
     }
     if (
       normalized.startsWith("apps/console/src/client/components/evaluation/") ||
@@ -417,6 +430,19 @@ export async function buildVerificationPlan(paths, options = {}) {
         "Knowledge or memory surface changes require integration coverage.",
       runInIntegrationProfile: true,
       requiresDocker: true,
+    });
+  }
+
+  if (matchedSpecific.has("operator-diagnostics")) {
+    targeted.push({
+      packageName: "@osva/console",
+      label: "M15.3 operator diagnostics",
+      relativeTestFiles: [
+        "test/operator-diagnostics.test.ts",
+        "test/error-state.test.tsx",
+        "test/run-detail-page.test.tsx",
+        "test/workflow-run-detail.test.tsx",
+      ],
     });
   }
 
