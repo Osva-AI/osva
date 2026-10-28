@@ -1,25 +1,57 @@
 {
   "releaseVersion": "1.1.0-rc.4",
-  "status": "OSS Community release candidate prepared (unpublished)",
-  "publicationStatus": "unpublished",
+  "status": "OSS Community RC4 — npm and GitHub release published; PyPI/GHCR/M10.4E pending",
+  "publicationStatus": "partial",
   "sourceProvenance": {
-    "gitCommit": "e7dbc2349b4c9661f9922fa16a087dd446f37366",
+    "gitCommit": "045122edbe24847b228219229f2c22a7a7fe72ff",
+    "releaseCommit": "cd38eea46b8ee44bb099ccf307818cfcd348f50b",
+    "gitTag": "v1.1.0-rc.4",
     "versionFile": "VERSION",
-    "note": "gitCommit identifies the committed release-content state at generation time. The inventory file may be recorded in a subsequent metadata-only commit."
+    "note": "releaseCommit is the tag target for v1.1.0-rc.4. gitCommit is the tree state when this inventory was reconciled (M15.5 closeout on main through M15.4 merge)."
   },
   "priorPublishedRelease": {
-    "version": "1.1.0-rc.1",
+    "version": "1.1.0-rc.2",
     "publicationStatus": "published",
-    "cliIncludesM10_2AgentWorkflow": false,
-    "note": "npm @osva-ai/cli@1.1.0-rc.1 predates init/validate/deploy/run/status/doctor and bundled templates."
+    "note": "Last RC with full npm/PyPI/GHCR and M10.4E registry-only acceptance."
+  },
+  "distributionChannels": {
+    "npmFivePackagesRcDistTag": {
+      "status": "published",
+      "version": "1.1.0-rc.4",
+      "verifiedAt": "2026-10-28"
+    },
+    "gitHubPrerelease": {
+      "status": "published",
+      "tag": "v1.1.0-rc.4",
+      "publishedAt": "2026-10-27T09:54:36Z"
+    },
+    "pypiOsvaSdk": {
+      "status": "not_published",
+      "latestPublished": "1.1.0rc2",
+      "targetVersion": "1.1.0rc4"
+    },
+    "ghcrOsvaImage": {
+      "status": "not_published",
+      "targetTag": "ghcr.io/osva-ai/osva:1.1.0-rc.4",
+      "latestPublishedTag": "1.1.0-rc.2"
+    },
+    "m10_4eRegistryOnlyComposeReplay": {
+      "status": "not_run"
+    }
   },
   "pendingReleaseGates": [
-    "release-readiness verify-core on RC commit",
-    "release-readiness packages (npm/Python pack smoke)",
-    "release-readiness oci-compose-helm",
-    "release-readiness kind",
-    "RC.4 pnpm verify:ci:clean clean-room gate (optional maintainer)",
-    "maintainer authorization for tag and registry publish"
+    "PyPI osva-sdk 1.1.0rc4 publish",
+    "GHCR osva:1.1.0-rc.4 OCI publish",
+    "M10.4-style published-registry acceptance for 1.1.0-rc.4",
+    "Optional pnpm verify:ci:clean on M15 closeout commit"
+  ],
+  "completedReleaseGates": [
+    "release-readiness verify-core on cd38eea",
+    "release-readiness packages (npm/Python pack smoke) on cd38eea",
+    "release-readiness oci-compose-helm on cd38eea",
+    "release-readiness kind on cd38eea",
+    "Git tag v1.1.0-rc.4 and GitHub prerelease",
+    "npm five packages @rc 1.1.0-rc.4 publication"
   ],
   "ociImage": "osva:1.1.0-rc.4",
   "ociImageGhcr": "ghcr.io/osva-ai/osva:1.1.0-rc.4",
@@ -61,7 +93,8 @@
     "version": "1.1.0-rc.4",
     "pep440ArtifactVersion": "1.1.0rc4",
     "pipInstallExample": "pip install osva-sdk==1.1.0rc4",
-    "path": "sdks/python"
+    "path": "sdks/python",
+    "pypiPublishedVersion": "1.1.0rc2"
   },
   "migrationHead": "0030_approval_operation_binding_slice",
   "license": "Apache-2.0",
@@ -71,7 +104,7 @@
   ],
   "supplyChainNotes": [
     "Secrets scan and license inventory run in release-readiness CI",
-    "SBOM, container CVE scan, and artifact signing are not automated in-repo (RC.3 optional)"
+    "SBOM, container CVE scan, and artifact signing are not automated in-repo (RC.4 optional)"
   ],
   "documentation": [
     "README.md",
@@ -83,6 +116,7 @@
     "docs/operations/UPGRADE.md",
     "docs/operations/BACKUP_AND_RECOVERY.md",
     "docs/release/COMPATIBILITY.md",
-    "docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md"
+    "docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md",
+    "docs/operations/M15_ACCEPTANCE_SUMMARY.md"
   ]
 }

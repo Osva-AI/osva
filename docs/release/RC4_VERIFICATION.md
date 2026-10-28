@@ -16,8 +16,8 @@ Security release candidate **`1.1.0-rc.4`** builds on PR **#56** (Zod remediatio
 | GitHub prerelease **`v1.1.0-rc.4`** | **Complete** | Published **`2026-10-27T09:54:36Z`** |
 | npm five packages at **`1.1.0-rc.4`**; dist-tag **`rc`** | **Complete** | `npm view @osva-ai/{contracts,runtime-protocol,sdk,cli,connector-sdk}@rc version` → **`1.1.0-rc.4`** (reconciliation **`2026-10-27`**) |
 | GitHub **`Release readiness`** on publish commit **`cd38eea`** | **Complete** | Run **`40479668476`**: **`verify-core`**, **`packages`**, **`oci-compose-helm`**, **`kind`** — all **success** |
-| PyPI **`osva-sdk==1.1.0rc4`** publish | **Pending** | PyPI JSON index lists **`1.1.0rc1`** and **`1.1.0rc2`** only (reconciliation **`2026-10-27`**) |
-| GHCR **`ghcr.io/osva-ai/osva:1.1.0-rc.4`** | **Pending** | GHCR package versions show latest container tag **`1.1.0-rc.2`** (reconciliation **`2026-10-27`**) |
+| PyPI **`osva-sdk==1.1.0rc4`** publish | **Pending** | PyPI JSON index lists **`1.1.0rc1`** and **`1.1.0rc2`** only (reconciliation **`2026-10-28`** M15.5) |
+| GHCR **`ghcr.io/osva-ai/osva:1.1.0-rc.4`** | **Pending** | GHCR package versions show latest container tag **`1.1.0-rc.2`** (reconciliation **`2026-10-28`** M15.5) |
 | M10.4-style published-registry acceptance for **`1.1.0-rc.4`** | **Pending** | No RC.4 equivalent to M10.4E isolated Compose + registry-only CLI/SDK replay |
 
 ## Prior RC gate record

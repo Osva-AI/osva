@@ -1,6 +1,6 @@
 # M15.4 Acceptance Summary — Unified Production Adoption Acceptance
 
-Status: **Implementation complete** — orchestration and matrix documented; **profile execution evidence** recorded in the final handoff for this slice (default profile on operator machine). **Integration**, **browser**, and **full** profiles require Docker (and Playwright for browser) and are **operator/CI-owned** for sign-off.
+Status: **Complete** — orchestration documented; **`full`** profile **PASS** (**23/23** steps) recorded **2026-10-28** in gitignored `artifacts/acceptance/m15-4/latest.json`. Isolated **default** / **integration** / **browser** profile runs were not recorded separately; mandatory steps for those profiles passed as part of **`full`**.
 
 Implementation tracker: [`../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md`](../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md).
 
@@ -109,12 +109,12 @@ Diagnostics when Docker is missing: runner marks Docker steps **BLOCKED** (exit 
 
 Update the table below after each operator/CI profile run:
 
-| Profile | Last run | Verdict | Notes |
+| Profile | Last run (UTC) | Verdict | Notes |
 | --- | --- | --- | --- |
-| `default` | (see handoff) | | |
-| `integration` | — | **NOT RUN** | Requires Docker |
-| `browser` | — | **NOT RUN** | Requires Docker + Playwright |
-| `full` | — | **NOT RUN** | Maintainer sign-off |
+| `default` | — | **PASS (inferred)** | Subset of **`full`** run; not invoked alone |
+| `integration` | — | **PASS (inferred)** | Docker steps in **`full`** run |
+| `browser` | — | **PASS (inferred)** | Playwright steps in **`full`** run |
+| `full` | **2026-10-28T08:55:24Z** | **PASS** | **23** steps, **0** fail/blocked/not-run; evidence `artifacts/acceptance/m15-4/latest.json`; git SHA **not** in artifact (predates **`045122e`** merge; catalog verified on **`045122e`** via `pnpm acceptance:m15:test`) |
 
 ## 8. Compatibility limitations
 
@@ -129,10 +129,8 @@ Update the table below after each operator/CI profile run:
 - Optional M9.7B groups B3/B4 full stack scenarios (use `pnpm acceptance:m9-7b --group=b3` when ops need deployment-grade evidence).
 - Kind/Helm acceptance (`OSVA_KIND_ACCEPTANCE=true` via `release:acceptance`).
 
-## 10. M15.5 closeout prerequisites
+## 10. M15.5 closeout (completed)
 
-- Execute and record **integration** and **browser** profiles on CI or maintainer host (Docker + Playwright).
-- Reconcile [`M15_ACCEPTANCE_SUMMARY.md`](M15_ACCEPTANCE_SUMMARY.md) (create at M15.5) with PASS evidence for all mandatory journeys.
-- Close PyPI/GHCR/M10.4E gaps or document residual risk in release inventory.
-- `pnpm verify:ci:clean` on merge-ready commit.
-- Mark M15.4 **Complete** in implementation tracker only after profile evidence is attached.
+- [`M15_ACCEPTANCE_SUMMARY.md`](M15_ACCEPTANCE_SUMMARY.md) reconciles **`full`** profile evidence and residual gaps.
+- PyPI/GHCR/M10.4E documented as **pending** in release inventory and RC.4 verification.
+- `pnpm verify:ci:clean` **not** re-run for M15.5; GitHub **CI** **`verify:ci`** **success** on M15.4 merge **`045122e`**.

@@ -248,7 +248,7 @@ Requires **EDITOR** or **ADMIN** (WRITE) to create namespaces; record listing fo
 - **Batch evaluation** — launch coordinator runs, case results, usage/cost aggregates (M13.7.4)
 - **Quality gates (M13.7.5)** — optional policy at launch; terminal gate assessment persisted once; Console distinguishes run **lifecycle** from gate **PASS** / **FAIL** / **INDETERMINATE** when pricing is incomplete
 
-Playwright: `apps/console/test/integration/m13-7-2-browser.integration.test.ts` through `m13-7-4-browser.integration.test.ts`. Quality-gate browser acceptance remains a documented gap (see M13.7.5 closeout; planned M15.2).
+Playwright: `apps/console/test/integration/m13-7-2-browser.integration.test.ts` through `m13-7-5-browser.integration.test.ts` (quality-gate **PASS** / **FAIL** / **INDETERMINATE** — M15.2).
 
 Requires **EDITOR** or **ADMIN** (WRITE) for suite/version authoring; **EXECUTE** to launch evaluation runs.
 

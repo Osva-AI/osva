@@ -1,8 +1,12 @@
 # OSVA Community compatibility and release policy
 
-Target release version: **`1.1.0-rc.4`** (security release candidate **prepared in repository**; **unpublished** until maintainer tag and registry publish).
+Target release version: **`1.1.0-rc.4`** (security release candidate; git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`**).
 
-Last **published and registry-verified** RC line: **`1.1.0-rc.2`** (see [`M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md)). External adapter packages (for example osva-adapters) should pin **`1.1.0-rc.4`** (when published) for M12.4.3 artifact blob exports **and** Zod **4.6.7** / bounded collection validation from PR **#56**, or build from this repository.
+**npm (verified M15.5):** all five public packages publish **`1.1.0-rc.4`** on dist-tag **`rc`**. **`latest`** remains **`1.0.0`**.
+
+**Not published on RC.4 line (verified M15.5):** PyPI **`osva-sdk==1.1.0rc4`**; GHCR **`ghcr.io/osva-ai/osva:1.1.0-rc.4`** (latest GHCR tag **`1.1.0-rc.2`**). M10.4E-style registry-only Compose replay for RC.4 is **pending**.
+
+Last **full multi-channel** registry-verified RC: **`1.1.0-rc.2`** ([`M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md)). External adapter packages should pin **`@osva-ai/contracts@1.1.0-rc.4`** for M12.4.3 artifact blob exports and Zod **4.6.7** / bounded collection validation (PR **#56**), or build from this repository.
 
 Published **`1.1.0-rc.1`** npm/PyPI/GHCR artifacts remain on registries for existing pins. **`@osva-ai/cli@1.1.0-rc.1`** is the pre-M10.2 SDK wrapper only (no `init`, `validate`, `deploy`, `run`, `status`, `doctor`, or bundled templates). Use **`1.1.0-rc.2`** or newer from registries (or build from this repository for unreleased commits) for the agent developer CLI.
 
@@ -27,18 +31,18 @@ Versioned documents under `docs/contracts/` define manifests, runtime protocol m
 | Registry state | Artifact blob exports in npm tarball |
 |----------------|--------------------------------------|
 | **`1.1.0-rc.2`** (published) | **Missing** — tarball predates M12.4.3 merge |
-| **`1.1.0-rc.4`** (prepared) | **Present** — verified by packed export regression |
+| **`1.1.0-rc.4`** (npm **`@rc`**) | **Present** — verified by packed export regression and npm publication |
 
 ## Public SDKs and CLI
 
 | Artifact | Package | Repository `VERSION` | Last published npm | PyPI / notes |
 |----------|---------|----------------------|--------------------|--------------|
-| Contracts | `@osva-ai/contracts` | 1.1.0-rc.4 | 1.1.0-rc.2 | Zod **4.6.7** in packed runtime deps |
-| Runtime protocol | `@osva-ai/runtime-protocol` | 1.1.0-rc.4 | 1.1.0-rc.2 | Capability collection bounds (V1) |
-| TypeScript SDK | `@osva-ai/sdk` | 1.1.0-rc.4 | 1.1.0-rc.2 | — |
-| CLI | `@osva-ai/cli` | 1.1.0-rc.4 | 1.1.0-rc.2 | Includes M10.2 agent workflow (not in RC1 npm CLI) |
-| Connector SDK | `@osva-ai/connector-sdk` | 1.1.0-rc.4 | 1.1.0-rc.2 | — |
-| Python SDK | `osva-sdk` | 1.1.0-rc.4 | 1.1.0-rc.2 | **`pip install osva-sdk==1.1.0rc2`** until RC.4 PyPI publish; npm RC.4 is independent |
+| Contracts | `@osva-ai/contracts` | 1.1.0-rc.4 | 1.1.0-rc.4 (`@rc`) | Zod **4.6.7** in packed runtime deps |
+| Runtime protocol | `@osva-ai/runtime-protocol` | 1.1.0-rc.4 | 1.1.0-rc.4 (`@rc`) | Capability collection bounds (V1) |
+| TypeScript SDK | `@osva-ai/sdk` | 1.1.0-rc.4 | 1.1.0-rc.4 (`@rc`) | — |
+| CLI | `@osva-ai/cli` | 1.1.0-rc.4 | 1.1.0-rc.4 (`@rc`) | Includes M10.2 agent workflow (not in RC1 npm CLI) |
+| Connector SDK | `@osva-ai/connector-sdk` | 1.1.0-rc.4 | 1.1.0-rc.4 (`@rc`) | — |
+| Python SDK | `osva-sdk` | 1.1.0-rc.4 | 1.1.0rc2 (PyPI) | **`pip install osva-sdk==1.1.0rc2`** until RC.4 PyPI publish |
 
 Semver applies to published packages. **Minor** releases (1.0 → 1.1) may include additive `/v1` behavior, new optional fields, and documented adapter-interface changes below.
 
@@ -72,7 +76,7 @@ RC.4 is a **security-focused npm** release (Zod remediation + validation bounds)
 ## Database migrations
 
 - Migrations are forward-only.
-- Tag **`v1.0.0`** ends at **`0022_api_security_slice`**. **`1.1.0-rc.2`** requires **`0023_execution_lease_slice`**. Current repository head (M11): **`0026_better_auth_user_image`**. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md).
+- Tag **`v1.0.0`** ends at **`0022_api_security_slice`**. **`1.1.0-rc.2`** requires **`0023_execution_lease_slice`**. Community **`1.1.0-rc.4`** baseline requires head **`0030_approval_operation_binding_slice`**. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md).
 - Downgrading application images without a matching schema is unsupported.
 
 ## Human identity and authentication (M11)
