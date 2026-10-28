@@ -98,12 +98,14 @@ Status is recorded after locally verifiable checks for each slice.
 
 **Release baseline (M15.1):** Git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`** (`fix(security): remediate RC4 dependency vulnerabilities (#58)`). Repository **`VERSION`**: **`1.1.0-rc.4`**. Drizzle journal head: **`0030_approval_operation_binding_slice`**.
 
-## M15 — Production adoption and operational experience (planned)
+## M15 — Production adoption and operational experience
 
-See [`../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md`](../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md).
+See [`../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md`](../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md) · [`../operations/M15_ACCEPTANCE_SUMMARY.md`](../operations/M15_ACCEPTANCE_SUMMARY.md) · [`../operations/M15_CLOSEOUT_SUMMARY.md`](../operations/M15_CLOSEOUT_SUMMARY.md).
 
-- ✅ M15.1 Baseline and roadmap reconciliation (documentation) — [`../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md`](../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md) · baseline tag **`v1.1.0-rc.4`** / **`cd38eea`**
-- ⬜ M15.2 Evaluation Studio browser acceptance
-- ⬜ M15.3 Operator experience hardening
-- ⬜ M15.4 Unified adoption acceptance
-- ⬜ M15.5 Production adoption closeout
+- ✅ M15.1 Baseline and roadmap reconciliation (documentation) — PR **#59** → **`6716b83`**
+- ✅ M15.2 Evaluation Studio browser acceptance — PR **#60** → **`c313e1e`** · `m13-7-5-browser.integration.test.ts`
+- ✅ M15.3 Operator experience hardening — PR **#61** → **`f2a80e0`** · operator diagnostics Console unit tests
+- ✅ M15.4 Unified adoption acceptance — PR **#62** → **`045122e`** · [`../operations/M15_4_ACCEPTANCE_SUMMARY.md`](../operations/M15_4_ACCEPTANCE_SUMMARY.md) · **`full`** profile **PASS** (operator evidence **2026-10-28**)
+- ✅ M15.5 Production adoption closeout — acceptance/closeout summaries; release inventory reconciled (PyPI/GHCR/M10.4E **pending**)
+
+**M15 acceptance vs distribution:** Milestone **acceptance** is **complete (scoped)**. RC.4 **npm** publication is **complete**; **PyPI**, **GHCR**, and **M10.4E** registry-only replay remain **open** (not production-deployment certification for all channels).

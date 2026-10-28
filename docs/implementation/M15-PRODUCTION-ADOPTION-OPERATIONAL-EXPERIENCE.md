@@ -15,8 +15,8 @@ Verification policy: [`../engineering/DEVELOPMENT_GATES.md`](../engineering/DEVE
 | M15.1 Baseline and roadmap reconciliation | **Complete** (documentation) | Tracker, stage roadmap, UPGRADE **`0029`/`0030`**, RC.4 verification record, Console surface docs |
 | M15.2 Evaluation Studio browser acceptance | **Complete** (browser suite) | `m13-7-5-browser.integration.test.ts`; see M13.7.5 / M15.2 evidence |
 | M15.3 Operator experience hardening | **Complete** (Console UX) | Shared operator diagnostics on Run, WorkflowRun, connector, model, and knowledge surfaces |
-| M15.4 Unified adoption acceptance | **In progress** (orchestration) | `pnpm acceptance:m15` + [`../operations/M15_4_ACCEPTANCE_SUMMARY.md`](../operations/M15_4_ACCEPTANCE_SUMMARY.md); profile sign-off pending |
-| M15.5 Production adoption closeout | **Planned** | Acceptance summaries and residual risks |
+| M15.4 Unified adoption acceptance | **Complete** | `pnpm acceptance:m15` · [`../operations/M15_4_ACCEPTANCE_SUMMARY.md`](../operations/M15_4_ACCEPTANCE_SUMMARY.md) · **`full`** profile **PASS** **2026-10-28** |
+| M15.5 Production adoption closeout | **Complete** | [`../operations/M15_ACCEPTANCE_SUMMARY.md`](../operations/M15_ACCEPTANCE_SUMMARY.md) · [`../operations/M15_CLOSEOUT_SUMMARY.md`](../operations/M15_CLOSEOUT_SUMMARY.md) |
 
 ## M15.1 — Baseline and roadmap reconciliation
 
@@ -82,30 +82,23 @@ Verification policy: [`../engineering/DEVELOPMENT_GATES.md`](../engineering/DEVE
 - Reuses M12.3, M13 browser suites, M15.3 operator unit tests, canonical example integration, M14 adversarial/HTTP/approval DB tests, and RC4 version/pack smoke — no duplicated Vitest implementations.
 - Branch-impact **`operator-diagnostics`** targeted tests for M15.3 Console paths.
 
-**Remaining for slice closeout:**
+**Closeout evidence (M15.4 / M15.5):**
 
-- Record PASS for **integration** and **browser** profiles on Docker/Playwright hosts.
-- Optional npm `@rc` registry check in **`full`** profile (NOT RUN when registry unreachable).
-- Operator **`applied_and_matches`** evidence when `OSVA_DATABASE_URL` points at a migrated stack (not implied by default profile alone).
+- Operator **`full`** profile **PASS** — **23/23** steps, **`artifacts/acceptance/m15-4/latest.json`** (**2026-10-28T08:55:24Z**).
+- npm **`@rc`** registry check **PASS** inside **`full`** run.
+- **`applied_and_matches`** on long-lived operator DB remains **deferred** (not in orchestration catalog).
 
-**Acceptance:** Summary doc + evidence JSON; do not mark M15.4 complete until profile matrix shows mandatory journeys **PASS** (not merely script existence).
+**Acceptance:** Summary doc + evidence JSON; mandatory journeys **PASS** via **`full`** profile (see M15.5 acceptance summary).
 
 ## M15.5 — Production adoption closeout
 
-**Scope:**
+**Delivered:**
 
-- [`../operations/M15_ACCEPTANCE_SUMMARY.md`](../operations/M15_ACCEPTANCE_SUMMARY.md) (create at closeout) + optional closeout summary.
-- Update [`../release/COMPATIBILITY.md`](../release/COMPATIBILITY.md) and [`../release/RELEASE_CANDIDATE_INVENTORY.json`](../release/RELEASE_CANDIDATE_INVENTORY.json) when PyPI/GHCR/M10.4E replay completes.
-- Residual risk register (Console CI gaps, unpublished channels, operator binding on approvals).
+- [`../operations/M15_ACCEPTANCE_SUMMARY.md`](../operations/M15_ACCEPTANCE_SUMMARY.md) and [`../operations/M15_CLOSEOUT_SUMMARY.md`](../operations/M15_CLOSEOUT_SUMMARY.md).
+- Reconciled [`../release/COMPATIBILITY.md`](../release/COMPATIBILITY.md) and [`../release/RELEASE_CANDIDATE_INVENTORY.json`](../release/RELEASE_CANDIDATE_INVENTORY.json) with verified RC.4 channel status (npm **published**; PyPI/GHCR/M10.4E **pending**).
+- Residual risks: partial distribution, fixture-backed adoption proof, workflow vs tool-call approval granularity (M14).
 
-**Acceptance:** IMPLEMENTATION_TRACKER M15 slices marked complete with evidence; `pnpm verify:ci:clean` on merge-ready commit.
-
-## Recommended M15.2 implementation order (next slice)
-
-1. Read existing M13.7.4–M13.7.5 browser harness and evaluation run launch/detail components.
-2. Add fixtures for priced vs unpriced model usage to force **INDETERMINATE** cost gate in UI.
-3. Implement one Playwright file (for example `m15-2-evaluation-gate-browser.integration.test.ts`) covering launch + terminal detail.
-4. Run `pnpm verify:branch` with Console integration obligations; update M13.7.5 acceptance doc to reference new coverage.
+**Acceptance:** IMPLEMENTATION_TRACKER updated; focused verification on closeout docs. `pnpm verify:ci:clean` **not** re-run — GitHub **CI** **`verify:ci`** **success** on **`045122e`** recorded instead.
 
 ## Dependencies
 
