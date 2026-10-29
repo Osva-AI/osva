@@ -93,6 +93,17 @@ describe("deploy compose acceptance wiring", () => {
     );
   });
 
+  it("defaults MCP private-network connector access to false in compose.yml", () => {
+    const compose = fs.readFileSync(
+      path.join(COMPOSE_DIR, "compose.yml"),
+      "utf8",
+    );
+    assert.match(
+      compose,
+      /OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS:\s*\$\{OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS:-false\}/,
+    );
+  });
+
   it("rejects compose config when OSVA_AUTH_SECRET is unset", async () => {
     const env = await loadEnvironment();
     if (!env.docker?.version) {

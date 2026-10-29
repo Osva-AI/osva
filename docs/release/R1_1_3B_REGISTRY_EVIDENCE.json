@@ -1,0 +1,160 @@
+{
+  "acceptance": "r11-registry-only",
+  "release": "1.1.0-rc.4",
+  "phase": "R1.1.3B",
+  "journeys": [
+    { "id": "journey-preflight-npm", "title": "Published npm @rc identity", "status": "PASS" },
+    { "id": "journey-preflight-pypi", "title": "Published PyPI osva-sdk hashes", "status": "PASS" },
+    {
+      "id": "journey-01-oci-pull",
+      "title": "Fresh container pull from GHCR",
+      "status": "PASS",
+      "evidence": {
+        "indexDigest": "sha256:59148d75ab75cafcd8d287e95806a9b50d1e022048502f5c9379381b75d16d2f",
+        "platform": "linux/amd64"
+      }
+    },
+    {
+      "id": "journey-runtime-image",
+      "title": "Runtime image verification (entrypoint, prod deps)",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-02-migrations",
+      "title": "Database migration to head 0030",
+      "status": "PASS",
+      "evidence": { "head": "0030_approval_operation_binding_slice" }
+    },
+    {
+      "id": "journey-03-bootstrap",
+      "title": "Human identity and workspace bootstrap",
+      "status": "PASS",
+      "evidence": { "workspaceId": "ddd9a545-113c-4f65-a85e-577848938dcf" }
+    },
+    {
+      "id": "journey-04-model",
+      "title": "Model provider configuration (deterministic defaults)",
+      "status": "PASS",
+      "detail": "OSVA_KNOWLEDGE_EMBEDDING_PROVIDER=DETERMINISTIC"
+    },
+    {
+      "id": "journey-05-mcp-host",
+      "title": "MCP server startup and Host header security",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-05b-mcp-connectors",
+      "title": "MCP connector discovery and tool import",
+      "status": "PASS",
+      "detail": "OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS=true (acceptance topology)",
+      "evidence": {
+        "connectorId": "01670327-7a8d-4e28-b7c1-3309b922f89c",
+        "connectorVersionId": "94dfeefb-fcbc-4cf4-a811-1735239bb809",
+        "toolVersionId": "0c6fc6ac-7fbc-4564-9a62-b97332366a39",
+        "endpointUrl": "http://host.docker.internal:51035",
+        "discoveredToolCount": 5
+      }
+    },
+    {
+      "id": "journey-05c-mcp-tool-invoke",
+      "title": "Agent binding and authorized MCP tool invocation",
+      "status": "NOT_RUN",
+      "detail": "Registry harness stops at import; agent+run tool path deferred (no RC4 contract gap)"
+    },
+    {
+      "id": "journey-06-cli",
+      "title": "Published npm CLI install and execution",
+      "status": "PASS",
+      "evidence": {
+        "agentVersionId": "91383498-9621-47a7-8bdd-7e5ed796c0a9",
+        "runId": "b59210aa-b587-4073-ab2a-9ec11dc02ed5"
+      }
+    },
+    { "id": "journey-07-sdk", "title": "Published npm SDK install and usage", "status": "PASS" },
+    {
+      "id": "journey-08-agent",
+      "title": "Agent creation, publication and execution",
+      "status": "PASS",
+      "evidence": { "runStatus": "SUCCEEDED" }
+    },
+    {
+      "id": "journey-09-workflow",
+      "title": "Durable workflow with approval and WAIT",
+      "status": "PASS",
+      "evidence": {
+        "workflowId": "51b66267-8e9c-4a66-812d-f46da93239b1",
+        "workflowVersionId": "5c9f17cc-be06-47b4-a2d7-c2c2ed4e38cd",
+        "workflowRunId": "612350c8-2604-433a-839b-b70d707716ef",
+        "approvalRequestId": "69d0fb21-1ba9-4113-9d88-47c4b2f3dd60",
+        "correlationKey": "r11-b2851492-c032-451d-8690-60e3a11a0c6e"
+      }
+    },
+    {
+      "id": "journey-10-artifacts",
+      "title": "Artifact persistence and retrieval",
+      "status": "PASS",
+      "evidence": { "artifact": { "artifactId": "a0f22deb-fde1-4728-bb88-50f0862720e8" } }
+    },
+    {
+      "id": "journey-10b-sdk-multipart",
+      "title": "Published SDK multipart artifact upload probe",
+      "status": "PASS",
+      "detail": "SDK and fetch paths succeeded",
+      "evidence": {
+        "sdk": { "ok": true, "artifactId": "19b10da0-6619-4573-b1c9-6fee7ab20651" },
+        "fetch": { "ok": true, "artifactId": "dbec791b-0ea3-4a8b-96c3-43468b01b365" },
+        "nodeVersion": "v24.13.1"
+      }
+    },
+    {
+      "id": "journey-11-python",
+      "title": "Published PyPI SDK installation and API smoke",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-12-restart",
+      "title": "Runtime restart and persisted state recovery",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-13-security",
+      "title": "Workspace isolation and relevant security defaults",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-cleanup",
+      "title": "Docker cleanup (project-scoped volumes)",
+      "status": "PASS"
+    }
+  ],
+  "startedAt": "2026-10-29T17:47:50.863Z",
+  "composeProject": "osva-r11-registry",
+  "groups": ["preflight", "stack", "workflow", "mcp", "consumers", "multipart", "restart"],
+  "gitRevision": "e073e2fbeb87b0e820bb3e642be4860d8cdd2e97",
+  "releaseCommit": "cd38eea46b8ee44bb099ccf307818cfcd348f50b",
+  "npmRc": {
+    "@osva-ai/contracts": "1.1.0-rc.4",
+    "@osva-ai/runtime-protocol": "1.1.0-rc.4",
+    "@osva-ai/sdk": "1.1.0-rc.4",
+    "@osva-ai/cli": "1.1.0-rc.4",
+    "@osva-ai/connector-sdk": "1.1.0-rc.4"
+  },
+  "pypi": {
+    "osva_sdk-1.1.0rc4-py3-none-any.whl": "e1eb68454bcdd3c376919bdb88359ba03481d7407ba9ffc358cda862a4671161",
+    "osva_sdk-1.1.0rc4.tar.gz": "067379706602848ab46d8b179a6cfbd4393ecaba75651952dab6791fdf2b579a"
+  },
+  "ghcr": {
+    "indexDigest": "sha256:59148d75ab75cafcd8d287e95806a9b50d1e022048502f5c9379381b75d16d2f",
+    "platform": "linux/amd64"
+  },
+  "sdkMultipartInvestigation": {
+    "r11_3aObservation": "OsvaTransportError (fetch failed) on SDK path; raw fetch FormData succeeded in consumer smoke",
+    "r11_3bFinding": "Published @osva-ai/sdk@1.1.0-rc.4 multipart is not defective on Node v24.13.1; isolated probe and full replay PASS. Transient failure when probe ran immediately after workflow+MCP without /ready stabilization (both SDK and raw fetch failed at transport layer). Harness now waits for /ready and runs raw fetch before SDK probe.",
+    "rc4ArtifactChange": "none"
+  },
+  "mcpAcceptanceTopology": {
+    "fixture": "adapters/mcp-client dist fake HTTP MCP (bind 0.0.0.0, allowAnyHost for host.docker.internal Host header)",
+    "webToFixture": "http://host.docker.internal:<port>",
+    "composeFlag": "OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS=true when mcp group selected"
+  }
+}
