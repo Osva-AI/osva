@@ -1,22 +1,21 @@
 import { spawnSync } from "node:child_process";
 
-import {
-  GHCR_IMAGE_TAG,
-  GHCR_INDEX_DIGEST,
-  NPM_PACKAGES,
-  PYPI_SDIST_SHA256,
-  PYPI_WHEEL_SHA256,
-  RC4_PEP440,
-  RC4_SEMVER,
-} from "./constants.mjs";
+import { NPM_PACKAGES } from "./constants.mjs";
 
 const NPM_TIMEOUT_MS = 45_000;
 const HTTP_TIMEOUT_MS = 45_000;
 
-function npmViewRcVersion(packageName) {
+/**
+ * @param {import("./lib/targets.mjs").RegistryAcceptanceTarget} target
+ */
+function npmViewVersion(packageName, target) {
+  const selector =
+    target.npmRegistryMode === "exact"
+      ? target.npmPackageVersion
+      : target.npmViewSelector;
   const result = spawnSync(
     "npm",
-    ["view", `${packageName}@rc`, "version", "--json"],
+    ["view", `${packageName}@${selector}`, "version", "--json"],
     {
       encoding: "utf8",
       timeout: NPM_TIMEOUT_MS,
@@ -25,32 +24,43 @@ function npmViewRcVersion(packageName) {
   );
   if (result.status !== 0) {
     throw new Error(
-      `npm view ${packageName}@rc failed: ${(result.stderr || result.stdout).trim()}`,
+      `npm view ${packageName}@${selector} failed: ${(result.stderr || result.stdout).trim()}`,
     );
   }
   const parsed = JSON.parse(result.stdout.trim());
   return String(Array.isArray(parsed) ? parsed[0] : parsed);
 }
 
-export async function auditNpmRcVersions() {
+/**
+ * @param {import("./lib/targets.mjs").RegistryAcceptanceTarget} target
+ */
+export async function auditNpmPublishedVersions(target) {
   /** @type {Record<string, string>} */
   const versions = {};
   for (const name of NPM_PACKAGES) {
-    const version = npmViewRcVersion(name);
-    if (version !== RC4_SEMVER) {
-      throw new Error(`${name}@rc is ${version}, expected ${RC4_SEMVER}`);
+    const version = npmViewVersion(name, target);
+    if (version !== target.npmPackageVersion) {
+      throw new Error(
+        `${name}@${target.npmViewSelector} is ${version}, expected ${target.npmPackageVersion}`,
+      );
     }
     versions[name] = version;
   }
   return versions;
 }
 
-export async function auditPyPiHashes() {
+/**
+ * @param {import("./lib/targets.mjs").RegistryAcceptanceTarget} target
+ */
+export async function auditPyPiHashes(target) {
+  if (!target.pypiWheelSha256 || !target.pypiSdistSha256) {
+    throw new Error("PyPI SHA-256 expectations not configured for this target");
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
   try {
     const response = await fetch(
-      `https://pypi.org/pypi/osva-sdk/${RC4_PEP440}/json`,
+      `https://pypi.org/pypi/osva-sdk/${target.pythonPep440}/json`,
       { signal: controller.signal },
     );
     if (!response.ok) {
@@ -58,8 +68,8 @@ export async function auditPyPiHashes() {
     }
     const body = await response.json();
     const expected = {
-      "osva_sdk-1.1.0rc4-py3-none-any.whl": PYPI_WHEEL_SHA256,
-      "osva_sdk-1.1.0rc4.tar.gz": PYPI_SDIST_SHA256,
+      [target.pypiWheelFilename]: target.pypiWheelSha256,
+      [target.pypiSdistFilename]: target.pypiSdistSha256,
     };
     /** @type {Record<string, string>} */
     const verified = {};
@@ -80,10 +90,17 @@ export async function auditPyPiHashes() {
   }
 }
 
-export function auditGhcrDigestPull() {
+/**
+ * @param {import("./lib/targets.mjs").RegistryAcceptanceTarget} target
+ */
+export function auditGhcrDigestPull(target) {
+  if (!target.ghcrIndexDigest) {
+    throw new Error("GHCR index digest not configured for this target");
+  }
+  const imageRef = target.ghcrImageRef;
   const inspect = spawnSync(
     "docker",
-    ["buildx", "imagetools", "inspect", GHCR_IMAGE_TAG],
+    ["buildx", "imagetools", "inspect", imageRef],
     { encoding: "utf8", timeout: 120_000 },
   );
   if (inspect.status !== 0) {
@@ -91,15 +108,15 @@ export function auditGhcrDigestPull() {
       `imagetools inspect failed: ${(inspect.stderr || inspect.stdout).trim()}`,
     );
   }
-  if (!inspect.stdout.includes(GHCR_INDEX_DIGEST.replace("sha256:", ""))) {
+  if (!inspect.stdout.includes(target.ghcrIndexDigest.replace("sha256:", ""))) {
     throw new Error(
-      `GHCR index digest ${GHCR_INDEX_DIGEST} not found in imagetools output`,
+      `GHCR index digest ${target.ghcrIndexDigest} not found in imagetools output`,
     );
   }
 
   const pull = spawnSync(
     "docker",
-    ["pull", "--platform", "linux/amd64", GHCR_IMAGE_TAG],
+    ["pull", "--platform", "linux/amd64", imageRef],
     { encoding: "utf8", timeout: 600_000 },
   );
   if (pull.status !== 0) {
@@ -110,13 +127,7 @@ export function auditGhcrDigestPull() {
 
   const imageInspect = spawnSync(
     "docker",
-    [
-      "image",
-      "inspect",
-      GHCR_IMAGE_TAG,
-      "--format",
-      "{{.Os}}/{{.Architecture}}",
-    ],
+    ["image", "inspect", imageRef, "--format", "{{.Os}}/{{.Architecture}}"],
     { encoding: "utf8" },
   );
   if (imageInspect.status !== 0) {
@@ -126,5 +137,11 @@ export function auditGhcrDigestPull() {
   if (platform !== "linux/amd64") {
     throw new Error(`Expected linux/amd64 platform, got ${platform}`);
   }
-  return { indexDigest: GHCR_INDEX_DIGEST, platform };
+  return { indexDigest: target.ghcrIndexDigest, platform };
+}
+
+/** @deprecated Use auditNpmPublishedVersions */
+export async function auditNpmRcVersions() {
+  const { RC4_TARGET } = await import("./lib/targets.mjs");
+  return auditNpmPublishedVersions(RC4_TARGET);
 }

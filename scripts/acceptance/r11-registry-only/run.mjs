@@ -11,13 +11,17 @@ import {
 } from "../../deployment/deploy-compose-acceptance-env.mjs";
 import { httpGetWithHost } from "../../deployment/mcp-http-check.mjs";
 import { verifyRuntimeImageContents } from "../../deployment/verify-runtime-image.mjs";
-import { COMPOSE_PROJECT, GHCR_IMAGE_TAG, RC4_SEMVER } from "./constants.mjs";
 import { AcceptanceReport } from "./report.mjs";
 import {
   auditGhcrDigestPull,
-  auditNpmRcVersions,
+  auditNpmPublishedVersions,
   auditPyPiHashes,
 } from "./registry-audit.mjs";
+import {
+  assertTargetEnvGate,
+  resolveAcceptanceTarget,
+  stableTargetReadiness,
+} from "./lib/targets.mjs";
 import { parseGroups, runsGroup } from "./lib/groups.mjs";
 import { runMcpConnectorAcceptance } from "./lib/mcp-connector-acceptance.mjs";
 import { createPublishedNpmConsumer } from "./lib/published-npm-consumer.mjs";
@@ -41,18 +45,22 @@ const REQUIRED_SERVICES = [
 
 const DEFAULT_DEADLINE_MS = 15 * 60 * 1000;
 
-function printHelp() {
+function printHelp(target) {
   console.log(`Usage: pnpm acceptance:r11-registry
 
-Registry-only RC.4 published-artifact acceptance (M10.4E replay).
+Registry-only published-artifact acceptance (M10.4E / R1.1 replay).
+
+Target (default rc4):
+  OSVA_REGISTRY_ACCEPTANCE_TARGET=rc4|stable
 
 Requires:
-  OSVA_RC4_REGISTRY_ACCEPTANCE=1
+  rc4:   OSVA_RC4_REGISTRY_ACCEPTANCE=1
+  stable: OSVA_STABLE_REGISTRY_ACCEPTANCE=1 (blocked until stable artifacts + digests recorded)
   Docker Compose v2, Node 24+, Python 3.11+ on PATH
 
 Optional:
-  OSVA_IMAGE (defaults to ${GHCR_IMAGE_TAG})
-  COMPOSE_PROJECT_NAME (defaults to ${COMPOSE_PROJECT})
+  OSVA_IMAGE (defaults to target GHCR ref: ${target.ghcrImageRef})
+  COMPOSE_PROJECT_NAME (defaults to ${target.composeProject})
   OSVA_PUBLISH_WEB_PORT / OSVA_PUBLISH_MCP_PORT (defaults 18080 / 13100)
   OSVA_R11_SKIP_COMPOSE=1  — audit + image smoke only (no live stack)
   OSVA_R11_GROUPS=workflow,mcp,multipart  — focused unfinished journeys
@@ -104,13 +112,13 @@ async function waitUntil(deadlineMs, label, fn) {
   );
 }
 
-function composeEnvBase(options = {}) {
+function composeEnvBase(target, options = {}) {
   const composeEnv = buildComposeAcceptanceEnv(process.env);
   return {
     ...composeEnv,
-    OSVA_IMAGE: process.env.OSVA_IMAGE?.trim() || GHCR_IMAGE_TAG,
+    OSVA_IMAGE: process.env.OSVA_IMAGE?.trim() || target.ghcrImageRef,
     COMPOSE_PROJECT_NAME:
-      process.env.COMPOSE_PROJECT_NAME?.trim() || COMPOSE_PROJECT,
+      process.env.COMPOSE_PROJECT_NAME?.trim() || target.composeProject,
     ...(options.allowPrivateMcp === true
       ? { OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true" }
       : {}),
@@ -387,7 +395,7 @@ console.log(JSON.stringify({ artifactId: created.id }));
   }
 }
 
-async function runPythonSmoke(baseUrl, apiKey, report) {
+async function runPythonSmoke(baseUrl, apiKey, report, target) {
   const venvRoot = await mkdtemp(path.join(os.tmpdir(), "osva-r11-py-"));
   const venvDir = path.join(venvRoot, "venv");
   const python = process.platform === "win32" ? "python" : "python3";
@@ -405,11 +413,11 @@ async function runPythonSmoke(baseUrl, apiKey, report) {
 
     const pipInstall = spawnSync(
       venvPython,
-      ["-m", "pip", "install", "--no-cache-dir", "osva-sdk==1.1.0rc4"],
+      ["-m", "pip", "install", "--no-cache-dir", target.pipInstallSpec],
       { stdio: "inherit", timeout: 300_000 },
     );
     if (pipInstall.status !== 0) {
-      throw new Error("pip install osva-sdk==1.1.0rc4 failed");
+      throw new Error(`pip install ${target.pipInstallSpec} failed`);
     }
 
     const smoke = spawnSync(
@@ -441,23 +449,57 @@ async function runPythonSmoke(baseUrl, apiKey, report) {
 }
 
 async function main() {
+  let target;
+  try {
+    target = resolveAcceptanceTarget();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+
   if (process.argv.includes("--help") || process.argv.includes("-h")) {
-    printHelp();
+    printHelp(target);
     return;
   }
-  if (process.env.OSVA_RC4_REGISTRY_ACCEPTANCE !== "1") {
-    console.error(
-      "Refusing to run without OSVA_RC4_REGISTRY_ACCEPTANCE=1 (live registry + Docker).",
-    );
-    printHelp();
+
+  try {
+    assertTargetEnvGate(target);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    printHelp(target);
     process.exit(1);
+  }
+
+  const readiness = stableTargetReadiness(target);
+  if (readiness.blocked) {
+    const report = new AcceptanceReport();
+    report.record(
+      "target-readiness",
+      `Registry acceptance target ${target.id}`,
+      "BLOCKED",
+      { detail: readiness.reason },
+    );
+    console.log(
+      JSON.stringify(
+        report.summaryJson({
+          release: target.evidenceReleaseKey,
+          target: target.id,
+          registryArtifactsReady: target.registryArtifactsReady,
+        }),
+        null,
+        2,
+      ),
+    );
+    process.exit(report.exitCode());
   }
 
   const groups = parseGroups();
   const report = new AcceptanceReport();
   const startedAt = new Date().toISOString();
   const needsPrivateMcp = runsGroup(groups, "mcp");
-  const composeEnv = composeEnvBase({ allowPrivateMcp: needsPrivateMcp });
+  const composeEnv = composeEnvBase(target, {
+    allowPrivateMcp: needsPrivateMcp,
+  });
   const webPort = composeEnv.OSVA_PUBLISH_WEB_PORT;
   const mcpPort = Number.parseInt(composeEnv.OSVA_PUBLISH_MCP_PORT, 10);
   const baseUrl = `http://127.0.0.1:${webPort}`;
@@ -468,6 +510,8 @@ async function main() {
   /** @type {Record<string, unknown>} */
   const evidence = {
     startedAt,
+    release: target.evidenceReleaseKey,
+    target: target.id,
     composeProject: composeEnv.COMPOSE_PROJECT_NAME,
     groups: [...groups],
     gitRevision: spawnSync("git", ["rev-parse", "HEAD"], {
@@ -495,10 +539,10 @@ async function main() {
     }
     if (runsGroup(groups, "preflight")) {
       try {
-        evidence.npmRc = await auditNpmRcVersions();
+        evidence.npm = await auditNpmPublishedVersions(target);
         report.record(
           "journey-preflight-npm",
-          "Published npm @rc identity",
+          `Published npm ${target.npmViewSelector} identity`,
           "PASS",
         );
       } catch (error) {
@@ -514,7 +558,7 @@ async function main() {
       }
 
       try {
-        evidence.pypi = await auditPyPiHashes();
+        evidence.pypi = await auditPyPiHashes(target);
         report.record(
           "journey-preflight-pypi",
           "Published PyPI osva-sdk hashes",
@@ -547,7 +591,7 @@ async function main() {
     }
     if (runsGroup(groups, "preflight")) {
       try {
-        evidence.ghcr = auditGhcrDigestPull();
+        evidence.ghcr = auditGhcrDigestPull(target);
         report.record(
           "journey-01-oci-pull",
           "Fresh container pull from GHCR",
@@ -703,7 +747,7 @@ async function main() {
       runsGroup(groups, "workflow") ||
       runsGroup(groups, "multipart")
     ) {
-      npmConsumer = await createPublishedNpmConsumer();
+      npmConsumer = await createPublishedNpmConsumer(target.npmPackageVersion);
     }
 
     if (runsGroup(groups, "consumers")) {
@@ -716,7 +760,7 @@ async function main() {
         installRoot: npmConsumer.installRoot,
         workRoot: npmConsumer.workRoot,
       });
-      await runPythonSmoke(baseUrl, apiKey, report);
+      await runPythonSmoke(baseUrl, apiKey, report, target);
     }
 
     if (runsGroup(groups, "workflow")) {

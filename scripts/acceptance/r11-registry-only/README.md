@@ -1,6 +1,13 @@
-# R1.1.3 — RC.4 registry-only published-artifact acceptance
+# R1.1.3 — registry-only published-artifact acceptance
 
-Replay of the **M10.4E** pattern for **`1.1.0-rc.4`**: install and operate OSVA using **only** published npm, PyPI, and GHCR artifacts (no `workspace:*`, no local image build).
+Replay of the **M10.4E** pattern: install and operate OSVA using **only** published npm, PyPI, and GHCR artifacts (no `workspace:*`, no local image build).
+
+**Targets** (`OSVA_REGISTRY_ACCEPTANCE_TARGET`, default **`rc4`**):
+
+| Target | Gate env | Status |
+|--------|----------|--------|
+| **`rc4`** | `OSVA_RC4_REGISTRY_ACCEPTANCE=1` | **Ready** — verified **`1.1.0-rc.4`** artifacts |
+| **`stable`** | `OSVA_STABLE_REGISTRY_ACCEPTANCE=1` | **Blocked** until **`1.1.0`** is published and digests are recorded in `lib/targets.mjs` |
 
 ## Prerequisites
 
@@ -12,7 +19,11 @@ Replay of the **M10.4E** pattern for **`1.1.0-rc.4`**: install and operate OSVA 
 ## Run
 
 ```bash
+# RC4 historical replay (default target)
 OSVA_RC4_REGISTRY_ACCEPTANCE=1 pnpm acceptance:r11-registry
+
+# Stable 1.1.0 (after publication + target readiness update)
+OSVA_REGISTRY_ACCEPTANCE_TARGET=stable OSVA_STABLE_REGISTRY_ACCEPTANCE=1 pnpm acceptance:r11-registry
 ```
 
 Focused groups (R1.1.3B): `OSVA_R11_GROUPS=workflow,mcp,multipart` or `--group=workflow --group=mcp`. Values: `preflight`, `stack`, `workflow`, `mcp`, `consumers`, `multipart`, `restart`, `full`.
@@ -46,7 +57,7 @@ OSVA_RC4_REGISTRY_ACCEPTANCE=1 OSVA_COMPOSE_NO_BUILD=1 OSVA_IMAGE=ghcr.io/osva-a
 
 ## Isolation
 
-- Compose project: **`osva-r11-registry`** (override with `COMPOSE_PROJECT_NAME`)
+- Compose project: **`osva-r11-registry-rc4`** (stable: **`osva-r11-registry-stable`**; override with `COMPOSE_PROJECT_NAME`)
 - Host ports: **18080** (web), **13100** (MCP) by default
 - Teardown: `docker compose -p osva-r11-registry down -v` (runner executes on success/failure)
 

@@ -53,7 +53,6 @@ export class AcceptanceReport {
   summaryJson(extra = {}) {
     return {
       acceptance: "r11-registry-only",
-      release: "1.1.0-rc.4",
       journeys: this.#journeys,
       ...extra,
     };

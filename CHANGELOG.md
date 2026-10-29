@@ -6,13 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Added
+## [1.1.0] - TBD
 
-- **M11 (documentation closeout):** Human identity, Better Auth password sessions, fixed workspace roles, Console login and membership administration. Migration head **`0026_better_auth_user_image`**. See [`docs/operations/M11_CLOSEOUT_SUMMARY.md`](docs/operations/M11_CLOSEOUT_SUMMARY.md).
+Stable Community Edition release prepared in repository (**not published** until maintainer tag and registry publish). Builds on registry-verified **`1.1.0-rc.4`** plus M15 production-adoption closeout (source-only; no new SQL migrations).
+
+### Added (since stable 1.0.0 — cumulative 1.1.x line)
+
+- **Durable runtime and recovery:** Execution leases, heartbeats, fencing, worker recovery ticker, BullMQ enqueue outcomes (`JobQueue.enqueue` result type).
+- **Knowledge and retrieval:** Knowledge indexes, ingestion worker, embeddings gateway, runtime `context.knowledge.search`.
+- **MCP integrations:** Streamable HTTP MCP server, connector SDK, ToolGateway-mediated MCP client, Host header validation on `/mcp`.
+- **Human identity and workspaces (M11):** Better Auth password sessions, fixed workspace roles, Console login and membership administration (migrations **`0024`–`0026`**).
+- **Model and tool management (M12–M13):** Model provider connections, declarative agents, playground memory restrictions, evaluation quality gates (migrations **`0027`–`0029`**).
+- **Console studios:** Agents, workflows, runs, artifacts, Evaluation Studio browser acceptance (M13.7.5), operator diagnostics and recovery guidance (M15.3).
+- **Evaluation and quality gates:** Batch evaluation coordinator, quality gate persistence and Console surfacing.
+- **Security hardening (M14):** ToolGateway/MCP authorization, capability tokens, adversarial acceptance fixtures, operation-bound workflow approvals (migration **`0030`**), audit durability, human-session abuse controls.
+- **Operational diagnostics (M15):** Unified `pnpm acceptance:m15` replay, upgrade runbook through **`0030`**, RC.4 registry-only consumer acceptance harness (`pnpm acceptance:r11-registry`).
+- **Community adoption tooling:** `@osva-ai/cli` M10.2 agent workflow (`init`, `validate`, `deploy`, `run`, `status`, `doctor`), canonical dependency-adoption example.
+
+### Security
+
+- **Zod ([GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)):** Workspace dependency **Zod 4.6.7** with bounded collection validation (shipped on RC.4 line).
+- Dependency vulnerability remediation on RC.4 baseline (PR **#58**).
+
+### Upgrade
+
+- From **`v1.0.0`:** migrations through **`0030`** required. See [`docs/operations/UPGRADE.md`](docs/operations/UPGRADE.md).
+- From **`1.1.0-rc.4`:** intended aligned version bump only (npm `@rc` → stable **`1.1.0`**, PyPI, GHCR); schema unchanged at **`0030`**.
+
+### Known limitations
+
+- Registry-only journey **5c** (agent + authorized MCP tool invoke) remains **NOT RUN** in harness; discover/import covered.
+- OIDC/SAML/SCIM enterprise identity deferred.
+- S3-compatible artifact independent restore not acceptance-tested (same as 1.0.0 note).
+- Stable **`1.1.0`** registry acceptance blocked until publication (`OSVA_REGISTRY_ACCEPTANCE_TARGET=stable`).
 
 ## [1.1.0-rc.4] - 2026-10-26
 
-Security-focused release candidate prepared for npm publication. Aligns all public `@osva-ai/*` npm packages to the same version. **Not published** until maintainer tag and registry publish.
+Security-focused release candidate. Aligns all public `@osva-ai/*` npm packages to the same version. **Published** to npm **`@rc`**, PyPI **`1.1.0rc4`**, and GHCR **`:1.1.0-rc.4`** (see [`docs/release/R1_1_DISTRIBUTION_CLOSEOUT.md`](docs/release/R1_1_DISTRIBUTION_CLOSEOUT.md)).
 
 ### Security
 
@@ -28,10 +58,9 @@ Security-focused release candidate prepared for npm publication. Aligns all publ
 - **osva-adapters / external consumers:** Pin all `@osva-ai/*` packages to **`1.1.0-rc.4`** together. Includes M12.4.3 artifact blob storage root exports from RC.3 plus this security remediation.
 - **Upgrade from RC.3:** Drop-in npm version bump when all aligned packages move together; no HTTP `/v1` break.
 
-### Known limitations
+### Known limitations (historical prep note; superseded by R1.1 publication)
 
-- npm/PyPI **`latest`** dist-tags remain **`1.0.0`** until GA policy changes.
-- OCI, PyPI, and GHCR publication for **`1.1.0-rc.4`** are separate maintainer decisions (RC.4 is **npm-focused** unless explicitly extended).
+- At RC.4 prep time, multi-channel publication was pending; **R1.1** later verified npm, PyPI, and GHCR for **`1.1.0-rc.4`**.
 
 ## [1.1.0-rc.3] - 2026-10-24
 
