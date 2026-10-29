@@ -13,6 +13,17 @@ const REPO_ROOT = path.resolve(
 );
 const COMPOSE_DIR = path.join(REPO_ROOT, "deploy", "compose");
 
+function composeConfigTestEnv(overrides = {}) {
+  const env = {
+    ...process.env,
+    POSTGRES_PASSWORD: "compose-config-test-password",
+    OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
+    ...overrides,
+  };
+  delete env.COMPOSE_PROJECT_NAME;
+  return env;
+}
+
 describe("self-hosted compose distribution", () => {
   it("validates deploy/compose/compose.yml", async () => {
     const env = await loadEnvironment();
@@ -28,11 +39,7 @@ describe("self-hosted compose distribution", () => {
       {
         cwd: COMPOSE_DIR,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          POSTGRES_PASSWORD: "compose-config-test-password",
-          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
-        },
+        env: composeConfigTestEnv(),
       },
     );
     assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -60,11 +67,7 @@ describe("self-hosted compose distribution", () => {
       {
         cwd: COMPOSE_DIR,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          POSTGRES_PASSWORD: "compose-config-test-password",
-          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
-        },
+        env: composeConfigTestEnv(),
       },
     );
     assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -93,11 +96,7 @@ describe("self-hosted compose distribution", () => {
       {
         cwd: COMPOSE_DIR,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          POSTGRES_PASSWORD: "compose-config-test-password",
-          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
-        },
+        env: composeConfigTestEnv(),
       },
     );
     assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -135,11 +134,7 @@ describe("self-hosted compose distribution", () => {
       {
         cwd: COMPOSE_DIR,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          POSTGRES_PASSWORD: "compose-config-test-password",
-          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
-        },
+        env: composeConfigTestEnv(),
       },
     );
     assert.equal(
@@ -158,13 +153,10 @@ describe("self-hosted compose distribution", () => {
       {
         cwd: COMPOSE_DIR,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          POSTGRES_PASSWORD: "compose-config-test-password",
+        env: composeConfigTestEnv({
           VALKEY_PASSWORD: "compose-valkey-secret",
           OSVA_VALKEY_URL: "redis://:compose-valkey-secret@valkey:6379",
-          OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
-        },
+        }),
       },
     );
     assert.equal(

@@ -1,13 +1,44 @@
 {
   "releaseVersion": "1.1.0-rc.4",
-  "status": "OSS Community RC4 — npm and GitHub release published; PyPI/GHCR/M10.4E pending",
-  "publicationStatus": "partial",
+  "status": "OSS Community RC4 — R1.1 distribution closeout accepted",
+  "publicationStatus": "published_acceptance_complete",
   "sourceProvenance": {
-    "gitCommit": "045122edbe24847b228219229f2c22a7a7fe72ff",
+    "gitCommit": "e073e2fbeb87b0e820bb3e642be4860d8cdd2e97",
     "releaseCommit": "cd38eea46b8ee44bb099ccf307818cfcd348f50b",
     "gitTag": "v1.1.0-rc.4",
     "versionFile": "VERSION",
-    "note": "releaseCommit is the tag target for v1.1.0-rc.4. gitCommit is the tree state when this inventory was reconciled (M15.5 closeout on main through M15.4 merge)."
+    "note": "releaseCommit is the immutable tag target for v1.1.0-rc.4. gitCommit is branch HEAD when inventory was last reconciled (R1.1.4 closeout 2026-10-29)."
+  },
+  "r11ReleaseDistribution": {
+    "workstream": "R1.1",
+    "reconciledAt": "2026-10-29",
+    "closeoutDocument": "docs/release/R1_1_DISTRIBUTION_CLOSEOUT.md",
+    "registryReconciliationAt": "2026-10-29",
+    "registryOnlyAcceptance": {
+      "executedAt": "2026-10-29",
+      "harness": "scripts/acceptance/r11-registry-only/run.mjs",
+      "documentation": "docs/release/M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md",
+      "evidenceJson": "docs/release/R1_1_3B_REGISTRY_EVIDENCE.json",
+      "command": "OSVA_RC4_REGISTRY_ACCEPTANCE=1 pnpm acceptance:r11-registry",
+      "overall": "pass_with_not_run",
+      "notRunJourneys": ["mcp_agent_tool_invoke_via_run"]
+    },
+    "publishedRegistryDigests": {
+      "ghcrIndexDigest": "sha256:59148d75ab75cafcd8d287e95806a9b50d1e022048502f5c9379381b75d16d2f",
+      "ghcrLinuxAmd64Manifest": "sha256:d5ff8e6486944b8939569bc674f28f4496fdf16a846e09e8e0890a6dc3bad0f9",
+      "pypiWheelSha256": "e1eb68454bcdd3c376919bdb88359ba03481d7407ba9ffc358cda862a4671161",
+      "pypiSdistSha256": "067379706602848ab46d8b179a6cfbd4393ecaba75651952dab6791fdf2b579a"
+    },
+    "documentation": "docs/release/R1_1_RELEASE_DISTRIBUTION.md",
+    "tagWorktreePrePublishVerification": {
+      "commit": "cd38eea46b8ee44bb099ccf307818cfcd348f50b",
+      "npmPackSmoke": "pass",
+      "pythonPackSmoke": "pass",
+      "twineCheck": "pass",
+      "ociLocalDigest": "sha256:ce7f09bc3915184eaa24c8231dabfbac8ad217ea30052a4039425b2623d0aea8",
+      "pythonWheelSha256": "e1eb68454bcdd3c376919bdb88359ba03481d7407ba9ffc358cda862a4671161",
+      "pythonSdistSha256": "067379706602848ab46d8b179a6cfbd4393ecaba75651952dab6791fdf2b579a"
+    }
   },
   "priorPublishedRelease": {
     "version": "1.1.0-rc.2",
@@ -18,7 +49,7 @@
     "npmFivePackagesRcDistTag": {
       "status": "published",
       "version": "1.1.0-rc.4",
-      "verifiedAt": "2026-10-28"
+      "verifiedAt": "2026-10-29"
     },
     "gitHubPrerelease": {
       "status": "published",
@@ -26,23 +57,25 @@
       "publishedAt": "2026-10-27T09:54:36Z"
     },
     "pypiOsvaSdk": {
-      "status": "not_published",
-      "latestPublished": "1.1.0rc2",
-      "targetVersion": "1.1.0rc4"
+      "status": "published",
+      "version": "1.1.0rc4",
+      "verifiedAt": "2026-10-29"
     },
     "ghcrOsvaImage": {
-      "status": "not_published",
-      "targetTag": "ghcr.io/osva-ai/osva:1.1.0-rc.4",
-      "latestPublishedTag": "1.1.0-rc.2"
+      "status": "published",
+      "tag": "ghcr.io/osva-ai/osva:1.1.0-rc.4",
+      "indexDigest": "sha256:59148d75ab75cafcd8d287e95806a9b50d1e022048502f5c9379381b75d16d2f",
+      "platform": "linux/amd64",
+      "verifiedAt": "2026-10-29"
     },
     "m10_4eRegistryOnlyComposeReplay": {
-      "status": "not_run"
+      "status": "executed",
+      "verifiedAt": "2026-10-29",
+      "notRun": ["mcp_tool_invoke_agent_run"]
     }
   },
   "pendingReleaseGates": [
-    "PyPI osva-sdk 1.1.0rc4 publish",
-    "GHCR osva:1.1.0-rc.4 OCI publish",
-    "M10.4-style published-registry acceptance for 1.1.0-rc.4",
+    "Registry-only MCP tool invocation via agent Run (journey 5c)",
     "Optional pnpm verify:ci:clean on M15 closeout commit"
   ],
   "completedReleaseGates": [
@@ -51,7 +84,11 @@
     "release-readiness oci-compose-helm on cd38eea",
     "release-readiness kind on cd38eea",
     "Git tag v1.1.0-rc.4 and GitHub prerelease",
-    "npm five packages @rc 1.1.0-rc.4 publication"
+    "npm five packages @rc 1.1.0-rc.4 publication",
+    "PyPI osva-sdk 1.1.0rc4 publication",
+    "GHCR osva:1.1.0-rc.4 OCI publication",
+    "R1.1.3B registry-only acceptance (workflow 9, MCP discover/import 5b, multipart 10b, full matrix PASS)",
+    "R1.1.4 distribution closeout documentation and live registry reconciliation"
   ],
   "ociImage": "osva:1.1.0-rc.4",
   "ociImageGhcr": "ghcr.io/osva-ai/osva:1.1.0-rc.4",
@@ -94,7 +131,9 @@
     "pep440ArtifactVersion": "1.1.0rc4",
     "pipInstallExample": "pip install osva-sdk==1.1.0rc4",
     "path": "sdks/python",
-    "pypiPublishedVersion": "1.1.0rc2"
+    "pypiPublishedVersion": "1.1.0rc4",
+    "pypiPublishedWheelSha256": "e1eb68454bcdd3c376919bdb88359ba03481d7407ba9ffc358cda862a4671161",
+    "pypiPublishedSdistSha256": "067379706602848ab46d8b179a6cfbd4393ecaba75651952dab6791fdf2b579a"
   },
   "migrationHead": "0030_approval_operation_binding_slice",
   "license": "Apache-2.0",
@@ -117,6 +156,10 @@
     "docs/operations/BACKUP_AND_RECOVERY.md",
     "docs/release/COMPATIBILITY.md",
     "docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md",
+    "docs/release/M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md",
+    "docs/release/R1_1_RELEASE_DISTRIBUTION.md",
+    "docs/release/R1_1_DISTRIBUTION_CLOSEOUT.md",
+    "docs/release/R1_1_3B_REGISTRY_EVIDENCE.json",
     "docs/operations/M15_ACCEPTANCE_SUMMARY.md"
   ]
 }

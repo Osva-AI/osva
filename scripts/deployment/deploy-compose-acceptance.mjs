@@ -198,8 +198,18 @@ async function main() {
     }
   };
 
+  const registryOnly =
+    process.env.OSVA_COMPOSE_NO_BUILD === "1" ||
+    process.env.OSVA_COMPOSE_NO_BUILD === "true";
+  const composeUpArgs = registryOnly
+    ? ["compose", "up", "-d", "--no-build", "--wait"]
+    : ["compose", "up", "-d", "--build", "--wait"];
+
   run("docker", ["compose", "down", "-v"], { env: composeEnv });
-  run("docker", ["compose", "up", "-d", "--build", "--wait"], {
+  if (registryOnly && process.env.OSVA_IMAGE?.trim()) {
+    run("docker", ["compose", "pull"], { env: composeEnv });
+  }
+  run("docker", composeUpArgs, {
     env: composeEnv,
   });
 

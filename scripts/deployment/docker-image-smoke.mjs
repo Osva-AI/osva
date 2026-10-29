@@ -72,7 +72,14 @@ async function main() {
   removeAppContainers();
   removeSmokeInfra();
 
-  runDocker(["build", "-t", IMAGE, REPO_ROOT]);
+  const skipBuild =
+    process.env.OSVA_SKIP_IMAGE_BUILD === "1" ||
+    process.env.OSVA_SKIP_IMAGE_BUILD === "true";
+  if (skipBuild) {
+    runDocker(["pull", IMAGE]);
+  } else {
+    runDocker(["build", "-t", IMAGE, REPO_ROOT]);
+  }
   verifyRuntimeImageContents(IMAGE);
 
   await startSmokeInfra();

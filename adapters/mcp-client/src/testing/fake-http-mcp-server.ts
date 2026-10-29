@@ -24,6 +24,10 @@ export interface FakeHttpMcpServer {
 
 export interface StartFakeHttpMcpServerOptions {
   readonly requireAuth?: boolean;
+  /** Default 127.0.0.1; use 0.0.0.0 for Docker host-gateway acceptance. */
+  readonly bindHost?: string;
+  /** Skip localhost Host validation (registry acceptance via host.docker.internal). */
+  readonly allowAnyHost?: boolean;
 }
 
 export async function startFakeHttpMcpServer(
@@ -40,7 +44,7 @@ export async function startFakeHttpMcpServer(
   const validateHost = localhostHostValidation();
 
   const server = http.createServer((req, res) => {
-    if (!validateHost(req, res)) {
+    if (options.allowAnyHost !== true && !validateHost(req, res)) {
       return;
     }
 
@@ -74,7 +78,7 @@ export async function startFakeHttpMcpServer(
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
+    server.listen(0, options.bindHost ?? "127.0.0.1", () => {
       server.off("error", reject);
       resolve();
     });
