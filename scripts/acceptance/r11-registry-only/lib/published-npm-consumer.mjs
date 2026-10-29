@@ -3,12 +3,14 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { RC4_SEMVER } from "../constants.mjs";
+/**
+ * @param {string} npmPackageVersion
+ */
 
 /**
  * @returns {Promise<{ installRoot: string, dispose: () => Promise<void> }>}
  */
-export async function createPublishedNpmConsumer() {
+export async function createPublishedNpmConsumer(npmPackageVersion) {
   const workRoot = await mkdtemp(path.join(os.tmpdir(), "osva-r11-consumer-"));
   const installRoot = path.join(workRoot, "npm");
   await mkdir(installRoot, { recursive: true });
@@ -32,8 +34,8 @@ export async function createPublishedNpmConsumer() {
     npmCmd,
     [
       "install",
-      `@osva-ai/cli@${RC4_SEMVER}`,
-      `@osva-ai/sdk@${RC4_SEMVER}`,
+      `@osva-ai/cli@${npmPackageVersion}`,
+      `@osva-ai/sdk@${npmPackageVersion}`,
       "--no-fund",
       "--no-audit",
     ],

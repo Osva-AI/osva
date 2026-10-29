@@ -9,7 +9,8 @@ Supported upgrade path for self-hosted Compose and Kubernetes deployments.
 | Published git tag **`v1.0.0`** | **`1.1.0-rc.2`** (and 1.1.x) | Requires **`0023_execution_lease_slice`** (tag `v1.0.0` ends at **`0022_api_security_slice`**) |
 | Already on **`1.1.0-rc.1`** or **`1.1.0-rc.2`** schema head | Later 1.1.x RC/GA | Apply any new append-only migrations after **`0023`** |
 | Any **`0023`** database | M11 human auth head | Through **`0026_better_auth_user_image`** (`0024` identity, `0025` human auth, `0026` user image) |
-| M12–M14 Community line (**`1.1.0-rc.4`** repository baseline) | Current repository head | Through **`0030_approval_operation_binding_slice`** (`0027`–`0030`; see below) |
+| M12–M14 Community line (**`1.1.0-rc.4`** / **`1.1.0`**) | Same line (no new migrations in M15) | Head **`0030_approval_operation_binding_slice`** (`0027`–`0030`; see below) |
+| **`1.1.0-rc.4`** published artifacts | **`1.1.0`** stable | **Drop-in** image/npm/PyPI version bump when all aligned packages move together; schema already at **`0030`** |
 
 See [`../release/COMPATIBILITY.md`](../release/COMPATIBILITY.md) and [`CHANGELOG.md`](../../CHANGELOG.md).
 
@@ -112,7 +113,7 @@ Introduced for **operation-bound workflow approvals**. Adds nullable columns on 
 3. **Legacy rows:** Approval requests created before **`0030`** may have null binding columns; decide/resume paths skip digest verification for those rows (see [`M14_5_ACCEPTANCE_SUMMARY.md`](M14_5_ACCEPTANCE_SUMMARY.md)).
 4. **Forward-only:** Do not downgrade application binaries to builds that predate M14.5 after **`0030`** is applied unless you accept unsupported schema/application skew.
 
-Repository journal head (tag **`v1.1.0-rc.4`**): **`0030_approval_operation_binding_slice`**. Verify with `pnpm db:migrations:verify`.
+Repository journal head (**`1.1.0`** stable preparation, RC.4 tag **`v1.1.0-rc.4`** and later): **`0030_approval_operation_binding_slice`**. Verify with `pnpm db:migrations:verify`.
 
 ## Runtime behavior changes (1.1.x)
 
@@ -123,14 +124,14 @@ Repository journal head (tag **`v1.1.0-rc.4`**): **`0030_approval_operation_bind
 
 ## Helm
 
-1. Update chart `version` / `appVersion` and image tag to the target release (for example **`1.1.0-rc.4`** from root `VERSION`; confirm GHCR tag availability in [`../release/RC4_VERIFICATION.md`](../release/RC4_VERIFICATION.md)).
+1. Update chart `version` / `appVersion` and image tag to the target release (for example **`1.1.0`** from root `VERSION`; for RC pins see [`../release/RC4_VERIFICATION.md`](../release/RC4_VERIFICATION.md)).
 2. Run `helm upgrade` — the chart migration Job hook runs before workloads when enabled.
 3. Run bootstrap only for **new** environments (not on every upgrade).
 4. Roll Deployments if hook jobs do not restart apps automatically.
 
 ## Compose
 
-1. Pull the new image tag (`OSVA_IMAGE`, for example `ghcr.io/osva-ai/osva:1.1.0-rc.4` when published).
+1. Pull the new image tag (`OSVA_IMAGE`, for example `ghcr.io/osva-ai/osva:1.1.0` after stable publication, or `:1.1.0-rc.4` for RC).
 2. `docker compose run --rm migrate`
 3. `docker compose up -d` to recreate app services.
 
