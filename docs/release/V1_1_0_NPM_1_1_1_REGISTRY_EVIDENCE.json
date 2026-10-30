@@ -1,0 +1,169 @@
+{
+  "acceptance": "r11-registry-only",
+  "release": "1.1.0-npm-1.1.1",
+  "phase": "npm-1.1.1-recovery",
+  "target": "stable-npm-111",
+  "correctiveNpmDistributionOnly": true,
+  "journeys": [
+    {
+      "id": "journey-preflight-npm",
+      "title": "Published npm 1.1.1 identity",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-preflight-pypi",
+      "title": "Published PyPI osva-sdk hashes",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-01-oci-pull",
+      "title": "Fresh container pull from GHCR",
+      "status": "PASS",
+      "evidence": {
+        "indexDigest": "sha256:999b66f962d414c0811d6e3269aebdb9ec0d8e50549691941b97672a4e9dbdd9",
+        "platform": "linux/amd64"
+      }
+    },
+    {
+      "id": "journey-runtime-image",
+      "title": "Runtime image verification (entrypoint, prod deps)",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-02-migrations",
+      "title": "Database migration to head 0030",
+      "status": "PASS",
+      "evidence": { "head": "0030_approval_operation_binding_slice" }
+    },
+    {
+      "id": "journey-03-bootstrap",
+      "title": "Human identity and workspace bootstrap",
+      "status": "PASS",
+      "evidence": { "workspaceId": "51e16c2d-9bf4-4a62-9e6c-e72319b33271" }
+    },
+    {
+      "id": "journey-04-model",
+      "title": "Model provider configuration (deterministic defaults)",
+      "status": "PASS",
+      "detail": "OSVA_KNOWLEDGE_EMBEDDING_PROVIDER=DETERMINISTIC"
+    },
+    {
+      "id": "journey-05-mcp-host",
+      "title": "MCP server startup and Host header security",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-06-cli",
+      "title": "Published npm CLI install and execution",
+      "status": "PASS",
+      "evidence": {
+        "agentVersionId": "c15ae7d0-baf4-4c77-b029-c8e3041e224a",
+        "runId": "c5b6c921-6d53-4569-9ab4-d951a08f26ab"
+      }
+    },
+    { "id": "journey-07-sdk", "title": "Published npm SDK install and usage", "status": "PASS" },
+    {
+      "id": "journey-08-agent",
+      "title": "Agent creation, publication and execution",
+      "status": "PASS",
+      "evidence": { "runStatus": "SUCCEEDED" }
+    },
+    {
+      "id": "journey-10-artifacts",
+      "title": "Artifact persistence and retrieval",
+      "status": "PASS",
+      "evidence": { "artifact": { "artifactId": "c1f52922-f5f5-4dae-b26d-f1aa600b961d" } }
+    },
+    {
+      "id": "journey-11-python",
+      "title": "Published PyPI SDK installation and API smoke",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-09-workflow",
+      "title": "Durable workflow with approval and WAIT",
+      "status": "PASS",
+      "evidence": {
+        "workflowId": "4a83bacf-74d2-48fd-8175-7ff4dc7dee5a",
+        "workflowVersionId": "f47ad750-8816-4d74-93e0-1321d420bc40",
+        "workflowRunId": "7eab00e3-06b9-474a-9e6f-3ece18a797f2",
+        "approvalRequestId": "2d8ef904-cac2-4660-bc20-357e646f6b52",
+        "correlationKey": "r11-e72c2dd4-2996-45d7-972f-899c56933d35"
+      }
+    },
+    {
+      "id": "journey-05b-mcp-connectors",
+      "title": "MCP connector discovery and tool import",
+      "status": "PASS",
+      "detail": "OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS=true (acceptance topology)",
+      "evidence": {
+        "connectorId": "92434f1d-1e52-49d8-9b4a-c80080a7e72b",
+        "connectorVersionId": "ef0bdd02-027c-4a76-8299-cb7750bdf4a0",
+        "toolVersionId": "0929fd43-d2be-440f-9065-cebfcde7c4a3",
+        "endpointUrl": "http://host.docker.internal:53819",
+        "discoveredToolCount": 5
+      }
+    },
+    {
+      "id": "journey-05c-mcp-tool-invoke",
+      "title": "Agent binding and authorized MCP tool invocation",
+      "status": "NOT_RUN",
+      "detail": "Harness covers register/discover/import only; agent+run invoke deferred"
+    },
+    {
+      "id": "journey-10b-sdk-multipart",
+      "title": "Published SDK multipart artifact upload probe",
+      "status": "PASS",
+      "detail": "SDK and fetch paths succeeded",
+      "evidence": {
+        "sdk": { "ok": true, "artifactId": "04e3458e-54d9-4b5d-ada0-cfb248debf01" },
+        "fetch": { "ok": true, "artifactId": "b1795b9e-8b99-442a-a01d-cc5d085f436d" },
+        "nodeVersion": "v24.13.1"
+      }
+    },
+    {
+      "id": "journey-12-restart",
+      "title": "Runtime restart and persisted state recovery",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-13-security",
+      "title": "Workspace isolation and relevant security defaults",
+      "status": "PASS"
+    },
+    {
+      "id": "journey-cleanup",
+      "title": "Docker cleanup (project-scoped volumes)",
+      "status": "PASS"
+    }
+  ],
+  "summary": { "pass": 19, "fail": 0, "notRun": 1 },
+  "startedAt": "2026-10-30T09:37:48.163Z",
+  "composeProject": "osva-r11-registry-stable-npm-111",
+  "groups": ["preflight", "stack", "workflow", "mcp", "consumers", "multipart", "restart"],
+  "gitRevision": "8b9ce2a04fb29c23e3508b22d268562fd4c06f82",
+  "releaseCommit": "5fa4af2cdad2c5436dfbf7e4ebfb0435da782f3b",
+  "gitTag": "v1.1.0",
+  "npm": {
+    "@osva-ai/contracts": "1.1.1",
+    "@osva-ai/runtime-protocol": "1.1.1",
+    "@osva-ai/sdk": "1.1.1",
+    "@osva-ai/cli": "1.1.1",
+    "@osva-ai/connector-sdk": "1.1.1"
+  },
+  "pypi": {
+    "osva_sdk-1.1.0-py3-none-any.whl": "4311659678d4d728869cfd7319ddca4e406d9dea4cfc71848bb291b3010ae67f",
+    "osva_sdk-1.1.0.tar.gz": "8c6b86e03c2e574c18353484bd9a26ac0a52d0fcb2b4983c2c3c09373fb084a9"
+  },
+  "ghcr": {
+    "indexDigest": "sha256:999b66f962d414c0811d6e3269aebdb9ec0d8e50549691941b97672a4e9dbdd9",
+    "platform": "linux/amd64",
+    "imageRef": "ghcr.io/osva-ai/osva:1.1.0"
+  },
+  "mcpAcceptanceTopology": {
+    "fixture": "adapters/mcp-client dist fake HTTP MCP (bind 0.0.0.0, allowAnyHost for host.docker.internal Host header)",
+    "webToFixture": "http://host.docker.internal:<port>",
+    "composeFlag": "OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS=true when mcp group selected"
+  },
+  "journey05cCoverageLimitation": "The harness validates MCP connector registration, discovery, and tool import, but does not yet exercise authorized MCP tool invocation through an agent execution."
+}

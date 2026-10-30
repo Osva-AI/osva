@@ -8,14 +8,14 @@ Replay of the **M10.4E** pattern: install and operate OSVA using **only** publis
 |-------|---------|
 | `rc4` | RC.4 published line |
 | `stable` | Platform **1.1.0** historical target (npm @1.1.0 known defective) |
-| `stable-npm-111` | Corrective **npm @1.1.1** on platform **1.1.0** (blocked until publish + `registryArtifactsReady`) |
+| `stable-npm-111` | Corrective **npm @1.1.1** on platform **1.1.0** (registry acceptance recorded) |
 
 
 | Target | Gate env | Status |
 |--------|----------|--------|
 | **`rc4`** | `OSVA_RC4_REGISTRY_ACCEPTANCE=1` | **Ready** — verified **`1.1.0-rc.4`** artifacts |
 | **`stable`** | `OSVA_STABLE_REGISTRY_ACCEPTANCE=1` | **Historical** platform **`1.1.0`** (npm @1.1.0 defective; manifest audit fails if replayed) |
-| **`stable-npm-111`** | `OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE=1` | **Blocked** until npm **`1.1.1`** published + acceptance recorded |
+| **`stable-npm-111`** | `OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE=1` | **PASS** — evidence [`V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json`](../../../docs/release/V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json) |
 
 ## Prerequisites
 
@@ -71,4 +71,4 @@ OSVA_RC4_REGISTRY_ACCEPTANCE=1 OSVA_COMPOSE_NO_BUILD=1 OSVA_IMAGE=ghcr.io/osva-a
 
 ## Evidence
 
-Record results in [`docs/release/M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](../../../docs/release/M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md), machine-readable [`docs/release/R1_1_3B_REGISTRY_EVIDENCE.json`](../../../docs/release/R1_1_3B_REGISTRY_EVIDENCE.json), and reconcile [`docs/release/R1_1_RELEASE_DISTRIBUTION.md`](../../../docs/release/R1_1_RELEASE_DISTRIBUTION.md).
+Record results in [`docs/release/M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](../../../docs/release/M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md), machine-readable [`docs/release/R1_1_3B_REGISTRY_EVIDENCE.json`](../../../docs/release/R1_1_3B_REGISTRY_EVIDENCE.json) (RC.4), [`docs/release/V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json`](../../../docs/release/V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json) (corrective npm **1.1.1**), and reconcile [`docs/release/R1_1_RELEASE_DISTRIBUTION.md`](../../../docs/release/R1_1_RELEASE_DISTRIBUTION.md).

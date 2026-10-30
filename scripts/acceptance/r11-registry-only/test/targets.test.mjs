@@ -42,7 +42,7 @@ describe("registry acceptance targets", () => {
       assert.equal(target.npmPackageVersion, "1.1.1");
       assert.equal(target.pythonPep440, "1.1.0");
       assert.equal(target.correctiveNpmDistributionOnly, true);
-      assert.equal(stableTargetReadiness(target).blocked, true);
+      assert.equal(stableTargetReadiness(target).blocked, false);
     } finally {
       if (prev === undefined) {
         delete process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET;

@@ -84,7 +84,8 @@ Supported platforms: see [`COMPATIBILITY.md`](COMPATIBILITY.md) (validated vs de
 | Mode | Command gate | Status |
 |------|--------------|--------|
 | **RC.4 historical replay** | `OSVA_RC4_REGISTRY_ACCEPTANCE=1` (default target `rc4`) | **PASS** (recorded R1.1.3B) — does not re-run in prep unless operator executes |
-| **Stable 1.1.0 replay** | `OSVA_REGISTRY_ACCEPTANCE_TARGET=stable` + `OSVA_STABLE_REGISTRY_ACCEPTANCE=1` | **NOT RUN** — `STABLE_110_TARGET.registryArtifactsReady=false` |
+| **Stable 1.1.0 replay** | `OSVA_REGISTRY_ACCEPTANCE_TARGET=stable` + `OSVA_STABLE_REGISTRY_ACCEPTANCE=1` | **NOT RUN** — historical target; npm @1.1.0 defective |
+| **Corrective npm 1.1.1 replay** | `OSVA_REGISTRY_ACCEPTANCE_TARGET=stable-npm-111` + `OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE=1` | **PASS** — [`V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json`](V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json) (19 PASS, 0 FAIL, 1 NOT_RUN) |
 | **Journey 5c** (MCP tool invoke via agent run) | — | **NOT RUN** (explicit deferral) |
 | **In-repo M15** | `pnpm acceptance:m15` | Exercises source-linked adoption; not a substitute for stable registry replay |
 
