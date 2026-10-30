@@ -1,6 +1,6 @@
 # OSVA Community v1.1.0 — stable release readiness
 
-**Stage:** preparation only — **no publication**, tags, or registry promotion in this workstream.
+**Stage:** preparation document (historical prep branch). **Closeout supplement (2026-10-30):** platform **`v1.1.0`** published; corrective npm **`1.1.1`** registry acceptance **PASS**; all five `@osva-ai/*` packages **`latest`** and **`stable-candidate`** → **1.1.1**; **`rc`** → **1.1.0-rc.4**; Python/GHCR **1.1.0** unchanged. Inventory: [`V1_1_STABLE_RELEASE_INVENTORY.json`](V1_1_STABLE_RELEASE_INVENTORY.json); recovery: [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md).
 
 | Field | Value |
 |-------|--------|
@@ -121,15 +121,18 @@ Harness: [`scripts/acceptance/r11-registry-only/`](../../scripts/acceptance/r11-
 
 - Journey **5c** not implemented in registry harness.
 - RC.4 acceptance does not certify stable binaries.
-- npm **`latest`** and GHCR **`:latest`** still point at **1.0.0** / prior policy until stable publish.
+- npm **`latest`** and **`stable-candidate`** resolve to corrective **1.1.1** (platform **1.1.0** on PyPI/GHCR). GHCR **`:latest`** alias promotion remains separate policy.
 - External repos (osva-examples, osva-connectors) may lag aligned versions — follow-up outside this release.
 
 ## 10. Remaining blockers
 
-1. **No git tag `v1.1.0`** and **no published stable artifacts**.
-2. **Stable registry acceptance** blocked (`targets.mjs` digests unset).
-3. **release-readiness CI** must run on the exact stable version-bump commit (post-merge).
-4. **Dist-tag / `latest` policy** decision before npm publish.
+**Superseded for npm (2026-10-30):** git tag **`v1.1.0`**, stable PyPI/GHCR **1.1.0**, corrective npm **1.1.1** acceptance, and npm **`latest`** promotion — see closeout supplement above.
+
+Still open:
+
+1. **GitHub Release** page and release assets not verified (inventory pending gate).
+2. **GHCR `:latest`** (and related aliases) not promoted in npm **1.1.1** closeout.
+3. **Journey 5c** MCP tool invoke not implemented in registry harness (**NOT_RUN**).
 
 ## 11. Release approval checklist
 
@@ -141,4 +144,4 @@ Harness: [`scripts/acceptance/r11-registry-only/`](../../scripts/acceptance/r11-
 
 ## 12. Prep-stage disclaimer
 
-This repository state **prepares** stable **1.1.0** artifacts and documentation. It **does not** publish to npm, PyPI, or GHCR, create tags, or promote dist-tags.
+This file **primarily records** stable **1.1.0** preparation on branch `chore/v1-1-stable-readiness`. Published stable and corrective npm outcomes are recorded in [`V1_1_STABLE_RELEASE_INVENTORY.json`](V1_1_STABLE_RELEASE_INVENTORY.json) and [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md).

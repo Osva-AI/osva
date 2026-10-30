@@ -1,6 +1,6 @@
 # npm 1.1.1 corrective distribution (platform 1.1.0 unchanged)
 
-**Status:** corrective npm closeout recorded — **registry acceptance PASS** for target `stable-npm-111`; **npm `latest` not promoted**.
+**Status:** corrective npm closeout complete — **registry acceptance PASS** for target `stable-npm-111`; **npm `latest` promoted to 1.1.1** on all five `@osva-ai/*` packages (PR **#66** packaging, PR **#67** acceptance/docs).
 
 ## Problem
 
@@ -32,7 +32,15 @@ Implementation merged in PR **#66** (`8b9ce2a04fb29c23e3508b22d268562fd4c06f82`)
 
 ## Publication (completed)
 
-Five **`@osva-ai/*@1.1.1`** packages published from fingerprinted `.release/npm-artifacts/1.1.1/` tarballs (dependency order: contracts → runtime-protocol → sdk → connector-sdk → cli). Dist-tag **`stable-candidate`** points at **1.1.1**. Dist-tag **`latest`** remains **1.0.0** (no promotion in this closeout).
+Five **`@osva-ai/*@1.1.1`** packages published from fingerprinted `.release/npm-artifacts/1.1.1/` tarballs (dependency order: contracts → runtime-protocol → sdk → connector-sdk → cli).
+
+### npm dist-tags (all five packages, verified on registry)
+
+| Dist-tag | Version | Notes |
+|----------|---------|--------|
+| **`latest`** | **1.1.1** | Promoted after registry acceptance and independent `npm view` verification |
+| **`stable-candidate`** | **1.1.1** | Aligns with corrective distribution |
+| **`rc`** | **1.1.0-rc.4** | Unchanged RC line |
 
 Published registry consumer smoke: **PASS** (`node scripts/release/npm-registry-consumer-smoke.mjs`).
 
@@ -59,9 +67,9 @@ Do not claim full MCP execution coverage until Journey **5c** is implemented and
 
 ## Consumer guidance
 
-- **npm:** install **`@osva-ai/cli@1.1.1`** and **`@osva-ai/sdk@1.1.1`** (exact). Do **not** use **`@1.1.0`** for npm installs.
+- **npm:** install **`@osva-ai/cli@1.1.1`** and **`@osva-ai/sdk@1.1.1`** (exact), or use dist-tag **`latest`** (resolves to **1.1.1**). Do **not** use **`@1.1.0`** for npm installs.
 - **Python / containers:** continue **1.1.0** pins in [`UPGRADE.md`](../operations/UPGRADE.md).
-- **npm `latest`:** still **1.0.0** until an explicit promotion policy is approved and executed.
+- **npm `rc`:** remains **`1.1.0-rc.4`**; platform **1.1.0** is not republished on PyPI/GHCR for this recovery.
 
 ## Historical evidence
 
