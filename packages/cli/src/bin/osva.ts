@@ -14,6 +14,7 @@ import {
   runRunCommand,
   runStatusCommand,
 } from "../project/index.js";
+import { runPlatformCommand } from "../platform/index.js";
 import { runValidateCommand } from "../validate/index.js";
 
 async function main(): Promise<void> {
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
   const deployCommand = parsed.command[0] === "deploy";
   const runAgentCommand = parsed.command[0] === "run";
   const statusCommand = parsed.command[0] === "status";
+  const platformCommand = parsed.command[0] === "platform";
 
   if (initCommand) {
     try {
@@ -60,6 +62,22 @@ async function main(): Promise<void> {
       await exitCli(exitCode);
     } catch (error) {
       printError(error instanceof Error ? error.message : "Setup failed.");
+      await exitCli(1);
+    }
+    return;
+  }
+
+  if (platformCommand) {
+    try {
+      const exitCode = await runPlatformCommand(
+        parsed.command.slice(1),
+        parsed.flags,
+      );
+      await exitCli(exitCode);
+    } catch (error) {
+      printError(
+        error instanceof Error ? error.message : "Platform command failed.",
+      );
       await exitCli(1);
     }
     return;

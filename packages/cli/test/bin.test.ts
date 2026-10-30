@@ -37,6 +37,7 @@ describe("osva bin entrypoint", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("doctor");
     expect(result.stdout).toContain("setup");
+    expect(result.stdout).toContain("platform");
     expect(result.stdout).toContain("Docker Compose provisioning");
     expect(result.stdout).toContain("init");
     expect(result.stdout).toContain("validate");
