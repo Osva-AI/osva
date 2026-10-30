@@ -1,7 +1,7 @@
 {
   "releaseVersion": "1.1.0",
   "releaseKind": "stable",
-  "status": "published-awaiting-registry-acceptance",
+  "status": "published-corrective-npm-111-accepted",
   "publicationStatus": "published_artifacts_verified",
   "sourceProvenance": {
     "gitCommit": "5fa4af2cdad2c5436dfbf7e4ebfb0435da782f3b",
@@ -44,7 +44,18 @@
       "version": "1.1.0",
       "distTagStableCandidate": "1.1.0",
       "distTagLatest": "1.0.0",
-      "note": "Five @osva-ai/* packages published; latest not promoted to 1.1.0"
+      "note": "Original @1.1.0 npm line defective (catalog:/workspace:*); do not install. See npmCorrective111."
+    },
+    "npmCorrective111": {
+      "status": "published_and_registry_accepted",
+      "version": "1.1.1",
+      "distTagStableCandidate": "1.1.1",
+      "distTagLatest": "1.0.0",
+      "implementationCommit": "8b9ce2a04fb29c23e3508b22d268562fd4c06f82",
+      "registryConsumerSmoke": "pass",
+      "registryEvidenceJson": "docs/release/V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json",
+      "acceptanceSummary": "19 PASS, 0 FAIL, 1 NOT_RUN (journey-05c-mcp-tool-invoke)",
+      "note": "Corrective distribution only; platform remains v1.1.0. latest not promoted to 1.1.1."
     },
     "pypiOsvaSdk": {
       "status": "published",
@@ -88,7 +99,16 @@
       "command": "OSVA_REGISTRY_ACCEPTANCE_TARGET=stable OSVA_STABLE_REGISTRY_ACCEPTANCE=1 pnpm acceptance:r11-registry",
       "envGate": "OSVA_STABLE_REGISTRY_ACCEPTANCE=1",
       "targetReady": true,
-      "note": "Artifacts and digests recorded; full Docker replay pending operator execution"
+      "note": "Historical platform target with defective npm @1.1.0; prefer stable-npm-111 for npm consumers"
+    },
+    "stableNpm111": {
+      "status": "pass",
+      "harness": "scripts/acceptance/r11-registry-only/run.mjs",
+      "command": "OSVA_REGISTRY_ACCEPTANCE_TARGET=stable-npm-111 OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE=1 pnpm acceptance:r11-registry",
+      "envGate": "OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE=1",
+      "targetReady": true,
+      "evidenceJson": "docs/release/V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json",
+      "summary": "19 PASS, 0 FAIL, 1 NOT_RUN"
     }
   },
   "completedReleaseGates": [
@@ -103,11 +123,9 @@
     "STABLE_110_TARGET populated in lib/targets.mjs (registryArtifactsReady=true)"
   ],
   "pendingReleaseGates": [
-    "OSVA_REGISTRY_ACCEPTANCE_TARGET=stable registry-only acceptance replay",
     "Verify GitHub Release page and release assets",
-    "Stable evidence JSON after registry acceptance",
-    "Promote npm latest / GHCR aliases per approved stable policy (latest remains 1.0.0 until promotion)",
-    "Stable distribution closeout documentation (not claimed)"
+    "Promote npm latest / GHCR aliases per approved stable policy (latest remains 1.0.0; stable-candidate at 1.1.1)",
+    "Implement and replay journey-05c-mcp-tool-invoke in registry harness"
   ],
   "historicalEvidence": {
     "rc4RegistryAcceptance": "docs/release/R1_1_3B_REGISTRY_EVIDENCE.json",

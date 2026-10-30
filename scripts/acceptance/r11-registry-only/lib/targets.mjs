@@ -89,8 +89,8 @@ export const STABLE_110_TARGET = {
 };
 
 /**
- * Corrective npm-only distribution on platform 1.1.0 (Python/GHCR unchanged).
- * Not registry-ready until npm @1.1.1 is published and digests recorded.
+ * Corrective npm 1.1.1 distribution on platform 1.1.0.
+ * Published npm consumer smoke and full registry acceptance recorded (stable-npm-111).
  *
  * @type {RegistryAcceptanceTarget}
  */
@@ -115,14 +115,14 @@ export const STABLE_NPM_111_TARGET = {
   npmRegistryMode: "exact",
   npmViewSelector: "1.1.1",
   gitTag: "v1.1.0",
-  releaseCommit: null,
   composeProject: "osva-r11-registry-stable-npm-111",
   evidenceReleaseKey: "1.1.0-npm-1.1.1",
-  registryArtifactsReady: false,
+  releaseCommit: "5fa4af2cdad2c5436dfbf7e4ebfb0435da782f3b",
+  registryArtifactsReady: true,
   envGateVar: "OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE",
   correctiveNpmDistributionOnly: true,
   notes:
-    "Corrective npm metadata release; not a platform feature release. Requires registry acceptance after npm publish.",
+    "Corrective npm metadata release; not a platform feature release. Registry acceptance recorded (19 PASS, 0 FAIL, 1 NOT_RUN journey-05c).",
 };
 
 const TARGETS = {
