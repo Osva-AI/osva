@@ -9,6 +9,7 @@ import { useAuth } from "../context/auth-context";
 import { useAgentsListQuery } from "../hooks/use-agents";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
+  useModelBindingReadinessQuery,
   useModelProfilesListQuery,
   useModelProviderConnectionsListQuery,
 } from "../hooks/use-models";
@@ -60,6 +61,7 @@ export function OverviewPage() {
   const workflowsQuery = useWorkflowsListQuery();
   const modelProfilesQuery = useModelProfilesListQuery();
   const modelConnectionsQuery = useModelProviderConnectionsListQuery();
+  const modelBindingQuery = useModelBindingReadinessQuery();
   const recentRunsQuery = useRunsListQuery({ limit: RECENT_LIMIT });
   const recentWorkflowRunsQuery = useWorkflowRunsListQuery({
     limit: RECENT_LIMIT,
@@ -268,6 +270,9 @@ export function OverviewPage() {
             agents={agentsQuery.data?.agents}
             modelProfiles={modelProfilesQuery.data?.modelProfiles}
             modelConnections={modelConnectionsQuery.data?.connections}
+            hasBoundProfileVersion={
+              modelBindingQuery.data?.hasBoundProfileVersion
+            }
           />
 
           <section className="panel">

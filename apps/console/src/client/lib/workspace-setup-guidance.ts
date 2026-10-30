@@ -21,10 +21,15 @@ export function buildWorkspaceSetupGuidance(input: {
   readonly modelProfiles: readonly ModelProfileResource[] | undefined;
   readonly modelConnections:
     readonly ModelProviderConnectionResource[] | undefined;
+  readonly hasBoundProfileVersion?: boolean;
 }): readonly SetupGuidanceItem[] {
   const agentCount = input.agents?.length ?? 0;
   const profileCount = input.modelProfiles?.length ?? 0;
   const connectionCount = input.modelConnections?.length ?? 0;
+  const modelsReady =
+    connectionCount > 0 &&
+    profileCount > 0 &&
+    input.hasBoundProfileVersion === true;
 
   return [
     {
@@ -39,14 +44,14 @@ export function buildWorkspaceSetupGuidance(input: {
     {
       id: "models",
       label: "Model profiles & connections",
-      state:
-        profileCount > 0 && connectionCount > 0
-          ? "verified_ready"
-          : "requires_setup",
-      detail:
-        profileCount > 0 && connectionCount > 0
-          ? `${String(profileCount)} profile(s) and ${String(connectionCount)} connection(s) are registered in this workspace. Declarative agents still need a bound profile version at publish time.`
-          : "Declarative agents need an approved model profile with a provider connection. Configure connections first, then profiles.",
+      state: modelsReady ? "verified_ready" : "requires_setup",
+      detail: modelsReady
+        ? `${String(profileCount)} profile(s), ${String(connectionCount)} connection(s), and at least one profile version bound to a connection version.`
+        : connectionCount === 0
+          ? "Start on Models → Manage connections: pick a provider, append a connection version with endpoint and credential reference, then create a profile version that references it."
+          : profileCount === 0
+            ? "Connection registered. Create a ModelProfile, open it, and append a ModelProfileVersion linked to your connection version."
+            : "Profile exists but no version is bound to a provider connection version yet. Open the profile and append a version with a connection version id.",
       configurePath: "/models",
     },
     {

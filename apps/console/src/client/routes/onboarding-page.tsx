@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 
 import { RuntimeReadinessPanel } from "../components/agent/runtime-readiness-panel";
+import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { WorkspaceSetupPanel } from "../components/workspace/workspace-setup-panel";
 import {
@@ -14,7 +15,7 @@ import {
   useModelProfilesListQuery,
   useModelProviderConnectionsListQuery,
 } from "../hooks/use-models";
-import { useRunsListQuery } from "../hooks/use-runs";
+import { useRunQuery, useRunsListQuery } from "../hooks/use-runs";
 import { useWorkflowsListQuery } from "../hooks/use-workflows";
 import { useAuth } from "../context/auth-context";
 import {
@@ -27,6 +28,7 @@ import {
   deriveOnboardingProgress,
   developerOnboardingSteps,
   noCodeFirstAgentSteps,
+  onboardingSearch,
   parseOnboardingContext,
 } from "../lib/agent-onboarding";
 import {
@@ -39,6 +41,8 @@ const ONBOARDING_REQUIRES_WRITE_ROLE =
 const ONBOARDING_REQUIRES_EXECUTE_ROLE =
   "This step requires OPERATOR, DEVELOPER, ADMIN, or OWNER.";
 
+const ONBOARDING_RUNS_PAGE_LIMIT = 25;
+
 export function OnboardingPage() {
   const [searchParams] = useSearchParams();
   const context = parseOnboardingContext(searchParams);
@@ -50,7 +54,8 @@ export function OnboardingPage() {
   );
   const agentsQuery = useAgentsListQuery();
   const versionCatalogQuery = useAgentVersionCatalogQuery();
-  const runsQuery = useRunsListQuery({ limit: 25 });
+  const runsQuery = useRunsListQuery({ limit: ONBOARDING_RUNS_PAGE_LIMIT });
+  const contextRunQuery = useRunQuery(context.runId);
   const workflowsQuery = useWorkflowsListQuery();
   const modelBindingQuery = useModelBindingReadinessQuery();
   const modelProfilesQuery = useModelProfilesListQuery();
@@ -63,6 +68,22 @@ export function OnboardingPage() {
     authQuery.data !== undefined &&
     roleCanExecuteControlPlaneActions(authQuery.data.role);
 
+  const progressLoading =
+    agentsQuery.isLoading ||
+    versionCatalogQuery.isLoading ||
+    modelBindingQuery.isLoading ||
+    modelProfilesQuery.isLoading ||
+    modelConnectionsQuery.isLoading ||
+    runsQuery.isLoading ||
+    (context.runId !== undefined && contextRunQuery.isLoading);
+
+  const progressLoadError =
+    agentsQuery.isError ||
+    versionCatalogQuery.isError ||
+    modelBindingQuery.isError ||
+    runsQuery.isError ||
+    (context.runId !== undefined && contextRunQuery.isError);
+
   const progress = deriveOnboardingProgress({
     workspaceSelected: auth.selectedWorkspaceId !== undefined,
     modelProfiles: modelProfilesQuery.data?.modelProfiles,
@@ -71,17 +92,24 @@ export function OnboardingPage() {
     agents: agentsQuery.data?.agents,
     agentVersions: versionCatalogQuery.data?.entries,
     runs: runsQuery.data?.runs,
+    runsListHasMore: runsQuery.data?.nextCursor !== undefined,
+    contextRun: contextRunQuery.data,
     workflows: workflowsQuery.data?.workflows,
     context,
+    progressLoading,
+    progressLoadError,
   });
 
   const noCodeSteps = noCodeFirstAgentSteps(context, progress);
   const developerSteps = developerOnboardingSteps(context);
 
-  const loadingProgress =
-    agentsQuery.isLoading ||
-    versionCatalogQuery.isLoading ||
-    modelBindingQuery.isLoading;
+  const onboardingContextLink = `/onboarding${onboardingSearch({
+    agentId: context.agentId ?? progress.onboardingRun?.agentId,
+    agentVersionId:
+      context.agentVersionId ??
+      progress.onboardingRun?.effectiveBindings.agentVersionId,
+    runId: progress.onboardingRun?.id ?? context.runId,
+  })}`;
 
   return (
     <>
@@ -91,6 +119,7 @@ export function OnboardingPage() {
           <p className="page-subtitle">
             No-code first-agent journey using real workspace data. Progress
             marks complete only when APIs show the corresponding resources.
+            Creating a Run is not the same as SUCCEEDED execution.
           </p>
         </div>
         <Link className="button button-secondary" to="/overview">
@@ -98,8 +127,54 @@ export function OnboardingPage() {
         </Link>
       </header>
 
-      {loadingProgress ? (
+      {progressLoadError ? (
+        <ErrorState
+          title="Could not load onboarding progress"
+          error={
+            agentsQuery.error ??
+            versionCatalogQuery.error ??
+            modelBindingQuery.error ??
+            runsQuery.error ??
+            contextRunQuery.error ??
+            new Error("One or more workspace queries failed.")
+          }
+        />
+      ) : null}
+
+      {progressLoading && !progressLoadError ? (
         <LoadingBlock label="Loading onboarding progress…" />
+      ) : null}
+
+      {progress.sampleRunSucceeded &&
+      !progress.progressIndeterminate &&
+      !progressLoadError ? (
+        <section className="panel onboarding-step-complete" role="status">
+          <h2 className="panel-title">First agent run succeeded</h2>
+          <p className="muted">
+            Run{" "}
+            <span className="mono">
+              {progress.onboardingRun?.id ?? context.runId}
+            </span>{" "}
+            reached SUCCEEDED in this workspace. Inspect persisted output on Run
+            Detail, then explore workflows or additional agents when ready.
+          </p>
+          <div className="toolbar">
+            {progress.onboardingRun !== undefined ? (
+              <Link
+                className="button primary"
+                to={`/runs/${encodeURIComponent(progress.onboardingRun.id)}`}
+              >
+                Open Run output
+              </Link>
+            ) : null}
+            <Link className="button" to="/agents/new">
+              Create another agent
+            </Link>
+            <Link className="button button-secondary" to="/workflows/new">
+              Build a workflow
+            </Link>
+          </div>
+        </section>
       ) : null}
 
       <WorkspaceSetupPanel
@@ -107,6 +182,7 @@ export function OnboardingPage() {
         agents={agentsQuery.data?.agents}
         modelProfiles={modelProfilesQuery.data?.modelProfiles}
         modelConnections={modelConnectionsQuery.data?.connections}
+        hasBoundProfileVersion={modelBindingQuery.data?.hasBoundProfileVersion}
       />
 
       <RuntimeReadinessPanel
@@ -116,6 +192,14 @@ export function OnboardingPage() {
 
       <section className="panel">
         <h2 className="panel-title">No-code first agent</h2>
+        {progress.runsListIncomplete ? (
+          <p className="muted" role="status">
+            Run history is paginated ({ONBOARDING_RUNS_PAGE_LIMIT} most recent
+            Runs loaded). If you already executed this AgentVersion, open Runs
+            or pass <span className="mono">runId</span> in the URL to track a
+            specific Run on this page.
+          </p>
+        ) : null}
         <ol className="onboarding-steps">
           {noCodeSteps.map((step, index) => {
             const blockedWrite = step.requiresWrite === true && !canWrite;
@@ -156,6 +240,12 @@ export function OnboardingPage() {
             );
           })}
         </ol>
+        <p className="muted">
+          Bookmark progress for this agent:{" "}
+          <Link className="mono" to={onboardingContextLink}>
+            {onboardingContextLink}
+          </Link>
+        </p>
       </section>
 
       <section className="panel" id="developer-onboarding">

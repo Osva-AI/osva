@@ -86,6 +86,9 @@ describe("Agent Studio UI", () => {
     fireEvent.change(screen.getByLabelText("Agent name"), {
       target: { value: "Support Bot" },
     });
+    fireEvent.change(screen.getByLabelText(/instructions/i), {
+      target: { value: "" },
+    });
     expect(
       (
         screen.getByRole("button", {
@@ -94,6 +97,9 @@ describe("Agent Studio UI", () => {
       ).disabled,
     ).toBe(true);
     expect(screen.getByText(/instructions are required/i)).toBeTruthy();
+    expect(
+      screen.getAllByText(/modelBinding 'primary' is not declared/i).length,
+    ).toBeGreaterThan(0);
   });
 
   it("publishes a declarative agent and version", async () => {
