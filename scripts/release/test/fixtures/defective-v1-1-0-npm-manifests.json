@@ -1,0 +1,49 @@
+{
+  "description": "Registry metadata observed for @osva-ai/*@1.1.0 (invalid monorepo protocols).",
+  "packages": [
+    {
+      "name": "@osva-ai/contracts",
+      "version": "1.1.0",
+      "dependencies": {
+        "zod": "catalog:"
+      }
+    },
+    {
+      "name": "@osva-ai/runtime-protocol",
+      "version": "1.1.0",
+      "dependencies": {
+        "zod": "catalog:",
+        "@osva-ai/contracts": "workspace:*"
+      }
+    },
+    {
+      "name": "@osva-ai/sdk",
+      "version": "1.1.0",
+      "dependencies": {
+        "zod": "catalog:",
+        "@osva-ai/contracts": "workspace:*",
+        "@osva-ai/runtime-protocol": "workspace:*"
+      }
+    },
+    {
+      "name": "@osva-ai/connector-sdk",
+      "version": "1.1.0",
+      "dependencies": {
+        "zod": "catalog:",
+        "@osva-ai/contracts": "workspace:*",
+        "@modelcontextprotocol/node": "catalog:",
+        "@modelcontextprotocol/server": "catalog:"
+      }
+    },
+    {
+      "name": "@osva-ai/cli",
+      "version": "1.1.0",
+      "dependencies": {
+        "zod": "catalog:",
+        "@osva-ai/sdk": "workspace:*",
+        "@osva-ai/contracts": "workspace:*",
+        "ajv": "^8.17.1"
+      }
+    }
+  ]
+}

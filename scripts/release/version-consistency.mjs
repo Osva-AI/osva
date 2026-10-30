@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 
 import {
   PUBLIC_NPM_PACKAGES,
+  assertNpmDistributionAlignedWithPlatform,
   packageJsonPath,
+  readNpmDistributionVersion,
   readReleaseVersion,
 } from "./read-version.mjs";
 
@@ -38,7 +40,10 @@ function fail(message) {
   process.exit(1);
 }
 
-const expected = readReleaseVersion();
+const platformVersion = readReleaseVersion();
+const npmVersion = readNpmDistributionVersion();
+assertNpmDistributionAlignedWithPlatform(platformVersion, npmVersion);
+
 const failures = [];
 
 for (const name of PUBLIC_NPM_PACKAGES) {
@@ -47,28 +52,34 @@ for (const name of PUBLIC_NPM_PACKAGES) {
   if (pkg.private === true) {
     failures.push(`${name} is still private`);
   }
-  if (pkg.version !== expected) {
-    failures.push(`${name} version is ${pkg.version}, expected ${expected}`);
+  if (pkg.version !== npmVersion) {
+    failures.push(
+      `${name} version is ${pkg.version}, expected npm distribution ${npmVersion}`,
+    );
   }
 }
 
 const pythonVersion = readTomlVersion(
   path.join(REPO_ROOT, "sdks", "python", "pyproject.toml"),
 );
-if (pythonVersion !== expected) {
-  failures.push(`osva-sdk version is ${pythonVersion}, expected ${expected}`);
+if (pythonVersion !== platformVersion) {
+  failures.push(
+    `osva-sdk version is ${pythonVersion}, expected platform ${platformVersion}`,
+  );
 }
 
 const chart = readChartYaml(
   path.join(REPO_ROOT, "deploy", "helm", "osva", "Chart.yaml"),
 );
-if (chart.chartVersion !== expected) {
+if (chart.chartVersion !== platformVersion) {
   failures.push(
-    `Helm chart version is ${chart.chartVersion}, expected ${expected}`,
+    `Helm chart version is ${chart.chartVersion}, expected platform ${platformVersion}`,
   );
 }
-if (chart.appVersion !== expected) {
-  failures.push(`Helm appVersion is ${chart.appVersion}, expected ${expected}`);
+if (chart.appVersion !== platformVersion) {
+  failures.push(
+    `Helm appVersion is ${chart.appVersion}, expected platform ${platformVersion}`,
+  );
 }
 
 if (failures.length > 0) {
@@ -78,4 +89,10 @@ if (failures.length > 0) {
   fail(`${failures.length} mismatch(es)`);
 }
 
-console.log(`version consistency PASS (${expected})`);
+if (npmVersion === platformVersion) {
+  console.log(`version consistency PASS (${platformVersion})`);
+} else {
+  console.log(
+    `version consistency PASS (platform ${platformVersion}, npm distribution ${npmVersion})`,
+  );
+}

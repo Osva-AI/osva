@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 
+import { auditNpmRegistryDependencyManifests } from "../../release/lib/npm-registry-manifest-audit.mjs";
 import { NPM_PACKAGES } from "./constants.mjs";
 
 const NPM_TIMEOUT_MS = 45_000;
@@ -46,6 +47,10 @@ export async function auditNpmPublishedVersions(target) {
     }
     versions[name] = version;
   }
+  auditNpmRegistryDependencyManifests(
+    target.npmPackageVersion,
+    " (registry audit)",
+  );
   return versions;
 }
 

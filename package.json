@@ -38,6 +38,8 @@
     "release:version:check": "node scripts/release/version-consistency.mjs",
     "release:licenses": "node scripts/release/generate-license-inventory.mjs",
     "release:acceptance": "node scripts/release/release-acceptance.mjs",
+    "release:npm:artifacts": "node scripts/release/npm-pack-artifacts.mjs",
+    "release:npm:test": "node --test scripts/release/test/*.test.mjs",
     "dev:web": "pnpm --filter @osva/web dev",
     "dev:console": "pnpm --filter @osva/console dev",
     "dev:worker": "pnpm --filter @osva/worker dev",
