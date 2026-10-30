@@ -58,6 +58,7 @@ export interface HumanSessionUpstreamBinaryResult {
 
 export function createHumanSessionUpstream(config: ConsoleConfig) {
   const baseUrl = config.osvaBaseUrl.replace(/\/+$/, "");
+  const defaultMutationOrigin = config.browserOrigin;
 
   return {
     requestJson<T>(
@@ -70,7 +71,7 @@ export function createHumanSessionUpstream(config: ConsoleConfig) {
         readonly requireWorkspace?: boolean;
       },
     ): Promise<HumanSessionUpstreamJsonResult<T>> {
-      return upstreamJson<T>(baseUrl, ctx, input);
+      return upstreamJson<T>(baseUrl, ctx, input, defaultMutationOrigin);
     },
 
     download(
@@ -78,7 +79,13 @@ export function createHumanSessionUpstream(config: ConsoleConfig) {
       path: string,
       requireWorkspace = true,
     ): Promise<HumanSessionUpstreamBinaryResult> {
-      return upstreamBinary(baseUrl, ctx, path, requireWorkspace);
+      return upstreamBinary(
+        baseUrl,
+        ctx,
+        path,
+        requireWorkspace,
+        defaultMutationOrigin,
+      );
     },
   };
 }
@@ -97,9 +104,15 @@ async function upstreamJson<T>(
     readonly body?: unknown;
     readonly requireWorkspace?: boolean;
   },
+  defaultMutationOrigin: string,
 ): Promise<HumanSessionUpstreamJsonResult<T>> {
   const url = buildUpstreamUrl(baseUrl, input.path, input.query);
-  const headers = buildUpstreamHeaders(ctx, input.requireWorkspace ?? true);
+  const headers = buildUpstreamHeaders(
+    ctx,
+    input.requireWorkspace ?? true,
+    input.method,
+    defaultMutationOrigin,
+  );
   const init: RequestInit = {
     method: input.method,
     headers,
@@ -166,9 +179,15 @@ async function upstreamBinary(
   ctx: HumanSessionUpstreamContext,
   path: string,
   requireWorkspace: boolean,
+  defaultMutationOrigin: string,
 ): Promise<HumanSessionUpstreamBinaryResult> {
   const url = buildUpstreamUrl(baseUrl, path);
-  const headers = buildUpstreamHeaders(ctx, requireWorkspace);
+  const headers = buildUpstreamHeaders(
+    ctx,
+    requireWorkspace,
+    "GET",
+    defaultMutationOrigin,
+  );
 
   let response: Response;
   try {
@@ -227,6 +246,8 @@ async function upstreamBinary(
 function buildUpstreamHeaders(
   ctx: HumanSessionUpstreamContext,
   requireWorkspace: boolean,
+  method: string,
+  defaultMutationOrigin: string,
 ): Record<string, string> {
   const headers: Record<string, string> = {
     accept: "application/json",
@@ -240,6 +261,8 @@ function buildUpstreamHeaders(
   const origin = headerValue(ctx.incoming.headers.origin);
   if (origin !== undefined) {
     headers.origin = origin;
+  } else if (isMutatingHttpMethod(method)) {
+    headers.origin = defaultMutationOrigin;
   }
 
   if (ctx.workspaceId !== undefined) {
@@ -270,6 +293,16 @@ function buildUpstreamUrl(
     }
   }
   return url.toString();
+}
+
+function isMutatingHttpMethod(method: string): boolean {
+  const normalized = method.trim().toUpperCase();
+  return (
+    normalized === "POST" ||
+    normalized === "PUT" ||
+    normalized === "PATCH" ||
+    normalized === "DELETE"
+  );
 }
 
 function collectSetCookieFallback(headers: Headers): string[] {

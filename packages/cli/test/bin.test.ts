@@ -36,6 +36,8 @@ describe("osva bin entrypoint", () => {
     const result = await runCliSubprocess(["help"]);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("doctor");
+    expect(result.stdout).toContain("setup");
+    expect(result.stdout).toContain("Docker Compose provisioning");
     expect(result.stdout).toContain("init");
     expect(result.stdout).toContain("validate");
     expect(result.stdout).toContain("deploy");
@@ -67,6 +69,21 @@ describe("osva bin entrypoint", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("version");
     expect(result.stderr).toBe("");
+  });
+
+  it("runs setup preflight without credentials", async () => {
+    const result = await runCliSubprocess(["setup", "--preflight-only"], {
+      env: {
+        OSVA_API_KEY: "",
+        OSVA_BASE_URL: "",
+        OSVA_PUBLISH_WEB_PORT: "40200",
+        OSVA_PUBLISH_MCP_PORT: "40201",
+      },
+    });
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("OSVA Setup");
+    expect(result.stdout).toContain("Preflight");
+    expect(result.stdout).not.toMatch(/osva_ak_/);
   });
 
   it("runs doctor without credentials", async () => {

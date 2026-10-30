@@ -99,9 +99,14 @@ export function startConsoleServer(
 ): http.Server {
   const config = options.config ?? loadConsoleConfig();
   const server = createConsoleServer({ config });
-  server.listen(config.port, config.host, () => {
+  const listenHost = config.listenHost ?? config.host;
+  server.listen(config.port, listenHost, () => {
+    const published =
+      config.dockerPublishMode === true
+        ? ` (Docker publish mode; browser Host must remain loopback)`
+        : "";
     console.log(
-      `OSVA console listening on http://${config.host}:${config.port}`,
+      `OSVA console listening on http://${config.host}:${config.port}${published}`,
     );
   });
   return server;

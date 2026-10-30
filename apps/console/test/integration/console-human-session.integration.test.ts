@@ -315,6 +315,7 @@ describe("console human session real stack", () => {
         port: consolePort,
         clientDistDir: consoleClientDistDir,
         allowedOrigins: [],
+        browserOrigin: loopbackOrigin(consolePort),
       },
     });
 
@@ -545,6 +546,7 @@ describe("console human session real stack", () => {
         port: consolePort,
         clientDistDir: consoleClientDistDir,
         allowedOrigins: [],
+        browserOrigin: loopbackOrigin(consolePort),
       },
     });
     await new Promise<void>((resolve) =>

@@ -1,0 +1,5 @@
+{
+  "distributionSchemaVersion": 1,
+  "platformVersion": "1.1.0",
+  "imageRef": "ghcr.io/osva-ai/osva:1.1.0"
+}

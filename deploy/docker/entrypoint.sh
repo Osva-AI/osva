@@ -3,7 +3,13 @@ set -eu
 
 if [ -n "${OSVA_PROCESS:-}" ]; then
   process="$OSVA_PROCESS"
-  set --
+  case "$process" in
+    bootstrap|installation-status|identity-bootstrap|identity-recover)
+      ;;
+    *)
+      set --
+      ;;
+  esac
 elif [ "$#" -gt 0 ]; then
   process="$1"
   shift
@@ -36,6 +42,12 @@ case "$process" in
   bootstrap)
     exec node /app/packages/db/dist/bootstrap-cli.js "$@"
     ;;
+  installation-status)
+    exec node /app/packages/db/dist/installation-status-cli.js "$@"
+    ;;
+  console)
+    exec node /app/apps/console/dist/server/main.js "$@"
+    ;;
   identity-bootstrap)
     exec node /app/apps/identity/dist/bootstrap-cli.js "$@"
     ;;
@@ -43,7 +55,7 @@ case "$process" in
     exec node /app/apps/identity/dist/recover-cli.js "$@"
     ;;
   "")
-    echo "OSVA_PROCESS is required (web, worker, scheduler, workflow-orchestrator, knowledge-worker, mcp-server, migrate, bootstrap, identity-bootstrap, identity-recover)." >&2
+    echo "OSVA_PROCESS is required (web, worker, scheduler, workflow-orchestrator, knowledge-worker, mcp-server, migrate, bootstrap, installation-status, console, identity-bootstrap, identity-recover)." >&2
     exit 1
     ;;
   *)

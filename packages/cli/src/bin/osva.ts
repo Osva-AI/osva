@@ -5,6 +5,7 @@ import { OsvaClient } from "@osva-ai/sdk";
 import { runCommand } from "../commands/index.js";
 import { loadCliConfig, parseCliArgs } from "../config.js";
 import { runDoctorCommand } from "../doctor/index.js";
+import { runSetupCommand } from "../setup/index.js";
 import { exitCli } from "../exit.js";
 import { runInitCommand } from "../init/index.js";
 import { printError } from "../output.js";
@@ -24,6 +25,7 @@ async function main(): Promise<void> {
     parsed.command[0] === "--help";
   const versionCommand = parsed.command[0] === "version";
   const doctorCommand = parsed.command[0] === "doctor";
+  const setupCommand = parsed.command[0] === "setup";
   const initCommand = parsed.command[0] === "init";
   const validateCommand = parsed.command[0] === "validate";
   const deployCommand = parsed.command[0] === "deploy";
@@ -47,6 +49,17 @@ async function main(): Promise<void> {
       await exitCli(exitCode);
     } catch (error) {
       printError(error instanceof Error ? error.message : "Validate failed.");
+      await exitCli(1);
+    }
+    return;
+  }
+
+  if (setupCommand) {
+    try {
+      const exitCode = await runSetupCommand(parsed.flags);
+      await exitCli(exitCode);
+    } catch (error) {
+      printError(error instanceof Error ? error.message : "Setup failed.");
       await exitCli(1);
     }
     return;

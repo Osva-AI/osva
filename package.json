@@ -75,7 +75,9 @@
     "acceptance:m15:full": "node scripts/acceptance/m15-4/run.mjs --profile=full",
     "acceptance:m15:test": "node --test scripts/acceptance/m15-4/test/*.test.mjs",
     "acceptance:r11-registry": "node scripts/acceptance/r11-registry-only/run.mjs",
-    "acceptance:r11-registry:test": "node --test scripts/acceptance/r11-registry-only/test/*.test.mjs"
+    "acceptance:r11-registry:test": "node --test scripts/acceptance/r11-registry-only/test/*.test.mjs",
+    "acceptance:m16-2d": "node scripts/acceptance/m16-2d/run.mjs",
+    "acceptance:m16-2d:test": "node --test scripts/acceptance/m16-2d/test/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",
