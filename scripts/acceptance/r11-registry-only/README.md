@@ -4,10 +4,18 @@ Replay of the **M10.4E** pattern: install and operate OSVA using **only** publis
 
 **Targets** (`OSVA_REGISTRY_ACCEPTANCE_TARGET`, default **`rc4`**):
 
+| Value | Meaning |
+|-------|---------|
+| `rc4` | RC.4 published line |
+| `stable` | Platform **1.1.0** historical target (npm @1.1.0 known defective) |
+| `stable-npm-111` | Corrective **npm @1.1.1** on platform **1.1.0** (blocked until publish + `registryArtifactsReady`) |
+
+
 | Target | Gate env | Status |
 |--------|----------|--------|
 | **`rc4`** | `OSVA_RC4_REGISTRY_ACCEPTANCE=1` | **Ready** — verified **`1.1.0-rc.4`** artifacts |
-| **`stable`** | `OSVA_STABLE_REGISTRY_ACCEPTANCE=1` | **Blocked** until **`1.1.0`** is published and digests are recorded in `lib/targets.mjs` |
+| **`stable`** | `OSVA_STABLE_REGISTRY_ACCEPTANCE=1` | **Historical** platform **`1.1.0`** (npm @1.1.0 defective; manifest audit fails if replayed) |
+| **`stable-npm-111`** | `OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE=1` | **Blocked** until npm **`1.1.1`** published + acceptance recorded |
 
 ## Prerequisites
 

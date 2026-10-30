@@ -1,15 +1,17 @@
 {
   "releaseVersion": "1.1.0",
   "releaseKind": "stable",
-  "status": "prepared-unpublished",
-  "publicationStatus": "unpublished",
+  "status": "published-awaiting-registry-acceptance",
+  "publicationStatus": "published_artifacts_verified",
   "sourceProvenance": {
-    "gitCommit": "661841326a33e3277a33fa06e794c5a5641a249c",
-    "branch": "chore/v1-1-stable-readiness",
+    "gitCommit": "5fa4af2cdad2c5436dfbf7e4ebfb0435da782f3b",
+    "releaseCommit": "5fa4af2cdad2c5436dfbf7e4ebfb0435da782f3b",
+    "gitTag": "v1.1.0",
+    "branch": "chore/v1-1-stable-acceptance-evidence",
     "versionFile": "VERSION",
     "priorRcTag": "v1.1.0-rc.4",
     "priorRcReleaseCommit": "cd38eea46b8ee44bb099ccf307818cfcd348f50b",
-    "note": "Stable preparation only. RC4 inventory remains in RELEASE_CANDIDATE_INVENTORY.json."
+    "note": "Frozen stable release commit. RC4 inventory remains in RELEASE_CANDIDATE_INVENTORY.json."
   },
   "migrationHead": "0030_approval_operation_binding_slice",
   "npmPackages": [
@@ -31,23 +33,81 @@
     "chartVersion": "1.1.0",
     "appVersion": "1.1.0"
   },
-  "registryArtifacts": {
-    "npmPublished": false,
-    "pypiPublished": false,
-    "ghcrPublished": false,
-    "expectedNpmDistTagPolicy": "latest promotion per approved stable-release policy after verify",
-    "note": "Do not record digests until post-publish inspection"
+  "distributionChannels": {
+    "gitTagV110": {
+      "status": "published",
+      "tag": "v1.1.0",
+      "releaseCommit": "5fa4af2cdad2c5436dfbf7e4ebfb0435da782f3b"
+    },
+    "npmFivePackages": {
+      "status": "published",
+      "version": "1.1.0",
+      "distTagStableCandidate": "1.1.0",
+      "distTagLatest": "1.0.0",
+      "note": "Five @osva-ai/* packages published; latest not promoted to 1.1.0"
+    },
+    "pypiOsvaSdk": {
+      "status": "published",
+      "version": "1.1.0",
+      "pipInstallSpec": "osva-sdk==1.1.0"
+    },
+    "ghcrOsvaImage": {
+      "status": "published",
+      "tag": "ghcr.io/osva-ai/osva:1.1.0",
+      "platform": "linux/amd64"
+    },
+    "publishedDockerRuntimeSmoke": {
+      "status": "pass",
+      "note": "Post-publish GHCR runtime smoke on published image"
+    },
+    "gitHubRelease": {
+      "status": "not_verified",
+      "note": "GitHub Release page and assets not verified in this pass"
+    }
   },
+  "registryArtifacts": {
+    "npmPublished": true,
+    "pypiPublished": true,
+    "ghcrPublished": true,
+    "expectedNpmDistTagPolicy": "latest promotion per approved stable-release policy after stable registry acceptance",
+    "publishedRegistryDigests": {
+      "ghcrIndexDigest": "sha256:999b66f962d414c0811d6e3269aebdb9ec0d8e50549691941b97672a4e9dbdd9",
+      "ghcrLinuxAmd64ManifestDigest": "sha256:b696b28bf27b9c9b94493e3383b8a39438767801d32fb66cb33a46ffc8157b2c",
+      "pypiWheelSha256": "4311659678d4d728869cfd7319ddca4e406d9dea4cfc71848bb291b3010ae67f",
+      "pypiSdistSha256": "8c6b86e03c2e574c18353484bd9a26ac0a52d0fcb2b4983c2c3c09373fb084a9",
+      "pypiWheelFilename": "osva_sdk-1.1.0-py3-none-any.whl",
+      "pypiSdistFilename": "osva_sdk-1.1.0.tar.gz",
+      "acceptanceTargetModule": "scripts/acceptance/r11-registry-only/lib/targets.mjs",
+      "acceptanceTargetExport": "STABLE_110_TARGET"
+    }
+  },
+  "registryOnlyAcceptance": {
+    "stable110": {
+      "status": "not_run",
+      "harness": "scripts/acceptance/r11-registry-only/run.mjs",
+      "command": "OSVA_REGISTRY_ACCEPTANCE_TARGET=stable OSVA_STABLE_REGISTRY_ACCEPTANCE=1 pnpm acceptance:r11-registry",
+      "envGate": "OSVA_STABLE_REGISTRY_ACCEPTANCE=1",
+      "targetReady": true,
+      "note": "Artifacts and digests recorded; full Docker replay pending operator execution"
+    }
+  },
+  "completedReleaseGates": [
+    "Annotated Git tag v1.1.0 on frozen release commit 5fa4af2",
+    "Required CI and release-readiness passed on stable release commit",
+    "npm five packages @1.1.0 published (stable-candidate dist-tag)",
+    "PyPI osva-sdk==1.1.0 published",
+    "GHCR ghcr.io/osva-ai/osva:1.1.0 published",
+    "Verified PyPI wheel/sdist SHA-256 against registry inspection",
+    "Verified GHCR OCI index and linux/amd64 manifest digests",
+    "Published Docker runtime smoke PASS",
+    "STABLE_110_TARGET populated in lib/targets.mjs (registryArtifactsReady=true)"
+  ],
   "pendingReleaseGates": [
-    "Merge stable preparation PR",
-    "release-readiness CI on frozen stable tag SHA",
-    "Maintainer annotated tag v1.1.0",
-    "Build and publish npm (five packages, dependency order)",
-    "Publish PyPI osva-sdk==1.1.0",
-    "Publish GHCR ghcr.io/osva-ai/osva:1.1.0",
-    "Update scripts/acceptance/r11-registry-only/lib/targets.mjs STABLE_110_TARGET digests",
-    "OSVA_REGISTRY_ACCEPTANCE_TARGET=stable registry-only replay",
-    "GitHub Release and evidence finalize"
+    "OSVA_REGISTRY_ACCEPTANCE_TARGET=stable registry-only acceptance replay",
+    "Verify GitHub Release page and release assets",
+    "Stable evidence JSON after registry acceptance",
+    "Promote npm latest / GHCR aliases per approved stable policy (latest remains 1.0.0 until promotion)",
+    "Stable distribution closeout documentation (not claimed)"
   ],
   "historicalEvidence": {
     "rc4RegistryAcceptance": "docs/release/R1_1_3B_REGISTRY_EVIDENCE.json",

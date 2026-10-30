@@ -1,103 +1,50 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { validateContractsTarballArtifactExports } from "./contracts-pack-artifact-exports.mjs";
-import { PUBLIC_NPM_PACKAGES, readReleaseVersion } from "./read-version.mjs";
+import { runIsolatedNpmConsumerSmoke } from "./lib/npm-consumer-smoke.mjs";
+import { runCommand } from "./lib/npm-command.mjs";
+import { packPublicNpmPackages } from "./lib/npm-pack-public.mjs";
+import { readNpmDistributionVersion } from "./read-version.mjs";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
 
-const PACK_ORDER = [
-  "@osva-ai/contracts",
-  "@osva-ai/runtime-protocol",
-  "@osva-ai/sdk",
-  "@osva-ai/connector-sdk",
-  "@osva-ai/cli",
-];
-
-function run(command, args, options = {}) {
-  const useShell =
-    options.shell ??
-    (process.platform === "win32" &&
-      (command === "pnpm" || command === "npm" || command === "turbo"));
-  const result = spawnSync(command, args, {
-    cwd: options.cwd ?? REPO_ROOT,
-    encoding: "utf8",
-    env: { ...process.env, ...options.env },
-    stdio: options.stdio ?? "pipe",
-    shell: useShell,
-  });
-  if (result.status !== 0) {
-    throw new Error(
-      `${command} ${args.join(" ")} failed:\n${result.stderr || result.stdout}`,
-    );
-  }
-  return `${result.stdout ?? ""}${result.stderr ?? ""}`;
-}
-
 function main() {
-  const version = readReleaseVersion();
+  const version = readNpmDistributionVersion();
   console.log(`npm pack smoke (release ${version})`);
 
-  run(
-    "pnpm",
-    [
-      "exec",
-      "turbo",
-      "run",
-      "build",
-      "--filter=@osva-ai/contracts",
-      "--filter=@osva-ai/runtime-protocol",
-      "--filter=@osva-ai/sdk",
-      "--filter=@osva-ai/connector-sdk",
-      "--filter=@osva-ai/cli",
-    ],
-    { stdio: "inherit" },
-  );
-
   const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "osva-npm-pack-"));
-  const tarballs = new Map();
+  const artifacts = packPublicNpmPackages({
+    repoRoot: REPO_ROOT,
+    version,
+    packDestination: packDir,
+    runBuild: true,
+  });
 
-  for (const name of PACK_ORDER) {
+  const contracts = artifacts.get("@osva-ai/contracts");
+  if (contracts) {
+    validateContractsTarballArtifactExports(contracts.tarballPath);
+    console.log(
+      "validated @osva-ai/contracts packed artifact blob root exports",
+    );
+  }
+
+  for (const [name] of artifacts) {
     const dir = name.replace(/^@osva-ai\//, "");
-    const stdout = run("pnpm", ["pack", "--pack-destination", packDir], {
+    const dry = runCommand("npm", ["pack", "--dry-run"], {
       cwd: path.join(REPO_ROOT, "packages", dir),
     });
-    const tarballLine = stdout
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .find((line) => line.endsWith(".tgz"));
-    if (!tarballLine) {
-      throw new Error(`pnpm pack did not report tarball for ${name}`);
-    }
-    const tarballPath = path.isAbsolute(tarballLine)
-      ? tarballLine
-      : path.join(packDir, path.basename(tarballLine));
-    if (!fs.existsSync(tarballPath)) {
-      throw new Error(`Tarball missing for ${name}: ${tarballPath}`);
-    }
-    tarballs.set(name, tarballPath);
-    if (name === "@osva-ai/contracts") {
-      validateContractsTarballArtifactExports(tarballPath);
-      console.log(
-        "validated @osva-ai/contracts packed artifact blob root exports",
-      );
-    }
-    const dry = run("npm", ["pack", "--dry-run"], {
-      cwd: path.join(REPO_ROOT, "packages", dir),
-    });
-    const dryOutput = dry;
-    if (dryOutput.includes("node_modules/typescript")) {
+    if (dry.includes("node_modules/typescript")) {
       throw new Error(`${name} pack dry-run includes dev tooling`);
     }
     if (name === "@osva-ai/cli") {
-      if (!dryOutput.includes("templates/agent-typescript")) {
+      if (!dry.includes("templates/agent-typescript")) {
         throw new Error(
           "@osva-ai/cli pack dry-run missing agent-typescript templates",
         );
@@ -112,89 +59,11 @@ function main() {
         throw new Error("@osva-ai/cli package.json missing ajv dependency");
       }
     }
-    console.log(`packed ${name} -> ${path.basename(tarballPath)}`);
+    const entry = artifacts.get(name);
+    console.log(`packed ${name} -> ${entry.fileName} (sha256=${entry.sha256})`);
   }
 
-  const consumerDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), "osva-npm-consumer-"),
-  );
-  const packageJson = {
-    name: "osva-npm-consumer-smoke",
-    private: true,
-    type: "module",
-    dependencies: {},
-  };
-  for (const [name, tarball] of tarballs) {
-    packageJson.dependencies[name] = `file:${tarball.replace(/\\/g, "/")}`;
-  }
-  fs.writeFileSync(
-    path.join(consumerDir, "package.json"),
-    `${JSON.stringify(packageJson, null, 2)}\n`,
-    "utf8",
-  );
-
-  run("npm", ["install", "--omit=dev"], { cwd: consumerDir, stdio: "inherit" });
-
-  const importCheck = `
-import { OsvaClient } from "@osva-ai/sdk";
-import "@osva-ai/contracts";
-import "@osva-ai/runtime-protocol";
-import "@osva-ai/connector-sdk";
-if (!(OsvaClient.prototype && typeof OsvaClient === "function")) {
-  throw new Error("OsvaClient export missing");
-}
-console.log("npm consumer import smoke ok");
-`;
-  fs.writeFileSync(
-    path.join(consumerDir, "import-smoke.mjs"),
-    importCheck,
-    "utf8",
-  );
-  run(process.execPath, ["import-smoke.mjs"], {
-    cwd: consumerDir,
-    stdio: "inherit",
-  });
-
-  const cliBin = path.join(
-    consumerDir,
-    "node_modules",
-    "@osva-ai",
-    "cli",
-    "dist",
-    "bin",
-    "osva.js",
-  );
-  if (!fs.existsSync(cliBin)) {
-    throw new Error("CLI bin missing from consumer install");
-  }
-  const help = run(process.execPath, [cliBin, "help"], { cwd: consumerDir });
-  if (!help.includes("Usage:")) {
-    throw new Error("CLI help did not render from packed install");
-  }
-  const versionOut = run(process.execPath, [cliBin, "version"], {
-    cwd: consumerDir,
-  });
-  if (!versionOut.includes(version)) {
-    throw new Error(`CLI version expected ${version}, got: ${versionOut}`);
-  }
-
-  const cliRoot = path.join(consumerDir, "node_modules", "@osva-ai", "cli");
-  const templateRoot = path.join(
-    cliRoot,
-    "templates",
-    "agent-typescript",
-    "scripts",
-    "build-manifest.mjs",
-  );
-  if (!fs.existsSync(templateRoot)) {
-    throw new Error("CLI consumer install missing bundled templates");
-  }
-  const installedCliPkg = JSON.parse(
-    fs.readFileSync(path.join(cliRoot, "package.json"), "utf8"),
-  );
-  if (!installedCliPkg.dependencies?.ajv) {
-    throw new Error("Installed CLI package.json missing ajv dependency");
-  }
+  const { help } = runIsolatedNpmConsumerSmoke(artifacts, version);
 
   for (const command of [
     "init",

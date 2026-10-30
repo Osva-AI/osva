@@ -32,7 +32,7 @@ Commits after **`v1.1.0-rc.4`** ( **`cd38eea` → `6618413`** ):
 | Surface | Stable prep value | RC.4 (historical, unchanged evidence) |
 |---------|-------------------|----------------------------------------|
 | Root `VERSION` | **1.1.0** | 1.1.0-rc.4 |
-| `@osva-ai/contracts` | **1.1.0** | 1.1.0-rc.4 |
+| `@osva-ai/contracts` (npm) | **1.1.1** (`NPM_DISTRIBUTION_VERSION`; platform **1.1.0**) | 1.1.0-rc.4 |
 | `@osva-ai/runtime-protocol` | **1.1.0** | 1.1.0-rc.4 |
 | `@osva-ai/sdk` | **1.1.0** | 1.1.0-rc.4 |
 | `@osva-ai/cli` | **1.1.0** | 1.1.0-rc.4 |
@@ -49,7 +49,7 @@ Inventory: [`V1_1_STABLE_RELEASE_INVENTORY.json`](V1_1_STABLE_RELEASE_INVENTORY.
 
 | Check | Prep expectation |
 |-------|------------------|
-| Five npm packages `pnpm pack` | Run `node scripts/release/npm-pack-smoke.mjs` — no `workspace:` leak in packed deps |
+| Five npm packages `pnpm pack` | Run `node scripts/release/npm-pack-smoke.mjs` — tarball manifest audit (see [`NPM_PUBLICATION.md`](NPM_PUBLICATION.md)) |
 | Python wheel/sdist | Run `node scripts/release/python-pack-smoke.mjs` — version **1.1.0** |
 | Docker image | Build from frozen SHA; **not pushed** |
 | Helm metadata | Matches **1.1.0** |

@@ -1,6 +1,6 @@
 /**
- * Published-artifact acceptance targets. RC4 is registry-verified; stable 1.1.0
- * remains blocked until maintainers record post-publication digests and hashes.
+ * Published-artifact acceptance targets. RC4 and stable 1.1.0 digests are
+ * recorded for registry-only replay; stable requires OSVA_STABLE_REGISTRY_ACCEPTANCE=1.
  *
  * @typedef {object} RegistryAcceptanceTarget
  * @property {string} id
@@ -24,6 +24,8 @@
  * @property {string} evidenceReleaseKey
  * @property {boolean} registryArtifactsReady
  * @property {string} envGateVar
+ * @property {boolean} [correctiveNpmDistributionOnly]
+ * @property {string} [notes]
  */
 
 /** @type {RegistryAcceptanceTarget} */
@@ -60,29 +62,73 @@ export const STABLE_110_TARGET = {
   id: "stable",
   productVersion: "1.1.0",
   npmPackageVersion: "1.1.0",
+  notes:
+    "Historical stable platform acceptance; npm @1.1.0 tarballs are defective (catalog:/workspace:*).",
   pythonPyprojectVersion: "1.1.0",
   pythonPep440: "1.1.0",
   pipInstallSpec: "osva-sdk==1.1.0",
   ghcrImageRef: "ghcr.io/osva-ai/osva:1.1.0",
-  ghcrIndexDigest: null,
-  ghcrLinuxAmd64ManifestDigest: null,
-  pypiWheelSha256: null,
-  pypiSdistSha256: null,
+  ghcrIndexDigest:
+    "sha256:999b66f962d414c0811d6e3269aebdb9ec0d8e50549691941b97672a4e9dbdd9",
+  ghcrLinuxAmd64ManifestDigest:
+    "sha256:b696b28bf27b9c9b94493e3383b8a39438767801d32fb66cb33a46ffc8157b2c",
+  pypiWheelSha256:
+    "4311659678d4d728869cfd7319ddca4e406d9dea4cfc71848bb291b3010ae67f",
+  pypiSdistSha256:
+    "8c6b86e03c2e574c18353484bd9a26ac0a52d0fcb2b4983c2c3c09373fb084a9",
   pypiWheelFilename: "osva_sdk-1.1.0-py3-none-any.whl",
   pypiSdistFilename: "osva_sdk-1.1.0.tar.gz",
   npmRegistryMode: "exact",
   npmViewSelector: "1.1.0",
   gitTag: "v1.1.0",
-  releaseCommit: null,
+  releaseCommit: "5fa4af2cdad2c5436dfbf7e4ebfb0435da782f3b",
   composeProject: "osva-r11-registry-stable",
   evidenceReleaseKey: "1.1.0",
-  registryArtifactsReady: false,
+  registryArtifactsReady: true,
   envGateVar: "OSVA_STABLE_REGISTRY_ACCEPTANCE",
+};
+
+/**
+ * Corrective npm-only distribution on platform 1.1.0 (Python/GHCR unchanged).
+ * Not registry-ready until npm @1.1.1 is published and digests recorded.
+ *
+ * @type {RegistryAcceptanceTarget}
+ */
+export const STABLE_NPM_111_TARGET = {
+  id: "stable-npm-111",
+  productVersion: "1.1.0",
+  npmPackageVersion: "1.1.1",
+  pythonPyprojectVersion: "1.1.0",
+  pythonPep440: "1.1.0",
+  pipInstallSpec: "osva-sdk==1.1.0",
+  ghcrImageRef: "ghcr.io/osva-ai/osva:1.1.0",
+  ghcrIndexDigest:
+    "sha256:999b66f962d414c0811d6e3269aebdb9ec0d8e50549691941b97672a4e9dbdd9",
+  ghcrLinuxAmd64ManifestDigest:
+    "sha256:b696b28bf27b9c9b94493e3383b8a39438767801d32fb66cb33a46ffc8157b2c",
+  pypiWheelSha256:
+    "4311659678d4d728869cfd7319ddca4e406d9dea4cfc71848bb291b3010ae67f",
+  pypiSdistSha256:
+    "8c6b86e03c2e574c18353484bd9a26ac0a52d0fcb2b4983c2c3c09373fb084a9",
+  pypiWheelFilename: "osva_sdk-1.1.0-py3-none-any.whl",
+  pypiSdistFilename: "osva_sdk-1.1.0.tar.gz",
+  npmRegistryMode: "exact",
+  npmViewSelector: "1.1.1",
+  gitTag: "v1.1.0",
+  releaseCommit: null,
+  composeProject: "osva-r11-registry-stable-npm-111",
+  evidenceReleaseKey: "1.1.0-npm-1.1.1",
+  registryArtifactsReady: false,
+  envGateVar: "OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE",
+  correctiveNpmDistributionOnly: true,
+  notes:
+    "Corrective npm metadata release; not a platform feature release. Requires registry acceptance after npm publish.",
 };
 
 const TARGETS = {
   rc4: RC4_TARGET,
   stable: STABLE_110_TARGET,
+  "stable-npm-111": STABLE_NPM_111_TARGET,
 };
 
 /**
@@ -96,7 +142,7 @@ export function resolveAcceptanceTarget(
   const target = TARGETS[key];
   if (!target) {
     throw new Error(
-      `Unknown OSVA_REGISTRY_ACCEPTANCE_TARGET=${JSON.stringify(raw)} (expected rc4 or stable)`,
+      `Unknown OSVA_REGISTRY_ACCEPTANCE_TARGET=${JSON.stringify(raw)} (expected rc4, stable, or stable-npm-111)`,
     );
   }
   return target;

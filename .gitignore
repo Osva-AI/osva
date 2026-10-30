@@ -10,6 +10,7 @@ coverage/
 .osva/
 .acceptance-evidence/
 artifacts/
+.release/
 
 .env
 .env.*

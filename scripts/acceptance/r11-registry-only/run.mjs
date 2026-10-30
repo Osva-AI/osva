@@ -51,11 +51,12 @@ function printHelp(target) {
 Registry-only published-artifact acceptance (M10.4E / R1.1 replay).
 
 Target (default rc4):
-  OSVA_REGISTRY_ACCEPTANCE_TARGET=rc4|stable
+  OSVA_REGISTRY_ACCEPTANCE_TARGET=rc4|stable|stable-npm-111
 
 Requires:
   rc4:   OSVA_RC4_REGISTRY_ACCEPTANCE=1
-  stable: OSVA_STABLE_REGISTRY_ACCEPTANCE=1 (blocked until stable artifacts + digests recorded)
+  stable: OSVA_STABLE_REGISTRY_ACCEPTANCE=1 (platform 1.1.0 historical; npm @1.1.0 defective)
+  stable-npm-111: OSVA_STABLE_NPM_111_REGISTRY_ACCEPTANCE=1 (blocked until npm @1.1.1 published)
   Docker Compose v2, Node 24+, Python 3.11+ on PATH
 
 Optional:
