@@ -4,7 +4,9 @@
 
 **Last registry-verified prerelease:** **`1.1.0-rc.4`** (git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`**). Evidence: [`M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md), [`R1_1_DISTRIBUTION_CLOSEOUT.md`](R1_1_DISTRIBUTION_CLOSEOUT.md).
 
-**npm (RC.4 verified):** all five public packages publish **`1.1.0-rc.4`** on dist-tag **`rc`**. **`latest`** remains **`1.0.0`** until stable publication policy executes.
+**npm (RC.4 verified):** all five public packages publish **`1.1.0-rc.4`** on dist-tag **`rc`**.
+
+**npm (stable corrective, registry-verified):** dist-tags **`latest`** and **`stable-candidate`** → **1.1.1** on all five `@osva-ai/*` packages; **`rc`** → **1.1.0-rc.4**. Platform **1.1.0** on PyPI/GHCR unchanged. Do not install defective **`@1.1.0`** npm tarballs — see [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md).
 
 **PyPI and GHCR (RC.4 verified):** **`pip install osva-sdk==1.1.0rc4`**; **`ghcr.io/osva-ai/osva:1.1.0-rc.4`** (OCI index **`sha256:59148d75…`**, **linux/amd64**). Stable **`1.1.0`** coordinates are **declared** in source but **not registry-verified** until publication and [`acceptance:r11-registry`](../../scripts/acceptance/r11-registry-only/README.md) stable target readiness is updated.
 

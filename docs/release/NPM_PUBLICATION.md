@@ -80,7 +80,7 @@ Option B is the smallest safe recovery if Python wheel and GHCR image at 1.1.0 a
 
 Preserve **v1.1.0** git tag and historical registry metadata; do not unpublish or overwrite immutable npm versions.
 
-**Active recovery (closeout recorded):** platform **`v1.1.0`**, corrective npm **1.1.1** published and registry-accepted — see [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md). Public npm **`1.1.0`** tarballs remain defective and immutable; **`latest`** not promoted to **1.1.1**.
+**Active recovery (closeout complete):** platform **`v1.1.0`**, corrective npm **1.1.1** published, registry-accepted, and promoted — see [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md). Public npm **`1.1.0`** tarballs remain defective and immutable. All five packages: **`latest`** and **`stable-candidate`** → **1.1.1**; **`rc`** → **1.1.0-rc.4**.
 
 ## Regression tests
 
