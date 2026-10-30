@@ -1,7 +1,7 @@
 {
   "releaseVersion": "1.1.0",
   "releaseKind": "stable",
-  "status": "published-corrective-npm-111-accepted",
+  "status": "published-corrective-npm-111-latest-promoted",
   "publicationStatus": "published_artifacts_verified",
   "sourceProvenance": {
     "gitCommit": "5fa4af2cdad2c5436dfbf7e4ebfb0435da782f3b",
@@ -47,15 +47,17 @@
       "note": "Original @1.1.0 npm line defective (catalog:/workspace:*); do not install. See npmCorrective111."
     },
     "npmCorrective111": {
-      "status": "published_and_registry_accepted",
+      "status": "published_registry_accepted_latest_promoted",
       "version": "1.1.1",
       "distTagStableCandidate": "1.1.1",
-      "distTagLatest": "1.0.0",
+      "distTagLatest": "1.1.1",
+      "distTagRc": "1.1.0-rc.4",
       "implementationCommit": "8b9ce2a04fb29c23e3508b22d268562fd4c06f82",
       "registryConsumerSmoke": "pass",
+      "independentNpmRegistryVerification": "pass",
       "registryEvidenceJson": "docs/release/V1_1_0_NPM_1_1_1_REGISTRY_EVIDENCE.json",
       "acceptanceSummary": "19 PASS, 0 FAIL, 1 NOT_RUN (journey-05c-mcp-tool-invoke)",
-      "note": "Corrective distribution only; platform remains v1.1.0. latest not promoted to 1.1.1."
+      "note": "Corrective npm distribution only; platform git tag and PyPI/GHCR remain v1.1.0."
     },
     "pypiOsvaSdk": {
       "status": "published",
@@ -80,7 +82,7 @@
     "npmPublished": true,
     "pypiPublished": true,
     "ghcrPublished": true,
-    "expectedNpmDistTagPolicy": "latest promotion per approved stable-release policy after stable registry acceptance",
+    "expectedNpmDistTagPolicy": "latest and stable-candidate at 1.1.1; rc at 1.1.0-rc.4 (promoted 2026-10-30 after stable-npm-111 acceptance)",
     "publishedRegistryDigests": {
       "ghcrIndexDigest": "sha256:999b66f962d414c0811d6e3269aebdb9ec0d8e50549691941b97672a4e9dbdd9",
       "ghcrLinuxAmd64ManifestDigest": "sha256:b696b28bf27b9c9b94493e3383b8a39438767801d32fb66cb33a46ffc8157b2c",
@@ -120,11 +122,13 @@
     "Verified PyPI wheel/sdist SHA-256 against registry inspection",
     "Verified GHCR OCI index and linux/amd64 manifest digests",
     "Published Docker runtime smoke PASS",
-    "STABLE_110_TARGET populated in lib/targets.mjs (registryArtifactsReady=true)"
+    "STABLE_110_TARGET populated in lib/targets.mjs (registryArtifactsReady=true)",
+    "Corrective npm @1.1.1 full R11 registry acceptance (stable-npm-111): 19 PASS, 0 FAIL, 1 NOT_RUN",
+    "npm five packages dist-tags latest and stable-candidate promoted to 1.1.1 (rc remains 1.1.0-rc.4); independent npm registry verification PASS"
   ],
   "pendingReleaseGates": [
     "Verify GitHub Release page and release assets",
-    "Promote npm latest / GHCR aliases per approved stable policy (latest remains 1.0.0; stable-candidate at 1.1.1)",
+    "Promote GHCR aliases per approved stable policy (image tag remains 1.1.0; :latest not moved in npm promotion closeout)",
     "Implement and replay journey-05c-mcp-tool-invoke in registry harness"
   ],
   "historicalEvidence": {
