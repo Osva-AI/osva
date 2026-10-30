@@ -107,6 +107,23 @@ describe("console config", () => {
     ).toThrow(ConsoleConfigurationError);
   });
 
+  it("uses loopback bind by default and enables Docker publish listen mode only when explicitly requested", () => {
+    const defaultConfig = loadConsoleConfig({
+      OSVA_BASE_URL: "http://127.0.0.1:3000",
+    });
+    expect(defaultConfig.host).toBe("127.0.0.1");
+    expect(defaultConfig.listenHost).toBe("127.0.0.1");
+    expect(defaultConfig.dockerPublishMode).toBe(false);
+
+    const dockerConfig = loadConsoleConfig({
+      OSVA_BASE_URL: "http://127.0.0.1:3000",
+      OSVA_CONSOLE_DOCKER_PUBLISH: "true",
+    });
+    expect(dockerConfig.host).toBe("127.0.0.1");
+    expect(dockerConfig.listenHost).toBe("0.0.0.0");
+    expect(dockerConfig.dockerPublishMode).toBe(true);
+  });
+
   it("parses explicit allowed origins and rejects wildcards", () => {
     expect(
       loadConsoleConfig({

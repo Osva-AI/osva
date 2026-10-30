@@ -254,6 +254,9 @@ Commands:
   run [--project DIR] --input JSON | --input-file PATH [--wait] [--json]
   status [--project DIR] [--json]
   doctor [--json]
+  setup [--json] [--preflight-only] [--yes] [--install-dir PATH]
+        [--web-port PORT] [--mcp-port PORT]
+        Installation preflight and local Docker Compose provisioning.
   version
   help
 
@@ -264,6 +267,7 @@ Environment:
   OSVA_TRUSTED_RUNTIME_MODE (host | compose)
   OSVA_TRUSTED_RUNTIME_ROOT (required for host mode)
   OSVA_COMPOSE_DIR (required for compose mode)
+  OSVA_INSTALL_DIR (optional; default per-user install directory for setup)
   OSVA_COMPOSE_PROJECT / COMPOSE_PROJECT_NAME (optional)
   OSVA_RUN_POLL_INTERVAL_MS / OSVA_RUN_POLL_TIMEOUT_MS (optional)
 `);

@@ -131,6 +131,7 @@ describe("console real control-plane stack", () => {
           port: 0,
           clientDistDir: consoleClientDistDir,
           allowedOrigins: [],
+          browserOrigin: "http://127.0.0.1:4174",
         },
       });
 
@@ -302,6 +303,7 @@ describe("console real control-plane stack", () => {
           port: 0,
           clientDistDir: consoleClientDistDir,
           allowedOrigins: [],
+          browserOrigin: "http://127.0.0.1:4174",
         },
       });
       await new Promise<void>((resolve) => restartedConsole.listen(0, resolve));

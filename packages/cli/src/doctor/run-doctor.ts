@@ -122,7 +122,7 @@ export async function runDoctorPipeline(
   return finalizeReport(checks);
 }
 
-function checkNodeRuntime(): DoctorCheck {
+export function checkNodeRuntime(): DoctorCheck {
   const version = process.version;
   const match = /^v(\d+)\./.exec(version);
   const major = match === null ? NaN : Number.parseInt(match[1]!, 10);

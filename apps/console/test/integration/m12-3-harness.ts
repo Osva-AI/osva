@@ -407,6 +407,7 @@ export async function startM12_3HumanConsoleStack(options: {
         port: consolePort,
         clientDistDir: consoleClientDistDir,
         allowedOrigins: [],
+        browserOrigin: consoleOrigin,
       },
     });
     await new Promise<void>((resolve) =>

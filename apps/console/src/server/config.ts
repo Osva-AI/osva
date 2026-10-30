@@ -9,10 +9,16 @@ export interface ConsoleConfig {
   /** Deprecated server-side API key mode; disabled unless legacy flag is set. */
   readonly osvaApiKey?: string;
   readonly legacyApiKeyMode: boolean;
+  /** Logical loopback host used for operator messaging and request validation context. */
   readonly host: string;
+  /** Actual Node HTTP bind address (may differ inside Docker publish mode). */
+  readonly listenHost?: string;
+  readonly dockerPublishMode?: boolean;
   readonly port: number;
   readonly clientDistDir: string;
   readonly allowedOrigins: readonly string[];
+  /** Loopback origin browsers use (host publish port), for upstream CSRF context. */
+  readonly browserOrigin: string;
 }
 
 const DEFAULT_HOST = "127.0.0.1";
@@ -44,6 +50,9 @@ export function loadConsoleConfig(
 
   const host = readOptional(env.OSVA_CONSOLE_HOST) ?? DEFAULT_HOST;
   assertConsoleBindHost(host, env);
+  const dockerPublishMode =
+    readOptionalBoolean(env.OSVA_CONSOLE_DOCKER_PUBLISH) ?? false;
+  const listenHost = resolveConsoleListenHost(host, dockerPublishMode);
   const port = parsePort(env.OSVA_CONSOLE_PORT, DEFAULT_PORT);
   const clientDistDir =
     readOptional(env.OSVA_CONSOLE_CLIENT_DIST) ?? defaultClientDistDir();
@@ -60,15 +69,32 @@ export function loadConsoleConfig(
     );
   }
 
+  const browserOrigin =
+    readOptional(env.OSVA_CONSOLE_BROWSER_ORIGIN) ??
+    `http://${host}:${String(port)}`;
+
   return {
     osvaBaseUrl,
     ...(osvaApiKey === undefined ? {} : { osvaApiKey }),
     legacyApiKeyMode,
     host,
+    listenHost,
+    dockerPublishMode,
     port,
     clientDistDir,
     allowedOrigins,
+    browserOrigin,
   };
+}
+
+function resolveConsoleListenHost(
+  logicalHost: string,
+  dockerPublishMode: boolean,
+): string {
+  if (!dockerPublishMode) {
+    return logicalHost;
+  }
+  return "0.0.0.0";
 }
 
 export function tryLoadConsoleConfig(

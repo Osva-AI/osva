@@ -65,6 +65,7 @@ describe("human session BFF", () => {
         port: 0,
         clientDistDir: "/tmp/unused",
         allowedOrigins: [],
+        browserOrigin: "http://127.0.0.1:4174",
       },
     });
     await new Promise<void>((resolve) => consoleServer!.listen(0, resolve));
@@ -104,6 +105,7 @@ describe("human session BFF", () => {
         port: 0,
         clientDistDir: "/tmp/unused",
         allowedOrigins: [],
+        browserOrigin: "http://127.0.0.1:4174",
       },
     });
     await new Promise<void>((resolve) => consoleServer!.listen(0, resolve));

@@ -72,6 +72,7 @@ function main() {
     "run",
     "status",
     "doctor",
+    "setup",
   ]) {
     if (!help.includes(command)) {
       throw new Error(`CLI help missing M10.2 command: ${command}`);

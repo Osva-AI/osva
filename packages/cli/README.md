@@ -24,6 +24,18 @@ From a git checkout, build then invoke `dist/bin/osva.js` or link the package lo
 
 `@osva-ai/cli` depends on `@osva-ai/sdk`, `@osva-ai/contracts`, and `ajv`; npm installs them automatically when published with aligned dependency versions.
 
+## Self-hosted installation (`osva setup`)
+
+Materializes a local Compose project (registry-pinned `OSVA_IMAGE` in the bundled template), starts PostgreSQL/Valkey, migrates on first install, starts platform services and Console, and bootstraps the initial workspace plus human administrator when needed.
+
+```bash
+osva setup --admin-email you@example.com
+```
+
+Use `--yes` to reconcile an existing installation directory. Console is published on loopback (default `http://127.0.0.1:4174`). Complete password setup at `/setup`, then sign in.
+
+**Published image note:** GHCR tags shipped before M16.2 Console packaging require a matching OCI rebuild; development acceptance builds a local image (`osva/local-m16-2d:dev`). Test-only overrides: `OSVA_SETUP_LOCAL_IMAGE`, `OSVA_SETUP_SKIP_IMAGE_PULL`, and acceptance capture flags documented in [`scripts/acceptance/m16-2d/README.md`](../../scripts/acceptance/m16-2d/README.md).
+
 ## Quick start (standalone agent project)
 
 ```bash
