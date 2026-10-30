@@ -8,6 +8,7 @@ import {
   describeCreateRunFailure,
   resolveAgentVersionInputContract,
 } from "../../lib/agent-input-contract";
+import { DEFAULT_FIRST_AGENT_SAMPLE_TASK } from "../../lib/declarative-agent-manifest";
 import { ConsoleApiError } from "../../lib/console-api";
 import { trySafeExampleFromJsonSchema } from "../../lib/workflow-root-input-contract";
 import { parseWorkflowRunInputJson } from "../../lib/workflow-run-input";
@@ -52,6 +53,26 @@ export function AgentRunLaunchForm({
     }
     const example = trySafeExampleFromJsonSchema(contract.schema);
     if (example === undefined) {
+      setInputText(
+        JSON.stringify({ task: DEFAULT_FIRST_AGENT_SAMPLE_TASK }, null, 2),
+      );
+      return;
+    }
+    if (
+      typeof example === "object" &&
+      example !== null &&
+      !Array.isArray(example) &&
+      "task" in example &&
+      typeof (example as { task?: unknown }).task === "string" &&
+      (example as { task: string }).task.length === 0
+    ) {
+      setInputText(
+        JSON.stringify(
+          { ...example, task: DEFAULT_FIRST_AGENT_SAMPLE_TASK },
+          null,
+          2,
+        ),
+      );
       return;
     }
     setInputText(JSON.stringify(example, null, 2));
@@ -83,7 +104,9 @@ export function AgentRunLaunchForm({
       setFeedback(
         `Run ${created.run.id} was created and queued. Creation is not a terminal SUCCEEDED status.`,
       );
-      navigate(`/runs/${created.run.id}`);
+      navigate(
+        `/runs/${created.run.id}?from=onboarding&agentId=${encodeURIComponent(agentId)}&agentVersionId=${encodeURIComponent(selectedVersion.id)}`,
+      );
     } catch (error) {
       submittingRef.current = false;
       setFeedback(

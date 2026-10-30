@@ -53,6 +53,29 @@ export function ModelsPage() {
         </div>
       </header>
 
+      {connectionsQuery.data !== undefined &&
+      connectionsQuery.data.connections.length === 0 ? (
+        <section className="panel">
+          <h2 className="section-title">First model connection</h2>
+          <p className="muted">
+            Declarative agents cannot publish until a ModelProfileVersion
+            references a provider connection version. Start by creating a
+            connection for your model provider, append a version with endpoint
+            and credential reference, then return here to create a profile
+            version.
+          </p>
+          {canWrite ? (
+            <Link className="button primary" to="/models/connections">
+              Manage provider connections
+            </Link>
+          ) : (
+            <p className="muted">
+              Provider connection setup requires DEVELOPER, ADMIN, or OWNER.
+            </p>
+          )}
+        </section>
+      ) : null}
+
       {profilesQuery.isLoading || connectionsQuery.isLoading ? (
         <LoadingBlock label="Loading models…" />
       ) : null}

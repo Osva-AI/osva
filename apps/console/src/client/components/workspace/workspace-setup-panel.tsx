@@ -15,18 +15,21 @@ export function WorkspaceSetupPanel({
   agents,
   modelProfiles,
   modelConnections,
+  hasBoundProfileVersion,
 }: {
   readonly controlPlaneReachable: boolean;
   readonly agents: readonly AgentResource[] | undefined;
   readonly modelProfiles: readonly ModelProfileResource[] | undefined;
   readonly modelConnections:
     readonly ModelProviderConnectionResource[] | undefined;
+  readonly hasBoundProfileVersion?: boolean;
 }) {
   const items = buildWorkspaceSetupGuidance({
     controlPlaneReachable,
     agents,
     modelProfiles,
     modelConnections,
+    hasBoundProfileVersion,
   });
 
   return (

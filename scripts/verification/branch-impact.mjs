@@ -127,7 +127,9 @@ function matchRules(paths, packages) {
     if (
       normalized.startsWith("apps/console/src/client/routes/") ||
       normalized === "apps/console/src/client/app-router.tsx" ||
-      normalized.startsWith("apps/console/src/client/navigation")
+      normalized.startsWith("apps/console/src/client/navigation") ||
+      normalized.includes("/agent-onboarding") ||
+      normalized.includes("/workspace-setup-guidance")
     ) {
       note("console-routes", normalized);
     }
@@ -465,6 +467,30 @@ export async function buildVerificationPlan(paths, options = {}) {
         "pnpm --filter @osva/console exec vitest run --config vitest.integration.browser.config.ts test/integration/m13-7-5-browser.integration.test.ts",
       reason:
         "Evaluation Studio or quality-gate UI changes require M13.7.5 browser acceptance.",
+      runInIntegrationProfile: true,
+      requiresDocker: true,
+    });
+  }
+
+  if (matchedSpecific.has("console-routes")) {
+    addObligation({
+      id: "console-m16-3-browser",
+      label: "M16.3 first-agent onboarding browser acceptance",
+      commandArgv: [
+        "pnpm",
+        "--filter",
+        "@osva/console",
+        "exec",
+        "vitest",
+        "run",
+        "--config",
+        "vitest.integration.browser.config.ts",
+        "test/integration/m16-3-browser.integration.test.ts",
+      ],
+      command:
+        "pnpm --filter @osva/console exec vitest run --config vitest.integration.browser.config.ts test/integration/m16-3-browser.integration.test.ts",
+      reason:
+        "Onboarding or first-agent Console journey changes require M16.3 browser acceptance.",
       runInIntegrationProfile: true,
       requiresDocker: true,
     });

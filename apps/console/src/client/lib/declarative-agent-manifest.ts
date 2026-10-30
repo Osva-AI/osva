@@ -12,6 +12,12 @@ import { parseWorkflowRunInputJson } from "./workflow-run-input";
 
 export const DEFAULT_DECLARATIVE_MODEL_BINDING = "primary";
 
+export const DEFAULT_FIRST_AGENT_INSTRUCTIONS =
+  "You are a helpful assistant. Answer the user's task concisely using the workspace model.";
+
+export const DEFAULT_FIRST_AGENT_SAMPLE_TASK =
+  "Summarize what OSVA agents do in one sentence.";
+
 export interface DeclarativeStudioFields {
   readonly manifestKey: string;
   readonly manifestName: string;
@@ -55,7 +61,7 @@ export function defaultDeclarativeManifestTemplate(options?: {
       type: "DECLARATIVE",
       config: {
         configVersion: "1",
-        instructions: "",
+        instructions: DEFAULT_FIRST_AGENT_INSTRUCTIONS,
         modelBinding: DEFAULT_DECLARATIVE_MODEL_BINDING,
         allowedToolBindings: [],
         maxModelInvocations: 8,

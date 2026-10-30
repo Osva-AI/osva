@@ -21,7 +21,7 @@ describe("declarative agent manifest studio", () => {
     });
     expect(manifest.runtime).toMatchObject({ type: "DECLARATIVE" });
     const validation = describeDeclarativeManifestValidation(manifest);
-    expect(validation.fieldErrors.instructions).toBeDefined();
+    expect(validation.fieldErrors.instructions).toBeUndefined();
     expect(validation.fieldErrors.model).toBeDefined();
   });
 
@@ -95,6 +95,10 @@ describe("declarative agent manifest studio", () => {
 
   it("validates empty instructions and missing model bindings", () => {
     const manifest = defaultDeclarativeManifestTemplate();
+    const runtime = manifest.runtime as {
+      config: { instructions: string };
+    };
+    runtime.config.instructions = "";
     const validation = describeDeclarativeManifestValidation(manifest);
     expect(validation.ok).toBe(false);
     expect(validation.fieldErrors.instructions).toMatch(/required/i);

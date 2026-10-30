@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { RunArtifactsSection } from "../components/artifact/run-artifacts-section";
 import { EmptyState } from "../components/empty-state/empty-state";
@@ -26,12 +26,15 @@ import {
 } from "../lib/operator-diagnostics";
 import { attemptStatusCategory, runStatusCategory } from "../lib/statuses";
 import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
+import { onboardingSearch } from "../lib/agent-onboarding";
 
 export function RunDetailPage() {
   const { runId, runAttemptId } = useParams<{
     runId: string;
     runAttemptId?: string;
   }>();
+  const [searchParams] = useSearchParams();
+  const fromOnboarding = searchParams.get("from") === "onboarding";
 
   const runQuery = useRunQuery(runId);
   const attemptsQuery = useRunAttemptsQuery(runId, runQuery.data?.status);
@@ -83,6 +86,14 @@ export function RunDetailPage() {
     return <LoadingBlock label="Loading run…" />;
   }
 
+  const onboardingLink = `/onboarding${onboardingSearch({
+    agentId: searchParams.get("agentId") ?? run.agentId,
+    agentVersionId:
+      searchParams.get("agentVersionId") ??
+      run.effectiveBindings.agentVersionId,
+    runId: run.id,
+  })}`;
+
   const selectedAttemptForGuidance = attemptQuery.data;
   const lifecycleGuidance = describeRunLifecycleGuidance({
     runStatus: run.status,
@@ -109,6 +120,11 @@ export function RunDetailPage() {
           </p>
         </div>
         <div className="toolbar">
+          {fromOnboarding || run.status !== "SUCCEEDED" ? (
+            <Link className="button" to={onboardingLink}>
+              Continue getting started
+            </Link>
+          ) : null}
           <Link className="button" to="/runs">
             Back to runs
           </Link>
