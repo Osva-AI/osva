@@ -36,6 +36,30 @@ Use `--yes` to reconcile an existing installation directory. Console is publishe
 
 **Published image note:** GHCR tags shipped before M16.2 Console packaging require a matching OCI rebuild; development acceptance builds a local image (`osva/local-m16-2d:dev`). Test-only overrides: `OSVA_SETUP_LOCAL_IMAGE`, `OSVA_SETUP_SKIP_IMAGE_PULL`, and acceptance capture flags documented in [`scripts/acceptance/m16-2d/README.md`](../../scripts/acceptance/m16-2d/README.md).
 
+## Installation lifecycle (`osva platform`)
+
+Day-to-day management of an **existing** Compose installation (no API key required):
+
+```bash
+osva platform status
+osva platform start
+osva platform stop
+osva platform restart
+osva platform logs --service web --tail 200
+osva platform doctor
+```
+
+Use `--install-dir PATH` when the installation is not in the default per-user directory. Lifecycle commands do not pull images, run migrations, or create a new installation — use `osva setup` for first install.
+
+**Explicit upgrade** (requires manual PostgreSQL/artifact backup attestation):
+
+```bash
+osva platform upgrade --to 1.1.0 --dry-run
+osva platform upgrade --to 1.1.0 --backup-confirmed --yes
+```
+
+See [`docs/operations/UPGRADE.md`](../../docs/operations/UPGRADE.md) and [`docs/operations/BACKUP_AND_RECOVERY.md`](../../docs/operations/BACKUP_AND_RECOVERY.md).
+
 ## Quick start (standalone agent project)
 
 ```bash

@@ -32,6 +32,8 @@ export function buildComposeSpawnEnv(
 export function composeBaseArgs(ctx: ComposeExecContext): string[] {
   return [
     "compose",
+    "--project-name",
+    ctx.projectName,
     "--project-directory",
     ctx.installDir,
     "--env-file",
@@ -48,7 +50,9 @@ export function runComposeCommand(
 ): ProbeSpawnResult {
   const spawn = options.spawn ?? defaultProbeSpawn;
   const dockerArgs = [...composeBaseArgs(ctx), ...args];
-  return spawn("docker", dockerArgs, options.timeoutMs);
+  const processEnv =
+    options.processEnv ?? buildComposeSpawnEnv(ctx, process.env);
+  return spawn("docker", dockerArgs, options.timeoutMs, processEnv);
 }
 
 export function assertComposeSuccess(

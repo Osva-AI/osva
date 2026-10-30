@@ -135,6 +135,24 @@ Repository journal head (**`1.1.0`** stable preparation, RC.4 tag **`v1.1.0-rc.4
 2. `docker compose run --rm migrate`
 3. `docker compose up -d` to recreate app services.
 
+### CLI-managed installations (`osva platform upgrade`)
+
+For installations created with `osva setup`, prefer explicit lifecycle commands over ad-hoc Compose:
+
+```bash
+osva platform upgrade --to 1.1.0 --dry-run
+# After PostgreSQL + artifact backups (manual — see BACKUP_AND_RECOVERY.md):
+osva platform upgrade --to 1.1.0 --backup-confirmed --yes
+```
+
+- `--dry-run` is read-only and prints the planned image change, migration expectation, backup requirements, and blocking issues.
+- `--backup-confirmed` is operator attestation only; OSVA does not verify backups or restore them.
+- `--yes` confirms execution; it does **not** bypass backup attestation.
+- Upgrades refuse downgrades and unknown version paths (see bundled `upgrade-catalog.json` in the CLI).
+- Interrupted upgrades persist non-secret state under `.osva/upgrade-state.json` for diagnosis. Application rollback and database rollback are not equivalent; see recovery notes in this runbook.
+
+Day-to-day start/stop/restart remains `osva platform start|stop|restart` (no implicit pull or migrate).
+
 ## Verification
 
 - `GET /ready` returns `200` on web (may name `postgres` and/or `valkey` on failure without leaking secrets).

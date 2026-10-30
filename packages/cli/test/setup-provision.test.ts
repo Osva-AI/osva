@@ -145,6 +145,7 @@ describe("osva setup provisioning", () => {
       projectName: "osva-self-hosted",
     });
     expect(args).toContain("--env-file");
+    expect(args).toContain("--project-name");
     expect(args.join(" ")).toContain("/tmp/osva/.env");
   });
 

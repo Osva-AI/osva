@@ -254,6 +254,8 @@ Commands:
   run [--project DIR] --input JSON | --input-file PATH [--wait] [--json]
   status [--project DIR] [--json]
   doctor [--json]
+  platform status|start|stop|restart|logs|doctor|upgrade [--install-dir PATH] [--json]
+        Manage an existing local Compose installation (no API key required).
   setup [--json] [--preflight-only] [--yes] [--install-dir PATH]
         [--web-port PORT] [--mcp-port PORT]
         Installation preflight and local Docker Compose provisioning.
