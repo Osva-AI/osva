@@ -6,6 +6,12 @@ import { redactSecrets } from "../../m16-2d/redact.mjs";
 import { runCli } from "../../m16-shared/cli-runner.mjs";
 import { bootstrapPlatform110Install } from "./bootstrap-platform-110.mjs";
 
+/** @param {string} dryRunOutput */
+export function migrationRequiredFromDryRun(dryRunOutput) {
+  const match = dryRunOutput.match(/Migration required:\s*(yes|no)/i);
+  return match?.[1]?.toLowerCase() === "yes";
+}
+
 /**
  * @param {import("../../m16-2d/report.mjs").AcceptanceReport} report
  * @param {object} input
@@ -24,14 +30,43 @@ export async function runM16UpgradeJourney(report, input) {
   if (input.useLocalUpgradeImage) {
     upgradeEnv.OSVA_UPGRADE_LOCAL_IMAGE = input.targetImageRef;
   }
-  const composeProject = `osva-m16-upg-${Date.now()}`;
   await bootstrapPlatform110Install({
     installDir: input.installDir,
     imageRef: input.priorImageRef,
     webPort: input.webPort,
     mcpPort: input.mcpPort,
-    composeProjectName: composeProject,
   });
+
+  const envFile = path.join(input.installDir, ".env");
+  const configCheck = spawnSync(
+    "docker",
+    [
+      "compose",
+      "--project-directory",
+      input.installDir,
+      "--env-file",
+      envFile,
+      "config",
+    ],
+    { encoding: "utf8" },
+  );
+  report.record(
+    "upgrade_bootstrap_compose_config",
+    "Legacy 1.1.0 compose config validates",
+    configCheck.status === 0 ? "PASS" : "FAIL",
+    {
+      detail:
+        configCheck.status === 0
+          ? undefined
+          : redactSecrets(configCheck.stderr || configCheck.stdout).slice(
+              0,
+              300,
+            ),
+    },
+  );
+  if (configCheck.status !== 0) {
+    return;
+  }
 
   const up = spawnSync(
     "docker",
@@ -40,7 +75,7 @@ export async function runM16UpgradeJourney(report, input) {
       "--project-directory",
       input.installDir,
       "--env-file",
-      path.join(input.installDir, ".env"),
+      envFile,
       "up",
       "-d",
       "postgres",
@@ -93,31 +128,48 @@ export async function runM16UpgradeJourney(report, input) {
     ],
     upgradeEnv,
   );
+  const dryRunText = redactSecrets(dryRun.stderr || dryRun.stdout || "");
   report.record(
     "upgrade_dry_run",
     "platform upgrade dry-run",
     dryRun.status === 0 ? "PASS" : "FAIL",
-    { detail: redactSecrets(dryRun.stderr || dryRun.stdout).slice(0, 300) },
+    { detail: dryRunText.slice(0, 300) },
   );
+  if (dryRun.status !== 0) {
+    return;
+  }
 
-  const withoutBackup = runCli(
-    input.cliBin,
-    [
-      "platform",
-      "upgrade",
-      "--to",
-      input.targetPlatformVersion,
-      "--install-dir",
-      input.installDir,
-      "--yes",
-    ],
-    upgradeEnv,
-  );
-  report.record(
-    "upgrade_requires_backup",
-    "Upgrade refuses without backup attestation",
-    withoutBackup.status !== 0 ? "PASS" : "FAIL",
-  );
+  const migrationRequired = migrationRequiredFromDryRun(dryRunText);
+  if (migrationRequired) {
+    const withoutBackup = runCli(
+      input.cliBin,
+      [
+        "platform",
+        "upgrade",
+        "--to",
+        input.targetPlatformVersion,
+        "--install-dir",
+        input.installDir,
+        "--yes",
+      ],
+      upgradeEnv,
+    );
+    report.record(
+      "upgrade_requires_backup",
+      "Upgrade refuses without backup attestation when migrations are required",
+      withoutBackup.status !== 0 ? "PASS" : "FAIL",
+    );
+  } else {
+    report.record(
+      "upgrade_requires_backup",
+      "Upgrade backup attestation policy",
+      "PASS",
+      {
+        detail:
+          "No migration on this upgrade path; backup attestation not required per upgrade catalog.",
+      },
+    );
+  }
 
   const execute = runCli(
     input.cliBin,

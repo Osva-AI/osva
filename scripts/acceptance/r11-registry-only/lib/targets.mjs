@@ -139,19 +139,23 @@ export const M16_111_TARGET = {
   pythonPep440: "1.1.1",
   pipInstallSpec: "osva-sdk==1.1.1",
   ghcrImageRef: "ghcr.io/osva-ai/osva:1.1.1",
-  ghcrIndexDigest: null,
-  ghcrLinuxAmd64ManifestDigest: null,
-  pypiWheelSha256: null,
-  pypiSdistSha256: null,
+  ghcrIndexDigest:
+    "sha256:773817f4a2b2464cd75f4c64f3c1097e95eae53378e1548fae8a3b9fc148b824",
+  ghcrLinuxAmd64ManifestDigest:
+    "sha256:753963393bf0d339a3ec5ac2bc7e958f2c7def508b40d246ed22a3152d07d439",
+  pypiWheelSha256:
+    "7914d314577580204460a99464e4003c84d5c4e53df747ad0ee5272501631a4e",
+  pypiSdistSha256:
+    "7a4ac4ea31987b4bfc78077dbaabca7caff39d334fbb06cdf844f22bd4afedb4",
   pypiWheelFilename: "osva_sdk-1.1.1-py3-none-any.whl",
   pypiSdistFilename: "osva_sdk-1.1.1.tar.gz",
   npmRegistryMode: "exact",
   npmViewSelector: "1.1.2",
   gitTag: "v1.1.1",
-  releaseCommit: null,
+  releaseCommit: "20dbdb8fd52f13ff0368679ff4d6aa6edb3aa814",
   composeProject: "osva-m16-registry-111",
   evidenceReleaseKey: "1.1.1-m16",
-  registryArtifactsReady: false,
+  registryArtifactsReady: true,
   envGateVar: "OSVA_M16_REGISTRY_ACCEPTANCE",
   notes:
     "M16 installer + lifecycle + 1.1.0→1.1.1 upgrade. Prior platform image ghcr.io/osva-ai/osva:1.1.0.",
