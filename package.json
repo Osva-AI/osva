@@ -77,7 +77,9 @@
     "acceptance:r11-registry": "node scripts/acceptance/r11-registry-only/run.mjs",
     "acceptance:r11-registry:test": "node --test scripts/acceptance/r11-registry-only/test/*.test.mjs",
     "acceptance:m16-2d": "node scripts/acceptance/m16-2d/run.mjs",
-    "acceptance:m16-2d:test": "node --test scripts/acceptance/m16-2d/test/*.test.mjs"
+    "acceptance:m16-2d:test": "node --test scripts/acceptance/m16-2d/test/*.test.mjs",
+    "acceptance:m16-4-lifecycle": "node scripts/acceptance/m16-4-lifecycle/run.mjs",
+    "acceptance:m16-registry": "node scripts/acceptance/m16-registry/run.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",

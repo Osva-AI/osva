@@ -140,10 +140,12 @@ Repository journal head (**`1.1.0`** stable preparation, RC.4 tag **`v1.1.0-rc.4
 For installations created with `osva setup`, prefer explicit lifecycle commands over ad-hoc Compose:
 
 ```bash
-osva platform upgrade --to 1.1.0 --dry-run
+osva platform upgrade --to 1.1.1 --dry-run
 # After PostgreSQL + artifact backups (manual — see BACKUP_AND_RECOVERY.md):
-osva platform upgrade --to 1.1.0 --backup-confirmed --yes
+osva platform upgrade --to 1.1.1 --backup-confirmed --yes
 ```
+
+**From platform `1.1.0` → `1.1.1` (M16):** no new SQL migrations; the CLI replaces the compose template to add Console and installation-status services. Requires npm **`@osva-ai/cli@1.1.2`** (or newer 1.1.x distribution) with bundled catalog paths.
 
 - `--dry-run` is read-only and prints the planned image change, migration expectation, backup requirements, and blocking issues.
 - `--backup-confirmed` is operator attestation only; OSVA does not verify backups or restore them.

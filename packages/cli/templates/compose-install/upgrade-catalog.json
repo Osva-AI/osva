@@ -2,11 +2,21 @@
   "schemaVersion": 1,
   "targets": [
     {
+      "platformVersion": "1.1.1",
+      "imageRef": "ghcr.io/osva-ai/osva:1.1.1"
+    },
+    {
       "platformVersion": "1.1.0",
       "imageRef": "ghcr.io/osva-ai/osva:1.1.0"
     }
   ],
   "paths": [
+    {
+      "fromPlatformVersion": "1.1.0",
+      "toPlatformVersion": "1.1.1",
+      "migrationRequired": false,
+      "composeTemplateUpdate": true
+    },
     {
       "fromPlatformVersion": "1.1.0-rc.4",
       "toPlatformVersion": "1.1.0",

@@ -68,7 +68,31 @@ export function verifyInstallationImageContents(image) {
     throw new Error("Installation image missing Console client assets.");
   }
 
+  verifyInstallationImageEntrypoints(image);
+
   return "installation-image-ok";
+}
+
+/**
+ * @param {string} image
+ */
+export function verifyInstallationImageEntrypoints(image) {
+  const entrypoint = runDockerCapture([
+    "run",
+    "--rm",
+    "--entrypoint",
+    "cat",
+    image,
+    "/entrypoint.sh",
+  ]);
+  for (const process of ["console", "installation-status"]) {
+    const casePattern = new RegExp(`\\n\\s*${process}\\)`);
+    if (!casePattern.test(entrypoint)) {
+      throw new Error(
+        `Installation image entrypoint.sh missing OSVA_PROCESS handler for ${process}.`,
+      );
+    }
+  }
 }
 
 const isMain =

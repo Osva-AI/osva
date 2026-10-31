@@ -54,7 +54,7 @@ describe("osva setup provisioning", () => {
     expect(result.wroteCompose).toBe(true);
     expect(result.wroteEnv).toBe(true);
     const envContents = await readFile(result.envPath, "utf8");
-    expect(envContents).toContain("ghcr.io/osva-ai/osva:1.1.0");
+    expect(envContents).toContain("ghcr.io/osva-ai/osva:1.1.1");
     expect(envContents).toMatch(/POSTGRES_PASSWORD=[0-9a-f]{64}/);
     expect(envContents).toMatch(/OSVA_AUTH_SECRET=[0-9a-f]{64}/);
     const composeContents = await readFile(result.composePath, "utf8");
@@ -67,7 +67,7 @@ describe("osva setup provisioning", () => {
     const marker = JSON.parse(await readFile(result.markerPath, "utf8")) as {
       imageRef: string;
     };
-    expect(marker.imageRef).toBe("ghcr.io/osva-ai/osva:1.1.0");
+    expect(marker.imageRef).toBe("ghcr.io/osva-ai/osva:1.1.1");
   });
 
   it("preserves secrets on repeated materialization", async () => {
@@ -118,7 +118,7 @@ describe("osva setup provisioning", () => {
 
   it("detects conflicting host environment overrides", () => {
     const values = buildInstallEnvValues({
-      imageRef: "ghcr.io/osva-ai/osva:1.1.0",
+      imageRef: "ghcr.io/osva-ai/osva:1.1.1",
       composeProjectName: "osva-deadbeef0123",
       webPort: 8080,
       mcpPort: 3100,

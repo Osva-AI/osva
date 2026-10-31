@@ -8,6 +8,19 @@ Authoritative path for a **self-hosted OSVA Community Edition** deployment using
 >
 > **Historical OSS 1.0 guide:** [`OSS-1.0-QUICKSTART.md`](OSS-1.0-QUICKSTART.md) (documents the **`v1.0.0`** tag baseline).
 
+## M16 one-command install (platform 1.1.1+, after publication)
+
+External install without cloning this repository (requires published npm **`@osva-ai/cli@1.1.2`** and GHCR **`ghcr.io/osva-ai/osva:1.1.1`**):
+
+```powershell
+npm install -g @osva-ai/cli@1.1.2
+osva setup --yes
+```
+
+Follow Console onboarding at the printed loopback URL. Registry-verified acceptance: [`release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md).
+
+Until that release publishes, build the CLI from this repository or use **`deploy/compose`** below.
+
 ## Which local journey?
 
 | Journey | Use this guide | Also read |

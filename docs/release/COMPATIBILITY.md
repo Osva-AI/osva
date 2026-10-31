@@ -1,6 +1,8 @@
 # OSVA Community compatibility and release policy
 
-**Stable preparation target:** **`1.1.0`** (repository branch `chore/v1-1-stable-readiness`; **not published** until maintainer tag and registry publish).
+**Current platform preparation target:** **`1.1.1`** (M16 installer, Console compose, lifecycle, upgrade). See [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md).
+
+**Published platform line (pre-M16):** **`1.1.0`** on GHCR/PyPI (registry-verified). **Published npm `latest`:** **`1.1.1`** (corrective packaging **without** M16 CLI — use **`1.1.2`** after M16 publish).
 
 **Last registry-verified prerelease:** **`1.1.0-rc.4`** (git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`**). Evidence: [`M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md), [`R1_1_DISTRIBUTION_CLOSEOUT.md`](R1_1_DISTRIBUTION_CLOSEOUT.md).
 
@@ -30,8 +32,11 @@ Historical OSS **1.0.0** policy remains in git tag **`v1.0.0`** and [`CHANGELOG.
 | **`v1.0.0`** | **`1.1.0`** | Requires migrations through **`0023`** minimum; full Community **`1.1.0`** head is **`0030`**. See UPGRADE runbook. |
 | **`1.1.0-rc.4`** (published) | **`1.1.0`** (stable) | **Intended drop-in** for aligned npm/PyPI/GHCR pins when stable artifacts publish; **no new SQL** between RC.4 tag and stable preparation HEAD. Re-run migrate/integrity for operator hygiene; schema unchanged if already at **`0030`**. |
 | **`1.1.0-rc.2`** or older RC | **`1.1.0`** | Apply intermediate migrations and align all `@osva-ai/*` packages together. |
+| **`1.1.0`** (GHCR/PyPI) | **`1.1.1`** (M16) | **No new SQL** (head remains **`0030`**); **`osva platform upgrade --to 1.1.1`** refreshes compose template (Console + installation-status). Legacy **`deploy/compose`** installs are valid sources. |
 
 RC.4 registry acceptance **does not** prove stable **`1.1.0`** binaries. Stable qualification requires post-publication registry-only replay (`OSVA_REGISTRY_ACCEPTANCE_TARGET=stable`).
+
+M16 external-consumer proof requires **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m16-111`** after platform **1.1.1** and npm **1.1.2** publish ([`M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](M16_EXTERNAL_CONSUMER_ACCEPTANCE.md)).
 
 ## HTTP API
 
