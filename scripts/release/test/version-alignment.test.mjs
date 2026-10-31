@@ -49,7 +49,9 @@ describe("platform vs npm distribution version alignment", () => {
     assert.equal(result.status, 0, result.stderr || result.stdout);
     const expected =
       platform === npm
-        ? new RegExp(`version consistency PASS \\(${platform.replaceAll(".", "\\.")}\\)`)
+        ? new RegExp(
+            `version consistency PASS \\(${platform.replaceAll(".", "\\.")}\\)`,
+          )
         : new RegExp(
             `platform ${platform.replaceAll(".", "\\.")}, npm distribution ${npm.replaceAll(".", "\\.")}`,
           );
