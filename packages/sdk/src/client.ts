@@ -23,6 +23,9 @@ import { RolesResource } from "./resources/office-roles.js";
 import { TeamsResource } from "./resources/office-teams.js";
 import { GoalsResource } from "./resources/goals.js";
 import { AssignmentsResource } from "./resources/assignments.js";
+import { ConnectorsResource } from "./resources/connectors.js";
+import { ModelProfilesResource } from "./resources/model-profiles.js";
+import { ToolsResource } from "./resources/tools.js";
 
 export type OsvaClientOptions = OsvaHttpClientOptions;
 
@@ -49,6 +52,9 @@ export class OsvaClient {
   readonly teams: TeamsResource;
   readonly goals: GoalsResource;
   readonly assignments: AssignmentsResource;
+  readonly modelProfiles: ModelProfilesResource;
+  readonly connectors: ConnectorsResource;
+  readonly tools: ToolsResource;
 
   private readonly http: OsvaHttpClient;
 
@@ -76,5 +82,8 @@ export class OsvaClient {
     this.teams = new TeamsResource(this.http);
     this.goals = new GoalsResource(this.http);
     this.assignments = new AssignmentsResource(this.http);
+    this.modelProfiles = new ModelProfilesResource(this.http);
+    this.connectors = new ConnectorsResource(this.http);
+    this.tools = new ToolsResource(this.http);
   }
 }
