@@ -23,8 +23,6 @@ describe("platform vs npm distribution version alignment", () => {
     const platform = readReleaseVersion();
     const npm = readNpmDistributionVersion();
     assertNpmDistributionAlignedWithPlatform(platform, npm);
-    assert.equal(platform, "1.1.0");
-    assert.equal(npm, "1.1.1");
   });
 
   it("aligns public package.json versions with npm distribution only", () => {
@@ -36,6 +34,8 @@ describe("platform vs npm distribution version alignment", () => {
   });
 
   it("passes release version-consistency script", () => {
+    const platform = readReleaseVersion();
+    const npm = readNpmDistributionVersion();
     const script = path.join(
       REPO_ROOT,
       "scripts",
@@ -47,6 +47,12 @@ describe("platform vs npm distribution version alignment", () => {
       encoding: "utf8",
     });
     assert.equal(result.status, 0, result.stderr || result.stdout);
-    assert.match(result.stdout, /platform 1\.1\.0, npm distribution 1\.1\.1/);
+    const expected =
+      platform === npm
+        ? new RegExp(`version consistency PASS \\(${platform.replaceAll(".", "\\.")}\\)`)
+        : new RegExp(
+            `platform ${platform.replaceAll(".", "\\.")}, npm distribution ${npm.replaceAll(".", "\\.")}`,
+          );
+    assert.match(result.stdout, expected);
   });
 });
