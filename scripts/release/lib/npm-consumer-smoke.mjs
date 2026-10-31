@@ -73,6 +73,12 @@ import "@osva-ai/connector-sdk";
 if (!(OsvaClient.prototype && typeof OsvaClient === "function")) {
   throw new Error("OsvaClient export missing");
 }
+const client = new OsvaClient({ baseUrl: "http://127.0.0.1:1", apiKey: "osva_ak_test.secret" });
+for (const resource of ["modelProfiles", "connectors", "tools"]) {
+  if (typeof client[resource] !== "object" || client[resource] === null) {
+    throw new Error(\`OsvaClient missing capability resource: \${resource}\`);
+  }
+}
 console.log("npm consumer import smoke ok");
 `;
   fs.writeFileSync(
