@@ -18,8 +18,8 @@ const REPO_ROOT = path.resolve(
   "../../..",
 );
 const DEFAULT_LOCAL_IMAGE = "osva/local-m16-2d:dev";
-const ADMIN_EMAIL = "acceptance-admin@install.local";
-const ADMIN_PASSWORD = "Acceptance-Install-Pw-12!";
+export const ADMIN_EMAIL = "acceptance-admin@install.local";
+export const ADMIN_PASSWORD = "Acceptance-Install-Pw-12!";
 const DEADLINE_MS = 20 * 60 * 1000;
 
 function printHelp() {
@@ -137,7 +137,7 @@ async function waitForHttp(url, attempts = 60) {
   );
 }
 
-function checkStatus(report, setupJson, id) {
+export function checkStatus(report, setupJson, id) {
   const match = setupJson.checks?.find((check) => check.id === id);
   if (!match) {
     report.record(id, id, "FAIL", {
@@ -163,20 +163,28 @@ async function buildLocalImage(imageRef) {
   run("docker", ["build", "-t", imageRef, "-f", "Dockerfile", "."]);
 }
 
-async function runInstaller(ctx) {
+export async function runInstaller(ctx) {
   const bootstrapKeyPath = path.join(
     ctx.installDir,
     ".acceptance-bootstrap-key",
   );
   const setupTokenPath = path.join(ctx.installDir, ".acceptance-setup-token");
-  const cliBin = path.join(
-    REPO_ROOT,
-    "packages",
-    "cli",
-    "dist",
-    "bin",
-    "osva.js",
-  );
+  const cliBin =
+    ctx.cliBin ??
+    path.join(REPO_ROOT, "packages", "cli", "dist", "bin", "osva.js");
+  /** @type {NodeJS.ProcessEnv} */
+  const setupEnv = {
+    ...process.env,
+    OSVA_ACCEPTANCE_INSTALL: "1",
+    OSVA_SETUP_BOOTSTRAP_KEY_FILE: bootstrapKeyPath,
+    OSVA_SETUP_SETUP_TOKEN_FILE: setupTokenPath,
+  };
+  if (ctx.imageRef) {
+    setupEnv.OSVA_SETUP_LOCAL_IMAGE = ctx.imageRef;
+  }
+  if (ctx.skipImagePull === true) {
+    setupEnv.OSVA_SETUP_SKIP_IMAGE_PULL = "1";
+  }
   const result = spawnSync(
     process.execPath,
     [
@@ -198,16 +206,9 @@ async function runInstaller(ctx) {
       "Acceptance Admin",
     ],
     {
-      cwd: REPO_ROOT,
+      cwd: ctx.cwd ?? REPO_ROOT,
       encoding: "utf8",
-      env: {
-        ...process.env,
-        OSVA_SETUP_LOCAL_IMAGE: ctx.imageRef,
-        OSVA_SETUP_SKIP_IMAGE_PULL: "1",
-        OSVA_ACCEPTANCE_INSTALL: "1",
-        OSVA_SETUP_BOOTSTRAP_KEY_FILE: bootstrapKeyPath,
-        OSVA_SETUP_SETUP_TOKEN_FILE: setupTokenPath,
-      },
+      env: setupEnv,
     },
   );
   const stdout = result.stdout ?? "";
@@ -239,7 +240,7 @@ async function readBootstrapKey(ctx) {
   }
 }
 
-async function consoleSecurityChecks(ctx, report) {
+export async function consoleSecurityChecks(ctx, report) {
   const consoleUrl = `http://127.0.0.1:${ctx.consolePort}`;
   const ok = await fetch(`${consoleUrl}/`);
   if (!ok.ok) {
@@ -318,7 +319,7 @@ async function consoleSecurityChecks(ctx, report) {
   );
 }
 
-async function completeAdminSetup(ctx, report) {
+export async function completeAdminSetup(ctx, report) {
   let setupToken;
   try {
     setupToken = (await readFile(ctx.setupTokenPath, "utf8")).trim();
@@ -435,7 +436,7 @@ async function resolveWorkspaceIdFromApiKey(baseUrl, apiKey) {
   return workspaceId;
 }
 
-async function runHelloAgent(ctx, report) {
+export async function runHelloAgent(ctx, report) {
   run("pnpm", ["--filter", "@osva/example-hello-agent", "build"], {
     stdio: "inherit",
     shell: process.platform === "win32",
@@ -590,7 +591,7 @@ async function idempotencyChecks(ctx, report) {
   );
 }
 
-async function composeValidate(ctx, report) {
+export async function composeValidate(ctx, report) {
   runCapture(
     "docker",
     [
@@ -677,6 +678,7 @@ async function main() {
   const ctx = {
     imageRef,
     installDir,
+    skipImagePull: true,
     ...ports,
   };
 
@@ -757,9 +759,15 @@ async function main() {
   console.log("acceptance:m16-2d PASS");
 }
 
-main().catch((error) => {
-  console.error(
-    redactSecrets(error instanceof Error ? error.message : String(error)),
-  );
-  process.exitCode = 1;
-});
+const isMain =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMain) {
+  main().catch((error) => {
+    console.error(
+      redactSecrets(error instanceof Error ? error.message : String(error)),
+    );
+    process.exitCode = 1;
+  });
+}

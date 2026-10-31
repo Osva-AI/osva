@@ -1,6 +1,6 @@
 {
   "name": "@osva-ai/runtime-protocol",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "OSVA Runtime Protocol V1 types and helpers",
   "license": "Apache-2.0",
   "repository": {

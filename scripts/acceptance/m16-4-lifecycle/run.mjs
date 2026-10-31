@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { allocatePortTriple } from "../m16-2d/lib/ports.mjs";
 import { AcceptanceReport } from "../m16-2d/report.mjs";
 import { redactSecrets } from "../m16-2d/redact.mjs";
+import { runM16LifecycleJourney } from "../m16-shared/lifecycle-journey.mjs";
+import { runCli } from "../m16-shared/cli-runner.mjs";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -15,23 +17,6 @@ const REPO_ROOT = path.resolve(
 );
 const DEFAULT_LOCAL_IMAGE = "osva/local-m16-4-lifecycle:dev";
 const ADMIN_EMAIL = "acceptance-lifecycle@install.local";
-
-function runCli(args, env = {}) {
-  const cliBin = path.join(
-    REPO_ROOT,
-    "packages",
-    "cli",
-    "dist",
-    "bin",
-    "osva.js",
-  );
-  const result = spawnSync(process.execPath, [cliBin, ...args], {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-    env: { ...process.env, ...env },
-  });
-  return result;
-}
 
 async function main() {
   if (process.env.OSVA_ACCEPTANCE_LIVE !== "1") {
@@ -44,6 +29,9 @@ async function main() {
   const report = new AcceptanceReport();
   const imageRef =
     process.env.OSVA_M16_LOCAL_IMAGE?.trim() || DEFAULT_LOCAL_IMAGE;
+  const cliBin =
+    process.env.OSVA_M16_CLI_BIN?.trim() ||
+    path.join(REPO_ROOT, "packages", "cli", "dist", "bin", "osva.js");
 
   spawnSync(
     "pnpm",
@@ -69,6 +57,7 @@ async function main() {
 
   try {
     const setup = runCli(
+      cliBin,
       [
         "setup",
         "--json",
@@ -97,74 +86,11 @@ async function main() {
       throw new Error("setup failed");
     }
 
-    const status1 = runCli(["platform", "status", "--install-dir", installDir]);
-    report.record(
-      "platform_status",
-      "platform status (running)",
-      status1.status === 0 ? "PASS" : "WARN",
-    );
-
-    const stop = runCli(["platform", "stop", "--install-dir", installDir]);
-    report.record(
-      "platform_stop",
-      "platform stop",
-      stop.status === 0 ? "PASS" : "FAIL",
-    );
-
-    const status2 = runCli([
-      "platform",
-      "status",
-      "--install-dir",
+    await runM16LifecycleJourney(report, {
+      cliBin,
       installDir,
-      "--json",
-    ]);
-    report.record(
-      "platform_status_stopped",
-      "platform status after stop",
-      status2.status === 1 ? "PASS" : "WARN",
-    );
-
-    const start = runCli(["platform", "start", "--install-dir", installDir]);
-    report.record(
-      "platform_start",
-      "platform start (no pull/migrate)",
-      start.status === 0 ? "PASS" : "FAIL",
-    );
-
-    const restart = runCli([
-      "platform",
-      "restart",
-      "--install-dir",
-      installDir,
-    ]);
-    report.record(
-      "platform_restart",
-      "platform restart",
-      restart.status === 0 ? "PASS" : "FAIL",
-    );
-
-    const doctor = runCli(["platform", "doctor", "--install-dir", installDir]);
-    report.record(
-      "platform_doctor",
-      "platform doctor",
-      doctor.status === 0 ? "PASS" : "WARN",
-    );
-
-    const logs = runCli([
-      "platform",
-      "logs",
-      "--install-dir",
-      installDir,
-      "--service",
-      "web",
-      "--tail",
-      "20",
-    ]);
-    report.record(
-      "platform_logs",
-      "platform logs",
-      logs.status === 0 ? "PASS" : "FAIL",
-    );
+      consolePort: String(ports.consolePort),
+    });
 
     report.record(
       "platform_upgrade_live",
@@ -172,7 +98,7 @@ async function main() {
       "NOT_RUN",
       {
         detail:
-          "Live cross-version upgrade requires two compatible built images; use hermetic upgrade unit tests.",
+          "Cross-version upgrade runs in acceptance:m16-registry (Stage B) or local-pack with OSVA_M16_GROUPS=upgrade.",
       },
     );
 

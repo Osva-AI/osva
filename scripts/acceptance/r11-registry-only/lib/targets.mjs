@@ -125,10 +125,43 @@ export const STABLE_NPM_111_TARGET = {
     "Corrective npm metadata release; not a platform feature release. Registry acceptance recorded (19 PASS, 0 FAIL, 1 NOT_RUN journey-05c).",
 };
 
+/**
+ * M16 external-consumer line (platform 1.1.1 + npm 1.1.2).
+ * Digests and PyPI hashes are recorded after maintainer publication (Stage B).
+ *
+ * @type {RegistryAcceptanceTarget}
+ */
+export const M16_111_TARGET = {
+  id: "m16-111",
+  productVersion: "1.1.1",
+  npmPackageVersion: "1.1.2",
+  pythonPyprojectVersion: "1.1.1",
+  pythonPep440: "1.1.1",
+  pipInstallSpec: "osva-sdk==1.1.1",
+  ghcrImageRef: "ghcr.io/osva-ai/osva:1.1.1",
+  ghcrIndexDigest: null,
+  ghcrLinuxAmd64ManifestDigest: null,
+  pypiWheelSha256: null,
+  pypiSdistSha256: null,
+  pypiWheelFilename: "osva_sdk-1.1.1-py3-none-any.whl",
+  pypiSdistFilename: "osva_sdk-1.1.1.tar.gz",
+  npmRegistryMode: "exact",
+  npmViewSelector: "1.1.2",
+  gitTag: "v1.1.1",
+  releaseCommit: null,
+  composeProject: "osva-m16-registry-111",
+  evidenceReleaseKey: "1.1.1-m16",
+  registryArtifactsReady: false,
+  envGateVar: "OSVA_M16_REGISTRY_ACCEPTANCE",
+  notes:
+    "M16 installer + lifecycle + 1.1.0→1.1.1 upgrade. Prior platform image ghcr.io/osva-ai/osva:1.1.0.",
+};
+
 const TARGETS = {
   rc4: RC4_TARGET,
   stable: STABLE_110_TARGET,
   "stable-npm-111": STABLE_NPM_111_TARGET,
+  "m16-111": M16_111_TARGET,
 };
 
 /**
@@ -142,7 +175,7 @@ export function resolveAcceptanceTarget(
   const target = TARGETS[key];
   if (!target) {
     throw new Error(
-      `Unknown OSVA_REGISTRY_ACCEPTANCE_TARGET=${JSON.stringify(raw)} (expected rc4, stable, or stable-npm-111)`,
+      `Unknown OSVA_REGISTRY_ACCEPTANCE_TARGET=${JSON.stringify(raw)} (expected rc4, stable, stable-npm-111, or m16-111)`,
     );
   }
   return target;

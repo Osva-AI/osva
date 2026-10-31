@@ -51,9 +51,20 @@ export async function createPublishedNpmConsumer(npmPackageVersion) {
     throw new Error("npm install published CLI/SDK failed");
   }
 
+  const cliBin = path.join(
+    installRoot,
+    "node_modules",
+    "@osva-ai",
+    "cli",
+    "dist",
+    "bin",
+    "osva.js",
+  );
+
   return {
     installRoot,
     workRoot,
+    cliBin,
     dispose: () => rm(workRoot, { recursive: true, force: true }),
   };
 }

@@ -218,11 +218,12 @@ export function runCliSubprocess(
 
 export async function removeTempDir(dir: string): Promise<void> {
   await terminateTrackedSubprocesses();
+  await new Promise((resolve) => setTimeout(resolve, 50));
   const { rm } = await import("node:fs/promises");
   await rm(dir, {
     recursive: true,
     force: true,
-    maxRetries: 5,
-    retryDelay: 100,
+    maxRetries: 12,
+    retryDelay: 250,
   });
 }

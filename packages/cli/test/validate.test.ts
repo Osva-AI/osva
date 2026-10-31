@@ -23,7 +23,12 @@ import {
 const tempRoots: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempRoots.splice(0).map((dir) => removeTempDir(dir)));
+  while (tempRoots.length > 0) {
+    const dir = tempRoots.pop();
+    if (dir !== undefined) {
+      await removeTempDir(dir);
+    }
+  }
 });
 
 async function makeTempRoot(label = "osva-validate"): Promise<string> {

@@ -16,15 +16,15 @@ describe("acceptance install hooks", () => {
   it("uses OSVA_SETUP_LOCAL_IMAGE without changing distribution manifest pin", () => {
     expect(
       resolveSetupImageRef({
-        distributionImageRef: "ghcr.io/osva-ai/osva:1.1.0",
+        distributionImageRef: "ghcr.io/osva-ai/osva:1.1.1",
         processEnv: { OSVA_SETUP_LOCAL_IMAGE: "osva/local-m16-2d:dev" },
       }),
     ).toBe("osva/local-m16-2d:dev");
     expect(
       resolveSetupImageRef({
-        distributionImageRef: "ghcr.io/osva-ai/osva:1.1.0",
+        distributionImageRef: "ghcr.io/osva-ai/osva:1.1.1",
         processEnv: {},
       }),
-    ).toBe("ghcr.io/osva-ai/osva:1.1.0");
+    ).toBe("ghcr.io/osva-ai/osva:1.1.1");
   });
 });

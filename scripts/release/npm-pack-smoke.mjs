@@ -49,6 +49,15 @@ function main() {
           "@osva-ai/cli pack dry-run missing agent-typescript templates",
         );
       }
+      for (const requiredPath of [
+        "templates/compose-install/compose.yml",
+        "templates/compose-install/distribution.json",
+        "templates/compose-install/upgrade-catalog.json",
+      ]) {
+        if (!dry.includes(requiredPath)) {
+          throw new Error(`@osva-ai/cli pack dry-run missing ${requiredPath}`);
+        }
+      }
       const cliPkg = JSON.parse(
         fs.readFileSync(
           path.join(REPO_ROOT, "packages", "cli", "package.json"),
@@ -73,9 +82,10 @@ function main() {
     "status",
     "doctor",
     "setup",
+    "platform status",
   ]) {
     if (!help.includes(command)) {
-      throw new Error(`CLI help missing M10.2 command: ${command}`);
+      throw new Error(`CLI help missing expected command in help: ${command}`);
     }
   }
 
