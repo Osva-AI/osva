@@ -3,10 +3,27 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 
+import { deriveComposeProjectName } from "../../m16-shared/compose-project.mjs";
+
 const FIXTURE_COMPOSE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../fixtures/compose-platform-1.1.0.yml",
 );
+
+/**
+ * Strip local `build:` stanzas from legacy deploy/compose for published-image installs.
+ *
+ * @param {string} composeRaw
+ * @returns {string}
+ */
+export function transformLegacyComposeForPublishedImage(composeRaw) {
+  return composeRaw
+    .replace(/\n\s*build:\s*\n\s*context:[^\n]*\n\s*dockerfile:[^\n]*\n/g, "\n")
+    .replace(
+      /image: \$\{OSVA_IMAGE:-osva:local\}/,
+      "image: ${OSVA_IMAGE:?OSVA_IMAGE is required}",
+    );
+}
 
 /**
  * Bootstrap a platform 1.1.0 installation layout (legacy deploy/compose, no Console)
@@ -17,24 +34,20 @@ const FIXTURE_COMPOSE = path.resolve(
  * @param {string} input.imageRef
  * @param {number} input.webPort
  * @param {number} input.mcpPort
- * @param {string} input.composeProjectName
  */
 export async function bootstrapPlatform110Install(input) {
+  const composeProjectName = deriveComposeProjectName(input.installDir);
   const composeRaw = await readFile(FIXTURE_COMPOSE, "utf8");
-  const composeYaml = composeRaw
-    .replace(/\n\s*build:\n[\s\S]*?(?=\n\s*\w)/g, "\n")
-    .replace(
-      /image: \$\{OSVA_IMAGE:-osva:local\}/,
-      "image: ${OSVA_IMAGE:?OSVA_IMAGE is required}",
-    );
+  const composeYaml = transformLegacyComposeForPublishedImage(composeRaw);
 
   await mkdir(path.join(input.installDir, ".osva"), { recursive: true });
   const postgresPassword = randomBytes(24).toString("hex");
   const authSecret = randomBytes(32).toString("hex");
   const envLines = [
     `OSVA_IMAGE=${input.imageRef}`,
-    `COMPOSE_PROJECT_NAME=${input.composeProjectName}`,
+    `COMPOSE_PROJECT_NAME=${composeProjectName}`,
     `POSTGRES_PASSWORD=${postgresPassword}`,
+    `OSVA_VALKEY_URL=redis://valkey:6379`,
     `OSVA_AUTH_SECRET=${authSecret}`,
     `OSVA_PUBLISH_WEB_PORT=${String(input.webPort)}`,
     `OSVA_PUBLISH_MCP_PORT=${String(input.mcpPort)}`,
@@ -49,7 +62,7 @@ export async function bootstrapPlatform110Install(input) {
     imageRef: input.imageRef,
     cliVersion: "acceptance-bootstrap",
     installDir: input.installDir,
-    composeProjectName: input.composeProjectName,
+    composeProjectName,
     createdAt: now,
     updatedAt: now,
   };

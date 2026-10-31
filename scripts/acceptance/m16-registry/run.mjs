@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +20,11 @@ import { redactSecrets } from "../m16-2d/redact.mjs";
 import { runM16LifecycleJourney } from "../m16-shared/lifecycle-journey.mjs";
 import { runCli } from "../m16-shared/cli-runner.mjs";
 import { resolveM16Artifacts } from "./lib/resolve-artifacts.mjs";
+import {
+  registryInstallJourneyStatus,
+  registryLifecycleJourneyStatus,
+  registryUpgradeJourneyStatus,
+} from "./lib/journey-aggregation.mjs";
 import { runM16UpgradeJourney } from "./lib/upgrade-journey.mjs";
 import { M16_111_TARGET } from "../r11-registry-only/lib/targets.mjs";
 
@@ -66,6 +71,13 @@ async function teardown(installDir) {
     console.log(`Skipping teardown; install dir ${installDir}`);
     return;
   }
+  const envFile = path.join(installDir, ".env");
+  try {
+    await access(envFile);
+  } catch {
+    await rm(installDir, { recursive: true, force: true }).catch(() => {});
+    return;
+  }
   const { spawnSync } = await import("node:child_process");
   spawnSync(
     "docker",
@@ -74,7 +86,7 @@ async function teardown(installDir) {
       "--project-directory",
       installDir,
       "--env-file",
-      path.join(installDir, ".env"),
+      envFile,
       "down",
     ],
     { cwd: installDir, stdio: "inherit" },
@@ -199,9 +211,11 @@ async function main() {
     }
 
     const ports = await allocatePortTriple();
-    const installDir = await mkdtemp(
-      path.join(os.tmpdir(), "osva-m16-registry-"),
-    );
+    const needsInstallDir = groups.has("install") || groups.has("lifecycle");
+    /** @type {string | undefined} */
+    const installDir = needsInstallDir
+      ? await mkdtemp(path.join(os.tmpdir(), "osva-m16-registry-"))
+      : undefined;
     const pullPublished = artifacts.source === "published";
 
     /** @type {any} */
@@ -216,6 +230,9 @@ async function main() {
 
     try {
       if (groups.has("install")) {
+        if (!installDir) {
+          throw new Error("Install directory missing for install group");
+        }
         const setupJson = await runInstaller(ctx);
         await composeValidate(ctx, report);
         for (const id of [
@@ -232,11 +249,14 @@ async function main() {
         report.record(
           "registry_install_journey",
           "Registry install + onboarding + agent run",
-          "PASS",
+          registryInstallJourneyStatus(report),
         );
       }
 
       if (groups.has("lifecycle")) {
+        if (!installDir) {
+          throw new Error("Install directory missing for lifecycle group");
+        }
         await runM16LifecycleJourney(report, {
           cliBin: artifacts.cliBin,
           installDir,
@@ -245,7 +265,7 @@ async function main() {
         report.record(
           "registry_lifecycle_journey",
           "Registry lifecycle journey",
-          "PASS",
+          registryLifecycleJourneyStatus(report),
         );
       }
 
@@ -267,18 +287,22 @@ async function main() {
           report.record(
             "registry_upgrade_journey",
             "Registry upgrade journey",
-            "PASS",
+            registryUpgradeJourneyStatus(report),
           );
         } finally {
           await teardown(upgradeDir).catch(() => {});
         }
       }
     } finally {
-      await teardown(installDir).catch((error) => {
-        console.error(
-          redactSecrets(error instanceof Error ? error.message : String(error)),
-        );
-      });
+      if (installDir) {
+        await teardown(installDir).catch((error) => {
+          console.error(
+            redactSecrets(
+              error instanceof Error ? error.message : String(error),
+            ),
+          );
+        });
+      }
       await artifacts.dispose().catch(() => {});
     }
   } catch (error) {
