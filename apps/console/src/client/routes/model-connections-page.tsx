@@ -1,8 +1,13 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { Button, LinkButton } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { SelectField, TextField } from "../components/ui/field";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useCreateModelProviderConnectionMutation,
@@ -17,23 +22,22 @@ export function ModelConnectionsPage() {
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [provider, setProvider] = useState("OPENAI");
+  const [formError, setFormError] = useState<string | undefined>();
   const canWrite =
     authQuery.data !== undefined &&
     roleCanWriteControlPlaneResources(authQuery.data.role);
 
   return (
     <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Provider connections</h1>
-          <p className="page-subtitle">
-            Workspace-owned provider connections with immutable versions.
-          </p>
-        </div>
-        <Link className="button" to="/models">
-          Back to models
-        </Link>
-      </header>
+      <PageHeader
+        title="Provider connections"
+        subtitle="Workspace-owned provider connections with immutable versions."
+        actions={
+          <LinkButton variant="secondary" to="/models">
+            Back to models
+          </LinkButton>
+        }
+      />
 
       {connectionsQuery.isLoading ? (
         <LoadingBlock label="Loading connections…" />
@@ -46,82 +50,87 @@ export function ModelConnectionsPage() {
       ) : null}
 
       {canWrite ? (
-        <section className="panel">
-          <h2 className="section-title">Create connection</h2>
+        <SectionPanel
+          title="Create connection"
+          description="Keys must be unique within the workspace. Secrets are stored as references, not shown here."
+        >
           <div className="filters">
-            <div className="field">
-              <label htmlFor="connection-key">Key</label>
-              <input
-                id="connection-key"
-                value={key}
-                onChange={(event) => setKey(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="connection-name">Name</label>
-              <input
-                id="connection-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="connection-provider">Provider</label>
-              <select
-                id="connection-provider"
-                value={provider}
-                onChange={(event) => setProvider(event.target.value)}
-              >
-                <option value="OPENAI">OPENAI</option>
-                <option value="ANTHROPIC">ANTHROPIC</option>
-                <option value="GOOGLE_GEMINI">GOOGLE_GEMINI</option>
-              </select>
-            </div>
+            <TextField
+              id="connection-key"
+              label="Key"
+              required
+              value={key}
+              onChange={(event) => {
+                setKey(event.target.value);
+                setFormError(undefined);
+              }}
+              error={
+                formError !== undefined && key.trim().length === 0
+                  ? formError
+                  : undefined
+              }
+            />
+            <TextField
+              id="connection-name"
+              label="Name"
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+            <SelectField
+              id="connection-provider"
+              label="Provider"
+              value={provider}
+              onChange={(event) => setProvider(event.target.value)}
+            >
+              <option value="OPENAI">OPENAI</option>
+              <option value="ANTHROPIC">ANTHROPIC</option>
+              <option value="GOOGLE_GEMINI">GOOGLE_GEMINI</option>
+            </SelectField>
           </div>
-          <button
+          <Button
             type="button"
-            className="button primary"
-            disabled={
-              createMutation.isPending ||
-              key.trim().length === 0 ||
-              name.trim().length === 0
-            }
-            onClick={() =>
-              void createMutation.mutateAsync({ key, name, provider })
-            }
+            variant="primary"
+            loading={createMutation.isPending}
+            disabled={key.trim().length === 0 || name.trim().length === 0}
+            onClick={() => {
+              if (key.trim().length === 0) {
+                setFormError("Key is required.");
+                return;
+              }
+              void createMutation.mutateAsync({ key, name, provider });
+            }}
           >
             Create connection
-          </button>
-        </section>
+          </Button>
+        </SectionPanel>
       ) : null}
 
       {connectionsQuery.data !== undefined ? (
-        <section className="panel">
-          <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Provider</th>
-                  <th>Key</th>
+        <SectionPanel title="Connections">
+          <DataTableRegion caption="Model provider connections">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Provider</th>
+                <th scope="col">Key</th>
+              </tr>
+            </thead>
+            <tbody>
+              {connectionsQuery.data.connections.map((connection) => (
+                <tr key={connection.id}>
+                  <td>
+                    <Link to={`/models/connections/${connection.id}`}>
+                      {connection.name}
+                    </Link>
+                  </td>
+                  <td>{connection.provider}</td>
+                  <td className="mono">{connection.key}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {connectionsQuery.data.connections.map((connection) => (
-                  <tr key={connection.id}>
-                    <td>
-                      <Link to={`/models/connections/${connection.id}`}>
-                        {connection.name}
-                      </Link>
-                    </td>
-                    <td>{connection.provider}</td>
-                    <td className="mono">{connection.key}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              ))}
+            </tbody>
+          </DataTableRegion>
+        </SectionPanel>
       ) : null}
     </>
   );

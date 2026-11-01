@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom";
 
+import { LinkButton } from "../components/ui/button";
+import { PageHeader } from "../components/ui/page-header";
+
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
@@ -124,30 +127,27 @@ export function OverviewPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Overview</h1>
-          <p className="page-subtitle">
-            Workspace-scoped summary from existing Console APIs. Counts reflect
-            loaded registry lists; run tables show recent pages only.
-          </p>
-        </div>
-        <div className="action-row">
-          {canWrite ? (
-            <>
-              <Link className="button" to="/agents/new">
-                Create Agent
-              </Link>
-              <Link className="button button-secondary" to="/workflows/new">
-                Build Workflow
-              </Link>
-            </>
-          ) : null}
-          <Link className="button button-secondary" to="/runs">
-            View Runs
-          </Link>
-        </div>
-      </header>
+      <PageHeader
+        title="Overview"
+        subtitle="Workspace-scoped summary from existing Console APIs. Counts reflect loaded registry lists; run tables show recent pages only."
+        actions={
+          <div className="action-row">
+            {canWrite ? (
+              <>
+                <LinkButton variant="primary" to="/agents/new">
+                  Create Agent
+                </LinkButton>
+                <LinkButton variant="secondary" to="/workflows/new">
+                  Build Workflow
+                </LinkButton>
+              </>
+            ) : null}
+            <LinkButton variant="secondary" to="/runs">
+              View Runs
+            </LinkButton>
+          </div>
+        }
+      />
 
       {!workspaceAligned ? (
         <LoadingBlock label="Select a workspace to view Overview." />

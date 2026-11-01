@@ -14,6 +14,8 @@ import {
 } from "../lib/permissions";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { ConfirmDialog } from "../components/ui/confirm-dialog";
+import { Button } from "../components/ui/button";
 
 interface MembershipRow {
   readonly id: string;
@@ -33,6 +35,10 @@ export function WorkspaceAccessPage() {
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [pendingRole, setPendingRole] = useState<Record<string, string>>({});
   const [transferTargetUserId, setTransferTargetUserId] = useState("");
+  const [pendingRemove, setPendingRemove] = useState<
+    MembershipRow | undefined
+  >();
+  const [removePending, setRemovePending] = useState(false);
 
   const canTransfer =
     access !== undefined && roleCanTransferOwnership(access.role);
@@ -126,14 +132,12 @@ export function WorkspaceAccessPage() {
     }
   }
 
-  async function removeMember(membership: MembershipRow): Promise<void> {
-    if (
-      !window.confirm(
-        `Remove ${membership.userId} from this workspace? This cannot be undone.`,
-      )
-    ) {
+  async function confirmRemoveMember(): Promise<void> {
+    if (pendingRemove === undefined) {
       return;
     }
+    const membership = pendingRemove;
+    setRemovePending(true);
     setRowErrors((current) => ({ ...current, [membership.id]: "" }));
     try {
       await consoleFetch(
@@ -141,6 +145,7 @@ export function WorkspaceAccessPage() {
         { method: "DELETE" },
       );
       await invalidateMemberships();
+      setPendingRemove(undefined);
     } catch (removeError) {
       setRowErrors((current) => ({
         ...current,
@@ -149,6 +154,8 @@ export function WorkspaceAccessPage() {
             ? removeError.message
             : "Could not remove member.",
       }));
+    } finally {
+      setRemovePending(false);
     }
   }
 
@@ -284,12 +291,13 @@ export function WorkspaceAccessPage() {
                         >
                           Save role
                         </button>{" "}
-                        <button
+                        <Button
                           type="button"
-                          onClick={() => void removeMember(row)}
+                          variant="danger"
+                          onClick={() => setPendingRemove(row)}
                         >
                           Remove
-                        </button>{" "}
+                        </Button>{" "}
                         {canTransfer ? (
                           <button
                             type="button"
@@ -394,6 +402,27 @@ export function WorkspaceAccessPage() {
         Signed in as {auth.user?.email ?? auth.session?.userId}. Destructive
         membership changes require confirmation.
       </p>
+
+      <ConfirmDialog
+        open={pendingRemove !== undefined}
+        title="Remove member"
+        description={
+          pendingRemove !== undefined
+            ? `Remove ${pendingRemove.userId} from this workspace? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Remove member"
+        destructive
+        pending={removePending}
+        onCancel={() => {
+          if (!removePending) {
+            setPendingRemove(undefined);
+          }
+        }}
+        onConfirm={() => {
+          void confirmRemoveMember();
+        }}
+      />
     </section>
   );
 }
