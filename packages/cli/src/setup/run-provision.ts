@@ -16,6 +16,7 @@ import {
 import type { ProbeSpawnFn } from "./probe-spawn.js";
 import { runSetupOnboarding } from "./run-onboarding.js";
 import type { SetupOptions } from "./read-options.js";
+import { REMOTE_HTTP_DEV_PROFILE_ENV } from "./remote-http-dev.js";
 
 export const COMPOSE_CONFIG_TIMEOUT_MS = 120_000;
 export const COMPOSE_PULL_TIMEOUT_MS = 900_000;
@@ -91,6 +92,8 @@ export async function runSetupProvision(
       installDir: options.installDir,
       envFilePath: materialized.envPath,
       projectName: materialized.envValues.COMPOSE_PROJECT_NAME,
+      remoteHttpDevProfile:
+        materialized.envValues[REMOTE_HTTP_DEV_PROFILE_ENV] === "true",
     };
 
     const platformRunning = await detectFunctioningPlatform(execCtx, spawn);

@@ -51,6 +51,7 @@ function main() {
       }
       for (const requiredPath of [
         "templates/compose-install/compose.yml",
+        "templates/compose-install/compose.remote-http-dev.yml",
         "templates/compose-install/distribution.json",
         "templates/compose-install/upgrade-catalog.json",
       ]) {

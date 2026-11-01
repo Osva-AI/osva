@@ -123,6 +123,8 @@ describe("osva setup provisioning", () => {
       webPort: 8080,
       mcpPort: 3100,
       consolePort: 4174,
+      runtimeCapabilityPort: 8787,
+      remoteHttpDevProfile: false,
       generateSecret: () => "a".repeat(64),
     });
     const conflicts = detectShellEnvConflicts(values, {
@@ -147,6 +149,42 @@ describe("osva setup provisioning", () => {
     expect(args).toContain("--env-file");
     expect(args).toContain("--project-name");
     expect(args.join(" ")).toContain("/tmp/osva/.env");
+  });
+
+  it("includes the remote-http-dev overlay in compose base args when enabled", () => {
+    const args = composeBaseArgs({
+      installDir: "/tmp/osva",
+      envFilePath: "/tmp/osva/.env",
+      projectName: "osva-self-hosted",
+      remoteHttpDevProfile: true,
+    });
+    expect(args.join(" ")).toContain("compose.remote-http-dev.yml");
+  });
+
+  it("materializes remote-http-dev secrets and overlay when requested", async () => {
+    const installDir = await makeTempDir("osva-setup-remote-http-");
+    const distribution = await loadComposeDistribution();
+    const options = readSetupOptions({ "remote-http-dev": true }, {}, "linux");
+    const result = await materializeInstallation({
+      options: { ...options, installDir },
+      distribution,
+      processEnv: {},
+    });
+    const envContents = await readFile(result.envPath, "utf8");
+    expect(envContents).toContain("OSVA_REMOTE_HTTP_DEV_PROFILE=true");
+    expect(envContents).toMatch(/OSVA_RUNTIME_CAPABILITY_SECRET=[0-9a-f]{64}/);
+    expect(envContents).toContain(
+      "OSVA_RUNTIME_CAPABILITY_BASE_URL=http://127.0.0.1:8787",
+    );
+    expect(envContents).toContain(
+      "OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS=true",
+    );
+    const overlayPath = path.join(installDir, "compose.remote-http-dev.yml");
+    const overlay = await readFile(overlayPath, "utf8");
+    expect(overlay).toContain(
+      "127.0.0.1:${OSVA_PUBLISH_RUNTIME_CAPABILITY_PORT",
+    );
+    expect(overlay).toContain("host.docker.internal:host-gateway");
   });
 
   it("runs staged docker compose provisioning with mocked subprocesses", async () => {

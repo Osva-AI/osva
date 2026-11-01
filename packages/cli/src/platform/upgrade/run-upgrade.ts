@@ -9,7 +9,12 @@ import {
   runComposeCommand,
 } from "../../setup/compose-exec.js";
 import { writeFileAtomic } from "../../setup/atomic-write.js";
-import { renderInstallEnvFile } from "../../setup/env-file.js";
+import {
+  installEnvValuesFromEnvMap,
+  readInstallEnvFile,
+  renderInstallEnvFile,
+} from "../../setup/env-file.js";
+import { REMOTE_HTTP_DEV_COMPOSE_FILE } from "../../setup/remote-http-dev.js";
 import {
   INSTALLATION_MARKER_RELATIVE,
   renderInstallationMarker,
@@ -19,7 +24,6 @@ import {
   type ProbeSpawnFn,
 } from "../../setup/probe-spawn.js";
 import { CLI_VERSION } from "../../version.js";
-import { installEnvValuesFromMap } from "../resolve-installation.js";
 import { probeInstallationReadiness } from "../readiness.js";
 import { PLATFORM_APPLICATION_SERVICES } from "../services.js";
 import { PlatformCommandError, type ResolvedInstallation } from "../types.js";
@@ -279,14 +283,20 @@ async function prepareInstallationConfiguration(
   installation: ResolvedInstallation,
   target: ResolvedUpgradeTarget,
 ): Promise<void> {
-  const envMap = new Map(Object.entries(installation.envValues));
+  const envMap =
+    (await readInstallEnvFile(installation.envPath)) ??
+    new Map(Object.entries(installation.envValues));
   envMap.set("OSVA_IMAGE", target.imageRef);
-  const values = installEnvValuesFromMap(envMap);
+  const values = installEnvValuesFromEnvMap(envMap);
   await writeFileAtomic(installation.envPath, renderInstallEnvFile(values), {
     restrictPermissions: true,
   });
   if (target.path.composeTemplateUpdate) {
     await writeFileAtomic(installation.composePath, target.composeYaml);
+    await writeFileAtomic(
+      path.join(installation.installDir, REMOTE_HTTP_DEV_COMPOSE_FILE),
+      target.remoteHttpDevComposeYaml,
+    );
   }
 }
 

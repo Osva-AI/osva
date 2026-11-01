@@ -1,9 +1,15 @@
 import { resolveInstallDir } from "./install-path.js";
+import {
+  DEFAULT_RUNTIME_CAPABILITY_PORT,
+  readRemoteHttpDevSetupFlag,
+} from "./remote-http-dev.js";
 
 export interface SetupOptions {
   readonly webPort: number;
   readonly mcpPort: number;
   readonly consolePort: number;
+  readonly runtimeCapabilityPort: number;
+  readonly remoteHttpDev: boolean;
   readonly installDir: string;
   readonly preflightOnly: boolean;
   readonly authorizeExisting: boolean;
@@ -36,10 +42,21 @@ export function readSetupOptions(
     4174,
     "console-port",
   );
+  const remoteHttpDev = readRemoteHttpDevSetupFlag(flags, env);
+  const runtimeCapabilityPort = parsePortFlag(
+    flags["runtime-capability-port"],
+    env.OSVA_PUBLISH_RUNTIME_CAPABILITY_PORT ??
+      env.OSVA_RUNTIME_CAPABILITY_PORT,
+    DEFAULT_RUNTIME_CAPABILITY_PORT,
+    "runtime-capability-port",
+  );
   const publishPorts = [
     { port: webPort, label: "web" },
     { port: mcpPort, label: "mcp" },
     { port: consolePort, label: "console" },
+    ...(remoteHttpDev
+      ? [{ port: runtimeCapabilityPort, label: "runtime capability" }]
+      : []),
   ];
   for (let left = 0; left < publishPorts.length; left += 1) {
     for (let right = left + 1; right < publishPorts.length; right += 1) {
@@ -73,6 +90,8 @@ export function readSetupOptions(
     webPort,
     mcpPort,
     consolePort,
+    runtimeCapabilityPort,
+    remoteHttpDev,
     installDir: resolveInstallDir(flags, env, platform),
     preflightOnly: flags["preflight-only"] === true,
     authorizeExisting: flags.yes === true,

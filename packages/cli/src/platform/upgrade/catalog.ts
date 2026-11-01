@@ -30,6 +30,7 @@ export interface ResolvedUpgradeTarget {
   readonly platformVersion: string;
   readonly imageRef: string;
   readonly composeYaml: string;
+  readonly remoteHttpDevComposeYaml: string;
   readonly path: UpgradePath;
 }
 
@@ -104,6 +105,7 @@ export async function resolveUpgradeTarget(input: {
     platformVersion: targetEntry.platformVersion,
     imageRef,
     composeYaml: distribution.composeYaml,
+    remoteHttpDevComposeYaml: distribution.remoteHttpDevComposeYaml,
     path: pathRule,
   };
 }

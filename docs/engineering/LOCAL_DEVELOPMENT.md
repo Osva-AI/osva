@@ -9,7 +9,7 @@ Two supported local topologies share the same product sequence but differ in **w
 
 Historical guides ([`OSS-1.0-QUICKSTART.md`](../OSS-1.0-QUICKSTART.md), [`COMMUNITY-BETA-QUICKSTART.md`](../COMMUNITY-BETA-QUICKSTART.md)) describe earlier release lines. **`1.1.0-rc.2`** is **published** on registries (npm/PyPI **`latest`** remains **`1.0.0`**). **Published `1.1.0-rc.1`** registries remain available; **`@osva-ai/cli@1.1.0-rc.1`** does not include M10.2 agent commands — use **`1.1.0-rc.2`** from registries or build from this repository.
 
-Authoritative self-hosted operator path for journey **A**: [`OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md). CLI details: [`../../packages/cli/README.md`](../../packages/cli/README.md).
+Authoritative self-hosted operator path for journey **A**: [`OSS-COMMUNITY-QUICKSTART.md`](../OSS-COMMUNITY-QUICKSTART.md). CLI details: [`../../packages/cli/README.md`](../../packages/cli/README.md). Host-based **REMOTE_HTTP** agents: [`REMOTE_HTTP_LOCAL_AGENT_SETUP.md`](REMOTE_HTTP_LOCAL_AGENT_SETUP.md).
 
 ---
 

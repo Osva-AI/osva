@@ -1,0 +1,28 @@
+# Opt-in local development overlay for host-based REMOTE_HTTP agents.
+#
+# Enables the worker runtime capability bridge (loopback-published), operator
+# opt-in for private/loopback REMOTE_HTTP destinations, and MCP connector
+# reachability to host-local MCP servers (for example via host.docker.internal).
+#
+# Activated when installation .env sets OSVA_REMOTE_HTTP_DEV_PROFILE=true
+# (`osva setup --remote-http-dev`) or manually:
+#   docker compose -f compose.yml -f compose.remote-http-dev.yml up -d
+#
+# Production installs must not enable this profile by default.
+
+services:
+  worker:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      OSVA_RUNTIME_CAPABILITY_SECRET: ${OSVA_RUNTIME_CAPABILITY_SECRET:?OSVA_RUNTIME_CAPABILITY_SECRET is required when the remote-http-dev profile is enabled}
+      OSVA_RUNTIME_CAPABILITY_HOST: 0.0.0.0
+      OSVA_RUNTIME_CAPABILITY_PORT: ${OSVA_RUNTIME_CAPABILITY_PORT:?OSVA_RUNTIME_CAPABILITY_PORT is required when the remote-http-dev profile is enabled}
+      OSVA_RUNTIME_CAPABILITY_BASE_URL: ${OSVA_RUNTIME_CAPABILITY_BASE_URL:?OSVA_RUNTIME_CAPABILITY_BASE_URL is required when the remote-http-dev profile is enabled}
+      OSVA_RUNTIME_CAPABILITY_ALLOW_PUBLIC_BIND: "true"
+      OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS: ${OSVA_REMOTE_HTTP_ALLOW_PRIVATE_NETWORKS:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_GEMINI_API_KEY: ${GOOGLE_GEMINI_API_KEY:-}
+    ports:
+      - "127.0.0.1:${OSVA_PUBLISH_RUNTIME_CAPABILITY_PORT:?OSVA_PUBLISH_RUNTIME_CAPABILITY_PORT is required when the remote-http-dev profile is enabled}:${OSVA_RUNTIME_CAPABILITY_PORT:?OSVA_RUNTIME_CAPABILITY_PORT is required when the remote-http-dev profile is enabled}"

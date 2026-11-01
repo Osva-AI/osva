@@ -27,6 +27,8 @@ function setupOptions(
     webPort: partial.webPort,
     mcpPort: partial.mcpPort,
     consolePort: partial.consolePort ?? 4174,
+    runtimeCapabilityPort: partial.runtimeCapabilityPort ?? 8787,
+    remoteHttpDev: partial.remoteHttpDev ?? false,
     adminEmail: partial.adminEmail ?? "",
     adminName: partial.adminName ?? "Initial Owner",
     organizationName: partial.organizationName ?? "Default Organization",

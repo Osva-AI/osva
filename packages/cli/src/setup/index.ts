@@ -22,6 +22,7 @@ export { runSetupProvision } from "./run-provision.js";
 export {
   buildInstallEnvValues,
   detectShellEnvConflicts,
+  installEnvValuesFromEnvMap,
   parseDotEnv,
   renderInstallEnvFile,
 } from "./env-file.js";
