@@ -1,6 +1,6 @@
 # M17.5 Public SDK distribution readiness
 
-**Status:** Release candidate prepared (not registry-published).
+**Status:** **Published** — superseded on dist-tags **`latest`** / **`stable-candidate`** by **1.1.4** (M17.9). Historical record for the **1.1.3** coordinated npm line.
 
 ## Problem
 
