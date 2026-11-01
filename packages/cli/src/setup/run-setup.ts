@@ -114,6 +114,19 @@ export async function runSetupPipeline(
       { ...portReconciliation, envKey: "OSVA_PUBLISH_CONSOLE_PORT" },
     ),
   );
+  if (options.remoteHttpDev) {
+    checks.push(
+      await checkPublishPort(
+        "publish_runtime_capability_port",
+        options.runtimeCapabilityPort,
+        probeLoopbackPort,
+        {
+          ...portReconciliation,
+          envKey: "OSVA_PUBLISH_RUNTIME_CAPABILITY_PORT",
+        },
+      ),
+    );
+  }
   checks.push(checkHostMemory());
   checks.push(
     checkHostDiskSpace(deps.cwdForDisk ?? options.installDir ?? process.cwd()),

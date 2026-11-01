@@ -32,6 +32,14 @@ Materializes a local Compose project (registry-pinned `OSVA_IMAGE` in the bundle
 osva setup --admin-email you@example.com
 ```
 
+**Host-based REMOTE_HTTP agents (local development only):**
+
+```bash
+osva setup --remote-http-dev --admin-email you@example.com
+```
+
+This opt-in profile generates runtime capability secrets, publishes the capability bridge on loopback (default port `8787`), and enables documented private-network exceptions for worker → host agent and MCP discovery. See [`docs/engineering/REMOTE_HTTP_LOCAL_AGENT_SETUP.md`](../../docs/engineering/REMOTE_HTTP_LOCAL_AGENT_SETUP.md).
+
 Use `--yes` to reconcile an existing installation directory. Console is published on loopback (default `http://127.0.0.1:4174`). Complete password setup at `/setup`, then sign in.
 
 **Published image note:** GHCR tags shipped before M16.2 Console packaging require a matching OCI rebuild; development acceptance builds a local image (`osva/local-m16-2d:dev`). Test-only overrides: `OSVA_SETUP_LOCAL_IMAGE`, `OSVA_SETUP_SKIP_IMAGE_PULL`, and acceptance capture flags documented in [`scripts/acceptance/m16-2d/README.md`](../../scripts/acceptance/m16-2d/README.md).

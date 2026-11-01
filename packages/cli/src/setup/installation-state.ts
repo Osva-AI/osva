@@ -51,6 +51,7 @@ export async function assessInstallDirectory(
   const recognized = new Set([
     ".osva",
     "compose.yml",
+    "compose.remote-http-dev.yml",
     ".env",
     ".env.example",
     "README.md",

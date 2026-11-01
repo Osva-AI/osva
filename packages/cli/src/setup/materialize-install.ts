@@ -21,6 +21,7 @@ import { resolveSetupImageRef } from "./acceptance-install.js";
 import { deriveComposeProjectName } from "./compose-project.js";
 import { generateSecretHex } from "./secrets.js";
 import type { SetupOptions } from "./read-options.js";
+import { REMOTE_HTTP_DEV_COMPOSE_FILE } from "./remote-http-dev.js";
 
 export interface MaterializeInstallResult {
   readonly assessment: InstallDirectoryAssessment;
@@ -72,6 +73,8 @@ export async function materializeInstallation(input: {
     webPort: input.options.webPort,
     mcpPort: input.options.mcpPort,
     consolePort: input.options.consolePort,
+    runtimeCapabilityPort: input.options.runtimeCapabilityPort,
+    remoteHttpDevProfile: input.options.remoteHttpDev,
     existing: existingEnv,
     generateSecret: () => generateSecretHex(32),
   });
@@ -90,6 +93,10 @@ export async function materializeInstallation(input: {
     input.distribution.composeYaml,
     assessment,
     input.options.authorizeExisting,
+  );
+  await writeFileAtomic(
+    path.join(installDir, REMOTE_HTTP_DEV_COMPOSE_FILE),
+    input.distribution.remoteHttpDevComposeYaml,
   );
   const wroteEnv = await writeEnvIfNeeded(envPath, envValues, existingEnv);
   const marker = renderInstallationMarker({

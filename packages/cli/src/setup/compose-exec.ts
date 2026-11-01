@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { redactSecrets } from "../doctor/redact.js";
+import { REMOTE_HTTP_DEV_COMPOSE_FILE } from "./remote-http-dev.js";
 import {
   defaultProbeSpawn,
   type ProbeSpawnFn,
@@ -11,6 +12,7 @@ export interface ComposeExecContext {
   readonly installDir: string;
   readonly envFilePath: string;
   readonly projectName: string;
+  readonly remoteHttpDevProfile?: boolean;
 }
 
 export interface ComposeExecOptions {
@@ -30,7 +32,7 @@ export function buildComposeSpawnEnv(
 }
 
 export function composeBaseArgs(ctx: ComposeExecContext): string[] {
-  return [
+  const args = [
     "compose",
     "--project-name",
     ctx.projectName,
@@ -41,6 +43,10 @@ export function composeBaseArgs(ctx: ComposeExecContext): string[] {
     "-f",
     path.join(ctx.installDir, "compose.yml"),
   ];
+  if (ctx.remoteHttpDevProfile === true) {
+    args.push("-f", path.join(ctx.installDir, REMOTE_HTTP_DEV_COMPOSE_FILE));
+  }
+  return args;
 }
 
 export function runComposeCommand(

@@ -12,6 +12,7 @@ export interface ComposeDistributionManifest {
 export interface ComposeDistribution {
   readonly manifest: ComposeDistributionManifest;
   readonly composeYaml: string;
+  readonly remoteHttpDevComposeYaml: string;
   readonly templateRoot: string;
 }
 
@@ -19,14 +20,21 @@ export async function loadComposeDistribution(): Promise<ComposeDistribution> {
   const templateRoot = resolveComposeInstallTemplateRoot();
   const manifestPath = path.join(templateRoot, "distribution.json");
   const composePath = path.join(templateRoot, "compose.yml");
-  const [manifestRaw, composeYaml] = await Promise.all([
-    readFile(manifestPath, "utf8"),
-    readFile(composePath, "utf8"),
-  ]);
+  const remoteHttpDevComposePath = path.join(
+    templateRoot,
+    "compose.remote-http-dev.yml",
+  );
+  const [manifestRaw, composeYaml, remoteHttpDevComposeYaml] =
+    await Promise.all([
+      readFile(manifestPath, "utf8"),
+      readFile(composePath, "utf8"),
+      readFile(remoteHttpDevComposePath, "utf8"),
+    ]);
   const manifest = JSON.parse(manifestRaw) as ComposeDistributionManifest;
   assertDistributionManifest(manifest);
   assertRegistryOnlyCompose(composeYaml);
-  return { manifest, composeYaml, templateRoot };
+  assertRemoteHttpDevOverlay(remoteHttpDevComposeYaml);
+  return { manifest, composeYaml, remoteHttpDevComposeYaml, templateRoot };
 }
 
 function assertDistributionManifest(
@@ -69,6 +77,21 @@ export function assertPinnedImageRef(imageRef: string): void {
   if (tag.length === 0) {
     throw new Error(
       "Refusing OSVA image reference without an explicit version tag.",
+    );
+  }
+}
+
+function assertRemoteHttpDevOverlay(composeYaml: string): void {
+  if (!composeYaml.includes("OSVA_RUNTIME_CAPABILITY_SECRET")) {
+    throw new Error(
+      "Bundled remote-http-dev compose overlay is missing runtime capability wiring.",
+    );
+  }
+  if (
+    !composeYaml.includes("127.0.0.1:${OSVA_PUBLISH_RUNTIME_CAPABILITY_PORT")
+  ) {
+    throw new Error(
+      "Bundled remote-http-dev compose overlay must publish the capability port on loopback only.",
     );
   }
 }

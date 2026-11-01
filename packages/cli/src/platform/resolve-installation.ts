@@ -3,11 +3,11 @@ import path from "node:path";
 
 import {
   detectShellEnvConflicts,
+  installEnvValuesFromEnvMap,
   readInstallEnvFile,
-  type InstallEnvKey,
   type InstallEnvValues,
-  INSTALL_ENV_KEYS,
 } from "../setup/env-file.js";
+import { isRemoteHttpDevProfileEnabled } from "../setup/remote-http-dev.js";
 import { deriveComposeProjectName } from "../setup/compose-project.js";
 import {
   assessInstallDirectory,
@@ -67,7 +67,17 @@ export async function resolveInstallationForLifecycle(
       `Could not read installation environment at ${envPath}.`,
     );
   }
-  const envValues = installEnvValuesFromMap(envMap);
+  let envValues: InstallEnvValues;
+  try {
+    envValues = installEnvValuesFromEnvMap(envMap);
+  } catch (error) {
+    throw new PlatformCommandError(
+      "installation_invalid",
+      error instanceof Error
+        ? error.message
+        : "Installation .env could not be parsed.",
+    );
+  }
   await validateMarkerMetadata(marker, installDir, envValues);
 
   const conflicts = detectShellEnvConflicts(envValues, processEnv);
@@ -83,6 +93,7 @@ export async function resolveInstallationForLifecycle(
     installDir,
     envFilePath: envPath,
     projectName: envValues.COMPOSE_PROJECT_NAME,
+    remoteHttpDevProfile: isRemoteHttpDevProfileEnabled(envMap),
   };
 
   const webPort = Number(envValues.OSVA_PUBLISH_WEB_PORT);
@@ -100,28 +111,6 @@ export async function resolveInstallationForLifecycle(
     mcpUrl: `http://127.0.0.1:${String(mcpPort)}`,
     consoleUrl: `http://127.0.0.1:${String(consolePort)}`,
   };
-}
-
-export function installEnvValuesFromMap(
-  envMap: Map<string, string>,
-): InstallEnvValues {
-  const values = {} as InstallEnvValues;
-  const missing: InstallEnvKey[] = [];
-  for (const key of INSTALL_ENV_KEYS) {
-    const raw = envMap.get(key)?.trim();
-    if (raw === undefined || raw.length === 0) {
-      missing.push(key);
-      continue;
-    }
-    values[key] = raw;
-  }
-  if (missing.length > 0) {
-    throw new PlatformCommandError(
-      "installation_invalid",
-      `Installation .env is missing required keys: ${missing.join(", ")}.`,
-    );
-  }
-  return values;
 }
 
 function validateMarkerPaths(
