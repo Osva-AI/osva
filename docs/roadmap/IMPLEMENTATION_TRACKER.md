@@ -109,3 +109,27 @@ See [`../implementation/M15-PRODUCTION-ADOPTION-OPERATIONAL-EXPERIENCE.md`](../i
 - ✅ M15.5 Production adoption closeout — acceptance/closeout summaries; release inventory reconciled (PyPI/GHCR/M10.4E **pending**)
 
 **M15 acceptance vs distribution:** Milestone **acceptance** is **complete (scoped)**. RC.4 **npm** publication is **complete**; **PyPI**, **GHCR**, and **M10.4E** registry-only replay remain **open** (not production-deployment certification for all channels).
+
+## M16 — Installer, lifecycle, and external-consumer acceptance
+
+See [`../release/M16_5B_RELEASE_VERSION_MATRIX.md`](../release/M16_5B_RELEASE_VERSION_MATRIX.md) · [`../release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](../release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md).
+
+- ✅ M16.1–M16.2 Installation and preflight — PR **#70** → **`2b4bef8`**
+- ✅ M16.3 First-agent Console experience — PR **#71** → **`bf9e933`** · [`../operations/M16_3_ACCEPTANCE_SUMMARY.md`](../operations/M16_3_ACCEPTANCE_SUMMARY.md)
+- ✅ M16.4 Platform lifecycle and upgrade CLI — PR **#72** → **`f66d09c`**
+- ✅ M16.5B Distribution and registry acceptance — PR **#73–#74** → **`20dbdb8`**, **`812c8ab`**
+
+**Platform baseline (M16):** **`1.1.1`** (GHCR/PyPI) · npm **`@osva-ai/*@1.1.2`** · registry target **`m16-111`** (`registryArtifactsReady: true`).
+
+## M17 — Real-world agent adoption and public distribution
+
+See [`../implementation/M17-REAL-WORLD-AGENT-ADOPTION-AND-PUBLIC-DISTRIBUTION.md`](../implementation/M17-REAL-WORLD-AGENT-ADOPTION-AND-PUBLIC-DISTRIBUTION.md) · [`../operations/M17_ACCEPTANCE_SUMMARY.md`](../operations/M17_ACCEPTANCE_SUMMARY.md) · [`../operations/M17_CLOSEOUT_SUMMARY.md`](../operations/M17_CLOSEOUT_SUMMARY.md).
+
+- ✅ M17.2 SDK model profile, connector, and tool resources — PR **#75** → **`3270f55`**
+- ✅ M17.2–M17.7 Published SDK, Example 19, and `@osva-ai/connector-npm@0.1.0` — operator/registry evidence (acceptance summary §2)
+- ✅ M17.5 npm **1.1.3** SDK distribution readiness — PR **#76** → **`9a78874`** · [`../release/M17_5_SDK_RELEASE_READINESS.md`](../release/M17_5_SDK_RELEASE_READINESS.md)
+- ✅ M17.8 REMOTE_HTTP local setup + real-world integration acceptance — PR **#77** → **`6cdf1d7`** · run id **`a409acad-b3be-47d1-97fc-689158f39b54`**
+- ✅ M17.9 Coordinated npm **1.1.4** release — PR **#78** → **`f9fa20e`** · [`../release/M17_9_NPM_RELEASE_READINESS.md`](../release/M17_9_NPM_RELEASE_READINESS.md)
+- ✅ M17 closeout — acceptance/closeout summaries; npm **`latest`** / **`stable-candidate`** → **1.1.4**
+
+**M17 acceptance vs distribution:** Milestone **acceptance** is **complete (scoped)**. Platform remains **1.1.1**; public npm line is **1.1.4**; Python SDK remains **1.1.1** on PyPI. M17.9 install smoke **does not** supersede M17.8 workflow evidence. **`m16-111`** harness npm pin (**1.1.2**) refresh remains **open** maintenance.

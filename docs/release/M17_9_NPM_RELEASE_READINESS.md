@@ -1,8 +1,8 @@
 # M17.9 Coordinated npm 1.1.4 release readiness
 
-**Status:** Release candidate prepared (not registry-published).
+**Status:** **Published** — npm **`@osva-ai/*@1.1.4`** on dist-tags **`latest`** and **`stable-candidate`** (M17.9 closeout **2026-11-01**).
 
-**Branch:** `release/npm-1.1.4-cli-remote-http-dev`
+**Merge:** PR **#78** → **`f9fa20e`**
 
 ## Why all five npm packages are 1.1.4
 
@@ -36,22 +36,16 @@ See [`docs/engineering/REMOTE_HTTP_LOCAL_AGENT_SETUP.md`](../engineering/REMOTE_
 
 Consumers should pin **all five** `@osva-ai/*` packages to **1.1.4** together. Platform runtime remains **1.1.1** (GHCR / PyPI). **`@osva-ai/connector-npm@0.1.0`** (separate repository) is out of scope.
 
-## Release verification evidence (prep branch)
+## Release verification evidence
 
 | Check | Result |
 |-------|--------|
 | `pnpm release:version:check` | **PASS** (platform 1.1.1, npm 1.1.4) |
-| `@osva-ai/cli` typecheck / build / test | **PASS** (118 tests) |
-| `node --test scripts/release/test/*.test.mjs` | **PASS** (13 tests) |
-| `node --test scripts/verification/cli-compose-remote-http-dev.test.mjs` | **PASS** (4 tests) |
-| `node scripts/release/npm-pack-artifacts.mjs` | **PASS** |
-| `node scripts/release/npm-pack-smoke.mjs` | **PASS** |
-| `node scripts/release/npm-publish-plan.mjs --tag stable-candidate` | **PASS** (commands printed) |
-| Pre-publish `npm view @osva-ai/*@1.1.4` | **404** (versions not yet on registry — expected) |
-| `pnpm verify:changed` (affected npm packages + doc) | **PASS** (~292s) |
-| `pnpm verify:branch` | **FAIL** — `@osva-ai/cli#test` subprocess timeout (`validate.test.ts` scaffold, 120s) under full-branch Turbo load (~25m); standalone CLI test **PASS** (118 tests) when run directly |
-
-Re-run `pnpm verify:branch` before merge sign-off (or retry `@osva-ai/cli` test if load-related).
+| PR **#78** CI **`verify`** | **SUCCESS** on merge commit **`f9fa20e`** |
+| `node scripts/release/npm-registry-consumer-smoke.mjs` | **PASS** (post-publish) |
+| npm dist-tags **`latest`** / **`stable-candidate`** → **1.1.4** (all five packages) | **PASS** (operator **2026-11-01**) |
+| Clean global `@osva-ai/cli@1.1.4` + `osva setup --remote-http-dev` | **PASS** (install/smoke; see [`../operations/M17_ACCEPTANCE_SUMMARY.md`](../operations/M17_ACCEPTANCE_SUMMARY.md) §4) |
+| M17.8 full model/tool/workflow replay on M17.9 install | **NOT RUN** (evidence remains M17.8) |
 
 ## Tarball SHA-256 manifest
 
@@ -139,11 +133,9 @@ done
 
 Requires maintainer policy approval; do not promote if any package failed consumer smoke.
 
-## Clean-install acceptance still required after publication
+## Post-publication acceptance (recorded)
 
-Local packing **does not** prove public registry acceptance. After **`stable-candidate`** publish, operators must still run:
+- **`node scripts/release/npm-registry-consumer-smoke.mjs`** — **PASS**
+- Fresh **`npm install -g @osva-ai/cli@1.1.4`** and **`osva setup --remote-http-dev`** install smoke — **PASS** (M17.9; does not rerun M17.8 workflow)
 
-- **`node scripts/release/npm-registry-consumer-smoke.mjs`**
-- Fresh **`npm install -g @osva-ai/cli@stable-candidate`** (or pinned **1.1.4**) and golden-path / remote-http-dev setup acceptance as defined in release operations docs.
-
-Historical full-matrix registry acceptance (R1.1.3B) remains valid for platform **1.1.1**; re-run only if harness or platform behavior changes.
+Historical full-matrix registry acceptance (R1.1.3B) and M16 **`m16-111`** harness remain valid for their pinned npm versions; refresh to **1.1.4** is optional maintenance.

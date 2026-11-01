@@ -89,4 +89,20 @@ Delivered operator-trustworthy **in-repository** adoption evidence for **`1.1.0-
 
 **Not implied by M15:** full PyPI/GHCR RC.4 publication, M10.4E tarball-only adoption certification, or independent real-world operator sign-off without fixture harnesses.
 
-Still ahead (post-M15): deeper isolation, richer AI Office, ecosystem scale, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).
+### M16 — Installer, lifecycle, and external-consumer acceptance (complete)
+
+Delivered platform **1.1.1** with npm **1.1.2** installer/lifecycle CLI, Console onboarding improvements, and registry-verified **`m16-111`** acceptance ([`../release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](../release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md)).
+
+### M17 — Real-world agent adoption and public distribution (complete, scoped)
+
+Delivered **published** Node SDK capability resources, **Example 19** on published SDK and **`@osva-ai/connector-npm@0.1.0`**, M17.8 real-world REMOTE_HTTP workflow acceptance on platform **1.1.1**, and coordinated npm **1.1.4** with **`osva setup --remote-http-dev`** ([`../operations/M17_CLOSEOUT_SUMMARY.md`](../operations/M17_CLOSEOUT_SUMMARY.md) · [`../operations/M17_ACCEPTANCE_SUMMARY.md`](../operations/M17_ACCEPTANCE_SUMMARY.md)).
+
+| Slice | Status |
+| --- | --- |
+| **M17.2–M17.7** | **Complete** — published SDK/connector; Example 19 adoption (scoped) |
+| **M17.8** | **Complete** — REMOTE_HTTP dev setup + real-world model/tool/workflow evidence |
+| **M17.9** | **Complete** — npm **1.1.4** publication and clean CLI install smoke |
+
+**Not implied by M17:** M17.9 clean install reruns the M17.8 full workflow; automated **`m16-111`** harness refresh to npm **1.1.4**; PyPI/GHCR republication beyond **1.1.1** platform pins.
+
+Still ahead (post-M17): deeper isolation, richer AI Office, ecosystem scale, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).

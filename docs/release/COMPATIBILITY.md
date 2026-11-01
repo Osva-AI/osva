@@ -2,7 +2,7 @@
 
 **Current platform preparation target:** **`1.1.1`** (M16 installer, Console compose, lifecycle, upgrade). See [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md).
 
-**Published platform line (pre-M16):** **`1.1.0`** on GHCR/PyPI (registry-verified). **Published npm `latest`:** **`1.1.1`** (corrective packaging **without** M16 CLI — use **`1.1.2`** after M16 publish).
+**Published platform line:** **`1.1.1`** on GHCR/PyPI (M16 registry-verified). **Published npm `latest` / `stable-candidate`:** **`1.1.4`** (five `@osva-ai/*` packages; M17.9). M16 external-consumer harness still records npm **`1.1.2`** until refreshed.
 
 **Last registry-verified prerelease:** **`1.1.0-rc.4`** (git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`**). Evidence: [`M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md), [`R1_1_DISTRIBUTION_CLOSEOUT.md`](R1_1_DISTRIBUTION_CLOSEOUT.md).
 
