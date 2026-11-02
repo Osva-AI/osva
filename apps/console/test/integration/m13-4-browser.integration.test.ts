@@ -73,7 +73,7 @@ describe("M13.4 browser acceptance (overview & onboarding shell)", () => {
       const page = await context.newPage();
       await loginAndSelectWorkspaceA(page, stack.consoleOrigin);
 
-      await page.getByRole("heading", { name: "Overview", level: 1 }).waitFor({
+      await page.getByRole("heading", { name: "Home", level: 1 }).waitFor({
         timeout: 30_000,
       });
       await page.getByRole("link", { name: "Create Agent" }).first().click();

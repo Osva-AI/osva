@@ -289,7 +289,7 @@ export async function screenshotShell(
 }
 
 export async function waitForOverview(page: Page): Promise<void> {
-  await page.getByRole("heading", { name: "Overview", level: 1 }).waitFor({
+  await page.getByRole("heading", { name: "Home", level: 1 }).waitFor({
     timeout: 30_000,
   });
 }
