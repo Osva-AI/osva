@@ -14,6 +14,27 @@ describe("branch verification planner", () => {
       ),
     );
     assert.ok(
+      plan.obligations.some((entry) => entry.id === "console-m16-3-browser"),
+    );
+    assert.ok(
+      plan.obligations.some((entry) => entry.id === "console-browser-smoke"),
+    );
+    assert.equal(plan.unknownSourcePaths.length, 0);
+  });
+
+  it("treats guided onboarding components as console route impact", async () => {
+    const plan = await buildVerificationPlan([
+      "apps/console/src/client/components/onboarding/onboarding-primary-step.tsx",
+    ]);
+    assert.ok(
+      plan.targetedUnitTests.some((entry) =>
+        entry.relativeTestFiles.includes("test/agent-onboarding.test.ts"),
+      ),
+    );
+    assert.ok(
+      plan.obligations.some((entry) => entry.id === "console-m16-3-browser"),
+    );
+    assert.ok(
       plan.obligations.some((entry) => entry.id === "console-browser-smoke"),
     );
     assert.equal(plan.unknownSourcePaths.length, 0);

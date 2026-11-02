@@ -75,9 +75,18 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
 
       await page.getByRole("link", { name: "Getting started" }).click();
       await page
-        .getByRole("heading", { name: "Getting started", level: 1 })
+        .getByRole("heading", {
+          name: "Get your first agent running",
+          level: 1,
+        })
         .waitFor({ timeout: 30_000 });
-      await page.getByText(/Current — .*model/i).waitFor({ timeout: 30_000 });
+      await page.getByTestId("onboarding-primary-step").waitFor({
+        timeout: 30_000,
+      });
+      await page
+        .getByTestId("onboarding-primary-step")
+        .getByText(/model capabilities/i)
+        .waitFor({ timeout: 30_000 });
 
       await page.goto(`${stack.consoleOrigin}/models/connections`);
       await page.fill("#connection-key", "onboarding-openai");
@@ -143,13 +152,20 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
       await page.goto(
         `${stack.consoleOrigin}/onboarding?agentId=${encodeURIComponent(agentId)}&agentVersionId=${encodeURIComponent(agentVersionId)}`,
       );
+      await page.getByTestId("onboarding-primary-step").waitFor({
+        timeout: 30_000,
+      });
       await page
-        .getByText(/Current — .*Start a Run from the AgentVersion page/i)
+        .getByTestId("onboarding-primary-step")
+        .getByText(/Start a Run from the AgentVersion page/i)
         .waitFor({
           timeout: 30_000,
         });
 
-      await page.getByRole("link", { name: "Run Agent" }).click();
+      await page
+        .getByTestId("onboarding-primary-step")
+        .getByRole("link", { name: "Run Agent" })
+        .click();
       await page.getByRole("heading", { name: "Run Agent" }).waitFor({
         timeout: 30_000,
       });
