@@ -74,6 +74,10 @@ export function HomeAdvancedPresentation({
             <strong>Getting started</strong>
             <span className="muted">First-agent checklist</span>
           </Link>
+          <Link className="action-tile" to="/examples">
+            <strong>Examples</strong>
+            <span className="muted">Verified osva-examples catalog</span>
+          </Link>
         </div>
       </SectionPanel>
 

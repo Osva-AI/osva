@@ -23,6 +23,11 @@ export const CONSOLE_NAV_SECTIONS: readonly ConsoleNavSection[] = [
         to: "/onboarding",
         navId: "getting-started",
       },
+      {
+        label: "Examples",
+        to: "/examples",
+        navId: "examples",
+      },
     ],
   },
   {

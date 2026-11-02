@@ -34,6 +34,8 @@ import { ToolsPage } from "./routes/tools-page";
 import { ToolDetailPage } from "./routes/tool-detail-page";
 import { ConnectorsPage } from "./routes/connectors-page";
 import { ConnectorDetailPage } from "./routes/connector-detail-page";
+import { ExampleDetailPage } from "./routes/example-detail-page";
+import { ExamplesPage } from "./routes/examples-page";
 import { OverviewPage } from "./routes/overview-page";
 import { KnowledgePage } from "./routes/knowledge-page";
 import { KnowledgeSourcePage } from "./routes/knowledge-source-page";
@@ -71,6 +73,11 @@ export function App() {
                     element={<Navigate to="/overview" replace />}
                   />
                   <Route path="/overview" element={<OverviewPage />} />
+                  <Route path="/examples" element={<ExamplesPage />} />
+                  <Route
+                    path="/examples/:exampleId"
+                    element={<ExampleDetailPage />}
+                  />
                   <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route path="/agents" element={<AgentsPage />} />
                   <Route path="/agents/new" element={<AgentCreatePage />} />

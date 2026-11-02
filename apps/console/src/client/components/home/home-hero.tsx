@@ -1,4 +1,5 @@
 import { LinkButton } from "../ui/button";
+import { HomeGoalDiscovery } from "./home-goal-discovery";
 
 export function HomeHero({
   canWrite,
@@ -14,12 +15,15 @@ export function HomeHero({
           What would you like AI to do for you?
         </h2>
         <p className="home-hero-subtitle">
-          OSVA helps you build agents and automated workflows that connect
-          models, tools, and approvals—then run them with clear lifecycle
-          visibility.
+          Describe an outcome to discover verified OSVA examples, then follow
+          documented source paths in the public osva-examples repository.
         </p>
+        <HomeGoalDiscovery canWrite={canWrite} />
         <div className="home-hero-actions action-row">
-          <LinkButton variant="primary" to="/onboarding">
+          <LinkButton variant="secondary" to="/examples">
+            Browse all examples
+          </LinkButton>
+          <LinkButton variant="secondary" to="/onboarding">
             Getting started
           </LinkButton>
           {canWrite ? (
@@ -45,6 +49,9 @@ export function HomeHero({
           Jump to real routes using your current workspace permissions.
         </p>
         <div className="home-hero-aside-links action-row">
+          <LinkButton variant="secondary" to="/examples">
+            Examples catalog
+          </LinkButton>
           <LinkButton
             variant="secondary"
             to={canWrite ? "/agents/new" : "/agents"}

@@ -75,6 +75,14 @@ describe("console production SPA routing", () => {
     expect(overview.status).toBe(200);
     expect(await overview.text()).toContain('id="root"');
 
+    const examples = await fetch(`${origin}/examples`);
+    expect(examples.status).toBe(200);
+    expect(await examples.text()).toContain('id="root"');
+
+    const exampleDetail = await fetch(`${origin}/examples/04-seo-worker`);
+    expect(exampleDetail.status).toBe(200);
+    expect(await exampleDetail.text()).toContain('id="root"');
+
     const runDetail = await fetch(`${origin}/runs/run-123`);
     expect(runDetail.status).toBe(200);
     expect(await runDetail.text()).toContain('id="root"');
@@ -104,5 +112,5 @@ describe("console production SPA routing", () => {
     const apiRoute = await fetch(`${origin}/api/v1/agents`);
     expect(apiRoute.status).toBe(503);
     expect(await apiRoute.text()).not.toContain('id="root"');
-  });
+  }, 30_000);
 });
