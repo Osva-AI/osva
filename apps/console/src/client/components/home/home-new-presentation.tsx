@@ -1,5 +1,6 @@
 import { useAgentVersionCatalogQuery } from "../../hooks/use-agents";
 import type { HomePageData } from "../../hooks/use-home-page-data";
+import { HomeFeaturedExamples } from "./home-featured-examples";
 import { HomeGettingStartedPreview } from "./home-getting-started-preview";
 import { HomeHero } from "./home-hero";
 import { HomePartialErrors } from "./home-partial-errors";
@@ -25,6 +26,7 @@ export function HomeNewPresentation({ data }: { readonly data: HomePageData }) {
     <div className="home-stack">
       <HomePartialErrors messages={data.partialErrors} />
       <HomeHero canWrite={data.canWrite} canExecute={data.canExecute} />
+      <HomeFeaturedExamples />
       <HomeGettingStartedPreview
         agents={data.agentsQuery.data?.agents}
         agentVersions={versionCatalogQuery.data?.entries}

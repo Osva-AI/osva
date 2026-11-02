@@ -42,6 +42,9 @@ export function HomeActivePresentation({
           <LinkButton variant="secondary" to="/testing">
             Testing Studio
           </LinkButton>
+          <LinkButton variant="secondary" to="/examples">
+            Discover examples
+          </LinkButton>
         </div>
       </SectionPanel>
 

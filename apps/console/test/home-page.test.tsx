@@ -81,6 +81,32 @@ describe("Home (OverviewPage)", () => {
     });
   });
 
+  it("runs local goal discovery and explains SEO matches", async () => {
+    stubEmptyWorkspace("DEVELOPER");
+    renderHome();
+    const user = userEvent.setup();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Describe your goal")).toBeTruthy();
+    });
+
+    await user.type(
+      screen.getByLabelText("Describe your goal"),
+      "create an SEO audit",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Find matching examples" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Recommended examples")).toBeTruthy();
+    });
+    expect(
+      screen.getByRole("heading", { name: "SEO audit worker", level: 3 }),
+    ).toBeTruthy();
+    expect(screen.getByText(/Why this matches/i)).toBeTruthy();
+  });
+
   it("persists advanced presentation preference", async () => {
     stubEmptyWorkspace("DEVELOPER");
     renderHome();
