@@ -32,7 +32,7 @@ async function loginAndSelectWorkspaceA(
     await page.waitForURL(/\/overview/, { timeout: 30_000 });
   }
 
-  await page.getByRole("heading", { name: "Overview", level: 1 }).waitFor({
+  await page.getByRole("heading", { name: "Home", level: 1 }).waitFor({
     timeout: 30_000,
   });
 }

@@ -47,7 +47,7 @@ function renderShell(initialPath = "/overview") {
         <MemoryRouter initialEntries={[initialPath]}>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/overview" element={<h1>Overview</h1>} />
+              <Route path="/overview" element={<h1>Home</h1>} />
               <Route path="/agents" element={<h1>Agents</h1>} />
               <Route
                 path="/workspace/access"
@@ -228,7 +228,7 @@ describe("AppShell navigation", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: "Overview", level: 1 }),
+        screen.getByRole("heading", { name: "Home", level: 1 }),
       ).toBeTruthy();
     });
   });
