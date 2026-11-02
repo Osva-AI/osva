@@ -22,6 +22,7 @@ import {
   slugAgentKeyFromName,
 } from "../lib/declarative-agent-manifest";
 import { ConsoleApiError } from "../lib/console-api";
+import { describeControlPlaneWriteRoleRequirement } from "../lib/control-plane-access";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
 export function AgentCreatePage() {
@@ -42,6 +43,8 @@ export function AgentCreatePage() {
   const [feedback, setFeedback] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
   const [errorStatus, setErrorStatus] = useState<number | undefined>();
+  const [createdAgentId, setCreatedAgentId] = useState<string | undefined>();
+  const [partialPublishFailure, setPartialPublishFailure] = useState(false);
 
   const canWrite =
     authQuery.data !== undefined &&
@@ -105,25 +108,34 @@ export function AgentCreatePage() {
     setFeedback(undefined);
     setErrorRequestId(undefined);
     setErrorStatus(undefined);
+    setPartialPublishFailure(false);
+    let agentIdForAttempt = createdAgentId;
     try {
-      const createdAgent = await createAgent.mutateAsync({
-        key: agentKey.trim(),
-        name: agentName.trim(),
-      });
+      if (agentIdForAttempt === undefined) {
+        const createdAgent = await createAgent.mutateAsync({
+          key: agentKey.trim(),
+          name: agentName.trim(),
+        });
+        agentIdForAttempt = createdAgent.id;
+        setCreatedAgentId(createdAgent.id);
+      }
       const manifest = {
         ...parsedManifest.value,
         key: agentKey.trim(),
         name: agentName.trim(),
       };
       const createdVersion = await createVersion.mutateAsync({
-        agentId: createdAgent.id,
+        agentId: agentIdForAttempt,
         manifest,
       });
       navigate(
-        `/agents/${createdAgent.id}/versions/${createdVersion.id}?published=1`,
+        `/agents/${agentIdForAttempt}/versions/${createdVersion.id}?published=1`,
       );
     } catch (error) {
       submittingRef.current = false;
+      if (agentIdForAttempt !== undefined) {
+        setPartialPublishFailure(true);
+      }
       setFeedback(
         error instanceof Error ? error.message : "Failed to create agent.",
       );
@@ -156,9 +168,21 @@ export function AgentCreatePage() {
       </header>
 
       {!canWrite ? (
-        <p className="muted">
-          Creating an agent requires an EDITOR or ADMIN role.
-        </p>
+        <p className="muted">{describeControlPlaneWriteRoleRequirement()}</p>
+      ) : null}
+
+      {partialPublishFailure && createdAgentId !== undefined ? (
+        <section className="panel">
+          <p>
+            Agent{" "}
+            <Link className="mono" to={`/agents/${createdAgentId}`}>
+              {createdAgentId}
+            </Link>{" "}
+            was created, but publishing the first AgentVersion failed. Fix the
+            manifest and use <strong>Publish agent version</strong> again — a
+            duplicate Agent row will not be created.
+          </p>
+        </section>
       ) : null}
 
       <section className="panel">

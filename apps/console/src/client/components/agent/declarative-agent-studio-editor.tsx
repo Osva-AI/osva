@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+
 import {
   applyDeclarativeStudioPatch,
   describeDeclarativeManifestValidation,
@@ -8,6 +10,18 @@ import {
   type DeclarativeStudioFields,
   type ManifestValidationView,
 } from "../../lib/declarative-agent-manifest";
+import {
+  AGENT_STUDIO_SECTIONS,
+  firstSectionWithError,
+  sectionHasFieldError,
+  type AgentStudioSectionId,
+} from "../../lib/agent-studio-sections";
+import {
+  describeExecutionAssuranceNote,
+  describeManifestAssurance,
+} from "../../lib/agent-studio-assurance";
+import { TextAreaField } from "../ui/field";
+import { InlineMessage } from "../ui/inline-message";
 import { ModelProfileVersionSelector } from "./model-profile-version-selector";
 import { ToolVersionBindingSelector } from "./tool-version-binding-selector";
 import { KnowledgeBindingSelector } from "./knowledge-binding-selector";
@@ -16,6 +30,15 @@ import { extractKnowledgeBindingRows } from "../../lib/agent-knowledge-bindings"
 import { extractMemoryBindingRows } from "../../lib/agent-memory-bindings";
 
 export type AgentStudioEditorMode = "guided" | "advanced";
+
+type ExecutionDraftFields = Pick<
+  DeclarativeStudioFields,
+  | "maxModelInvocations"
+  | "maxToolInvocations"
+  | "maxOutputTokens"
+  | "timeoutMs"
+  | "maxAttempts"
+>;
 
 export function DeclarativeAgentStudioEditor(props: {
   readonly manifestText: string;
@@ -40,6 +63,17 @@ export function DeclarativeAgentStudioEditor(props: {
           fieldErrors: {},
         });
 
+  const assurance = describeManifestAssurance(props.manifestText);
+  const [activeSection, setActiveSection] =
+    useState<AgentStudioSectionId>("identity");
+  const [executionDraft, setExecutionDraft] = useState<ExecutionDraftFields>(
+    () => pickExecutionDraft(fields),
+  );
+
+  useEffect(() => {
+    setExecutionDraft(pickExecutionDraft(fields));
+  }, [props.manifestText]);
+
   function patch(patch: Partial<DeclarativeStudioFields>): void {
     if (!parsed.ok) {
       return;
@@ -48,8 +82,19 @@ export function DeclarativeAgentStudioEditor(props: {
     props.onManifestTextChange(manifestToText(next));
   }
 
+  function commitExecutionDraft(): void {
+    patch(executionDraft);
+  }
+
+  function scrollToSection(sectionId: AgentStudioSectionId): void {
+    setActiveSection(sectionId);
+    document
+      .getElementById(`agent-studio-section-${sectionId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   const modeToggle = props.onModeChange ? (
-    <div className="toolbar">
+    <div className="toolbar agent-studio-mode-toggle">
       <button
         type="button"
         className={`button${props.mode === "guided" ? " primary" : ""}`}
@@ -69,58 +114,98 @@ export function DeclarativeAgentStudioEditor(props: {
     </div>
   ) : null;
 
-  const guided = (
-    <>
+  const invalidJsonGuidance =
+    !parsed.ok && props.mode === "guided" ? (
+      <InlineMessage tone="warning" title="Manifest JSON is invalid">
+        Guided editing is paused so your raw draft is preserved. Switch to{" "}
+        <button
+          type="button"
+          className="button"
+          onClick={() => props.onModeChange?.("advanced")}
+        >
+          Advanced JSON
+        </button>{" "}
+        to fix syntax, then return to Guided.
+      </InlineMessage>
+    ) : null;
+
+  const identitySection = (
+    <section
+      id="agent-studio-section-identity"
+      className="panel agent-studio-section"
+      aria-labelledby="agent-studio-identity-title"
+    >
+      <h2 className="section-title" id="agent-studio-identity-title">
+        Identity & instructions
+      </h2>
+      <p className="muted agent-studio-section-intro">
+        Required fields for every declarative agent. Instructions are trusted
+        configuration — they are not end-user Run input.
+      </p>
+
       {props.showManifestKeyFields ? (
         <div className="filters">
           <div className="field">
-            <label htmlFor="studio-manifest-name">Display name</label>
+            <label htmlFor="studio-manifest-name" className="field-label">
+              Display name
+            </label>
             <input
               id="studio-manifest-name"
+              className="ui-control"
               value={fields.manifestName}
-              disabled={props.disabled}
+              disabled={props.disabled || !parsed.ok}
               onChange={(event) => patch({ manifestName: event.target.value })}
             />
           </div>
           <div className="field">
-            <label htmlFor="studio-manifest-key">Agent key</label>
+            <label htmlFor="studio-manifest-key" className="field-label">
+              Agent key
+              <span className="field-badge field-badge-required">Required</span>
+            </label>
             <input
               id="studio-manifest-key"
+              className="ui-control"
               value={fields.manifestKey}
-              disabled={props.disabled}
+              disabled={props.disabled || !parsed.ok}
               onChange={(event) => patch({ manifestKey: event.target.value })}
             />
-            <p className="muted">
+            <p className="field-hint">
               Workspace-unique identifier used in APIs and workflows.
             </p>
           </div>
         </div>
       ) : null}
 
-      <div className="field">
-        <label htmlFor="studio-instructions">Instructions</label>
-        <textarea
-          id="studio-instructions"
-          rows={8}
-          value={fields.instructions}
-          disabled={props.disabled}
-          onChange={(event) => patch({ instructions: event.target.value })}
-          aria-invalid={validation.fieldErrors.instructions !== undefined}
-        />
-        <p className="muted">
-          Tell the agent its role, tone, and boundaries. These instructions are
-          trusted configuration — not end-user Run input.
-        </p>
-        {validation.fieldErrors.instructions !== undefined ? (
-          <p className="error-inline" role="alert">
-            {validation.fieldErrors.instructions}
-          </p>
-        ) : null}
-      </div>
+      <TextAreaField
+        id="studio-instructions"
+        label="Instructions"
+        required
+        rows={10}
+        value={fields.instructions}
+        disabled={props.disabled || !parsed.ok}
+        error={validation.fieldErrors.instructions}
+        hint="Purpose: what this agent is for. Behavior: how it should respond. Boundaries: topics or actions to refuse. All of this is stored in the single canonical instructions field."
+        onChange={(event) => patch({ instructions: event.target.value })}
+      />
+    </section>
+  );
 
+  const modelSection = (
+    <section
+      id="agent-studio-section-model"
+      className="panel agent-studio-section"
+      aria-labelledby="agent-studio-model-title"
+    >
+      <h2 className="section-title" id="agent-studio-model-title">
+        Model
+      </h2>
+      <p className="muted agent-studio-section-intro">
+        Bind an immutable ModelProfileVersion. The manifest stores the exact
+        version ID — OSVA never silently upgrades to latest.
+      </p>
       <ModelProfileVersionSelector
         value={fields.modelProfileVersionId}
-        disabled={props.disabled}
+        disabled={props.disabled || !parsed.ok}
         onChange={(selection) => {
           if (selection === undefined) {
             patch({ modelProfileVersionId: "" });
@@ -130,119 +215,213 @@ export function DeclarativeAgentStudioEditor(props: {
         }}
       />
       {validation.fieldErrors.model !== undefined ? (
-        <p className="error-inline" role="alert">
+        <p className="field-error" role="alert">
           {validation.fieldErrors.model}
         </p>
       ) : null}
+      <p className="muted">
+        Missing profiles or connections?{" "}
+        <Link to="/models/connections">Configure model connections</Link> and{" "}
+        <Link to="/models/profiles">publish a model profile version</Link>.
+        Registering a connection does not prove provider calls succeed until a
+        Run executes.
+      </p>
+    </section>
+  );
 
+  const toolsSection = (
+    <section
+      id="agent-studio-section-tools"
+      className="panel agent-studio-section"
+      aria-labelledby="agent-studio-tools-title"
+    >
+      <h2 className="section-title" id="agent-studio-tools-title">
+        Tools
+        <span className="field-badge field-badge-optional">Optional</span>
+      </h2>
+      <p className="muted agent-studio-section-intro">
+        Attach immutable ToolVersions with logical binding names. Permissions
+        follow existing ToolGateway policy — prompts cannot grant access.
+      </p>
       <ToolVersionBindingSelector
         manifestText={props.manifestText}
-        disabled={props.disabled}
+        disabled={props.disabled || !parsed.ok}
         onManifestChange={props.onManifestTextChange}
       />
       {validation.fieldErrors.tools !== undefined ? (
-        <p className="error-inline" role="alert">
+        <p className="field-error" role="alert">
           {validation.fieldErrors.tools}
         </p>
       ) : null}
+    </section>
+  );
 
+  const knowledgeSection = (
+    <section
+      id="agent-studio-section-knowledge"
+      className="panel agent-studio-section"
+      aria-labelledby="agent-studio-knowledge-title"
+    >
+      <h2 className="section-title" id="agent-studio-knowledge-title">
+        Knowledge
+        <span className="field-badge field-badge-optional">Optional</span>
+      </h2>
       <KnowledgeBindingSelector
         manifestText={props.manifestText}
-        disabled={props.disabled}
+        disabled={props.disabled || !parsed.ok}
         onManifestChange={props.onManifestTextChange}
       />
+    </section>
+  );
+
+  const memorySection = (
+    <section
+      id="agent-studio-section-memory"
+      className="panel agent-studio-section"
+      aria-labelledby="agent-studio-memory-title"
+    >
+      <h2 className="section-title" id="agent-studio-memory-title">
+        Memory
+        <span className="field-badge field-badge-optional">Optional</span>
+      </h2>
       <MemoryBindingSelector
         manifestText={props.manifestText}
-        disabled={props.disabled}
+        disabled={props.disabled || !parsed.ok}
         onManifestChange={props.onManifestTextChange}
       />
+    </section>
+  );
 
-      <details className="panel">
-        <summary>Execution and limits</summary>
-        <div className="filters">
-          <div className="field">
-            <label htmlFor="studio-max-model">Max model calls</label>
-            <input
-              id="studio-max-model"
-              inputMode="numeric"
-              value={fields.maxModelInvocations}
-              disabled={props.disabled}
-              onChange={(event) =>
-                patch({ maxModelInvocations: event.target.value })
-              }
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="studio-max-tool">Max tool calls</label>
-            <input
-              id="studio-max-tool"
-              inputMode="numeric"
-              value={fields.maxToolInvocations}
-              disabled={props.disabled}
-              onChange={(event) =>
-                patch({ maxToolInvocations: event.target.value })
-              }
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="studio-max-output">
-              Max output tokens (optional)
-            </label>
-            <input
-              id="studio-max-output"
-              inputMode="numeric"
-              value={fields.maxOutputTokens}
-              disabled={props.disabled}
-              onChange={(event) =>
-                patch({ maxOutputTokens: event.target.value })
-              }
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="studio-timeout">Timeout (ms)</label>
-            <input
-              id="studio-timeout"
-              inputMode="numeric"
-              value={fields.timeoutMs}
-              disabled={props.disabled}
-              onChange={(event) => patch({ timeoutMs: event.target.value })}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="studio-max-attempts">Max attempts</label>
-            <input
-              id="studio-max-attempts"
-              inputMode="numeric"
-              value={fields.maxAttempts}
-              disabled={props.disabled}
-              onChange={(event) => patch({ maxAttempts: event.target.value })}
-            />
-          </div>
+  const executionSection = (
+    <section
+      id="agent-studio-section-execution"
+      className="panel agent-studio-section"
+      aria-labelledby="agent-studio-execution-title"
+    >
+      <h2 className="section-title" id="agent-studio-execution-title">
+        Execution settings
+      </h2>
+      <p className="muted agent-studio-section-intro">
+        Technical limits for Runs. Values commit when you leave a field so
+        partial numbers are not silently rewritten while typing.
+      </p>
+      <div className="filters">
+        <div className="field">
+          <label htmlFor="studio-max-model">Max model calls</label>
+          <input
+            id="studio-max-model"
+            className="ui-control"
+            inputMode="numeric"
+            value={executionDraft.maxModelInvocations}
+            disabled={props.disabled || !parsed.ok}
+            onChange={(event) =>
+              setExecutionDraft((current) => ({
+                ...current,
+                maxModelInvocations: event.target.value,
+              }))
+            }
+            onBlur={commitExecutionDraft}
+          />
         </div>
-        {validation.fieldErrors.budgets !== undefined ||
-        validation.fieldErrors.execution !== undefined ? (
-          <p className="error-inline" role="alert">
-            {validation.fieldErrors.budgets ?? validation.fieldErrors.execution}
-          </p>
-        ) : null}
+        <div className="field">
+          <label htmlFor="studio-max-tool">Max tool calls</label>
+          <input
+            id="studio-max-tool"
+            className="ui-control"
+            inputMode="numeric"
+            value={executionDraft.maxToolInvocations}
+            disabled={props.disabled || !parsed.ok}
+            onChange={(event) =>
+              setExecutionDraft((current) => ({
+                ...current,
+                maxToolInvocations: event.target.value,
+              }))
+            }
+            onBlur={commitExecutionDraft}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="studio-max-output">
+            Max output tokens
+            <span className="field-badge field-badge-optional">Optional</span>
+          </label>
+          <input
+            id="studio-max-output"
+            className="ui-control"
+            inputMode="numeric"
+            value={executionDraft.maxOutputTokens}
+            disabled={props.disabled || !parsed.ok}
+            onChange={(event) =>
+              setExecutionDraft((current) => ({
+                ...current,
+                maxOutputTokens: event.target.value,
+              }))
+            }
+            onBlur={commitExecutionDraft}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="studio-timeout">Timeout (ms)</label>
+          <input
+            id="studio-timeout"
+            className="ui-control"
+            inputMode="numeric"
+            value={executionDraft.timeoutMs}
+            disabled={props.disabled || !parsed.ok}
+            onChange={(event) =>
+              setExecutionDraft((current) => ({
+                ...current,
+                timeoutMs: event.target.value,
+              }))
+            }
+            onBlur={commitExecutionDraft}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="studio-max-attempts">Max attempts</label>
+          <input
+            id="studio-max-attempts"
+            className="ui-control"
+            inputMode="numeric"
+            value={executionDraft.maxAttempts}
+            disabled={props.disabled || !parsed.ok}
+            onChange={(event) =>
+              setExecutionDraft((current) => ({
+                ...current,
+                maxAttempts: event.target.value,
+              }))
+            }
+            onBlur={commitExecutionDraft}
+          />
+        </div>
+      </div>
+      {validation.fieldErrors.budgets !== undefined ||
+      validation.fieldErrors.execution !== undefined ? (
+        <p className="field-error" role="alert">
+          {validation.fieldErrors.budgets ?? validation.fieldErrors.execution}
+        </p>
+      ) : null}
 
+      <details className="agent-studio-advanced-details">
+        <summary>Output JSON Schema (advanced)</summary>
         <div className="field">
           <label>
             <input
               type="checkbox"
               checked={fields.useCustomOutputSchema}
-              disabled={props.disabled}
+              disabled={props.disabled || !parsed.ok}
               onChange={(event) =>
                 patch({ useCustomOutputSchema: event.target.checked })
               }
             />{" "}
-            Customize output JSON Schema (advanced)
+            Customize output schema
           </label>
           {fields.useCustomOutputSchema ? (
             <textarea
+              className="ui-control ui-control-textarea"
               rows={8}
               value={fields.outputSchemaText}
-              disabled={props.disabled}
+              disabled={props.disabled || !parsed.ok}
               spellCheck={false}
               onChange={(event) =>
                 patch({ outputSchemaText: event.target.value })
@@ -255,59 +434,160 @@ export function DeclarativeAgentStudioEditor(props: {
             </p>
           )}
           {validation.fieldErrors.outputSchema !== undefined ? (
-            <p className="error-inline" role="alert">
+            <p className="field-error" role="alert">
               {validation.fieldErrors.outputSchema}
             </p>
           ) : null}
         </div>
       </details>
-    </>
+    </section>
   );
 
-  const advancedJson = (
-    <div className="field">
-      <label htmlFor="studio-manifest-json">Manifest (JSON)</label>
-      <textarea
+  const advancedJsonSection = (
+    <section
+      id="agent-studio-section-advanced"
+      className="panel agent-studio-section"
+      aria-labelledby="agent-studio-advanced-title"
+    >
+      <h2 className="section-title" id="agent-studio-advanced-title">
+        Manifest JSON
+      </h2>
+      <p className="muted agent-studio-section-intro">
+        Same canonical draft as guided fields. Unknown valid fields are
+        preserved. Invalid JSON blocks publishing until corrected.
+      </p>
+      <TextAreaField
         id="studio-manifest-json"
+        label="AgentVersion manifest"
         rows={22}
         value={props.manifestText}
         spellCheck={false}
         disabled={props.disabled}
+        error={parsed.ok ? undefined : parsed.message}
         onChange={(event) => props.onManifestTextChange(event.target.value)}
       />
-      {!parsed.ok ? (
-        <p className="error-inline" role="alert">
-          {parsed.message}
-        </p>
-      ) : null}
-    </div>
+    </section>
   );
 
+  const guidedSections =
+    props.mode === "guided" ? (
+      <>
+        {invalidJsonGuidance}
+        {identitySection}
+        {modelSection}
+        {toolsSection}
+        {knowledgeSection}
+        {memorySection}
+        {executionSection}
+      </>
+    ) : null;
+
+  const advancedSections =
+    props.mode === "advanced" ? (
+      <>
+        {!parsed.ok ? (
+          <InlineMessage tone="error" title="JSON syntax invalid">
+            {parsed.message} Switch back to Guided after syntax is valid to use
+            form fields.
+          </InlineMessage>
+        ) : (
+          <InlineMessage tone="info" title="Advanced JSON is authoritative">
+            Edits here update the same draft as Guided. Switch modes anytime —
+            configuration is not reset.
+          </InlineMessage>
+        )}
+        {advancedJsonSection}
+      </>
+    ) : null;
+
   const summaryMessages = useMemo(
-    () => validation.messages.slice(0, 6),
+    () => validation.messages.slice(0, 8),
     [validation.messages],
   );
 
+  const errorSectionId = firstSectionWithError(validation.fieldErrors);
+
   return (
     <div className="agent-studio-editor">
-      {modeToggle}
-      {props.mode === "guided" ? guided : null}
-      {props.mode === "advanced" ? (
-        <>
-          {guided}
-          {advancedJson}
-        </>
-      ) : null}
-      {!validation.ok && summaryMessages.length > 0 ? (
-        <div className="panel" role="alert">
-          <h2 className="section-title">Validation</h2>
-          <ul>
-            {summaryMessages.map((message) => (
-              <li key={message}>{message}</li>
-            ))}
+      <div className="agent-studio-layout">
+        <nav
+          className="agent-studio-nav panel"
+          aria-label="Agent configuration sections"
+        >
+          <p className="agent-studio-nav-title">Sections</p>
+          <ul className="agent-studio-nav-list">
+            {AGENT_STUDIO_SECTIONS.filter(
+              (section) =>
+                section.id !== "advanced" || props.mode === "advanced",
+            ).map((section) => {
+              const hasError = sectionHasFieldError(
+                section,
+                validation.fieldErrors,
+              );
+              return (
+                <li key={section.id}>
+                  <button
+                    type="button"
+                    className={`agent-studio-nav-link${activeSection === section.id ? " is-active" : ""}${hasError ? " has-error" : ""}`}
+                    onClick={() => scrollToSection(section.id)}
+                  >
+                    {section.title}
+                    {hasError ? (
+                      <span className="agent-studio-nav-error">Issue</span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
+        </nav>
+
+        <div className="agent-studio-main stack">
+          <div className="agent-studio-status panel">
+            {modeToggle}
+            <InlineMessage
+              tone={
+                assurance.level === "draft-valid"
+                  ? "success"
+                  : assurance.level === "syntax-invalid"
+                    ? "error"
+                    : "warning"
+              }
+              title={assurance.title}
+            >
+              {assurance.detail}
+            </InlineMessage>
+            <p className="muted">{describeExecutionAssuranceNote()}</p>
+          </div>
+
+          {guidedSections}
+          {advancedSections}
+
+          {!validation.ok && summaryMessages.length > 0 ? (
+            <div className="panel" role="alert" id="agent-studio-validation">
+              <h2 className="section-title">Validation summary</h2>
+              <ul className="agent-studio-validation-list">
+                {summaryMessages.map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+              {errorSectionId !== undefined ? (
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => scrollToSection(errorSectionId)}
+                >
+                  Jump to first issue
+                </button>
+              ) : null}
+            </div>
+          ) : validation.ok ? (
+            <p className="muted" role="status">
+              Ready for review when model and instructions are complete.
+            </p>
+          ) : null}
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
@@ -316,22 +596,35 @@ export function AgentVersionReviewPanel(props: {
   readonly manifestText: string;
 }) {
   const parsed = parseManifestRecord(props.manifestText);
+  const assurance = describeManifestAssurance(props.manifestText);
   if (!parsed.ok) {
     return (
-      <p className="error-inline" role="alert">
+      <InlineMessage tone="error" title="Cannot review yet">
         {parsed.message}
-      </p>
+      </InlineMessage>
     );
   }
   const fields = extractDeclarativeStudioFields(parsed.value);
   const validation = describeDeclarativeManifestValidation(parsed.value);
   return (
-    <section className="panel">
+    <section className="panel agent-studio-review">
       <h2 className="section-title">Review before publishing</h2>
-      <p className="muted">
-        Publishing saves an immutable AgentVersion. Model and tool calls during
-        a Run may incur provider cost.
-      </p>
+      <InlineMessage
+        tone={validation.ok ? "info" : "warning"}
+        title={assurance.title}
+      >
+        {assurance.detail}
+      </InlineMessage>
+      <ul className="muted agent-studio-review-notes">
+        <li>
+          Publishing creates a new immutable AgentVersion. Earlier versions stay
+          unchanged.
+        </li>
+        <li>Publishing does not execute the agent or call a model.</li>
+        <li>
+          Model and tool usage during Runs may incur external provider cost.
+        </li>
+      </ul>
       <dl className="meta-grid">
         <div>
           <dt>Name</dt>
@@ -380,6 +673,14 @@ export function AgentVersionReviewPanel(props: {
           </dd>
         </div>
         <div>
+          <dt>Timeout</dt>
+          <dd>{fields.timeoutMs} ms</dd>
+        </div>
+        <div>
+          <dt>Max attempts</dt>
+          <dd>{fields.maxAttempts}</dd>
+        </div>
+        <div>
           <dt>Model call budget</dt>
           <dd>{fields.maxModelInvocations}</dd>
         </div>
@@ -387,23 +688,44 @@ export function AgentVersionReviewPanel(props: {
           <dt>Tool call budget</dt>
           <dd>{fields.maxToolInvocations}</dd>
         </div>
+        {fields.maxOutputTokens.trim().length > 0 ? (
+          <div>
+            <dt>Max output tokens</dt>
+            <dd>{fields.maxOutputTokens}</dd>
+          </div>
+        ) : null}
       </dl>
       <p className="muted">
         Instructions preview:{" "}
         {fields.instructions.trim().length > 0
-          ? fields.instructions.trim().slice(0, 240)
+          ? fields.instructions.trim().slice(0, 320)
           : "(empty)"}
-        {fields.instructions.length > 240 ? "…" : ""}
+        {fields.instructions.length > 320 ? "…" : ""}
       </p>
       {!validation.ok ? (
-        <p className="error-inline" role="alert">
+        <p className="field-error" role="alert">
           Fix validation issues before publishing.
         </p>
       ) : (
-        <p className="muted">Configuration passes local manifest validation.</p>
+        <p className="muted" role="status">
+          Configuration passes local manifest validation. Execute a Run to
+          verify provider and runtime behavior.
+        </p>
       )}
     </section>
   );
+}
+
+function pickExecutionDraft(
+  fields: DeclarativeStudioFields,
+): ExecutionDraftFields {
+  return {
+    maxModelInvocations: fields.maxModelInvocations,
+    maxToolInvocations: fields.maxToolInvocations,
+    maxOutputTokens: fields.maxOutputTokens,
+    timeoutMs: fields.timeoutMs,
+    maxAttempts: fields.maxAttempts,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -49,6 +49,7 @@ import {
 } from "../lib/declarative-agent-manifest";
 import { ConsoleApiError } from "../lib/console-api";
 import { parseWorkflowRunInputJson } from "../lib/workflow-run-input";
+import { describeControlPlaneWriteRoleRequirement } from "../lib/control-plane-access";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
 type AuthoringSurface = "studio" | "developer";
@@ -86,20 +87,33 @@ export function AgentVersionCreatePage() {
     if (agent === undefined || manifestInitialized) {
       return;
     }
-    const sourceManifest = sourceVersionQuery.data?.manifest;
-    if (copyFromVersionId !== undefined && sourceVersionQuery.isLoading) {
+    if (copyFromVersionId !== undefined) {
+      if (sourceVersionQuery.isLoading) {
+        return;
+      }
+      if (
+        sourceVersionQuery.isError ||
+        sourceVersionQuery.data?.manifest === undefined
+      ) {
+        setManifestInitialized(true);
+        return;
+      }
+      const base = cloneManifestForNewVersion(
+        sourceVersionQuery.data.manifest,
+        {
+          key: agent.key,
+          name: agent.name,
+        },
+      );
+      setManifestText(manifestToText(base));
+      setPrimaryModelVersionId(readPrimaryModelProfileVersionId(base) ?? "");
+      setManifestInitialized(true);
       return;
     }
-    const base =
-      sourceManifest !== undefined
-        ? cloneManifestForNewVersion(sourceManifest, {
-            key: agent.key,
-            name: agent.name,
-          })
-        : defaultDeclarativeManifestTemplate({
-            key: agent.key,
-            name: agent.name,
-          });
+    const base = defaultDeclarativeManifestTemplate({
+      key: agent.key,
+      name: agent.name,
+    });
     setManifestText(manifestToText(base));
     setPrimaryModelVersionId(readPrimaryModelProfileVersionId(base) ?? "");
     setManifestInitialized(true);
@@ -108,6 +122,7 @@ export function AgentVersionCreatePage() {
     copyFromVersionId,
     manifestInitialized,
     sourceVersionQuery.data?.manifest,
+    sourceVersionQuery.isError,
     sourceVersionQuery.isLoading,
   ]);
 
@@ -166,6 +181,12 @@ export function AgentVersionCreatePage() {
   }
 
   const resolvedAgentId = agentId;
+
+  const sourceVersionUnavailable =
+    copyFromVersionId !== undefined &&
+    manifestInitialized &&
+    (sourceVersionQuery.isError ||
+      sourceVersionQuery.data?.manifest === undefined);
 
   if (authQuery.isLoading || agentQuery.isLoading) {
     return <LoadingBlock label="Loading agent…" />;
@@ -258,9 +279,14 @@ export function AgentVersionCreatePage() {
       </header>
 
       {!canWrite ? (
-        <p className="muted">
-          Creating an AgentVersion requires an EDITOR or ADMIN role.
-        </p>
+        <p className="muted">{describeControlPlaneWriteRoleRequirement()}</p>
+      ) : null}
+
+      {sourceVersionUnavailable ? (
+        <EmptyState
+          title="Source AgentVersion unavailable"
+          description={`Version ${copyFromVersionId} is missing or not visible in this workspace. The draft was not replaced with defaults.`}
+        />
       ) : null}
 
       <section className="panel">
@@ -289,14 +315,14 @@ export function AgentVersionCreatePage() {
 
         {surface === "studio" ? (
           <>
-            {copyFromVersionId !== undefined ? (
+            {copyFromVersionId !== undefined && !sourceVersionUnavailable ? (
               <p className="muted">
                 Copied configuration from version{" "}
                 <span className="mono">{copyFromVersionId}</span>. The original
                 version is unchanged.
               </p>
             ) : null}
-            {!manifestInitialized ? (
+            {sourceVersionUnavailable ? null : !manifestInitialized ? (
               <LoadingBlock label="Preparing draft…" />
             ) : (
               <>
