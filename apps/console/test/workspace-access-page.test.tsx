@@ -193,7 +193,6 @@ describe("Workspace access page", () => {
   });
 
   it("requires confirmation before removal", async () => {
-    confirmSpy.mockImplementationOnce(() => false);
     const fetchMock = stubMemberships("OWNER");
     renderPage();
     await waitFor(() => {
@@ -202,7 +201,8 @@ describe("Workspace access page", () => {
       ).toBeGreaterThan(0);
     });
     fireEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]!);
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(
       fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE"),
     ).toBe(false);

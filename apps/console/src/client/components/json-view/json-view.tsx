@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { safeJsonStringify } from "../../lib/formatting";
+import { Button } from "../ui/button";
 
 interface JsonViewProps {
   readonly value: unknown;
@@ -21,13 +22,13 @@ export function JsonView({ value, label }: JsonViewProps) {
 
   return (
     <div className="json-view">
-      <div className="toolbar" style={{ marginBottom: 8 }}>
+      <div className="json-view-toolbar">
         {label !== undefined ? (
-          <strong style={{ fontSize: "0.82rem" }}>{label}</strong>
+          <strong className="json-view-label">{label}</strong>
         ) : null}
-        <button type="button" className="button" onClick={() => void copy()}>
+        <Button type="button" variant="secondary" onClick={() => void copy()}>
           {copied ? "Copied" : "Copy JSON"}
-        </button>
+        </Button>
       </div>
       <pre>{text}</pre>
     </div>

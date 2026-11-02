@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { Button, LinkButton } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
 import { useAgentsListQuery } from "../hooks/use-agents";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import { formatTimestamp } from "../lib/formatting";
@@ -17,33 +21,31 @@ export function AgentsPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Agents</h1>
-          <p className="page-subtitle">
-            Agent registry in the authenticated workspace. Versions are
-            immutable; launch individual Runs from an AgentVersion.
-          </p>
-        </div>
-        <div className="toolbar">
-          <Link className="button" to="/onboarding">
-            First-agent guide
-          </Link>
-          {canWrite ? (
-            <Link className="button primary" to="/agents/new">
-              Create Agent
-            </Link>
-          ) : null}
-          <button
-            type="button"
-            className="button"
-            onClick={() => void agentsQuery.refetch()}
-            disabled={agentsQuery.isFetching}
-          >
-            Refresh
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        title="Agents"
+        subtitle="Agent registry in the authenticated workspace. Versions are immutable; launch individual Runs from an AgentVersion."
+        actions={
+          <>
+            <LinkButton variant="secondary" to="/onboarding">
+              First-agent guide
+            </LinkButton>
+            {canWrite ? (
+              <LinkButton variant="primary" to="/agents/new">
+                Create Agent
+              </LinkButton>
+            ) : null}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void agentsQuery.refetch()}
+              disabled={agentsQuery.isFetching}
+              loading={agentsQuery.isFetching}
+            >
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       {!canWrite ? (
         <p className="muted">
@@ -62,38 +64,43 @@ export function AgentsPage() {
         <EmptyState
           title="No agents yet."
           description="Create a no-code agent in this workspace, or open an existing agent to publish a new version before launching a Run."
+          action={
+            canWrite ? (
+              <LinkButton variant="primary" to="/agents/new">
+                Create Agent
+              </LinkButton>
+            ) : undefined
+          }
         />
       ) : null}
 
       {agentsQuery.data !== undefined && agentsQuery.data.agents.length > 0 ? (
-        <section className="panel">
-          <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Key</th>
-                  <th>Agent ID</th>
-                  <th>Created</th>
+        <SectionPanel title="Agent registry">
+          <DataTableRegion caption="Agents in this workspace">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Key</th>
+                <th scope="col">Agent ID</th>
+                <th scope="col">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agentsQuery.data.agents.map((agent) => (
+                <tr key={agent.id}>
+                  <td>{agent.name}</td>
+                  <td className="mono">{agent.key}</td>
+                  <td>
+                    <Link className="mono" to={`/agents/${agent.id}`}>
+                      {agent.id}
+                    </Link>
+                  </td>
+                  <td>{formatTimestamp(agent.createdAt)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {agentsQuery.data.agents.map((agent) => (
-                  <tr key={agent.id}>
-                    <td>{agent.name}</td>
-                    <td className="mono">{agent.key}</td>
-                    <td>
-                      <Link className="mono" to={`/agents/${agent.id}`}>
-                        {agent.id}
-                      </Link>
-                    </td>
-                    <td>{formatTimestamp(agent.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              ))}
+            </tbody>
+          </DataTableRegion>
+        </SectionPanel>
       ) : null}
     </>
   );
