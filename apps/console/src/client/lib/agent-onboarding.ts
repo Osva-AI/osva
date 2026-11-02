@@ -13,7 +13,35 @@ export interface OnboardingContext {
   readonly agentId?: string;
   readonly agentVersionId?: string;
   readonly runId?: string;
+  readonly exampleId?: string;
 }
+
+/** Core guided journey steps (workflow exploration is optional and separate). */
+export const GUIDED_ONBOARDING_CORE_STEP_IDS = [
+  "workspace",
+  "model",
+  "create-agent",
+  "publish",
+  "run",
+  "inspect",
+] as const;
+
+export type GuidedOnboardingCoreStepId =
+  (typeof GUIDED_ONBOARDING_CORE_STEP_IDS)[number];
+
+export type OnboardingJourneyState =
+  | "loading"
+  | "not_started"
+  | "in_progress"
+  | "blocked"
+  | "ready_to_test"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "indeterminate";
+
+export type GuidedStepVisualState =
+  "complete" | "current" | "upcoming" | "needs_attention" | "not_verified";
 
 export interface OnboardingStep {
   readonly id: string;
@@ -51,6 +79,7 @@ export function parseOnboardingContext(
     agentId: optionalId(searchParams.get("agentId")),
     agentVersionId: optionalId(searchParams.get("agentVersionId")),
     runId: optionalId(searchParams.get("runId")),
+    exampleId: optionalId(searchParams.get("exampleId")),
   };
 }
 
@@ -64,6 +93,9 @@ export function onboardingSearch(context: OnboardingContext): string {
   }
   if (context.runId !== undefined) {
     params.set("runId", context.runId);
+  }
+  if (context.exampleId !== undefined) {
+    params.set("exampleId", context.exampleId);
   }
   const query = params.toString();
   return query.length === 0 ? "" : `?${query}`;
@@ -219,6 +251,116 @@ export function deriveOnboardingProgress(
   return base;
 }
 
+export function deriveOnboardingJourneyState(
+  flags: OnboardingProgressFlags,
+  progressLoading: boolean,
+  progressLoadError: boolean,
+): OnboardingJourneyState {
+  if (progressLoadError) {
+    return "indeterminate";
+  }
+  if (progressLoading || flags.progressIndeterminate) {
+    return "loading";
+  }
+  if (flags.sampleRunSucceeded) {
+    return "succeeded";
+  }
+  if (!flags.workspaceReady) {
+    return "not_started";
+  }
+  if (flags.publishedVersionReady && !flags.sampleRunSubmitted) {
+    return "ready_to_test";
+  }
+  switch (flags.runPhase) {
+    case "pending":
+    case "queued":
+    case "running":
+      return "running";
+    case "failed":
+    case "cancelled":
+    case "timed_out":
+      return "failed";
+    default:
+      break;
+  }
+  if (!flags.modelReady || !flags.declarativeAgentReady) {
+    return "in_progress";
+  }
+  if (flags.publishedVersionReady && flags.sampleRunSubmitted) {
+    return "in_progress";
+  }
+  return "in_progress";
+}
+
+export function guidedOnboardingCoreSteps(
+  steps: readonly NoCodeOnboardingStep[],
+): readonly NoCodeOnboardingStep[] {
+  const allowed = new Set<string>(GUIDED_ONBOARDING_CORE_STEP_IDS);
+  return steps.filter((step) => allowed.has(step.id));
+}
+
+export function findPrimaryOnboardingStep(
+  steps: readonly NoCodeOnboardingStep[],
+): NoCodeOnboardingStep | undefined {
+  const current = steps.find((step) => step.status === "current");
+  if (current !== undefined) {
+    return current;
+  }
+  const blocked = steps.find((step) => step.status === "blocked");
+  if (blocked !== undefined) {
+    return blocked;
+  }
+  if (
+    steps.every((step) => step.id === "workflow" || step.status === "complete")
+  ) {
+    return steps.find((step) => step.id === "workflow");
+  }
+  return steps.find((step) => step.status === "upcoming");
+}
+
+export function guidedStepVisualState(
+  step: NoCodeOnboardingStep,
+  flags: OnboardingProgressFlags,
+): GuidedStepVisualState {
+  if (flags.progressIndeterminate && step.id !== "workspace") {
+    return "not_verified";
+  }
+  if (step.status === "complete") {
+    return "complete";
+  }
+  if (step.status === "current") {
+    if (
+      (step.id === "run" || step.id === "inspect") &&
+      flags.sampleRunSubmitted &&
+      !flags.sampleRunSucceeded
+    ) {
+      return "needs_attention";
+    }
+    return "current";
+  }
+  if (step.status === "blocked") {
+    return "needs_attention";
+  }
+  return "upcoming";
+}
+
+export function guidedStepVisualLabel(state: GuidedStepVisualState): string {
+  switch (state) {
+    case "complete":
+      return "Complete";
+    case "current":
+      return "Current";
+    case "upcoming":
+      return "Upcoming";
+    case "needs_attention":
+      return "Needs attention";
+    case "not_verified":
+      return "Not verified";
+    default:
+      return "Upcoming";
+  }
+}
+
 export function noCodeFirstAgentSteps(
   context: OnboardingContext,
   flags: OnboardingProgressFlags,
@@ -241,7 +383,7 @@ export function noCodeFirstAgentSteps(
   const steps: Array<Omit<NoCodeOnboardingStep, "status" | "statusDetail">> = [
     {
       id: "workspace",
-      title: "Select workspace",
+      title: "Prepare workspace",
       description:
         "All resources and Runs are scoped to the workspace selected in the sidebar.",
       to: "/select-workspace",
@@ -249,16 +391,16 @@ export function noCodeFirstAgentSteps(
     },
     {
       id: "model",
-      title: "Configure an approved model",
+      title: "Configure model capabilities",
       description:
-        "Create a provider connection, then a model profile version that references it. Declarative agents bind a profile version at publish time.",
+        "Choose the model your agent will use: create a provider connection, then a ModelProfileVersion bound to that connection. Declarative agents bind a profile version at publish time.",
       to: "/models",
       actionLabel: "Open Models",
       requiresWrite: true,
     },
     {
       id: "create-agent",
-      title: "Create a declarative agent",
+      title: "Create your agent",
       description:
         "Use Agent Studio to define instructions and capabilities without editing runtime manifest JSON in the browser.",
       to: "/agents/new",
@@ -267,16 +409,16 @@ export function noCodeFirstAgentSteps(
     },
     {
       id: "publish",
-      title: "Publish an immutable AgentVersion",
+      title: "Publish a version",
       description:
-        "Publishing appends a new version. Previous versions are never rewritten.",
+        "Publishing appends an immutable AgentVersion. Previous versions are never rewritten.",
       to: versionPath,
       actionLabel: "Publish version",
       requiresWrite: true,
     },
     {
       id: "run",
-      title: "Run a sample task",
+      title: "Test your agent",
       description:
         "Launch a Run from the AgentVersion page. HTTP 201 means queued, not SUCCEEDED.",
       to: versionPath,
@@ -285,9 +427,9 @@ export function noCodeFirstAgentSteps(
     },
     {
       id: "inspect",
-      title: "Inspect output and execution details",
+      title: "Inspect the result",
       description:
-        "Review RunAttempts, terminal output, and artifacts on Run Detail.",
+        "Review RunAttempts, terminal output, and artifacts on Run Detail after the Run reaches a terminal status.",
       to: runId === undefined ? "/runs" : `/runs/${encodeURIComponent(runId)}`,
       actionLabel: "Open Run",
     },
@@ -525,6 +667,18 @@ function resolveOnboardingDeclarativeVersion(
     ) {
       return version;
     }
+    return undefined;
+  }
+  if (context.agentId !== undefined) {
+    const entry = entries.find((item) => item.agentId === context.agentId);
+    if (entry !== undefined) {
+      for (const version of entry.versions) {
+        if (readAgentRuntimeView(version.manifest).type === "DECLARATIVE") {
+          return version;
+        }
+      }
+    }
+    return undefined;
   }
   return findDeclarativePublishedVersion(entries);
 }

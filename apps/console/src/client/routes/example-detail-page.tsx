@@ -146,7 +146,10 @@ export function ExampleDetailPage() {
                 </LinkButton>
               );
             })}
-            <LinkButton variant="secondary" to="/onboarding">
+            <LinkButton
+              variant="secondary"
+              to={`/onboarding?exampleId=${encodeURIComponent(entry.id)}`}
+            >
               Getting started
             </LinkButton>
           </div>

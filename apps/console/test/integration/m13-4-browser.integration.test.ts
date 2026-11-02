@@ -85,11 +85,14 @@ describe("M13.4 browser acceptance (overview & onboarding shell)", () => {
 
       await page.getByRole("link", { name: "Getting started" }).click();
       await page
-        .getByRole("heading", { name: "Getting started", level: 1 })
+        .getByRole("heading", {
+          name: "Get your first agent running",
+          level: 1,
+        })
         .waitFor({ timeout: 30_000 });
-      await page
-        .getByRole("heading", { name: "No-code first agent" })
-        .waitFor();
+      await page.getByTestId("onboarding-primary-step").waitFor({
+        timeout: 30_000,
+      });
       await page
         .getByRole("heading", { name: "Developer / Hello Agent (advanced)" })
         .waitFor();

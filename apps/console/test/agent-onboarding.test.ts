@@ -3,9 +3,13 @@ import { describe, expect, it } from "vitest";
 import { helloAgentManifestTemplate } from "../src/client/lib/agent-example";
 import { describeManifestSubmitBlocker } from "../src/client/lib/agent-manifest-draft";
 import {
+  deriveOnboardingJourneyState,
   deriveOnboardingProgress,
   developerOnboardingSteps,
+  findPrimaryOnboardingStep,
   firstAgentOnboardingSteps,
+  guidedOnboardingCoreSteps,
+  guidedStepVisualState,
   noCodeFirstAgentSteps,
   onboardingSearch,
   parseOnboardingContext,
@@ -84,15 +88,18 @@ const baseProgressInput = {
 describe("agent onboarding helpers", () => {
   it("keeps navigation context as non-secret identifiers", () => {
     const context = parseOnboardingContext(
-      new URLSearchParams("agentId=agent-1&agentVersionId=av-1&runId=run-1"),
+      new URLSearchParams(
+        "agentId=agent-1&agentVersionId=av-1&runId=run-1&exampleId=04-seo-worker",
+      ),
     );
     expect(context).toEqual({
       agentId: "agent-1",
       agentVersionId: "av-1",
       runId: "run-1",
+      exampleId: "04-seo-worker",
     });
     expect(onboardingSearch(context)).toBe(
-      "?agentId=agent-1&agentVersionId=av-1&runId=run-1",
+      "?agentId=agent-1&agentVersionId=av-1&runId=run-1&exampleId=04-seo-worker",
     );
     const encoded = JSON.stringify(firstAgentOnboardingSteps(context));
     expect(encoded).not.toMatch(/osva_ak_|Bearer |password|secret/i);
@@ -208,6 +215,18 @@ describe("agent onboarding helpers", () => {
       /FAILED/i,
     );
     expect(flags.inspectRunReady).toBe(false);
+  });
+
+  it("does not fall back when explicit AgentVersion id is invalid", () => {
+    const context = parseOnboardingContext(
+      new URLSearchParams("agentId=agent-1&agentVersionId=av-missing"),
+    );
+    const flags = deriveOnboardingProgress({
+      ...baseProgressInput,
+      context,
+    });
+    expect(flags.publishedVersionReady).toBe(false);
+    expect(flags.sampleRunSucceeded).toBe(false);
   });
 
   it("ignores Runs for a different AgentVersion", () => {
@@ -429,6 +448,52 @@ describe("agent onboarding helpers", () => {
         JSON.stringify(helloAgentManifestTemplate()),
       ),
     ).toMatch(/sha256:<64 hex chars>/);
+  });
+
+  it("derives journey state and guided step visuals from evidence", () => {
+    const context = parseOnboardingContext(
+      new URLSearchParams("agentId=agent-1&agentVersionId=av-1"),
+    );
+    const publishedOnly = deriveOnboardingProgress({
+      ...baseProgressInput,
+      runs: [],
+      context,
+    });
+    expect(deriveOnboardingJourneyState(publishedOnly, false, false)).toBe(
+      "ready_to_test",
+    );
+    const steps = noCodeFirstAgentSteps(context, publishedOnly);
+    expect(guidedOnboardingCoreSteps(steps)).toHaveLength(6);
+    expect(findPrimaryOnboardingStep(steps)?.id).toBe("run");
+
+    const failedRun = {
+      id: "run-f",
+      agentId: "agent-1",
+      status: "FAILED",
+      effectiveBindings: {
+        agentVersionId: "av-1",
+        modelProfileVersionBindings: {},
+        toolVersionBindings: {},
+      },
+      input: {},
+      createdAt: "",
+      updatedAt: "",
+    };
+    const failedFlags = deriveOnboardingProgress({
+      ...baseProgressInput,
+      runs: [failedRun],
+      context,
+    });
+    expect(deriveOnboardingJourneyState(failedFlags, false, false)).toBe(
+      "failed",
+    );
+    const inspectStep = noCodeFirstAgentSteps(context, failedFlags).find(
+      (step) => step.id === "inspect",
+    );
+    expect(inspectStep).toBeDefined();
+    expect(guidedStepVisualState(inspectStep!, failedFlags)).toBe(
+      "needs_attention",
+    );
   });
 
   it("parses builder handoff ids from the query string", () => {

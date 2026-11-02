@@ -129,6 +129,7 @@ function matchRules(paths, packages) {
       normalized === "apps/console/src/client/app-router.tsx" ||
       normalized.startsWith("apps/console/src/client/navigation") ||
       normalized.includes("/agent-onboarding") ||
+      normalized.includes("/components/onboarding/") ||
       normalized.includes("/workspace-setup-guidance")
     ) {
       note("console-routes", normalized);

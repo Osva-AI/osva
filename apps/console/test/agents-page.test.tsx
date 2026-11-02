@@ -281,24 +281,20 @@ describe("Agents UI", () => {
     renderAgents("/onboarding?agentId=agent-echo&agentVersionId=av-echo");
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: "Getting started", level: 1 }),
+        screen.getByRole("heading", {
+          name: "Get your first agent running",
+          level: 1,
+        }),
       ).toBeTruthy();
     });
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: "Run Agent" })).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Open Models" })).toBeTruthy();
     });
-    expect(screen.getByRole("link", { name: "Open Models" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Create Agent" })).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "Publish version" })
+        .getByRole("link", { name: "Developer create" })
         .getAttribute("href"),
-    ).toBe("/agents/agent-echo/versions/av-echo");
-    expect(
-      screen
-        .getByRole("link", { name: "Open Workflow Builder" })
-        .getAttribute("href"),
-    ).toBe("/workflows/new?agentId=agent-echo&agentVersionId=av-echo");
+    ).toBe("/agents/new/developer");
     expect(document.body.textContent ?? "").not.toMatch(/osva_ak_|Bearer /);
   });
 
@@ -306,7 +302,12 @@ describe("Agents UI", () => {
     stubConsole("VIEWER");
     renderAgents("/onboarding");
     await waitFor(() => {
-      expect(screen.getByText("Getting started")).toBeTruthy();
+      expect(
+        screen.getByRole("heading", {
+          name: "Get your first agent running",
+          level: 1,
+        }),
+      ).toBeTruthy();
     });
     expect(
       screen.getAllByText(/requires DEVELOPER, ADMIN, or OWNER/).length,
