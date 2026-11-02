@@ -1,11 +1,43 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ConsoleConfig } from "../src/server/config.js";
+import type { ConsoleOsvaClient } from "../src/server/osva-client.js";
 import { createConsoleServer } from "../src/server/server.js";
+
+const REQUEST_TIMEOUT_MS = 5_000;
+
+async function fetchWithTimeout(url: string, label: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "unknown fetch error";
+    throw new Error(
+      `SPA routing fetch timed out or failed (${label}, ${REQUEST_TIMEOUT_MS}ms): ${url} — ${detail}`,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function closeHttpServer(server: http.Server): Promise<void> {
+  server.closeAllConnections?.();
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
 
 describe("console production SPA routing", () => {
   let server: http.Server | undefined;
@@ -13,16 +45,12 @@ describe("console production SPA routing", () => {
 
   afterEach(async () => {
     if (server !== undefined) {
-      await new Promise<void>((resolve, reject) => {
-        server!.close((error) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve();
-        });
-      });
+      await closeHttpServer(server);
       server = undefined;
+    }
+    if (tempDir !== undefined) {
+      await rm(tempDir, { recursive: true, force: true });
+      tempDir = undefined;
     }
   });
 
@@ -42,8 +70,7 @@ describe("console production SPA routing", () => {
 
     const config: ConsoleConfig = {
       osvaBaseUrl: "http://127.0.0.1:3000",
-      osvaApiKey: "test-key",
-      legacyApiKeyMode: true,
+      legacyApiKeyMode: false,
       host: "127.0.0.1",
       port: 0,
       clientDistDir: tempDir,
@@ -51,7 +78,14 @@ describe("console production SPA routing", () => {
       browserOrigin: "http://127.0.0.1:4174",
     };
 
-    server = createConsoleServer({ config, client: undefined });
+    const testClient = {
+      listAgents: async () => ({
+        data: { agents: [] },
+        requestId: "spa-routing-test",
+      }),
+    } as unknown as ConsoleOsvaClient;
+
+    server = createConsoleServer({ config, client: testClient });
     await new Promise<void>((resolve) => server!.listen(0, resolve));
     const address = server.address();
     if (address === null || typeof address === "string") {
@@ -59,58 +93,38 @@ describe("console production SPA routing", () => {
     }
     const origin = `http://127.0.0.1:${address.port}`;
 
-    const agents = await fetch(`${origin}/agents`);
-    expect(agents.status).toBe(200);
-    expect(await agents.text()).toContain('id="root"');
+    const spaPaths = [
+      "/agents",
+      "/agents/agent-1/versions/av-1",
+      "/onboarding",
+      "/overview",
+      "/examples",
+      "/examples/04-seo-worker",
+      "/runs/run-123",
+      "/runs/run-123/attempts/attempt-456",
+      "/workflows/wf-1",
+      "/workflows/wf-1/versions/wv-1",
+      "/workflow-runs/wr-1",
+    ] as const;
 
-    const agentVersion = await fetch(`${origin}/agents/agent-1/versions/av-1`);
-    expect(agentVersion.status).toBe(200);
-    expect(await agentVersion.text()).toContain('id="root"');
+    for (const spaPath of spaPaths) {
+      const response = await fetchWithTimeout(`${origin}${spaPath}`, spaPath);
+      expect(response.status, spaPath).toBe(200);
+      expect(await response.text(), spaPath).toContain('id="root"');
+    }
 
-    const onboarding = await fetch(`${origin}/onboarding`);
-    expect(onboarding.status).toBe(200);
-    expect(await onboarding.text()).toContain('id="root"');
-
-    const overview = await fetch(`${origin}/overview`);
-    expect(overview.status).toBe(200);
-    expect(await overview.text()).toContain('id="root"');
-
-    const examples = await fetch(`${origin}/examples`);
-    expect(examples.status).toBe(200);
-    expect(await examples.text()).toContain('id="root"');
-
-    const exampleDetail = await fetch(`${origin}/examples/04-seo-worker`);
-    expect(exampleDetail.status).toBe(200);
-    expect(await exampleDetail.text()).toContain('id="root"');
-
-    const runDetail = await fetch(`${origin}/runs/run-123`);
-    expect(runDetail.status).toBe(200);
-    expect(await runDetail.text()).toContain('id="root"');
-
-    const attemptDetail = await fetch(
-      `${origin}/runs/run-123/attempts/attempt-456`,
-    );
-    expect(attemptDetail.status).toBe(200);
-    expect(await attemptDetail.text()).toContain('id="root"');
-
-    const asset = await fetch(`${origin}/assets/app.js`);
+    const asset = await fetchWithTimeout(`${origin}/assets/app.js`, "asset");
     expect(asset.status).toBe(200);
     expect(await asset.text()).toContain("console.log");
 
-    const workflowDetail = await fetch(`${origin}/workflows/wf-1`);
-    expect(workflowDetail.status).toBe(200);
-    expect(await workflowDetail.text()).toContain('id="root"');
-
-    const workflowVersion = await fetch(
-      `${origin}/workflows/wf-1/versions/wv-1`,
+    const apiRoute = await fetchWithTimeout(
+      `${origin}/api/v1/agents`,
+      "api-agents-json",
     );
-    expect(workflowVersion.status).toBe(200);
-
-    const workflowRunDetail = await fetch(`${origin}/workflow-runs/wr-1`);
-    expect(workflowRunDetail.status).toBe(200);
-
-    const apiRoute = await fetch(`${origin}/api/v1/agents`);
-    expect(apiRoute.status).toBe(503);
+    expect(apiRoute.status).toBe(200);
+    expect(apiRoute.headers.get("content-type") ?? "").toContain(
+      "application/json",
+    );
     expect(await apiRoute.text()).not.toContain('id="root"');
   }, 30_000);
 });

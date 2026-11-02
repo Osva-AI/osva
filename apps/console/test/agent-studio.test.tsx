@@ -86,7 +86,7 @@ describe("Agent Studio UI", () => {
     fireEvent.change(screen.getByLabelText("Agent name"), {
       target: { value: "Support Bot" },
     });
-    fireEvent.change(screen.getByLabelText(/instructions/i), {
+    fireEvent.change(document.getElementById("studio-instructions")!, {
       target: { value: "" },
     });
     expect(
@@ -136,7 +136,7 @@ describe("Agent Studio UI", () => {
       expect(screen.getByLabelText("Agent name")).toBeTruthy();
     });
     await user.type(screen.getByLabelText("Agent name"), "Support Bot");
-    fireEvent.change(screen.getByLabelText("Instructions"), {
+    fireEvent.change(document.getElementById("studio-instructions")!, {
       target: { value: "Help customers with billing questions." },
     });
     await user.click(screen.getByRole("button", { name: "Select test model" }));
@@ -152,7 +152,9 @@ describe("Agent Studio UI", () => {
     stubHumanSessionFetch("VIEWER", "ws-1");
     renderStudio("/agents/new");
     await waitFor(() => {
-      expect(screen.getByText(/EDITOR or ADMIN/i)).toBeTruthy();
+      expect(
+        screen.getByText(/DEVELOPER, EDITOR, ADMIN, or OWNER/i),
+      ).toBeTruthy();
     });
     expect(
       (
@@ -161,6 +163,126 @@ describe("Agent Studio UI", () => {
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
+  });
+
+  it("switches guided and advanced modes without losing manifest fields", async () => {
+    const user = userEvent.setup();
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    });
+    fireEvent.change(document.getElementById("studio-instructions")!, {
+      target: { value: "Round-trip instructions." },
+    });
+    await user.click(screen.getByRole("button", { name: "Advanced JSON" }));
+    const jsonField = screen.getByLabelText(
+      "AgentVersion manifest",
+    ) as HTMLTextAreaElement;
+    expect(jsonField.value).toMatch(/Round-trip instructions/);
+    await user.click(screen.getByRole("button", { name: "Guided" }));
+    expect(screen.getByDisplayValue("Round-trip instructions.")).toBeTruthy();
+  });
+
+  it("shows unavailable source version instead of defaulting the draft", async () => {
+    stubHumanSessionFetch("ADMIN", "ws-1", (url) => {
+      if (url === "/api/v1/agents/agent-studio") {
+        return json(agent);
+      }
+      if (url === "/api/v1/agents/agent-studio/versions/missing-version") {
+        return json({ message: "Not found" }, 404);
+      }
+      return undefined;
+    });
+    renderStudio("/agents/agent-studio/versions/new?from=missing-version");
+    await waitFor(() => {
+      expect(screen.getByText(/Source AgentVersion unavailable/i)).toBeTruthy();
+    });
+    expect(screen.queryByLabelText(/^Instructions$/i)).toBeNull();
+  });
+
+  it("retries AgentVersion publish without creating a duplicate Agent", async () => {
+    const user = userEvent.setup();
+    let agentPostCount = 0;
+    let versionPostCount = 0;
+    stubHumanSessionFetch("ADMIN", "ws-1", (url, init) => {
+      if (url === "/api/v1/agents" && init?.method === "POST") {
+        agentPostCount += 1;
+        return json({ ...agent, id: "agent-partial" }, 201);
+      }
+      if (
+        url === "/api/v1/agents/agent-partial/versions" &&
+        init?.method === "POST"
+      ) {
+        versionPostCount += 1;
+        if (versionPostCount === 1) {
+          return json({ error: "version rejected" }, 500);
+        }
+        return json(
+          {
+            id: "av-retry",
+            agentId: "agent-partial",
+            version: 1,
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+          201,
+        );
+      }
+      return undefined;
+    });
+    renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    });
+    await user.type(screen.getByLabelText("Agent name"), "Partial Bot");
+    fireEvent.change(document.getElementById("studio-instructions")!, {
+      target: { value: "Recover from partial publish." },
+    });
+    await user.click(screen.getByRole("button", { name: "Select test model" }));
+    await user.click(
+      screen.getByRole("button", { name: "Publish agent version" }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByText(/publishing the first AgentVersion failed/i),
+      ).toBeTruthy();
+    });
+    expect(agentPostCount).toBe(1);
+    expect(screen.getByText("agent-partial")).toBeTruthy();
+    expect(screen.queryByText("Published version")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Publish agent version" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByText("Published version")).toBeTruthy();
+    });
+    expect(agentPostCount).toBe(1);
+    expect(versionPostCount).toBe(2);
+  });
+
+  it("preserves invalid JSON when switching back to guided", async () => {
+    const user = userEvent.setup();
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    });
+    await user.click(screen.getByRole("button", { name: "Advanced JSON" }));
+    const jsonField = screen.getByLabelText(
+      "AgentVersion manifest",
+    ) as HTMLTextAreaElement;
+    fireEvent.change(jsonField, { target: { value: "{ broken-json" } });
+    await user.click(screen.getByRole("button", { name: "Guided" }));
+    expect(screen.getByText(/Manifest JSON is invalid/i)).toBeTruthy();
+    const modeToggle = document.querySelector(".agent-studio-mode-toggle");
+    const advancedToggle = modeToggle?.querySelectorAll("button")[1];
+    expect(advancedToggle?.textContent).toContain("Advanced JSON");
+    await user.click(advancedToggle!);
+    expect(
+      (screen.getByLabelText("AgentVersion manifest") as HTMLTextAreaElement)
+        .value,
+    ).toBe("{ broken-json");
   });
 
   it("loads a copied version draft for a new immutable version", async () => {

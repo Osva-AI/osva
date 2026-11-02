@@ -2214,3 +2214,108 @@ a.button:hover {
   font-size: var(--font-size-sm);
   max-width: 48rem;
 }
+
+.agent-studio-layout {
+  display: grid;
+  grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.agent-studio-nav-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.agent-studio-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.agent-studio-nav-link {
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.agent-studio-nav-link:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.agent-studio-nav-link.is-active {
+  border-color: var(--border-default);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
+}
+
+.agent-studio-nav-link.has-error {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border-default));
+}
+
+.agent-studio-nav-error {
+  font-size: 0.72rem;
+  color: var(--text-danger);
+}
+
+.agent-studio-main {
+  max-width: 52rem;
+}
+
+.agent-studio-section-intro {
+  margin-top: 0;
+  max-width: 44rem;
+}
+
+.agent-studio-mode-toggle {
+  margin-bottom: var(--space-3);
+}
+
+.agent-studio-validation-list {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.25rem;
+}
+
+.agent-studio-review-notes {
+  margin: var(--space-3) 0;
+  padding-left: 1.25rem;
+}
+
+.agent-studio-advanced-details {
+  margin-top: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .agent-studio-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-studio-nav {
+    position: sticky;
+    top: var(--space-2);
+    z-index: 1;
+  }
+
+  .agent-studio-nav-list {
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-studio-nav-link,
+  .agent-studio-nav-link:hover {
+    transition: none;
+  }
+}
