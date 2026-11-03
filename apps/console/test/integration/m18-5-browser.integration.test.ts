@@ -50,7 +50,13 @@ describe("M18.5 browser acceptance (Agent Studio UX)", () => {
         "Answer product questions.",
       );
 
-      await page.getByRole("button", { name: "Validate and review" }).click();
+      await page
+        .getByRole("button", { name: "Continue to capabilities" })
+        .click();
+      await page.getByText("What will your agent need?").waitFor();
+      await screenshotAgentStudio(page, "desktop-1440-equip-light.png");
+
+      await page.getByRole("button", { name: "Continue to review" }).click();
       await page.getByText("Review before publishing").waitFor();
       await screenshotAgentStudio(page, "desktop-1440-review-light.png");
 

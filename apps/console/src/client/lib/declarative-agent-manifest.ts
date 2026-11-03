@@ -12,8 +12,8 @@ import { parseWorkflowRunInputJson } from "./workflow-run-input";
 
 export const DEFAULT_DECLARATIVE_MODEL_BINDING = "primary";
 
-export const DEFAULT_FIRST_AGENT_INSTRUCTIONS =
-  "You are a helpful assistant. Answer the user's task concisely using the workspace model.";
+/** Empty default — Describe stage copy guides authoring; onboarding may set its own text. */
+export const DEFAULT_FIRST_AGENT_INSTRUCTIONS = "";
 
 export const DEFAULT_FIRST_AGENT_SAMPLE_TASK =
   "Summarize what OSVA agents do in one sentence.";
@@ -267,7 +267,31 @@ export function applyDeclarativeStudioPatch(
     );
   }
 
-  return syncDeclarativeToolBudgets(updated);
+  const bindingName =
+    stringField(config.modelBinding, DEFAULT_DECLARATIVE_MODEL_BINDING) ||
+    DEFAULT_DECLARATIVE_MODEL_BINDING;
+  const withoutModel = clearPrimaryModelBinding(updated, bindingName);
+  return syncDeclarativeToolBudgets(withoutModel);
+}
+
+function clearPrimaryModelBinding(
+  manifest: Record<string, unknown>,
+  bindingName: string,
+): Record<string, unknown> {
+  const next = { ...manifest };
+  if (isRecord(next.models)) {
+    const models = { ...next.models };
+    delete models[bindingName];
+    if (Object.keys(models).length === 0) {
+      delete next.models;
+    } else {
+      next.models = models;
+    }
+  }
+  if (isRecord(next.capabilities)) {
+    next.capabilities = { ...next.capabilities, model: false };
+  }
+  return next;
 }
 
 export function applyPrimaryModelToManifest(

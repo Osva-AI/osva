@@ -30,9 +30,14 @@ export function AgentsPage() {
               First-agent guide
             </LinkButton>
             {canWrite ? (
-              <LinkButton variant="primary" to="/agents/new">
-                Create Agent
-              </LinkButton>
+              <>
+                <LinkButton variant="secondary" to="/agents/new?templates=1">
+                  Templates
+                </LinkButton>
+                <LinkButton variant="primary" to="/agents/new">
+                  Create Agent
+                </LinkButton>
+              </>
             ) : null}
             <Button
               type="button"

@@ -7,6 +7,7 @@ import {
 
 import { AgentPlaygroundPanel } from "../components/agent/agent-playground-panel";
 import { AgentRunLaunchForm } from "../components/agent/agent-run-launch-form";
+import { AgentStudioTestStagePanel } from "../components/agent/agent-studio-test-stage-panel";
 import { RuntimeReadinessPanel } from "../components/agent/runtime-readiness-panel";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
@@ -39,6 +40,7 @@ export function AgentVersionPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const justPublished = searchParams.get("published") === "1";
+  const studioTestHandoff = searchParams.get("studio") === "test";
   const agentQuery = useAgentQuery(agentId);
   const versionQuery = useAgentVersionQuery(agentId, agentVersionId);
   const versionsQuery = useAgentVersionsQuery(agentId);
@@ -70,6 +72,62 @@ export function AgentVersionPage() {
     version?.manifest,
   );
   const versions = versionsQuery.data?.versions ?? [];
+  const studioTestFocus = justPublished && studioTestHandoff;
+
+  if (studioTestFocus) {
+    if (versionQuery.isLoading) {
+      return <LoadingBlock label="Loading AgentVersion…" />;
+    }
+    if (notFound) {
+      return (
+        <EmptyState
+          title="AgentVersion not found."
+          description="This version is not visible for the agent in your workspace."
+        />
+      );
+    }
+    if (versionQuery.isError && !notFound) {
+      return (
+        <ErrorState
+          title="Failed to load AgentVersion"
+          error={versionQuery.error}
+        />
+      );
+    }
+  }
+
+  if (studioTestFocus && version !== undefined) {
+    return (
+      <div
+        className="agent-studio-test-handoff-page"
+        data-testid="agent-studio-test-handoff-page"
+      >
+        <header className="page-header agent-studio-test-handoff-header">
+          <div>
+            <h1 className="page-title">
+              {agentQuery.data?.name ?? "Agent test"}
+            </h1>
+            <p className="page-subtitle">
+              Version {version.version} is published — run a quick test below.
+            </p>
+          </div>
+          <div className="toolbar agent-studio-test-handoff-toolbar">
+            <Link className="button" to={`/agents/${agentId}`}>
+              Back to agent
+            </Link>
+          </div>
+        </header>
+        <AgentStudioTestStagePanel
+          agentId={agentId}
+          agentKey={agentQuery.data?.key}
+          agentName={agentQuery.data?.name}
+          version={version}
+          canExecute={canExecute}
+          versionLoading={versionQuery.isLoading}
+        />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -120,7 +178,16 @@ export function AgentVersionPage() {
 
       {version !== undefined ? (
         <>
-          {justPublished ? (
+          {justPublished && studioTestHandoff ? (
+            <AgentStudioTestStagePanel
+              agentId={agentId}
+              agentKey={agentQuery.data?.key}
+              agentName={agentQuery.data?.name}
+              version={version}
+              canExecute={canExecute}
+              versionLoading={versionQuery.isLoading}
+            />
+          ) : justPublished ? (
             <section className="panel">
               <p className="muted">
                 This AgentVersion is now saved. Test runs use this immutable
@@ -302,16 +369,18 @@ export function AgentVersionPage() {
             canExecute={canExecute}
           />
 
-          <div id="run-agent">
-            <AgentRunLaunchForm
-              agentId={agentId}
-              agentKey={agentQuery.data?.key}
-              agentName={agentQuery.data?.name}
-              selectedVersion={version}
-              canExecute={canExecute}
-              versionLoading={versionQuery.isLoading}
-            />
-          </div>
+          {justPublished && studioTestHandoff ? null : (
+            <div id="run-agent">
+              <AgentRunLaunchForm
+                agentId={agentId}
+                agentKey={agentQuery.data?.key}
+                agentName={agentQuery.data?.name}
+                selectedVersion={version}
+                canExecute={canExecute}
+                versionLoading={versionQuery.isLoading}
+              />
+            </div>
+          )}
         </>
       ) : null}
     </>

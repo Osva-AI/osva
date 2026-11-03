@@ -13,10 +13,12 @@ import {
 import type { PostgresTestContext } from "../../../../packages/db/test/integration/postgres-harness.js";
 import type { ValkeyTestContext } from "../../../../adapters/bullmq/test/integration/valkey-harness.js";
 import {
+  applyWorkflowTemplateInStudio,
   bindAgentVersionOnNode,
   createApprovalGateWorkflowViaApi,
   createSingleAgentWorkflowViaApi,
   dismissStoredDraftBanner,
+  fillWorkflowRegistryInStudio,
   fetchWorkflowVersionDefinition,
   listWorkflowVersions,
   loginHumanWorkspaceA,
@@ -29,6 +31,7 @@ import {
   waitForValidationReady,
   waitForWorkflowRunStatus,
   selectBuilderNode,
+  waitForWorkflowStudio,
 } from "./m13-6-browser-helpers.js";
 
 async function launchChromium() {
@@ -75,21 +78,19 @@ describe("M13.6 browser acceptance (no-code workflow builder)", () => {
       await loginHumanWorkspaceA(page, stack);
       await page.goto(`${stack.consoleOrigin}/workflows/new`);
       await dismissStoredDraftBanner(page);
-      await page
-        .getByRole("heading", { name: "Create workflow", level: 1 })
-        .waitFor({ timeout: 30_000 });
-
-      await page
-        .getByRole("button", { name: "Agent with human approval" })
-        .click();
-      await page.fill("#workflow-key", "m13-6-browser-wf");
-      await page.fill("#workflow-name", "M13.6 Browser Workflow");
+      await waitForWorkflowStudio(page);
+      await applyWorkflowTemplateInStudio(page, "agent-with-approval");
+      await fillWorkflowRegistryInStudio(
+        page,
+        "m13-6-browser-wf",
+        "M13.6 Browser Workflow",
+      );
       await page.getByTestId("workflow-validation-panel").waitFor({
         timeout: 15_000,
       });
       expect(
         await page.getByTestId("workflow-validation-summary").textContent(),
-      ).toMatch(/error/i);
+      ).toMatch(/issue/i);
       await page.getByRole("button", { name: "Review and publish" }).click();
       await page.getByTestId("workflow-publish-review").waitFor({
         timeout: 15_000,
@@ -149,12 +150,7 @@ describe("M13.6 browser acceptance (no-code workflow builder)", () => {
         `${stack.consoleOrigin}/workflows/${workflowId}/versions/new`,
       );
       await dismissStoredDraftBanner(page);
-      await page
-        .getByRole("heading", {
-          name: "Publish new workflow version",
-          level: 1,
-        })
-        .waitFor({ timeout: 30_000 });
+      await waitForWorkflowStudio(page);
       await selectBuilderNode(page, "approval-2");
       await page.locator("#approval-title-approval-2").waitFor({
         timeout: 15_000,
@@ -166,6 +162,7 @@ describe("M13.6 browser acceptance (no-code workflow builder)", () => {
         "#approval-title-approval-2",
         "Updated approval title for V2",
       );
+      await dismissStoredDraftBanner(page);
       await waitForValidationReady(page);
       await publishFromReview(page, true);
 

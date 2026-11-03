@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
 
-import { WorkflowBuilderForm } from "./workflow-builder-form";
-import { WorkflowPublishReview } from "./workflow-publish-review";
 import { ErrorState } from "../error-state/error-state";
 import { LoadingBlock } from "../loading/loading-block";
 import { useAuthContextQuery } from "../../hooks/use-auth-context";
@@ -24,11 +21,7 @@ import {
   readStoredWorkflowBuilderDraft,
   writeStoredWorkflowBuilderDraft,
 } from "../../lib/workflow-builder-storage";
-import {
-  applyWorkflowBuilderTemplate,
-  WORKFLOW_BUILDER_TEMPLATES,
-  type WorkflowBuilderTemplateId,
-} from "../../lib/workflow-builder-templates";
+import { WorkflowStudioV2Workspace } from "./workflow-studio-v2-workspace";
 
 export interface WorkflowBuilderWorkspaceProps {
   readonly mode: "create" | "newVersion";
@@ -37,6 +30,8 @@ export interface WorkflowBuilderWorkspaceProps {
   readonly initialDraft: WorkflowBuilderDraft | undefined;
   readonly handoffSearchParams?: URLSearchParams;
   readonly backLink: { readonly to: string; readonly label: string };
+  readonly initialTemplatesOpen?: boolean;
+  readonly headerExtra?: ReactNode;
   readonly onPublished: (input: {
     readonly workflowId: string;
     readonly versionId: string;
@@ -45,11 +40,11 @@ export interface WorkflowBuilderWorkspaceProps {
 
 export function WorkflowBuilderWorkspace({
   mode,
-  title,
-  subtitle,
   initialDraft,
   handoffSearchParams,
   backLink,
+  initialTemplatesOpen,
+  headerExtra,
   onPublished,
 }: WorkflowBuilderWorkspaceProps) {
   const handoff =
@@ -143,15 +138,6 @@ export function WorkflowBuilderWorkspace({
     setStoredDraftOffer(undefined);
   }
 
-  function applyTemplate(templateId: WorkflowBuilderTemplateId) {
-    setDraft((current) =>
-      current === undefined
-        ? current
-        : applyWorkflowBuilderTemplate(current, templateId),
-    );
-    setReviewOpen(false);
-  }
-
   async function publish() {
     if (draft === undefined || !canWrite) {
       return;
@@ -207,150 +193,63 @@ export function WorkflowBuilderWorkspace({
     }
   }
 
-  const showRestoreBanner = storedDraftOffer !== undefined;
-
-  return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{title}</h1>
-          <p className="page-subtitle">{subtitle}</p>
-        </div>
-        <Link className="button" to={backLink.to}>
-          {backLink.label}
-        </Link>
-      </header>
-
-      {!canWrite ? (
-        <p className="muted">
-          Your role cannot publish workflows (EDITOR or ADMIN required).
+  const restoreBanner =
+    storedDraftOffer !== undefined ? (
+      <section className="workflow-studio-banner panel">
+        <p>
+          A saved draft exists for this editor session. Restore it explicitly;
+          your current draft will not be overwritten automatically.
         </p>
-      ) : null}
-
-      {handoff.agentVersionId !== undefined ? (
-        <section className="panel">
-          <h2 className="panel-title">Agent version handoff</h2>
-          <p className="muted">
-            Add a <strong>Run AI agent</strong> step, select the agent, then
-            choose version{" "}
-            <span className="mono">{handoff.agentVersionId}</span>.
-          </p>
-        </section>
-      ) : null}
-
-      {mode === "create" && draft.definition.nodes.length === 0 ? (
-        <section className="panel" aria-labelledby="workflow-templates-title">
-          <h2 className="panel-title" id="workflow-templates-title">
-            Start from a template
-          </h2>
-          <p className="muted">
-            Templates use supported step types only. Bind published agent
-            versions before publishing.
-          </p>
-          <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
-            {WORKFLOW_BUILDER_TEMPLATES.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                className="button"
-                disabled={!canWrite || publishing}
-                onClick={() => applyTemplate(template.id)}
-              >
-                {template.name}
-              </button>
-            ))}
-          </div>
-          <ul className="muted">
-            {WORKFLOW_BUILDER_TEMPLATES.map((template) => (
-              <li key={template.id}>{template.description}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {showRestoreBanner ? (
-        <section className="panel">
-          <p>
-            A saved draft exists for this editor session. Restore it explicitly;
-            your current draft will not be overwritten automatically.
-          </p>
-          <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
-            <button
-              type="button"
-              className="button primary"
-              onClick={restoreStoredDraft}
-            >
-              Restore saved draft
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={discardStoredDraft}
-            >
-              Discard saved draft
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      {partialPublishFailure && draft.createdWorkflowId !== undefined ? (
-        <section className="panel">
-          <p>
-            Workflow{" "}
-            <Link className="mono" to={`/workflows/${draft.createdWorkflowId}`}>
-              {draft.createdWorkflowId}
-            </Link>{" "}
-            exists, but publishing the version failed. Fix validation issues and
-            retry without creating another workflow.
-          </p>
-        </section>
-      ) : null}
-
-      <WorkflowBuilderForm
-        draft={draft}
-        onDraftChange={setDraft}
-        registryLocked={registryLocked}
-        disabled={!canWrite || publishing}
-      />
-
-      {reviewOpen ? (
-        <WorkflowPublishReview
-          draft={draft}
-          report={validateDraftForPublish(draft).report}
-          publishing={publishing}
-          retry={draft.createdWorkflowId !== undefined}
-          onCancel={() => setReviewOpen(false)}
-          onConfirm={() => void publish()}
-        />
-      ) : (
-        <section className="panel">
+        <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
           <button
             type="button"
             className="button primary"
-            disabled={!canWrite || publishing}
-            onClick={() => {
-              setFeedback(undefined);
-              setErrorRequestId(undefined);
-              setReviewOpen(true);
-            }}
+            onClick={restoreStoredDraft}
           >
-            {draft.createdWorkflowId !== undefined
-              ? "Review and publish new version"
-              : "Review and publish"}
+            Restore saved draft
           </button>
-        </section>
-      )}
+          <button type="button" className="button" onClick={discardStoredDraft}>
+            Discard saved draft
+          </button>
+        </div>
+      </section>
+    ) : null;
 
-      {feedback !== undefined ? (
-        <section className="panel">
-          <p data-testid="workflow-publish-upstream-error">
-            Publication failed on the control plane. {feedback}
-          </p>
-          {errorRequestId !== undefined ? (
-            <p className="mono">Request ID: {errorRequestId}</p>
-          ) : null}
-        </section>
-      ) : null}
-    </>
+  const handoffBanner =
+    handoff.agentVersionId !== undefined ? (
+      <section className="workflow-studio-banner panel">
+        <h2 className="panel-title">Agent version handoff</h2>
+        <p className="muted">
+          Add an <strong>AI agent</strong> step, select the agent, then choose
+          version <span className="mono">{handoff.agentVersionId}</span>.
+        </p>
+      </section>
+    ) : null;
+
+  return (
+    <WorkflowStudioV2Workspace
+      mode={mode}
+      draft={draft}
+      onDraftChange={setDraft}
+      registryLocked={registryLocked}
+      disabled={!canWrite || publishing}
+      canWrite={canWrite}
+      backLink={backLink}
+      publishing={publishing}
+      reviewOpen={reviewOpen}
+      onReviewOpenChange={setReviewOpen}
+      onPublish={publish}
+      partialPublishFailure={partialPublishFailure}
+      feedback={feedback}
+      errorRequestId={errorRequestId}
+      initialTemplatesOpen={initialTemplatesOpen}
+      headerExtra={headerExtra}
+      banner={
+        <>
+          {handoffBanner}
+          {restoreBanner}
+        </>
+      }
+    />
   );
 }

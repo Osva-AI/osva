@@ -369,18 +369,89 @@ export async function dismissStoredDraftBanner(page: Page): Promise<void> {
   }
 }
 
-export async function enableAdvancedBuilderDetails(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Advanced details" }).click();
+export async function waitForWorkflowStudio(page: Page): Promise<void> {
+  await page.getByTestId("workflow-studio-v2").waitFor({ timeout: 30_000 });
+}
+
+export async function fillWorkflowRegistryInStudio(
+  page: Page,
+  key: string,
+  name: string,
+): Promise<void> {
+  await page.getByRole("button", { name: "Edit details" }).click();
+  await page.getByLabel("Registry key").fill(key);
+  await page.getByLabel("Name").fill(name);
+  await page.getByRole("button", { name: "Done" }).click();
+}
+
+export async function applyWorkflowTemplateInStudio(
+  page: Page,
+  templateId: "sequential-agents" | "agent-with-approval",
+): Promise<void> {
+  await page.getByRole("button", { name: "Templates" }).click();
+  await page
+    .getByRole("heading", { name: "Workflow templates" })
+    .waitFor({ timeout: 15_000 });
+
+  const applyByTestId = page.getByTestId(
+    `workflow-template-apply-${templateId}`,
+  );
+  if ((await applyByTestId.count()) > 0) {
+    await applyByTestId.evaluate((element) => {
+      element.scrollIntoView({ block: "center", inline: "nearest" });
+    });
+    await applyByTestId.click();
+  } else {
+    const index = templateId === "sequential-agents" ? 0 : 1;
+    await page
+      .getByRole("button", { name: "Apply template" })
+      .nth(index)
+      .scrollIntoViewIfNeeded();
+    await page
+      .getByRole("button", { name: "Apply template" })
+      .nth(index)
+      .click();
+  }
+
+  const replaceDraft = page.getByRole("button", { name: "Replace draft" });
+  if (await replaceDraft.isVisible().catch(() => false)) {
+    await replaceDraft.click();
+  }
 }
 
 export async function selectBuilderNode(
   page: Page,
   nodeKey: string,
 ): Promise<void> {
-  await enableAdvancedBuilderDetails(page);
+  const fixButton = page.getByTestId(`workflow-validation-fix-${nodeKey}`);
+  if (await fixButton.isVisible().catch(() => false)) {
+    await fixButton.click();
+    return;
+  }
+
+  const canvasNode = page.locator(`.react-flow__node[data-id="${nodeKey}"]`);
+  if ((await canvasNode.count()) > 0) {
+    await canvasNode.first().scrollIntoViewIfNeeded();
+    await canvasNode.first().click();
+  } else {
+    const details = page.locator(".workflow-studio-a11y-steps");
+    const summary = details.locator("summary");
+    if (await summary.isVisible().catch(() => false)) {
+      if ((await details.getAttribute("open")) === null) {
+        await summary.click();
+      }
+    }
+    const a11yStep = page.getByTestId(`workflow-a11y-step-${nodeKey}`);
+    await a11yStep.scrollIntoViewIfNeeded();
+    await a11yStep.click();
+  }
+
   await page
-    .getByRole("button", { name: new RegExp(`\\(${nodeKey}\\)`) })
-    .click();
+    .locator(
+      `#agent-${nodeKey}, #approval-title-${nodeKey}, #wait-duration-${nodeKey}`,
+    )
+    .first()
+    .waitFor({ timeout: 15_000 });
 }
 
 export async function bindAgentVersionOnNode(
@@ -421,7 +492,7 @@ export async function waitForValidationReady(page: Page): Promise<void> {
         (await page.getByTestId("workflow-validation-summary").textContent()) ??
         "";
       return {
-        done: /No blocking errors/i.test(text),
+        done: /No blocking issues/i.test(text),
         lastState: text,
       };
     },
@@ -429,21 +500,28 @@ export async function waitForValidationReady(page: Page): Promise<void> {
 }
 
 export async function publishFromReview(page: Page, newVersion: boolean) {
-  await page
-    .getByRole("button", {
-      name: newVersion
-        ? "Review and publish new version"
-        : "Review and publish",
-    })
-    .click();
-  await page.getByTestId("workflow-publish-review").waitFor({
+  const reviewButtonName = newVersion
+    ? "Review and publish new version"
+    : "Review and publish";
+  const reviewPanel = page.getByTestId("workflow-publish-review");
+  if (!(await reviewPanel.isVisible().catch(() => false))) {
+    await page.getByRole("button", { name: reviewButtonName }).click();
+  }
+  await reviewPanel.waitFor({
     timeout: 30_000,
   });
-  await page
-    .getByRole("button", {
-      name: newVersion ? "Confirm publish new version" : "Confirm publish",
-    })
-    .click();
+  const confirm = reviewPanel.getByRole("button", {
+    name: /Confirm publish|Retry publishing/,
+  });
+  await pollUntil({
+    label: "publish review confirm enabled",
+    deadlineMs: 30_000,
+    probe: async () => {
+      const enabled = await confirm.isEnabled().catch(() => false);
+      return { done: enabled, lastState: enabled };
+    },
+  });
+  await confirm.click();
   await page.waitForURL(/\/workflows\/[^/]+\/versions\/(?!new)[^/]+$/, {
     timeout: 60_000,
   });

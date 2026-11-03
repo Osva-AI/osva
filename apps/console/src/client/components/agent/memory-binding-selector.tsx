@@ -15,8 +15,10 @@ import { parseWorkflowRunInputJson } from "../../lib/workflow-run-input";
 export function MemoryBindingSelector(props: {
   readonly manifestText: string;
   readonly disabled?: boolean;
+  readonly presentation?: "default" | "studio";
   readonly onManifestChange: (next: string) => void;
 }) {
+  const presentation = props.presentation ?? "default";
   const namespacesQuery = useMemoryNamespacesQuery();
   const parsed = parseWorkflowRunInputJson(props.manifestText);
   const rowsFromManifest = parsed.ok
@@ -26,7 +28,12 @@ export function MemoryBindingSelector(props: {
   const [draftRows, setDraftRows] = useState<AgentMemoryBindingRow[]>(() =>
     rowsFromManifest.length > 0
       ? rowsFromManifest.map((row) => ({ ...row }))
-      : [{ bindingName: "", namespaceId: "", access: "READ_ONLY" }],
+      : presentation === "studio"
+        ? []
+        : [{ bindingName: "", namespaceId: "", access: "READ_ONLY" }],
+  );
+  const [touchedRows, setTouchedRows] = useState<ReadonlySet<number>>(
+    () => new Set(),
   );
 
   const namespaces = namespacesQuery.data?.items ?? [];
@@ -60,13 +67,13 @@ export function MemoryBindingSelector(props: {
   function removeRow(index: number): void {
     setDraftRows((current) => {
       const next = current.filter((_row, rowIndex) => rowIndex !== index);
-      const normalized =
-        next.length === 0
-          ? [{ bindingName: "", namespaceId: "", access: "READ_ONLY" as const }]
-          : next;
-      syncManifest(normalized);
-      return normalized;
+      syncManifest(next);
+      return next;
     });
+  }
+
+  function markTouched(index: number): void {
+    setTouchedRows((current) => new Set([...current, index]));
   }
 
   return (
@@ -84,7 +91,32 @@ export function MemoryBindingSelector(props: {
         <p className="muted">Loading namespaces…</p>
       ) : null}
       {namespaces.length === 0 && !namespacesQuery.isLoading ? (
-        <p className="muted">No memory namespaces yet.</p>
+        <div className="agent-studio-capability-empty" role="status">
+          <p className="muted">
+            No memory namespaces exist yet. Create one in Memory, then return —
+            your draft is preserved.
+          </p>
+          <Link className="button button-secondary" to="/memory">
+            Open Memory
+          </Link>
+        </div>
+      ) : null}
+      {presentation === "studio" &&
+      namespaces.length > 0 &&
+      draftRows.length === 0 ? (
+        <div className="agent-studio-capability-empty">
+          <p className="muted">
+            Add a memory binding when your agent needs persistent context.
+          </p>
+          <button
+            type="button"
+            className="button"
+            disabled={props.disabled}
+            onClick={addRow}
+          >
+            Add memory binding
+          </button>
+        </div>
       ) : null}
       {draftRows.map((row, index) => {
         const nameError = describeMemoryBindingNameError(row.bindingName);
@@ -95,6 +127,12 @@ export function MemoryBindingSelector(props: {
               other.bindingName.trim() === row.bindingName.trim() &&
               other !== row,
           ).length > 0;
+        const showNameError =
+          (nameError !== undefined || duplicateName) &&
+          (presentation !== "studio" ||
+            touchedRows.has(index) ||
+            row.bindingName.trim().length > 0 ||
+            row.namespaceId.length > 0);
         return (
           <div className="filters" key={`memory-binding-${String(index)}`}>
             <div className="field">
@@ -108,8 +146,9 @@ export function MemoryBindingSelector(props: {
                 onChange={(event) =>
                   updateRow(index, { bindingName: event.target.value })
                 }
+                onBlur={() => markTouched(index)}
               />
-              {nameError !== undefined || duplicateName ? (
+              {showNameError ? (
                 <p className="error-inline" role="alert">
                   {duplicateName ? "Binding names must be unique." : nameError}
                 </p>
@@ -166,14 +205,16 @@ export function MemoryBindingSelector(props: {
           </div>
         );
       })}
-      <button
-        type="button"
-        className="button"
-        disabled={props.disabled}
-        onClick={addRow}
-      >
-        Add memory binding
-      </button>
+      {draftRows.length > 0 ? (
+        <button
+          type="button"
+          className="button"
+          disabled={props.disabled}
+          onClick={addRow}
+        >
+          Add memory binding
+        </button>
+      ) : null}
     </section>
   );
 }

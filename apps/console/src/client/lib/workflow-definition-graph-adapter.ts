@@ -25,6 +25,7 @@ export interface DefinitionToFlowOptions {
   readonly executionStatusByNodeKey?: Readonly<Record<string, string>>;
   readonly edgeAppearanceById?: Readonly<Record<string, string>>;
   readonly canvasLabelContext?: WorkflowCanvasLabelContext;
+  readonly showTechnicalKey?: boolean;
 }
 
 export interface WorkflowGraphNodeData extends Record<string, unknown> {
@@ -33,6 +34,7 @@ export interface WorkflowGraphNodeData extends Record<string, unknown> {
   readonly label: string;
   readonly hasError?: boolean;
   readonly executionStatus?: string;
+  readonly showTechnicalKey?: boolean;
 }
 
 export const WORKFLOW_GRAPH_NODE_TYPE = "workflowDefinition" as const;
@@ -172,6 +174,7 @@ export function definitionToFlow(
         nodeType: node.type,
         label: canvasLabel,
         hasError: options.errorNodeKeys?.has(node.key) === true,
+        showTechnicalKey: options.showTechnicalKey === true,
         ...(options.executionStatusByNodeKey?.[node.key] !== undefined
           ? { executionStatus: options.executionStatusByNodeKey[node.key] }
           : {}),

@@ -15,10 +15,12 @@ export interface ModelProfileVersionSelection {
 export function ModelProfileVersionSelector(props: {
   readonly value: string;
   readonly disabled?: boolean;
+  readonly presentation?: "default" | "studio";
   readonly onChange: (
     selection: ModelProfileVersionSelection | undefined,
   ) => void;
 }) {
+  const presentation = props.presentation ?? "default";
   const profilesQuery = useModelProfilesListQuery();
   const readinessQuery = useModelBindingReadinessQuery();
   const [profileId, setProfileId] = useState("");
@@ -67,8 +69,19 @@ export function ModelProfileVersionSelector(props: {
     !profilesQuery.isLoading &&
     (profilesQuery.data?.modelProfiles.length ?? 0) === 0;
 
+  const profileName =
+    (profilesQuery.data?.modelProfiles ?? []).find(
+      (profile) => profile.id === profileId,
+    )?.name ?? "Model profile";
+
   return (
-    <div className="filters">
+    <div
+      className={
+        presentation === "studio"
+          ? "agent-studio-model-picker stack"
+          : "filters"
+      }
+    >
       {props.value.length > 0 && resolvedSelection === undefined ? (
         <p className="muted" role="status">
           Selected version <span className="mono">{props.value}</span> is not
@@ -76,7 +89,21 @@ export function ModelProfileVersionSelector(props: {
           <Link to="/models/profiles">open Models</Link>.
         </p>
       ) : null}
-      {resolvedSelection !== undefined ? (
+      {resolvedSelection !== undefined && presentation === "studio" ? (
+        <div className="agent-studio-model-summary" role="status">
+          <p className="agent-studio-model-summary-title">
+            {profileName} · {resolvedSelection.label}
+          </p>
+          <details className="agent-studio-v2-tech-details">
+            <summary>Technical details</summary>
+            <p className="muted">
+              Immutable ModelProfileVersion ID:{" "}
+              <span className="mono">{resolvedSelection.version.id}</span>
+            </p>
+          </details>
+        </div>
+      ) : null}
+      {resolvedSelection !== undefined && presentation !== "studio" ? (
         <p className="muted" role="status">
           Bound version:{" "}
           <span className="mono">{resolvedSelection.version.id}</span> —{" "}
@@ -84,69 +111,93 @@ export function ModelProfileVersionSelector(props: {
         </p>
       ) : null}
       {profilesEmpty ? (
-        <p className="muted">
-          No model profiles yet.{" "}
-          <Link to="/models/connections">Create a connection</Link>, then{" "}
-          <Link to="/models/profiles">publish a model profile version</Link>.
-        </p>
-      ) : null}
-      <div className="field">
-        <label htmlFor="agent-model-profile">Model profile</label>
-        <select
-          id="agent-model-profile"
-          className="ui-control"
-          value={profileId}
-          disabled={props.disabled || profilesQuery.isLoading}
-          onChange={(event) => {
-            setProfileId(event.target.value);
-            props.onChange(undefined);
-          }}
+        <div
+          className="agent-studio-model-empty"
+          role="status"
+          data-testid="agent-studio-model-empty"
         >
-          <option value="">Select profile…</option>
-          {(profilesQuery.data?.modelProfiles ?? []).map((profile) => (
-            <option key={profile.id} value={profile.id}>
-              {profile.name} ({profile.key})
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor="agent-primary-model">Primary model version</label>
-        <select
-          id="agent-primary-model"
-          className="ui-control"
-          value={props.value}
-          disabled={
-            props.disabled || profileId.length === 0 || options.length === 0
-          }
-          onChange={(event) => {
-            const option = options.find(
-              (item) => item.id === event.target.value,
-            );
-            props.onChange(
-              option === undefined
-                ? undefined
-                : {
-                    modelProfileVersionId: option.id,
-                    label: option.label,
-                  },
-            );
-          }}
-        >
-          <option value="">Select immutable version…</option>
-          {options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-              {option.missingConnection ? " — connection not configured" : ""}
-            </option>
-          ))}
-        </select>
-        {profileId.length > 0 && options.length === 0 ? (
           <p className="muted">
-            This profile has no published versions yet.{" "}
-            <Link to={`/models/profiles/${profileId}`}>Open profile</Link>.
+            {presentation === "studio"
+              ? "This agent needs an immutable ModelProfileVersion before it can be published. Configure a model profile and published version in Models — a provider connection alone does not prove the agent can execute."
+              : "No model profiles yet."}
           </p>
-        ) : null}
+          <div className="toolbar">
+            <Link className="button button-secondary" to="/models/profiles">
+              Open Models
+            </Link>
+            {presentation === "default" ? (
+              <Link className="button button-ghost" to="/models/connections">
+                Connections
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      <div
+        className={
+          presentation === "studio"
+            ? "agent-studio-model-picker-fields"
+            : undefined
+        }
+      >
+        <div className="field">
+          <label htmlFor="agent-model-profile">Model profile</label>
+          <select
+            id="agent-model-profile"
+            className="ui-control"
+            value={profileId}
+            disabled={props.disabled || profilesQuery.isLoading}
+            onChange={(event) => {
+              setProfileId(event.target.value);
+              props.onChange(undefined);
+            }}
+          >
+            <option value="">Select profile…</option>
+            {(profilesQuery.data?.modelProfiles ?? []).map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name} ({profile.key})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="agent-primary-model">Primary model version</label>
+          <select
+            id="agent-primary-model"
+            className="ui-control"
+            value={props.value}
+            disabled={
+              props.disabled || profileId.length === 0 || options.length === 0
+            }
+            onChange={(event) => {
+              const option = options.find(
+                (item) => item.id === event.target.value,
+              );
+              props.onChange(
+                option === undefined
+                  ? undefined
+                  : {
+                      modelProfileVersionId: option.id,
+                      label: option.label,
+                    },
+              );
+            }}
+          >
+            <option value="">Select immutable version…</option>
+            {options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+                {option.missingConnection ? " — connection not configured" : ""}
+              </option>
+            ))}
+          </select>
+          {profileId.length > 0 && options.length === 0 ? (
+            <p className="muted">
+              This profile has no published versions yet.{" "}
+              <Link to={`/models/profiles/${profileId}`}>Open profile</Link>.
+            </p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

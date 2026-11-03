@@ -10,6 +10,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { readAgentStudioCreateDraft } from "../src/client/lib/agent-studio-create-draft-storage";
+import { AGENT_STUDIO_TEMPLATE_IDEAS } from "../src/client/lib/agent-studio-v2-templates";
 import { AuthProvider } from "../src/client/context/auth-context";
 import { AgentCreatePage } from "../src/client/routes/agent-create-page";
 import { AgentVersionCreatePage } from "../src/client/routes/agent-version-create-page";
@@ -62,6 +64,32 @@ function renderStudio(path: string) {
   );
 }
 
+async function goToEquipStage(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("button", { name: "Continue to capabilities" }),
+  );
+}
+
+async function goToReviewStage(user: ReturnType<typeof userEvent.setup>) {
+  await goToEquipStage(user);
+  await user.click(screen.getByRole("button", { name: "Select test model" }));
+  await user.click(screen.getByRole("button", { name: "Continue to review" }));
+}
+
+async function confirmPublish(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+) {
+  await user.click(screen.getByRole("button", { name: label }));
+  await waitFor(() => {
+    expect(document.querySelector(".dialog-panel")).toBeTruthy();
+  });
+  const confirm = document.querySelector(
+    '[data-confirm-dialog="confirm"]',
+  ) as HTMLButtonElement;
+  await user.click(confirm);
+}
+
 const agent = {
   id: "agent-studio",
   workspaceId: "ws-1",
@@ -78,6 +106,7 @@ describe("Agent Studio UI", () => {
   });
 
   it("blocks publish for empty instructions and missing model", async () => {
+    const user = userEvent.setup();
     stubHumanSessionFetch("ADMIN", "ws-1");
     renderStudio("/agents/new");
     await waitFor(() => {
@@ -89,6 +118,21 @@ describe("Agent Studio UI", () => {
     fireEvent.change(document.getElementById("studio-instructions")!, {
       target: { value: "" },
     });
+    await user.click(
+      screen.getByRole("button", { name: "Continue to capabilities" }),
+    );
+    expect(
+      screen.getByText(
+        /Add instructions describing what your agent should do/i,
+      ),
+    ).toBeTruthy();
+    fireEvent.change(document.getElementById("studio-instructions")!, {
+      target: { value: "Help customers." },
+    });
+    await goToEquipStage(user);
+    await user.click(
+      screen.getByRole("button", { name: "Continue to review" }),
+    );
     expect(
       (
         screen.getByRole("button", {
@@ -96,10 +140,9 @@ describe("Agent Studio UI", () => {
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
-    expect(screen.getByText(/instructions are required/i)).toBeTruthy();
     expect(
-      screen.getAllByText(/modelBinding 'primary' is not declared/i).length,
-    ).toBeGreaterThan(0);
+      screen.getByText(/Choose an AI model version before publishing/i),
+    ).toBeTruthy();
   });
 
   it("publishes a declarative agent and version", async () => {
@@ -139,10 +182,8 @@ describe("Agent Studio UI", () => {
     fireEvent.change(document.getElementById("studio-instructions")!, {
       target: { value: "Help customers with billing questions." },
     });
-    await user.click(screen.getByRole("button", { name: "Select test model" }));
-    await user.click(
-      screen.getByRole("button", { name: "Publish agent version" }),
-    );
+    await goToReviewStage(user);
+    await confirmPublish(user, "Publish agent version");
     await waitFor(() => {
       expect(screen.getByText("Published version")).toBeTruthy();
     });
@@ -152,17 +193,17 @@ describe("Agent Studio UI", () => {
     stubHumanSessionFetch("VIEWER", "ws-1");
     renderStudio("/agents/new");
     await waitFor(() => {
-      expect(
-        screen.getByText(/DEVELOPER, EDITOR, ADMIN, or OWNER/i),
-      ).toBeTruthy();
+      expect(screen.getByTestId("agent-studio-readonly-notice")).toBeTruthy();
     });
     expect(
-      (
-        screen.getByRole("button", {
-          name: "Publish agent version",
-        }) as HTMLButtonElement
-      ).disabled,
+      (screen.getByLabelText("Agent name") as HTMLInputElement).disabled,
     ).toBe(true);
+    expect(
+      (screen.getByLabelText(/^Instructions/i) as HTMLTextAreaElement).disabled,
+    ).toBe(true);
+    expect(
+      screen.queryByRole("button", { name: "Publish agent version" }),
+    ).toBeNull();
   });
 
   it("switches guided and advanced modes without losing manifest fields", async () => {
@@ -175,7 +216,9 @@ describe("Agent Studio UI", () => {
     fireEvent.change(document.getElementById("studio-instructions")!, {
       target: { value: "Round-trip instructions." },
     });
-    await user.click(screen.getByRole("button", { name: "Advanced JSON" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Advanced JSON" })[0]!,
+    );
     const jsonField = screen.getByLabelText(
       "AgentVersion manifest",
     ) as HTMLTextAreaElement;
@@ -238,27 +281,145 @@ describe("Agent Studio UI", () => {
     fireEvent.change(document.getElementById("studio-instructions")!, {
       target: { value: "Recover from partial publish." },
     });
-    await user.click(screen.getByRole("button", { name: "Select test model" }));
-    await user.click(
-      screen.getByRole("button", { name: "Publish agent version" }),
-    );
+    await goToReviewStage(user);
+    await confirmPublish(user, "Publish agent version");
     await waitFor(() => {
       expect(
-        screen.getByText(/publishing the first AgentVersion failed/i),
+        screen.getByText(/Agent created, but publishing didn't finish/i),
       ).toBeTruthy();
     });
+    expect(
+      screen.getByRole("button", { name: "Retry publishing" }),
+    ).toBeTruthy();
     expect(agentPostCount).toBe(1);
     expect(screen.getByText("agent-partial")).toBeTruthy();
     expect(screen.queryByText("Published version")).toBeNull();
 
-    await user.click(
-      screen.getByRole("button", { name: "Publish agent version" }),
-    );
+    await confirmPublish(user, "Retry publishing");
     await waitFor(() => {
       expect(screen.getByText("Published version")).toBeTruthy();
     });
     expect(agentPostCount).toBe(1);
     expect(versionPostCount).toBe(2);
+  });
+
+  it("does not show required-field errors on a fresh agent before interaction", async () => {
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    });
+    expect(screen.queryByText(/Agent instructions are required/i)).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows describe validation after attempting to continue with empty instructions", async () => {
+    const user = userEvent.setup();
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    });
+    fireEvent.change(screen.getByLabelText("Agent name"), {
+      target: { value: "Named agent" },
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Continue to capabilities" }),
+    );
+    expect(
+      screen.getByText(
+        /Add instructions describing what your agent should do/i,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("confirms before replacing a non-empty draft with a template", async () => {
+    const user = userEvent.setup();
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    });
+    fireEvent.change(screen.getByLabelText("Agent name"), {
+      target: { value: "Existing draft" },
+    });
+    fireEvent.change(document.getElementById("studio-instructions")!, {
+      target: { value: "Keep until confirmed." },
+    });
+    await user.click(screen.getByRole("button", { name: "Templates" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Use this idea" })[0]!,
+    );
+    expect(screen.getByText(/Replace current draft\?/i)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Replace draft" }));
+    expect(
+      screen.getByDisplayValue(AGENT_STUDIO_TEMPLATE_IDEAS[0]!.suggestedName),
+    ).toBeTruthy();
+  });
+
+  it("restores create-agent draft after leaving for Models and returning", async () => {
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    const { unmount } = renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    });
+    fireEvent.change(screen.getByLabelText("Agent name"), {
+      target: { value: "Draft survivor" },
+    });
+    fireEvent.change(document.getElementById("studio-instructions")!, {
+      target: { value: "Survives navigation." },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue to capabilities" }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: /What will your agent need\?/i }),
+      ).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(readAgentStudioCreateDraft("ws-1")?.agentName).toBe(
+        "Draft survivor",
+      );
+    });
+    unmount();
+    renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: /What will your agent need\?/i }),
+      ).toBeTruthy();
+    });
+    expect(readAgentStudioCreateDraft("ws-1")?.agentName).toBe(
+      "Draft survivor",
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "1 Describe" }));
+    expect(screen.getByDisplayValue("Draft survivor")).toBeTruthy();
+    expect(screen.getByDisplayValue("Survives navigation.")).toBeTruthy();
+  });
+
+  it("does not append examples to instructions when changing stages", async () => {
+    const user = userEvent.setup();
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    renderStudio("/agents/new");
+    await waitFor(() => {
+      expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    });
+    fireEvent.change(document.getElementById("studio-instructions")!, {
+      target: { value: "Base only." },
+    });
+    fireEvent.change(document.getElementById("studio-examples")!, {
+      target: { value: "User: Hi" },
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Continue to capabilities" }),
+    );
+    await user.click(screen.getByRole("button", { name: "1 Describe" }));
+    expect(
+      (document.getElementById("studio-instructions") as HTMLTextAreaElement)
+        .value,
+    ).toBe("Base only.");
   });
 
   it("preserves invalid JSON when switching back to guided", async () => {
@@ -268,17 +429,18 @@ describe("Agent Studio UI", () => {
     await waitFor(() => {
       expect(screen.getByLabelText("Agent name")).toBeTruthy();
     });
-    await user.click(screen.getByRole("button", { name: "Advanced JSON" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Advanced JSON" })[0]!,
+    );
     const jsonField = screen.getByLabelText(
       "AgentVersion manifest",
     ) as HTMLTextAreaElement;
     fireEvent.change(jsonField, { target: { value: "{ broken-json" } });
     await user.click(screen.getByRole("button", { name: "Guided" }));
     expect(screen.getByText(/Manifest JSON is invalid/i)).toBeTruthy();
-    const modeToggle = document.querySelector(".agent-studio-mode-toggle");
-    const advancedToggle = modeToggle?.querySelectorAll("button")[1];
-    expect(advancedToggle?.textContent).toContain("Advanced JSON");
-    await user.click(advancedToggle!);
+    await user.click(
+      screen.getAllByRole("button", { name: "Advanced JSON" })[0]!,
+    );
     expect(
       (screen.getByLabelText("AgentVersion manifest") as HTMLTextAreaElement)
         .value,
@@ -325,6 +487,8 @@ describe("Agent Studio UI", () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue("Existing instructions")).toBeTruthy();
     });
-    expect(screen.getByText(/Copied configuration from version/i)).toBeTruthy();
+    expect(
+      screen.getAllByText(/Copied configuration from version/i).length,
+    ).toBeGreaterThan(0);
   });
 });

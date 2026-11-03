@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import type { Page } from "playwright";
 import type { Database } from "@osva/db";
 
+import { openAgentStudioKnowledgeAndMemoryBindings } from "./agent-studio-v2-browser-helpers.js";
 import { clickResourcesNavLink } from "./m18-1a-browser-helpers.js";
 import { ensureConsoleClientDistForBrowserTests } from "./ensure-console-client-dist.js";
 import {
@@ -86,12 +87,7 @@ describe("M13.5 browser acceptance (knowledge & memory studio shell)", () => {
 
       await page.getByRole("link", { name: "Agents" }).click();
       await page.getByRole("link", { name: "Create Agent" }).first().click();
-      await page.getByRole("heading", { name: "Knowledge bindings" }).waitFor({
-        timeout: 30_000,
-      });
-      await page.getByRole("heading", { name: "Memory bindings" }).waitFor({
-        timeout: 30_000,
-      });
+      await openAgentStudioKnowledgeAndMemoryBindings(page);
     } finally {
       await browser.close();
       await stack.close();

@@ -31,15 +31,20 @@ export function WorkflowGraphNode({
   const typePresentation = isWorkflowV3NodeType(data.nodeType)
     ? workflowNodePresentation(data.nodeType).label
     : data.nodeType;
+  const primaryLabel =
+    data.label.trim().length > 0 ? data.label : "Configure this step";
+  const showTechnicalKey = data.showTechnicalKey === true;
   return (
     <div
       className={`workflow-graph-node workflow-graph-node--${nodeTypeClass}${selected ? " workflow-graph-node--selected" : ""}${errorClass}${executionClass}`}
-      aria-label={`${typePresentation} step ${data.nodeKey}${data.hasError === true ? " (has errors)" : ""}${executionLabel}`}
+      aria-label={`${primaryLabel}, ${typePresentation}${data.hasError === true ? " (has errors)" : ""}${executionLabel}`}
     >
       <Handle type="target" position={Position.Left} />
+      <div className="workflow-graph-node__primary">{primaryLabel}</div>
       <div className="workflow-graph-node__type">{typePresentation}</div>
-      <div className="workflow-graph-node__label">{data.label}</div>
-      <div className="workflow-graph-node__key mono">{data.nodeKey}</div>
+      {showTechnicalKey ? (
+        <div className="workflow-graph-node__key mono">{data.nodeKey}</div>
+      ) : null}
       {data.executionStatus !== undefined ? (
         <div className="workflow-graph-node__exec">
           {describeWorkflowNodeExecutionStatus(data.executionStatus)}

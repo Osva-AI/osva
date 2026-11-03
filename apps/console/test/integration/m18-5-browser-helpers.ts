@@ -120,7 +120,5 @@ export async function openAgentCreate(
   origin: string,
 ): Promise<void> {
   await page.goto(`${origin}/agents/new`, { waitUntil: "networkidle" });
-  await page
-    .getByRole("heading", { name: "Create Agent", level: 1 })
-    .waitFor({ timeout: 30_000 });
+  await page.getByTestId("agent-studio-v2").waitFor({ timeout: 30_000 });
 }

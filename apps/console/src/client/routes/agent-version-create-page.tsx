@@ -6,11 +6,8 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
-import {
-  AgentVersionReviewPanel,
-  DeclarativeAgentStudioEditor,
-  type AgentStudioEditorMode,
-} from "../components/agent/declarative-agent-studio-editor";
+import { AgentStudioV2Workspace } from "../components/agent/agent-studio-v2-workspace";
+import type { AgentStudioEditorMode } from "../components/agent/declarative-agent-studio-editor";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
@@ -70,7 +67,6 @@ export function AgentVersionCreatePage() {
 
   const [surface, setSurface] = useState<AuthoringSurface>(initialSurface);
   const [editorMode, setEditorMode] = useState<AgentStudioEditorMode>("guided");
-  const [showReview, setShowReview] = useState(false);
   const [manifestText, setManifestText] = useState("");
   const [manifestInitialized, setManifestInitialized] = useState(false);
   const [feedback, setFeedback] = useState<string | undefined>();
@@ -231,7 +227,6 @@ export function AgentVersionCreatePage() {
     if (!parsed.ok || !canSubmit || submittingRef.current) {
       if (surface === "studio" && declarativeValidation?.ok === false) {
         setFeedback("Fix validation issues before publishing.");
-        setShowReview(true);
       } else if (developerSubmitBlocker !== undefined) {
         setFeedback(developerSubmitBlocker);
       }
@@ -246,7 +241,9 @@ export function AgentVersionCreatePage() {
         agentId: resolvedAgentId,
         manifest: parsed.value,
       });
-      navigate(`/agents/${resolvedAgentId}/versions/${created.id}?published=1`);
+      navigate(
+        `/agents/${resolvedAgentId}/versions/${created.id}?published=1&studio=test`,
+      );
     } catch (error) {
       submittingRef.current = false;
       setFeedback(
@@ -315,61 +312,51 @@ export function AgentVersionCreatePage() {
 
         {surface === "studio" ? (
           <>
-            {copyFromVersionId !== undefined && !sourceVersionUnavailable ? (
-              <p className="muted">
-                Copied configuration from version{" "}
-                <span className="mono">{copyFromVersionId}</span>. The original
-                version is unchanged.
-              </p>
-            ) : null}
             {sourceVersionUnavailable ? null : !manifestInitialized ? (
               <LoadingBlock label="Preparing draft…" />
             ) : (
-              <>
-                <DeclarativeAgentStudioEditor
-                  manifestText={manifestText}
-                  disabled={!canWrite || mutation.isPending}
-                  mode={editorMode}
-                  onModeChange={setEditorMode}
-                  showManifestKeyFields
-                  onManifestTextChange={(next) => {
-                    setManifestText(next);
-                    setFeedback(undefined);
-                    setErrorStatus(undefined);
-                    const parsedNext = parseManifestRecord(next);
-                    if (parsedNext.ok) {
-                      setPrimaryModelVersionId(
-                        readPrimaryModelProfileVersionId(parsedNext.value) ??
-                          "",
-                      );
-                    }
-                  }}
-                  validation={declarativeValidation}
-                />
-                <div className="toolbar">
-                  <button
-                    type="button"
-                    className="button"
-                    disabled={!parsed.ok}
-                    onClick={() => setShowReview((current) => !current)}
-                  >
-                    {showReview ? "Hide review" : "Validate and review"}
-                  </button>
-                  <button
-                    type="button"
-                    className="button primary"
-                    disabled={!canSubmit}
-                    onClick={() => void submit()}
-                  >
-                    {mutation.isPending
-                      ? "Publishing…"
-                      : "Publish AgentVersion"}
-                  </button>
-                </div>
-                {showReview ? (
-                  <AgentVersionReviewPanel manifestText={manifestText} />
-                ) : null}
-              </>
+              <AgentStudioV2Workspace
+                agentName={agentQuery.data?.name ?? ""}
+                manifestText={manifestText}
+                onManifestTextChange={(next) => {
+                  setManifestText(next);
+                  setFeedback(undefined);
+                  setErrorStatus(undefined);
+                  const parsedNext = parseManifestRecord(next);
+                  if (parsedNext.ok) {
+                    setPrimaryModelVersionId(
+                      readPrimaryModelProfileVersionId(parsedNext.value) ?? "",
+                    );
+                  }
+                }}
+                canWrite={canWrite}
+                disabled={mutation.isPending}
+                workspaceName={authQuery.data?.workspaceId}
+                editorMode={editorMode}
+                onEditorModeChange={setEditorMode}
+                validation={
+                  declarativeValidation ?? {
+                    ok: false,
+                    messages: ["Manifest is not a declarative agent."],
+                    fieldErrors: {},
+                  }
+                }
+                publishLabel="Publish AgentVersion"
+                onPublish={() => void submit()}
+                publishPending={mutation.isPending}
+                feedback={feedback}
+                errorRequestId={errorRequestId}
+                errorStatus={errorStatus}
+                banner={
+                  copyFromVersionId !== undefined ? (
+                    <p className="muted">
+                      Copied configuration from version{" "}
+                      <span className="mono">{copyFromVersionId}</span>. The
+                      original version is unchanged.
+                    </p>
+                  ) : undefined
+                }
+              />
             )}
           </>
         ) : (
