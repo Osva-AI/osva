@@ -132,9 +132,7 @@ describe("UX V2.3 browser acceptance (guided onboarding evidence)", () => {
           {
             expectedViewportWidth: 1440,
             assertState: async () => {
-              await page
-                .getByText(/No model configured yet/i)
-                .waitFor();
+              await page.getByText(/No model configured yet/i).waitFor();
             },
           },
         );
@@ -245,7 +243,10 @@ describe("UX V2.3 browser acceptance (guided onboarding evidence)", () => {
           includeRuns: true,
         });
         await page.setViewportSize({ width: 1440, height: 900 });
-        await seedShellStorage(page, { workspaceId: "ws-admin", theme: "light" });
+        await seedShellStorage(page, {
+          workspaceId: "ws-admin",
+          theme: "light",
+        });
         await page.goto(
           `${origin}/onboarding?agentId=agent-onb-1&agentVersionId=av-onb-1&stage=review-test`,
           { waitUntil: "networkidle" },
@@ -293,7 +294,10 @@ describe("UX V2.3 browser acceptance (guided onboarding evidence)", () => {
           includeRuns: true,
         });
         await page.setViewportSize({ width: 1440, height: 900 });
-        await seedShellStorage(page, { workspaceId: "ws-admin", theme: "light" });
+        await seedShellStorage(page, {
+          workspaceId: "ws-admin",
+          theme: "light",
+        });
         await page.goto(
           `${origin}/onboarding?agentId=agent-onb-1&agentVersionId=av-onb-1&stage=review-test`,
           { waitUntil: "networkidle" },
@@ -331,7 +335,10 @@ describe("UX V2.3 browser acceptance (guided onboarding evidence)", () => {
           includeRuns: true,
         });
         await page.setViewportSize({ width: 1440, height: 900 });
-        await seedShellStorage(page, { workspaceId: "ws-admin", theme: "light" });
+        await seedShellStorage(page, {
+          workspaceId: "ws-admin",
+          theme: "light",
+        });
         await page.goto(
           `${origin}/onboarding?agentId=agent-onb-1&agentVersionId=av-onb-1&stage=review-test`,
           { waitUntil: "networkidle" },
@@ -366,7 +373,10 @@ describe("UX V2.3 browser acceptance (guided onboarding evidence)", () => {
           includeRuns: true,
         });
         await page.setViewportSize({ width: 1440, height: 900 });
-        await seedShellStorage(page, { workspaceId: "ws-admin", theme: "light" });
+        await seedShellStorage(page, {
+          workspaceId: "ws-admin",
+          theme: "light",
+        });
         await page.goto(
           `${origin}/onboarding?agentId=agent-onb-1&agentVersionId=av-onb-1&stage=review-test`,
           { waitUntil: "networkidle" },
@@ -580,7 +590,10 @@ describe("UX V2.3 browser acceptance (guided onboarding evidence)", () => {
           includeRuns: true,
         });
         await page.setViewportSize({ width: 390, height: 844 });
-        await seedShellStorage(page, { workspaceId: "ws-admin", theme: "light" });
+        await seedShellStorage(page, {
+          workspaceId: "ws-admin",
+          theme: "light",
+        });
         await page.goto(
           `${origin}/onboarding?agentId=agent-onb-1&agentVersionId=av-onb-1&stage=review-test`,
           { waitUntil: "networkidle" },
@@ -597,7 +610,9 @@ describe("UX V2.3 browser acceptance (guided onboarding evidence)", () => {
                 .scrollIntoViewIfNeeded();
             },
             assertState: async () => {
-              await page.getByTestId("onboarding-run-failure-recovery").waitFor();
+              await page
+                .getByTestId("onboarding-run-failure-recovery")
+                .waitFor();
               await page.getByText(/Test did not succeed/i).waitFor();
             },
           },

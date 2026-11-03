@@ -288,7 +288,9 @@ describe("Agents UI", () => {
       ).toBeTruthy();
     });
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: "Configure model" })).toBeTruthy();
+      expect(
+        screen.getByRole("link", { name: "Configure model" }),
+      ).toBeTruthy();
     });
     expect(
       screen
