@@ -328,7 +328,7 @@ describe("Agents UI", () => {
   });
 
   it("walks onboarding links without storing credentials", async () => {
-    stubConsole("ADMIN", (url, init) => {
+    stubConsole("ADMIN", (url) => {
       if (url.includes("/api/v1/model-provider-connections")) {
         return json({ connections: [] });
       }
