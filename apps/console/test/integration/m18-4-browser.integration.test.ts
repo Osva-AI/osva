@@ -36,15 +36,18 @@ describe("M18.4 browser acceptance (Unified guided onboarding)", () => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await openOnboarding(page, origin, { theme: "light" });
       await page.getByTestId("onboarding-primary-step").waitFor();
-      await page.getByRole("link", { name: "Open Models" }).waitFor();
+      await page.getByRole("link", { name: "Configure model" }).waitFor();
       await screenshotOnboarding(page, "desktop-1440-empty-light.png");
 
       await page.getByRole("link", { name: "Go to Home" }).click();
-      await page.getByRole("heading", { name: "Home", level: 1 }).waitFor();
-      await page.getByRole("link", { name: "Open full guide" }).click();
+      await page.getByRole("heading", { name: /Build your first/i }).waitFor();
+      await page.getByRole("link", { name: "Start guided setup" }).click();
       await waitForOnboarding(page);
 
-      await routeOnboardingConfiguredWorkspace(page, { runStatus: "QUEUED" });
+      await routeOnboardingConfiguredWorkspace(page, {
+        runStatus: "QUEUED",
+        includeRuns: true,
+      });
       await page.goto(
         `${origin}/onboarding?agentId=agent-onb-1&agentVersionId=av-onb-1`,
         { waitUntil: "networkidle" },
@@ -52,7 +55,7 @@ describe("M18.4 browser acceptance (Unified guided onboarding)", () => {
       await waitForOnboarding(page);
       await page
         .getByTestId("onboarding-primary-step")
-        .getByText(/in progress/i)
+        .getByText(/Your test is waiting to start/i)
         .waitFor();
       await screenshotOnboarding(
         page,
@@ -65,7 +68,7 @@ describe("M18.4 browser acceptance (Unified guided onboarding)", () => {
       await page.reload({ waitUntil: "networkidle" });
       await waitForOnboarding(page);
       await page
-        .getByRole("heading", { name: "First agent run succeeded" })
+        .getByRole("heading", { name: /Your first agent test succeeded/i })
         .waitFor();
       await page.getByRole("link", { name: "Open Run output" }).waitFor();
       await screenshotOnboarding(page, "desktop-1440-succeeded-light.png");
@@ -118,7 +121,7 @@ describe("M18.4 browser acceptance (Unified guided onboarding)", () => {
       );
       await waitForOnboarding(page);
       await page
-        .getByRole("heading", { name: "First agent run succeeded" })
+        .getByRole("heading", { name: /Your first agent test succeeded/i })
         .waitFor();
       await page.getByLabel("Theme").click();
       await page.getByRole("radio", { name: "Dark" }).click();
@@ -143,6 +146,7 @@ describe("M18.4 browser acceptance (Unified guided onboarding)", () => {
       );
       expect(focused.length).toBeGreaterThan(0);
 
+      await routeOnboardingEmptyWorkspace(page);
       await openOnboarding(page, origin, {
         query: "?exampleId=not-in-catalog",
         theme: "light",
@@ -158,7 +162,7 @@ describe("M18.4 browser acceptance (Unified guided onboarding)", () => {
       await page.getByTestId("onboarding-primary-step").waitFor();
       expect(
         await page
-          .getByRole("heading", { name: "First agent run succeeded" })
+          .getByRole("heading", { name: /Your first agent test succeeded/i })
           .count(),
       ).toBe(0);
     } finally {

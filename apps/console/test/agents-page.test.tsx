@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -81,6 +82,73 @@ const version = {
     capabilities: { model: false, tools: [] },
   },
 };
+
+const declarativeEchoVersion = {
+  ...version,
+  manifest: {
+    schemaVersion: "1",
+    runtime: { type: "DECLARATIVE" },
+    input: { schema: { type: "object" } },
+    capabilities: { model: true, tools: [] },
+  },
+};
+
+function stubOnboardingWorkspaceApis(
+  url: string,
+  init?: RequestInit,
+): Response | undefined {
+  const method = init?.method ?? "GET";
+  if (url.includes("/api/v1/model-provider-connections") && method === "GET") {
+    return json({
+      connections: [
+        {
+          id: "conn-1",
+          workspaceId: "ws-1",
+          key: "openai",
+          name: "OpenAI",
+          provider: "OPENAI",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+  }
+  if (url.includes("/api/v1/model-profiles") && !url.includes("/versions")) {
+    return json({
+      modelProfiles: [
+        {
+          id: "mp-1",
+          workspaceId: "ws-1",
+          key: "primary",
+          name: "Primary",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+  }
+  if (/\/api\/v1\/model-profiles\/[^/]+\/versions$/.test(url)) {
+    return json({
+      versions: [
+        {
+          id: "mpv-1",
+          modelProfileId: "mp-1",
+          version: 1,
+          provider: "OPENAI",
+          model: "gpt-test",
+          modelProviderConnectionVersionId: "conn-v-1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+  }
+  if (url.includes("/api/v1/workflows")) {
+    return json({ workflows: [] });
+  }
+  if (url.includes("/api/v1/runs")) {
+    return json({ runs: [] });
+  }
+  return undefined;
+}
 
 function stubConsole(
   role: string,
@@ -288,7 +356,9 @@ describe("Agents UI", () => {
       ).toBeTruthy();
     });
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: "Open Models" })).toBeTruthy();
+      expect(
+        screen.getByRole("link", { name: "Configure model" }),
+      ).toBeTruthy();
     });
     expect(
       screen
@@ -299,19 +369,56 @@ describe("Agents UI", () => {
   });
 
   it("blocks write and execute onboarding steps for VIEWER", async () => {
-    stubConsole("VIEWER");
-    renderAgents("/onboarding");
+    stubConsole("VIEWER", (url, init) => {
+      const onboarding = stubOnboardingWorkspaceApis(url, init);
+      if (onboarding !== undefined) {
+        return onboarding;
+      }
+      if (
+        url === "/api/v1/agents/agent-echo/versions" &&
+        init?.method !== "POST"
+      ) {
+        return json({ versions: [declarativeEchoVersion] });
+      }
+      return undefined;
+    });
+    const user = userEvent.setup();
+    renderAgents(
+      "/onboarding?stage=review-test&agentId=agent-echo&agentVersionId=av-echo",
+    );
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading onboarding progress/i)).toBeNull();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-primary-step")).toBeTruthy();
+    });
+
+    const primary = within(screen.getByTestId("onboarding-primary-step"));
+    expect(
+      primary.getByText(
+        /requires DEVELOPER, ADMIN, or OWNER in this workspace/i,
+      ),
+    ).toBeTruthy();
+    expect(
+      primary.getByText(/requires OPERATOR, DEVELOPER, ADMIN, or OWNER\./i),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("link", { name: "Review and publish" }),
+    ).toBeNull();
+    expect(screen.queryByRole("link", { name: "Start test run" })).toBeNull();
+
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+    await user.click(screen.getByRole("button", { name: "Developer path" }));
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", {
-          name: "Get your first agent running",
-          level: 1,
-        }),
-      ).toBeTruthy();
+        document.getElementById("developer-onboarding")?.hasAttribute("open"),
+      ).toBe(true);
+      expect(screen.getByText(/Create Agent \(developer path\)/i)).toBeTruthy();
     });
+    expect(screen.queryByRole("link", { name: "Developer create" })).toBeNull();
     expect(
       screen.getAllByText(/requires DEVELOPER, ADMIN, or OWNER/).length,
-    ).toBeGreaterThan(0);
+    ).toBeGreaterThan(1);
     expect(
       screen.getAllByText(/requires OPERATOR, DEVELOPER, ADMIN, or OWNER/)
         .length,

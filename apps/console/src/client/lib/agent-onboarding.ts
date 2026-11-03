@@ -16,6 +16,61 @@ export interface OnboardingContext {
   readonly exampleId?: string;
 }
 
+/** Four visual onboarding stages (granular evidence steps map into these). */
+export const GUIDED_ONBOARDING_VISUAL_STAGE_IDS = [
+  "get-ready",
+  "choose-model",
+  "create-agent",
+  "review-test",
+] as const;
+
+export type GuidedVisualStageId =
+  (typeof GUIDED_ONBOARDING_VISUAL_STAGE_IDS)[number];
+
+export interface GuidedVisualStageDefinition {
+  readonly id: GuidedVisualStageId;
+  readonly index: number;
+  readonly title: string;
+  readonly headline: string;
+  readonly description: string;
+}
+
+export const GUIDED_ONBOARDING_VISUAL_STAGES: readonly GuidedVisualStageDefinition[] =
+  [
+    {
+      id: "get-ready",
+      index: 1,
+      title: "Get ready",
+      headline: "Let's make sure OSVA is ready",
+      description:
+        "We'll show what the Console can verify from your workspace. Execution infrastructure is only confirmed after a successful test Run.",
+    },
+    {
+      id: "choose-model",
+      index: 2,
+      title: "Set up your AI model",
+      headline: "Set up your AI model",
+      description:
+        "Confirm a model is configured in this workspace. You pick the exact model when you create your agent in Agent Studio.",
+    },
+    {
+      id: "create-agent",
+      index: 3,
+      title: "Create your agent",
+      headline: "Tell your agent what to do",
+      description:
+        "Name your agent and describe its job in plain language. Advanced capabilities stay optional in Agent Studio.",
+    },
+    {
+      id: "review-test",
+      index: 4,
+      title: "Review, publish and test",
+      headline: "Review, publish, and test",
+      description:
+        "Publish locks in your agent setup, then run a small test task. Finishing the test successfully is separate from publishing.",
+    },
+  ];
+
 /** Core guided journey steps (workflow exploration is optional and separate). */
 export const GUIDED_ONBOARDING_CORE_STEP_IDS = [
   "workspace",
@@ -83,7 +138,10 @@ export function parseOnboardingContext(
   };
 }
 
-export function onboardingSearch(context: OnboardingContext): string {
+export function onboardingSearch(
+  context: OnboardingContext,
+  options?: { readonly viewStage?: GuidedVisualStageId },
+): string {
   const params = new URLSearchParams();
   if (context.agentId !== undefined) {
     params.set("agentId", context.agentId);
@@ -97,8 +155,301 @@ export function onboardingSearch(context: OnboardingContext): string {
   if (context.exampleId !== undefined) {
     params.set("exampleId", context.exampleId);
   }
+  if (options?.viewStage !== undefined) {
+    params.set("stage", options.viewStage);
+  }
   const query = params.toString();
   return query.length === 0 ? "" : `?${query}`;
+}
+
+export function parseOnboardingViewStage(
+  searchParams: URLSearchParams,
+): GuidedVisualStageId | undefined {
+  const raw = searchParams.get("stage")?.trim().toLowerCase();
+  if (raw === undefined || raw.length === 0) {
+    return undefined;
+  }
+  if (raw === "1" || raw === "get-ready") {
+    return "get-ready";
+  }
+  if (raw === "2" || raw === "choose-model") {
+    return "choose-model";
+  }
+  if (raw === "3" || raw === "create-agent") {
+    return "create-agent";
+  }
+  if (raw === "4" || raw === "review-test") {
+    return "review-test";
+  }
+  return undefined;
+}
+
+export function granularStepToVisualStage(stepId: string): GuidedVisualStageId {
+  switch (stepId) {
+    case "workspace":
+      return "get-ready";
+    case "model":
+      return "choose-model";
+    case "create-agent":
+      return "create-agent";
+    case "publish":
+    case "run":
+    case "inspect":
+      return "review-test";
+    default:
+      return "get-ready";
+  }
+}
+
+export function visualStageDefinition(
+  stageId: GuidedVisualStageId,
+): GuidedVisualStageDefinition {
+  const found = GUIDED_ONBOARDING_VISUAL_STAGES.find(
+    (stage) => stage.id === stageId,
+  );
+  if (found === undefined) {
+    return GUIDED_ONBOARDING_VISUAL_STAGES[0]!;
+  }
+  return found;
+}
+
+export function deriveRecommendedVisualStage(input: {
+  readonly primaryGranularStepId: string | undefined;
+  readonly flags: OnboardingProgressFlags;
+  readonly controlPlaneReachable: boolean;
+}): GuidedVisualStageId {
+  if (!input.flags.workspaceReady || !input.controlPlaneReachable) {
+    return "get-ready";
+  }
+  if (input.primaryGranularStepId !== undefined) {
+    return granularStepToVisualStage(input.primaryGranularStepId);
+  }
+  if (!input.flags.modelReady) {
+    return "choose-model";
+  }
+  if (!input.flags.declarativeAgentReady) {
+    return "create-agent";
+  }
+  return "review-test";
+}
+
+export function visualStageEvidenceComplete(
+  stageId: GuidedVisualStageId,
+  flags: OnboardingProgressFlags,
+  controlPlaneReachable: boolean,
+): boolean {
+  switch (stageId) {
+    case "get-ready":
+      return flags.workspaceReady && controlPlaneReachable;
+    case "choose-model":
+      return flags.modelReady;
+    case "create-agent":
+      return flags.declarativeAgentReady;
+    case "review-test":
+      return flags.sampleRunSucceeded;
+    default:
+      return false;
+  }
+}
+
+export function visualStagePrerequisitesMet(
+  stageId: GuidedVisualStageId,
+  flags: OnboardingProgressFlags,
+  controlPlaneReachable: boolean,
+): boolean {
+  switch (stageId) {
+    case "get-ready":
+      return true;
+    case "choose-model":
+      return (
+        flags.workspaceReady &&
+        controlPlaneReachable &&
+        !flags.progressIndeterminate
+      );
+    case "create-agent":
+      return (
+        visualStagePrerequisitesMet(
+          "choose-model",
+          flags,
+          controlPlaneReachable,
+        ) && flags.modelReady
+      );
+    case "review-test":
+      return (
+        visualStagePrerequisitesMet(
+          "create-agent",
+          flags,
+          controlPlaneReachable,
+        ) && flags.declarativeAgentReady
+      );
+    default:
+      return false;
+  }
+}
+
+export interface VisualStageStepperItemState {
+  readonly evidenceComplete: boolean;
+  readonly isViewing: boolean;
+  readonly isActionRequired: boolean;
+  readonly needsAttention: boolean;
+  readonly notVerified: boolean;
+}
+
+export function deriveVisualStageStepperItemState(
+  stageId: GuidedVisualStageId,
+  input: {
+    readonly viewedStageId: GuidedVisualStageId;
+    readonly recommendedStageId: GuidedVisualStageId;
+    readonly flags: OnboardingProgressFlags;
+    readonly controlPlaneReachable: boolean;
+  },
+): VisualStageStepperItemState {
+  const evidenceComplete = visualStageEvidenceComplete(
+    stageId,
+    input.flags,
+    input.controlPlaneReachable,
+  );
+  const notVerified =
+    input.flags.progressIndeterminate && stageId !== "get-ready";
+  const isViewing = stageId === input.viewedStageId;
+  const isActionRequired =
+    !evidenceComplete && stageId === input.recommendedStageId;
+  const runNeedsRecovery =
+    stageId === "review-test" &&
+    input.flags.sampleRunSubmitted &&
+    !input.flags.sampleRunSucceeded &&
+    (input.flags.runPhase === "failed" ||
+      input.flags.runPhase === "cancelled" ||
+      input.flags.runPhase === "timed_out");
+  const prerequisitesBlocked =
+    isViewing &&
+    !evidenceComplete &&
+    !visualStagePrerequisitesMet(
+      stageId,
+      input.flags,
+      input.controlPlaneReachable,
+    );
+  const needsAttention =
+    !notVerified &&
+    !evidenceComplete &&
+    (runNeedsRecovery || prerequisitesBlocked);
+
+  return {
+    evidenceComplete,
+    isViewing,
+    isActionRequired,
+    needsAttention,
+    notVerified,
+  };
+}
+
+export function visualStageStepperStatusLabel(
+  state: VisualStageStepperItemState,
+): string {
+  if (state.notVerified) {
+    return "Not verified";
+  }
+  if (state.evidenceComplete) {
+    return "Complete";
+  }
+  if (state.needsAttention) {
+    return "Needs attention";
+  }
+  if (state.isActionRequired) {
+    return "Your task";
+  }
+  if (state.isViewing) {
+    return "Viewing";
+  }
+  return "Upcoming";
+}
+
+/** @deprecated Stepper uses deriveVisualStageStepperItemState — kept for granular steps. */
+export function visualStageNavVisualState(
+  stageId: GuidedVisualStageId,
+  input: {
+    readonly viewedStageId: GuidedVisualStageId;
+    readonly recommendedStageId: GuidedVisualStageId;
+    readonly flags: OnboardingProgressFlags;
+    readonly controlPlaneReachable: boolean;
+  },
+): GuidedStepVisualState {
+  const item = deriveVisualStageStepperItemState(stageId, input);
+  if (item.notVerified) {
+    return "not_verified";
+  }
+  if (item.evidenceComplete) {
+    return "complete";
+  }
+  if (item.needsAttention) {
+    return "needs_attention";
+  }
+  if (item.isActionRequired) {
+    return "current";
+  }
+  if (item.isViewing) {
+    return "upcoming";
+  }
+  return "upcoming";
+}
+
+export interface UsableModelProfileVersionSummary {
+  readonly profileId: string;
+  readonly profileKey: string;
+  readonly profileName: string;
+  readonly version: ModelProfileVersionResource;
+}
+
+export function listUsableModelProfileVersions(input: {
+  readonly modelProfiles: readonly ModelProfileResource[] | undefined;
+  readonly modelProfileVersions:
+    | ReadonlyArray<{
+        readonly profileId: string;
+        readonly versions: readonly ModelProfileVersionResource[];
+      }>
+    | undefined;
+}): readonly UsableModelProfileVersionSummary[] {
+  const profiles = input.modelProfiles ?? [];
+  const versionEntries = input.modelProfileVersions ?? [];
+  const byId = new Map(profiles.map((profile) => [profile.id, profile]));
+  const summaries: UsableModelProfileVersionSummary[] = [];
+  for (const entry of versionEntries) {
+    const profile = byId.get(entry.profileId);
+    if (profile === undefined) {
+      continue;
+    }
+    for (const version of entry.versions) {
+      if (
+        version.modelProviderConnectionVersionId !== undefined &&
+        version.modelProviderConnectionVersionId.length > 0
+      ) {
+        summaries.push({
+          profileId: profile.id,
+          profileKey: profile.key,
+          profileName: profile.name,
+          version,
+        });
+      }
+    }
+  }
+  return summaries;
+}
+
+export function resolveOnboardingAgentVersionPath(
+  context: OnboardingContext,
+  flags: OnboardingProgressFlags,
+): string {
+  const agentId = context.agentId ?? flags.onboardingRun?.agentId;
+  const agentVersionId =
+    context.agentVersionId ??
+    flags.onboardingRun?.effectiveBindings.agentVersionId;
+  if (agentId !== undefined && agentVersionId !== undefined) {
+    return `/agents/${encodeURIComponent(agentId)}/versions/${encodeURIComponent(agentVersionId)}`;
+  }
+  if (agentId !== undefined) {
+    return `/agents/${encodeURIComponent(agentId)}`;
+  }
+  return "/agents/new";
 }
 
 export interface OnboardingProgressInput {
