@@ -23,6 +23,10 @@ import {
   runCommand,
   runSpec,
 } from "./environment.mjs";
+import {
+  harnessNodeTestArgv,
+  listHarnessTestFiles,
+} from "./harness-runner.mjs";
 
 const PYTHON_SDK_ROOT = path.join(REPO_ROOT, "sdks", "python");
 const LABEL_WIDTH = 12;
@@ -250,18 +254,9 @@ async function pythonPrerequisite(env) {
   return ms;
 }
 
-async function harnessTestFiles() {
-  const dir = path.join(REPO_ROOT, "scripts", "verification");
-  const entries = await fs.readdir(dir);
-  return entries
-    .filter((name) => name.endsWith(".test.mjs"))
-    .map((name) => path.join(dir, name))
-    .sort();
-}
-
 async function runHarnessTests() {
-  const files = await harnessTestFiles();
-  return runNamed("HARNESS", process.execPath, ["--test", ...files]);
+  const files = await listHarnessTestFiles();
+  return runNamed("HARNESS", process.execPath, harnessNodeTestArgv(files));
 }
 
 async function doctor(env) {

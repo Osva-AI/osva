@@ -1,5 +1,15 @@
 /** @typedef {'cli-unavailable' | 'engine-unavailable' | 'engine-ready'} DockerEngineState */
 
+/** Canonical probe result when `docker info` succeeds. */
+export const DOCKER_ENGINE_READY_STATE = /** @type {const} */ ("engine-ready");
+
+/**
+ * @param {{ engine?: DockerEngineState } | undefined} probe
+ */
+export function isDockerEngineReady(probe) {
+  return probe?.engine === DOCKER_ENGINE_READY_STATE;
+}
+
 export const DOCKER_ENGINE_PROBE_ARGS = ["info"];
 
 /** Upper bound for `docker info` during verify:doctor / verify:docker preflight. */
@@ -64,7 +74,7 @@ export async function probeDockerEngine(spec, runSpec) {
       .split(/\r?\n/)
       .find((line) => /^Server Version:/i.test(line));
     return {
-      engine: /** @type {const} */ ("engine-ready"),
+      engine: DOCKER_ENGINE_READY_STATE,
       engineHint: serverLine?.trim(),
     };
   }

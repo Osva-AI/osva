@@ -15,7 +15,14 @@ import {
   runSpec,
   REPO_ROOT,
 } from "./environment.mjs";
-import { probeDockerEngine } from "./docker-preflight.mjs";
+import {
+  dockerAvailable,
+  planObligationExecution,
+} from "./branch-verify-docker.mjs";
+import {
+  harnessNodeTestArgv,
+  listHarnessTestFiles,
+} from "./harness-runner.mjs";
 
 const REPORT_DIR = path.join(REPO_ROOT, "artifacts", "verification");
 const REPORT_PATH = path.join(REPORT_DIR, "branch-verification.json");
@@ -354,19 +361,18 @@ async function runTargetedTests(pnpmSpec, target, records) {
 }
 
 async function runHarnessTests(records) {
-  const dir = path.join(REPO_ROOT, "scripts", "verification");
-  const entries = await fs.readdir(dir);
-  const files = entries
-    .filter((name) => name.endsWith(".test.mjs"))
-    .map((name) => path.join(dir, name))
-    .sort();
+  const files = await listHarnessTestFiles();
   const stage = "HARNESS";
   const started = Date.now();
   console.log("");
   console.log(`── ${stage} ──`);
-  const result = await runCommand(process.execPath, ["--test", ...files], {
-    stdio: "inherit",
-  });
+  const result = await runCommand(
+    process.execPath,
+    harnessNodeTestArgv(files),
+    {
+      stdio: "inherit",
+    },
+  );
   const ms = Date.now() - started;
   if (result.code !== 0) {
     printPhaseResult(stage, "FAIL", ms);
@@ -422,18 +428,6 @@ async function runArgvCommand(stage, argv, records, recordId) {
     durationMs: ms,
     command: formatted,
   });
-}
-
-/**
- * @param {Awaited<ReturnType<typeof loadEnvironment>>} env
- */
-async function dockerAvailable(env) {
-  if (!env.docker?.source) {
-    return false;
-  }
-  const spec = { command: env.docker.source, prefixArgs: [] };
-  const probe = await probeDockerEngine(spec, runSpec);
-  return probe.engine === "running";
 }
 
 /**
@@ -651,30 +645,19 @@ async function main() {
     await runHarnessTests(records);
   }
 
-  const dockerOk = await dockerAvailable(env);
+  const dockerOk = await dockerAvailable(env, runSpec);
 
   for (const obligation of plan.obligations) {
     const recordId = `obligation:${obligation.id}`;
-    if (cli.profile !== "integration" || !obligation.runInIntegrationProfile) {
+    const planned = planObligationExecution(obligation, cli.profile, dockerOk);
+    if (planned.action !== "run") {
       records.push({
         id: recordId,
         stage: obligation.label,
         status: "NOT RUN",
         durationMs: 0,
         command: obligation.command,
-        detail: obligation.reason,
-      });
-      continue;
-    }
-    if (obligation.requiresDocker && !dockerOk) {
-      records.push({
-        id: recordId,
-        stage: obligation.label,
-        status: "NOT RUN",
-        durationMs: 0,
-        command: obligation.command,
-        detail:
-          "Docker engine unavailable — start Docker or use CI for this obligation.",
+        detail: planned.detail,
       });
       continue;
     }
