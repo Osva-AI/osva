@@ -75,48 +75,44 @@ describe("Home (OverviewPage)", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("heading", {
-          name: "What would you like AI to do for you?",
+          name: /Build your first/i,
         }),
       ).toBeTruthy();
     });
-  });
-
-  it("runs local goal discovery and explains SEO matches", async () => {
-    stubEmptyWorkspace("DEVELOPER");
-    renderHome();
-    const user = userEvent.setup();
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Describe your goal")).toBeTruthy();
-    });
-
-    await user.type(
-      screen.getByLabelText("Describe your goal"),
-      "create an SEO audit",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Find matching examples" }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("Recommended examples")).toBeTruthy();
-    });
     expect(
-      screen.getByRole("heading", { name: "SEO audit worker", level: 3 }),
+      screen.getByRole("link", { name: "Start guided setup" }),
     ).toBeTruthy();
-    expect(screen.getByText(/Why this matches/i)).toBeTruthy();
   });
 
-  it("persists advanced presentation preference", async () => {
+  it("links to examples without making search the primary interaction", async () => {
+    stubEmptyWorkspace("DEVELOPER");
+    renderHome();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("link", { name: /verified examples/i }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("link", { name: /Explore agents/i }),
+      ).toBeTruthy();
+    });
+    expect(screen.queryByLabelText("Describe your goal")).toBeNull();
+  });
+
+  it("opens advanced dashboard from secondary entry", async () => {
     stubEmptyWorkspace("DEVELOPER");
     renderHome();
     const user = userEvent.setup();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Advanced" })).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: /advanced dashboard/i }),
+      ).toBeTruthy();
     });
 
-    await user.click(screen.getByRole("button", { name: "Advanced" }));
+    await user.click(
+      screen.getByRole("button", { name: /advanced dashboard/i }),
+    );
     expect(localStorage.getItem(HOME_PRESENTATION_PREFERENCE_STORAGE_KEY)).toBe(
       "advanced",
     );
@@ -132,15 +128,29 @@ describe("Home (OverviewPage)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", {
-          name: "What would you like AI to do for you?",
-        }),
+        screen.getByRole("heading", { name: /Build your first/i }),
       ).toBeTruthy();
     });
     expect(screen.queryByRole("link", { name: "Create agent" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Create directly" })).toBeNull();
+    expect(screen.getByRole("link", { name: /Explore agents/i })).toBeTruthy();
     expect(
-      screen.getAllByRole("link", { name: /View agents/i }).length,
-    ).toBeGreaterThan(0);
+      screen.getByRole("link", { name: "Start guided setup" }),
+    ).toBeTruthy();
+  });
+
+  it("shows Create directly for developers on new home (role-gated, not viewport)", async () => {
+    stubEmptyWorkspace("DEVELOPER");
+    renderHome();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("link", { name: "Create directly" }),
+      ).toBeTruthy();
+    });
+    expect(
+      screen.getByRole("link", { name: "Start guided setup" }),
+    ).toBeTruthy();
   });
 
   it("shows partial data warning on active home when a secondary query fails", async () => {
@@ -179,10 +189,124 @@ describe("Home (OverviewPage)", () => {
     renderHome();
 
     await waitFor(() => {
-      expect(screen.getByText(/Welcome back/i)).toBeTruthy();
+      expect(screen.getByText("Demo Agent")).toBeTruthy();
     });
     expect(screen.getByText(/Partial data/i)).toBeTruthy();
     expect(screen.getByText(/Workflows:/i)).toBeTruthy();
+  });
+
+  it("shows returning header and two-column resume when workflow and agent exist", async () => {
+    stubHumanSessionFetch("DEVELOPER", "ws-1", (url) => {
+      if (url.includes("/api/v1/agents") && !url.includes("versions")) {
+        return json({
+          agents: [
+            {
+              id: "a1",
+              workspaceId: "ws-1",
+              key: "support",
+              name: "Support Agent",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/workflows")) {
+        return json({
+          workflows: [
+            {
+              id: "w1",
+              workspaceId: "ws-1",
+              key: "flow",
+              name: "Intake Flow",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-10T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/runs")) {
+        return json({ runs: [] });
+      }
+      if (url.includes("/api/v1/workflow-runs")) {
+        return json({ workflowRuns: [] });
+      }
+      if (url.includes("/api/v1/model-profiles")) {
+        return json({ modelProfiles: [] });
+      }
+      if (url.includes("/api/v1/model-provider-connections")) {
+        return json({ connections: [] });
+      }
+      return undefined;
+    });
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: /Pick up where you left off/i }),
+      ).toBeTruthy();
+    });
+    expect(screen.getByText("Intake Flow")).toBeTruthy();
+    expect(screen.getByText("Support Agent")).toBeTruthy();
+  });
+
+  it("surfaces failed runs in needs attention when no side resource", async () => {
+    stubHumanSessionFetch("DEVELOPER", "ws-1", (url) => {
+      if (url.includes("/api/v1/agents") && !url.includes("versions")) {
+        return json({
+          agents: [
+            {
+              id: "a1",
+              workspaceId: "ws-1",
+              key: "solo",
+              name: "Solo Agent",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/workflows")) {
+        return json({ workflows: [] });
+      }
+      if (url.includes("/api/v1/runs")) {
+        return json({
+          runs: [
+            {
+              id: "run-fail",
+              agentId: "a1",
+              status: "FAILED",
+              effectiveBindings: {
+                agentVersionId: "av-1",
+                modelProfileVersionBindings: {},
+                toolVersionBindings: {},
+              },
+              input: {},
+              createdAt: "2026-01-12T00:00:00.000Z",
+              updatedAt: "2026-01-12T00:01:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs")) {
+        return json({ workflowRuns: [] });
+      }
+      if (url.includes("/api/v1/model-profiles")) {
+        return json({ modelProfiles: [] });
+      }
+      if (url.includes("/api/v1/model-provider-connections")) {
+        return json({ connections: [] });
+      }
+      return undefined;
+    });
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.getByText(/recent run didn't finish/i)).toBeTruthy();
+    });
+    expect(screen.getByText(/Needs review · Failed/)).toBeTruthy();
+    expect(screen.queryByText(/status FAILED/i)).toBeNull();
+    expect(screen.getByRole("link", { name: "Review run" })).toBeTruthy();
   });
 
   it("shows active home when agents exist", async () => {
@@ -224,9 +348,9 @@ describe("Home (OverviewPage)", () => {
     renderHome();
 
     await waitFor(() => {
-      expect(screen.getByText(/Welcome back/i)).toBeTruthy();
+      expect(screen.getByText("Demo Agent")).toBeTruthy();
     });
-    expect(screen.getByText("Demo Agent")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open agent" })).toBeTruthy();
   });
 
   it("shows degraded state instead of empty hero when runs query fails", async () => {
@@ -255,13 +379,17 @@ describe("Home (OverviewPage)", () => {
     renderHome();
 
     await waitFor(() => {
-      expect(screen.getByText(/Home data is incomplete/i)).toBeTruthy();
+      expect(
+        screen.getByRole("heading", {
+          name: /couldn't load your workspace\./i,
+        }),
+      ).toBeTruthy();
     });
     expect(
-      screen.queryByRole("heading", {
-        name: "What would you like AI to do for you?",
-      }),
+      screen.queryByRole("heading", { name: /Build your first/i }),
     ).toBeNull();
+    expect(screen.queryByText("Partial data")).toBeNull();
+    expect(screen.getByText("Technical details")).toBeTruthy();
   });
 
   it("labels registry counts truthfully in advanced mode", async () => {
@@ -408,9 +536,7 @@ describe("Home (OverviewPage)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", {
-          name: "What would you like AI to do for you?",
-        }),
+        screen.getByRole("heading", { name: /Build your first/i }),
       ).toBeTruthy();
     });
   });

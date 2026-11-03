@@ -1,86 +1,66 @@
-import { LinkButton } from "../ui/button";
 import type { HomePageData } from "../../hooks/use-home-page-data";
-import { HomeAttentionPanel } from "./home-attention-panel";
-import { HomeContinueWorking } from "./home-continue-working";
+import {
+  selectHomeSideContext,
+  shouldUseReturningGrid,
+} from "../../lib/home-v2-side-context";
+import { selectHomeResumeTarget } from "../../lib/home-v2-resume";
 import { HomePartialErrors } from "./home-partial-errors";
-import { HomeQuickActions } from "./home-quick-actions";
-import { HomeReadinessCards } from "./home-readiness-cards";
-import { HomeRecentActivity } from "./home-recent-activity";
-import { SectionPanel } from "../ui/section-panel";
+import { HomeV2AdvancedEntry } from "./home-v2-advanced-entry";
+import { HomeV2Attention } from "./home-v2-attention";
+import { HomeV2ContinueCard } from "./home-v2-continue-card";
+import { HomeV2RecentActivity } from "./home-v2-recent-activity";
+import { HomeV2ReturnHeader } from "./home-v2-return-header";
+import { HomeV2SecondaryActions } from "./home-v2-secondary-actions";
+import { HomeV2SidePanel } from "./home-v2-side-panel";
 
 export function HomeActivePresentation({
   data,
 }: {
   readonly data: HomePageData;
 }) {
-  const workspaceName = data.workspace?.name ?? "your workspace";
+  const resume = selectHomeResumeTarget({
+    agents: data.agents,
+    workflows: data.workflows,
+    recentRuns: data.recentRuns,
+  });
+  const side = selectHomeSideContext({
+    resume,
+    agents: data.agents,
+    workflows: data.workflows,
+    recentRuns: data.recentRuns,
+    attentionItems: data.attentionItems,
+  });
+  const useGrid = shouldUseReturningGrid({ resume, side });
+  const embeddedAttention = side.attentionItem;
+  const remainingAttention = data.attentionItems.filter((item) => {
+    if (embeddedAttention === undefined) {
+      return true;
+    }
+    return !(
+      item.id === embeddedAttention.id && item.kind === embeddedAttention.kind
+    );
+  });
 
   return (
-    <div className="home-stack">
+    <div className="home-v2 home-v2-returning">
       <HomePartialErrors messages={data.partialErrors} />
-      <SectionPanel className="home-welcome-panel">
-        <p className="home-welcome-kicker">Welcome back</p>
-        <h2 className="home-welcome-title">{workspaceName}</h2>
-        <p className="muted">
-          Pick up agents, workflows, or runs—or open Testing Studio for
-          evaluation work.
-        </p>
-        <div className="action-row">
-          {data.canWrite ? (
-            <>
-              <LinkButton variant="primary" to="/agents/new">
-                Create agent
-              </LinkButton>
-              <LinkButton variant="secondary" to="/workflows/new">
-                Build workflow
-              </LinkButton>
-            </>
-          ) : null}
-          <LinkButton variant="secondary" to="/runs">
-            View runs
-          </LinkButton>
-          <LinkButton variant="secondary" to="/testing">
-            Testing Studio
-          </LinkButton>
-          <LinkButton variant="secondary" to="/examples">
-            Discover examples
-          </LinkButton>
+      <HomeV2ReturnHeader canWrite={data.canWrite} />
+      {resume !== undefined ? (
+        <div
+          className={useGrid ? "home-v2-return-grid" : "home-v2-return-stack"}
+        >
+          <HomeV2ContinueCard target={resume} />
+          {useGrid ? <HomeV2SidePanel side={side} /> : null}
         </div>
-      </SectionPanel>
-
-      <HomeContinueWorking
-        agents={data.agents}
-        workflows={data.workflows}
-        recentRuns={data.recentRuns}
-      />
-      <HomeAttentionPanel attentionItems={data.attentionItems} />
-      <HomeRecentActivity
-        recentRuns={data.recentRuns}
-        recentWorkflowRuns={data.recentWorkflowRuns}
-        runsPresentation={data.runsPresentation}
-        workflowRunsPresentation={data.workflowRunsPresentation}
-        runsError={
-          data.recentRunsQuery.isError ? data.recentRunsQuery.error : undefined
-        }
-        workflowRunsError={
-          data.recentWorkflowRunsQuery.isError
-            ? data.recentWorkflowRunsQuery.error
-            : undefined
-        }
-        canExecute={data.canExecute}
-        canWrite={data.canWrite}
-      />
-      <HomeQuickActions canWrite={data.canWrite} />
-      <HomeReadinessCards
-        compact
-        controlPlaneReachable={data.authContextQuery.data !== undefined}
-        agents={data.agentsQuery.data?.agents}
-        modelProfiles={data.modelProfilesQuery.data?.modelProfiles}
-        modelConnections={data.modelConnectionsQuery.data?.connections}
-        hasBoundProfileVersion={
-          data.modelBindingQuery.data?.hasBoundProfileVersion
-        }
-        canWrite={data.canWrite}
+      ) : null}
+      {remainingAttention.length > 0 ? (
+        <HomeV2Attention attentionItems={remainingAttention} />
+      ) : null}
+      <HomeV2RecentActivity data={data} />
+      <HomeV2SecondaryActions canWrite={data.canWrite} />
+      <HomeV2AdvancedEntry
+        preference={data.preference}
+        onPreferenceChange={data.setPreference}
       />
     </div>
   );
