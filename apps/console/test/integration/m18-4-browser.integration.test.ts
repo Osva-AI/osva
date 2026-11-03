@@ -120,7 +120,8 @@ describe("M18.4 browser acceptance (Unified guided onboarding)", () => {
       await page
         .getByRole("heading", { name: "First agent run succeeded" })
         .waitFor();
-      await page.getByLabel("Theme preference").selectOption("dark");
+      await page.getByLabel("Theme").click();
+      await page.getByRole("radio", { name: "Dark" }).click();
       await page.waitForFunction(
         () => document.documentElement.dataset.theme === "dark",
       );

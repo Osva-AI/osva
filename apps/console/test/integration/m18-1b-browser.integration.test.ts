@@ -4,6 +4,7 @@ import {
   installMockConsoleApi,
   readHorizontalOverflow,
   seedShellStorage,
+  setShellThemePreference,
   startConsolePreviewServer,
 } from "./m18-1a-browser-helpers.js";
 import { mkdirSync } from "node:fs";
@@ -46,10 +47,7 @@ describe("M18.1B browser acceptance (UI foundations)", () => {
       await page.getByRole("heading", { name: "Agents", level: 1 }).waitFor();
       await capture("desktop-light-agents-table.png", page);
 
-      await page.getByLabel("Theme preference").selectOption("dark");
-      await page.waitForFunction(
-        () => document.documentElement.dataset.theme === "dark",
-      );
+      await setShellThemePreference(page, "dark");
       await capture("desktop-dark-agents-table.png", page);
 
       await page.goto(`${origin}/models/connections`, {

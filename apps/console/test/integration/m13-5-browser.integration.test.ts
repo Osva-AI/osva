@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import type { Page } from "playwright";
 import type { Database } from "@osva/db";
 
+import { clickResourcesNavLink } from "./m18-1a-browser-helpers.js";
 import { ensureConsoleClientDistForBrowserTests } from "./ensure-console-client-dist.js";
 import {
   resetM12_3Data,
@@ -73,12 +74,12 @@ describe("M13.5 browser acceptance (knowledge & memory studio shell)", () => {
       const page = await context.newPage();
       await loginAndSelectWorkspaceA(page, stack.consoleOrigin);
 
-      await page.getByRole("link", { name: "Knowledge" }).click();
+      await clickResourcesNavLink(page, "Knowledge");
       await page.getByRole("heading", { name: "Knowledge", level: 1 }).waitFor({
         timeout: 30_000,
       });
 
-      await page.getByRole("link", { name: "Memory" }).click();
+      await clickResourcesNavLink(page, "Memory");
       await page.getByRole("heading", { name: "Memory", level: 1 }).waitFor({
         timeout: 30_000,
       });

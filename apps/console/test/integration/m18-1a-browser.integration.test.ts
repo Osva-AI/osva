@@ -7,6 +7,8 @@ import {
   screenshotShell,
   seedShellStorage,
   startConsolePreviewServer,
+  setShellThemePreference,
+  switchShellWorkspace,
   waitForOverview,
 } from "./m18-1a-browser-helpers.js";
 
@@ -72,10 +74,7 @@ describe("M18.1A browser acceptance (mock API + built client)", () => {
       );
 
       // --- Dark theme ---
-      await page.getByLabel("Theme preference").selectOption("dark");
-      await page.waitForFunction(
-        () => document.documentElement.dataset.theme === "dark",
-      );
+      await setShellThemePreference(page, "dark");
       const desktopDarkExpanded = await screenshotShell(
         page,
         "desktop-1440-dark-sidebar-expanded.png",
@@ -116,7 +115,7 @@ describe("M18.1A browser acceptance (mock API + built client)", () => {
         overflow.docClientWidth + 1,
       );
 
-      // --- Role-aware workspace nav (ADMIN) ---
+      // --- Role-aware workspace admin (ADMIN, account menu) ---
       await page.goto(`${origin}/overview`, { waitUntil: "networkidle" });
       await waitForOverview(page);
       const primaryNav = page.getByRole("navigation", { name: "Primary" });
@@ -124,26 +123,32 @@ describe("M18.1A browser acceptance (mock API + built client)", () => {
         await primaryNav
           .getByRole("link", { name: "Workspace Access" })
           .count(),
+      ).toBe(0);
+      await page.getByLabel("Account and workspace").click();
+      expect(
+        await page
+          .getByRole("dialog", { name: "Account and workspace" })
+          .getByRole("button", { name: "Workspace Access" })
+          .count(),
       ).toBe(1);
+      await page.keyboard.press("Escape");
 
       // --- Workspace switch (DEVELOPER) ---
-      await page.getByLabel("Workspace switcher").selectOption("ws-dev");
-      await page.waitForFunction(() => {
-        const select = document.querySelector(
-          "select.shell-workspace-select",
-        ) as HTMLSelectElement | null;
-        return select?.value === "ws-dev";
-      });
+      await switchShellWorkspace(page, /Acme Build/i);
+      await page.getByLabel("Account and workspace").click();
       expect(
-        await primaryNav
-          .getByRole("link", { name: "Workspace Access" })
+        await page
+          .getByRole("dialog", { name: "Account and workspace" })
+          .getByRole("button", { name: "Workspace Access" })
           .count(),
       ).toBe(0);
       expect(
-        await primaryNav
-          .getByRole("link", { name: "Security Activity" })
+        await page
+          .getByRole("dialog", { name: "Account and workspace" })
+          .getByRole("button", { name: "Security Activity" })
           .count(),
       ).toBe(1);
+      await page.keyboard.press("Escape");
 
       // --- Tablet 768 ---
       await page.setViewportSize({ width: 768, height: 1024 });
@@ -180,10 +185,10 @@ describe("M18.1A browser acceptance (mock API + built client)", () => {
       await menuButton.click();
       await page
         .getByRole("navigation", { name: "Primary" })
-        .getByRole("link", { name: "Runs", exact: true })
+        .getByRole("link", { name: "Activity", exact: true })
         .click();
       expect(await menuButton.getAttribute("aria-expanded")).toBe("false");
-      await page.getByRole("heading", { name: "Runs", level: 1 }).waitFor();
+      await page.getByRole("heading", { name: "Activity", level: 1 }).waitFor();
 
       const mobileRuns = await screenshotShell(page, "mobile-390-runs.png");
       overflow = await readHorizontalOverflow(page);

@@ -49,6 +49,8 @@ function renderShell(initialPath = "/overview") {
             <Route element={<AppShell />}>
               <Route path="/overview" element={<h1>Home</h1>} />
               <Route path="/agents" element={<h1>Agents</h1>} />
+              <Route path="/activity" element={<h1>Activity</h1>} />
+              <Route path="/runs" element={<h1>Runs</h1>} />
               <Route
                 path="/workspace/access"
                 element={<h1>Workspace Access</h1>}
@@ -89,17 +91,18 @@ describe("AppShell navigation", () => {
     });
 
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(within(nav).getByText("Start")).toBeTruthy();
     expect(within(nav).getByText("Build")).toBeTruthy();
-    expect(within(nav).getByText("Resources")).toBeTruthy();
-    expect(within(nav).getByText("Operate")).toBeTruthy();
+    expect(within(nav).getByText("Manage")).toBeTruthy();
 
     const agentsLink = within(nav).getByRole("link", { name: "Agents" });
     expect(agentsLink.className).toContain("active");
     expect(within(nav).getByRole("link", { name: "Home" })).toBeTruthy();
+    expect(
+      within(nav).queryByRole("link", { name: "Getting started" }),
+    ).toBeNull();
   });
 
-  it("shows workspace administration links based on role", async () => {
+  it("expands resources and links integrations honestly", async () => {
     stubHumanSessionFetch("DEVELOPER", "ws-1");
     renderShell();
 
@@ -108,31 +111,47 @@ describe("AppShell navigation", () => {
     });
 
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    await waitFor(() => {
-      expect(
-        within(nav).getByRole("link", { name: "Security Activity" }),
-      ).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Resources" }));
+    const integrations = within(nav).getByRole("link", {
+      name: "Integrations",
     });
-    expect(
-      within(nav).queryByRole("link", { name: "Workspace Access" }),
-    ).toBeNull();
+    expect(integrations.getAttribute("href")).toContain("/tools");
   });
 
-  it("shows member administration for ADMIN", async () => {
+  it("marks Activity active on runs routes", async () => {
+    stubHumanSessionFetch("DEVELOPER", "ws-1");
+    renderShell("/runs");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Runs", level: 1 }),
+      ).toBeTruthy();
+    });
+
+    const activityLink = within(
+      screen.getByRole("navigation", { name: "Primary" }),
+    ).getByRole("link", { name: "Activity" });
+    expect(activityLink.className).toContain("active");
+  });
+
+  it("opens workspace administration from the account menu for ADMIN", async () => {
     stubHumanSessionFetch("ADMIN", "ws-1");
     renderShell();
 
     await waitFor(() => {
-      expect(
-        within(screen.getByRole("navigation", { name: "Primary" })).getByRole(
-          "link",
-          { name: "Workspace Access" },
-        ),
-      ).toBeTruthy();
+      expect(screen.getByLabelText("Account and workspace")).toBeTruthy();
     });
+
+    await userEvent.click(screen.getByLabelText("Account and workspace"));
+    expect(
+      screen.getByRole("dialog", { name: "Account and workspace" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Workspace Access" }),
+    ).toBeTruthy();
   });
 
-  it("collapses and expands the desktop sidebar", async () => {
+  it("collapses and expands the desktop sidebar from the header", async () => {
     stubHumanSessionFetch("DEVELOPER", "ws-1");
     renderShell();
 
@@ -177,17 +196,50 @@ describe("AppShell navigation", () => {
     });
   });
 
-  it("persists theme preference and applies it to the document", async () => {
+  it("opens create menu routes for agent and workflow creation", async () => {
     stubHumanSessionFetch("DEVELOPER", "ws-1");
     renderShell();
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Theme preference")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Create" })).toBeTruthy();
     });
 
-    fireEvent.change(screen.getByLabelText("Theme preference"), {
-      target: { value: "light" },
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    const menu = screen.getByRole("menu", { name: "Create" });
+    expect(
+      within(menu).getByRole("menuitem", { name: /Create an agent/i }),
+    ).toBeTruthy();
+    expect(
+      within(menu).getByRole("menuitem", { name: /Build a workflow/i }),
+    ).toBeTruthy();
+  });
+
+  it("routes guided setup from the header help menu", async () => {
+    stubHumanSessionFetch("DEVELOPER", "ws-1");
+    renderShell();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Help")).toBeTruthy();
     });
+
+    await userEvent.click(screen.getByLabelText("Help"));
+    expect(
+      screen.getByRole("dialog", { name: "Help and guidance" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Guided setup/i })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /^Help$/i })).toBeNull();
+  });
+
+  it("persists theme preference from the header theme menu", async () => {
+    stubHumanSessionFetch("DEVELOPER", "ws-1");
+    renderShell();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Theme")).toBeTruthy();
+    });
+
+    await userEvent.click(screen.getByLabelText("Theme"));
+    await userEvent.click(screen.getByRole("radio", { name: "Light" }));
 
     expect(localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe("light");
     expect(document.documentElement.dataset.theme).toBe("light");
@@ -214,17 +266,11 @@ describe("AppShell navigation", () => {
       ).toBeTruthy();
     });
 
-    await waitFor(() => {
-      expect(
-        (screen.getByLabelText("Workspace switcher") as HTMLSelectElement)
-          .value,
-      ).toBe("ws-1");
-    });
-
-    await userEvent.selectOptions(
-      screen.getByLabelText("Workspace switcher"),
-      "ws-2",
+    await userEvent.click(screen.getByLabelText("Account and workspace"));
+    await userEvent.click(
+      screen.getByRole("button", { name: /Admin ws.*Switch/i }),
     );
+    await userEvent.click(screen.getByRole("button", { name: /Viewer ws/i }));
 
     await waitFor(() => {
       expect(

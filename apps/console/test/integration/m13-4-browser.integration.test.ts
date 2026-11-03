@@ -83,7 +83,8 @@ describe("M13.4 browser acceptance (overview & onboarding shell)", () => {
           timeout: 30_000,
         });
 
-      await page.getByRole("link", { name: "Getting started" }).click();
+      await page.getByLabel("Help").click();
+      await page.getByRole("link", { name: "Guided setup" }).click();
       await page
         .getByRole("heading", {
           name: "Get your first agent running",

@@ -21,11 +21,11 @@ import {
   readThemePreference,
   subscribeToSystemColorScheme,
   syncThemeFromPreference,
-  writeThemePreference,
   type ThemePreference,
 } from "../../lib/theme-preference";
-import { Button } from "../ui/button";
 import { SidebarNav } from "./sidebar-nav";
+import { ShellHeader } from "./shell-header";
+import { NavIconBrand } from "./nav-icons";
 
 const MOBILE_NAV_MEDIA = "(max-width: 900px)";
 
@@ -69,20 +69,10 @@ function readThemePreferenceSnapshot(): ThemePreference {
   return readThemePreference();
 }
 
-function formatRoleLabel(role: string): string {
-  return role
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 export function AppShell() {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const workspace = auth.selectedWorkspace;
-  const role = workspace?.role;
   const mobileNavId = useId();
   const drawerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -97,6 +87,10 @@ export function AppShell() {
     readSidebarCollapsed(),
   );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   const themePreference = useSyncExternalStore(
     subscribeToThemePreference,
@@ -118,6 +112,10 @@ export function AppShell() {
 
   useEffect(() => {
     setMobileNavOpen(false);
+    setThemeMenuOpen(false);
+    setCreateMenuOpen(false);
+    setHelpMenuOpen(false);
+    setAccountMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -142,7 +140,7 @@ export function AppShell() {
       return;
     }
     const focusable = drawerRef.current.querySelector<HTMLElement>(
-      "a.shell-nav-link, button, select",
+      "a.shell-nav-link, button.shell-nav-link, button.shell-nav-disclosure",
     );
     focusable?.focus();
   }, [mobileNavOpen]);
@@ -187,136 +185,34 @@ export function AppShell() {
     navigate(path, { replace: true });
   };
 
-  const handleThemeChange = (value: ThemePreference): void => {
-    writeThemePreference(value);
-    syncThemeFromPreference(value);
-    window.dispatchEvent(new Event("osva-theme-preference"));
+  const toggleSidebar = (): void => {
+    setSidebarCollapsed((previous) => {
+      const next = !previous;
+      writeSidebarCollapsed(next);
+      return next;
+    });
   };
-
-  const displayName =
-    auth.user?.displayName?.trim() || auth.user?.email || "Signed-in user";
-  const accountDetail =
-    auth.user?.displayName?.trim() &&
-    auth.user.email &&
-    auth.user.displayName.trim() !== auth.user.email
-      ? auth.user.email
-      : undefined;
 
   const sidebarContent = (
     <>
       <div className="shell-brand-row">
         <div className="shell-brand">
-          <div className="brand-title">OSVA</div>
-          {!compactNav ? <div className="brand-subtitle">Console</div> : null}
+          <span className="shell-brand-mark" aria-hidden="true">
+            <NavIconBrand className="shell-brand-icon" />
+          </span>
+          {!compactNav ? (
+            <div className="shell-brand-text">
+              <div className="brand-title">OSVA</div>
+              <div className="brand-subtitle">Agent platform</div>
+            </div>
+          ) : null}
         </div>
-        {!isMobile ? (
-          <Button
-            type="button"
-            variant="ghost"
-            className="shell-collapse-toggle"
-            aria-label={
-              sidebarCollapsed ? "Expand navigation" : "Collapse navigation"
-            }
-            aria-expanded={!sidebarCollapsed}
-            onClick={() => {
-              setSidebarCollapsed((previous) => {
-                const next = !previous;
-                writeSidebarCollapsed(next);
-                return next;
-              });
-            }}
-          >
-            {sidebarCollapsed ? "»" : "«"}
-          </Button>
-        ) : null}
-      </div>
-
-      <div className="shell-workspace-block">
-        {compactNav ? (
-          <button
-            type="button"
-            className="button shell-workspace-compact"
-            aria-label={`Current workspace: ${workspace?.name ?? "Unknown"}. Open sidebar to switch.`}
-            title={workspace?.name}
-            onClick={() => {
-              setSidebarCollapsed(false);
-              writeSidebarCollapsed(false);
-            }}
-          >
-            <span className="shell-workspace-compact-mark" aria-hidden="true">
-              {(workspace?.name ?? "W").slice(0, 1).toUpperCase()}
-            </span>
-          </button>
-        ) : (
-          <label className="shell-workspace-label">
-            <span>Workspace</span>
-            <select
-              className="shell-workspace-select"
-              aria-label="Workspace switcher"
-              value={workspace?.workspaceId ?? ""}
-              onChange={(event) => {
-                handleWorkspaceChange(event.target.value);
-              }}
-            >
-              {auth.workspaces.map((item) => (
-                <option key={item.workspaceId} value={item.workspaceId}>
-                  {item.name} · {formatRoleLabel(item.role)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
       </div>
 
       <SidebarNav
-        role={role}
         compact={compactNav}
         onNavigate={isMobile ? closeMobileNav : undefined}
       />
-
-      <div className="shell-sidebar-footer">
-        <div className="shell-account" aria-label="Account">
-          <div className="shell-account-name">{displayName}</div>
-          {!compactNav && accountDetail !== undefined ? (
-            <div className="shell-account-email">{accountDetail}</div>
-          ) : null}
-          {!compactNav && role !== undefined ? (
-            <div className="shell-account-role">{formatRoleLabel(role)}</div>
-          ) : null}
-        </div>
-
-        {!compactNav ? (
-          <label className="shell-theme-field">
-            <span>Theme</span>
-            <select
-              className="shell-theme-select"
-              aria-label="Theme preference"
-              value={themePreference}
-              onChange={(event) => {
-                handleThemeChange(event.target.value as ThemePreference);
-              }}
-            >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </label>
-        ) : null}
-
-        <Button
-          type="button"
-          variant="secondary"
-          className="logout-button"
-          aria-label="Sign out"
-          onClick={() => {
-            void auth.logout().finally(() => {
-              navigate("/login", { replace: true });
-            });
-          }}
-        >
-          {compactNav ? "Out" : "Sign out"}
-        </Button>
-      </div>
     </>
   );
 
@@ -350,27 +246,48 @@ export function AppShell() {
         </>
       )}
       <div className="shell-main-wrap">
-        {isMobile ? (
-          <header className="shell-mobile-topbar">
-            <Button
-              ref={menuButtonRef}
-              type="button"
-              variant="secondary"
-              className="shell-menu-toggle"
-              aria-expanded={mobileNavOpen}
-              aria-controls={mobileNavId}
-              onClick={() => {
-                setMobileNavOpen((open) => !open);
-              }}
-            >
-              Menu
-            </Button>
-            <div className="shell-mobile-brand">
-              <span className="brand-title">OSVA Console</span>
-            </div>
-          </header>
-        ) : null}
-        <main className="main-panel" id="main-content">
+        <ShellHeader
+          sidebarCollapsed={sidebarCollapsed}
+          isMobile={isMobile}
+          mobileNavOpen={mobileNavOpen}
+          mobileNavId={mobileNavId}
+          menuButtonRef={menuButtonRef}
+          themePreference={themePreference}
+          themeMenuOpen={themeMenuOpen}
+          createMenuOpen={createMenuOpen}
+          helpMenuOpen={helpMenuOpen}
+          accountMenuOpen={accountMenuOpen}
+          onSidebarToggle={toggleSidebar}
+          onMobileMenuToggle={() => {
+            setMobileNavOpen((open) => !open);
+          }}
+          onThemeMenuToggle={() => {
+            setThemeMenuOpen((open) => !open);
+          }}
+          onThemeMenuClose={() => {
+            setThemeMenuOpen(false);
+          }}
+          onCreateMenuToggle={() => {
+            setCreateMenuOpen((open) => !open);
+          }}
+          onCreateMenuClose={() => {
+            setCreateMenuOpen(false);
+          }}
+          onHelpMenuToggle={() => {
+            setHelpMenuOpen((open) => !open);
+          }}
+          onHelpMenuClose={() => {
+            setHelpMenuOpen(false);
+          }}
+          onAccountMenuToggle={() => {
+            setAccountMenuOpen((open) => !open);
+          }}
+          onAccountMenuClose={() => {
+            setAccountMenuOpen(false);
+          }}
+          onWorkspaceChange={handleWorkspaceChange}
+        />
+        <main className="main-panel shell-main-content" id="main-content">
           <Outlet />
         </main>
       </div>
