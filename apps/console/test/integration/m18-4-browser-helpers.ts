@@ -55,9 +55,16 @@ export async function routeOnboardingConfiguredWorkspace(
   options: {
     readonly runStatus?: string;
     readonly role?: string;
+    readonly includePublishedVersion?: boolean;
+    readonly includeAgents?: boolean;
+    readonly includeRuns?: boolean;
   } = {},
 ): Promise<void> {
-  const runStatus = options.runStatus ?? "QUEUED";
+  const runStatus = options.runStatus;
+  const includePublishedVersion = options.includePublishedVersion ?? true;
+  const includeAgents = options.includeAgents ?? true;
+  const includeRuns = options.includeRuns ?? options.runStatus !== undefined;
+  const effectiveRunStatus = runStatus ?? "QUEUED";
   const workspaces: readonly MockWorkspace[] = [
     {
       workspaceId: "ws-admin",
@@ -137,33 +144,35 @@ export async function routeOnboardingConfiguredWorkspace(
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        agents: [
-          {
-            id: "agent-onb-1",
-            workspaceId: "ws-admin",
-            key: "demo",
-            name: "Demo Agent",
-            createdAt: "2026-01-01T00:00:00.000Z",
-          },
-        ],
+        agents: includeAgents
+          ? [
+              {
+                id: "agent-onb-1",
+                workspaceId: "ws-admin",
+                key: "demo",
+                name: "Demo Agent",
+                createdAt: "2026-01-01T00:00:00.000Z",
+              },
+            ]
+          : [],
       }),
     });
   });
+
+  const publishedVersion = {
+    id: "av-onb-1",
+    agentId: "agent-onb-1",
+    version: 1,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    manifest: DECLARATIVE_MANIFEST,
+  };
 
   await page.route(/\/api\/v1\/agents\/[^/]+\/versions$/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        versions: [
-          {
-            id: "av-onb-1",
-            agentId: "agent-onb-1",
-            version: 1,
-            createdAt: "2026-01-01T00:00:00.000Z",
-            manifest: DECLARATIVE_MANIFEST,
-          },
-        ],
+        versions: includePublishedVersion ? [publishedVersion] : [],
       }),
     });
   });
@@ -171,39 +180,50 @@ export async function routeOnboardingConfiguredWorkspace(
   await page.route(
     /\/api\/v1\/agents\/agent-onb-1\/versions\/av-onb-1$/,
     async (route) => {
+      if (!includePublishedVersion) {
+        await route.fulfill({ status: 404, body: "Not found" });
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          id: "av-onb-1",
-          agentId: "agent-onb-1",
-          version: 1,
-          createdAt: "2026-01-01T00:00:00.000Z",
-          manifest: DECLARATIVE_MANIFEST,
-        }),
+        body: JSON.stringify(publishedVersion),
       });
     },
   );
 
   await page.route("**/api/v1/runs**", async (route) => {
     const url = route.request().url();
+    const runResource = {
+      id: "run-onb-1",
+      agentId: "agent-onb-1",
+      status: effectiveRunStatus,
+      effectiveBindings: {
+        agentVersionId: "av-onb-1",
+        modelProfileVersionBindings: {},
+        toolVersionBindings: {},
+      },
+      input: { task: "hello" },
+      createdAt: "2026-02-01T00:00:00.000Z",
+      updatedAt: "2026-02-01T00:00:01.000Z",
+    };
+    if (!includeRuns || !includePublishedVersion) {
+      if (url.match(/\/runs\/run-onb-1$/)) {
+        await route.fulfill({ status: 404, body: "Not found" });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ runs: [] }),
+      });
+      return;
+    }
     if (url.match(/\/runs\/run-onb-1$/)) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          id: "run-onb-1",
-          agentId: "agent-onb-1",
-          status: runStatus,
-          effectiveBindings: {
-            agentVersionId: "av-onb-1",
-            modelProfileVersionBindings: {},
-            toolVersionBindings: {},
-          },
-          input: { task: "hello" },
-          createdAt: "2026-02-01T00:00:00.000Z",
-          updatedAt: "2026-02-01T00:00:01.000Z",
-        }),
+        body: JSON.stringify(runResource),
       });
       return;
     }
@@ -211,21 +231,7 @@ export async function routeOnboardingConfiguredWorkspace(
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        runs: [
-          {
-            id: "run-onb-1",
-            agentId: "agent-onb-1",
-            status: runStatus,
-            effectiveBindings: {
-              agentVersionId: "av-onb-1",
-              modelProfileVersionBindings: {},
-              toolVersionBindings: {},
-            },
-            input: { task: "hello" },
-            createdAt: "2026-02-01T00:00:00.000Z",
-            updatedAt: "2026-02-01T00:00:01.000Z",
-          },
-        ],
+        runs: [runResource],
       }),
     });
   });

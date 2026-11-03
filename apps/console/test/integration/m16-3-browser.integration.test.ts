@@ -86,7 +86,7 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
       });
       await page
         .getByTestId("onboarding-primary-step")
-        .getByText(/model capabilities/i)
+        .getByText(/Set up your AI model/i)
         .waitFor({ timeout: 30_000 });
 
       await page.goto(`${stack.consoleOrigin}/models/connections`);
@@ -165,7 +165,7 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
 
       await page
         .getByTestId("onboarding-primary-step")
-        .getByRole("link", { name: "Run Agent" })
+        .getByRole("link", { name: "Start test run" })
         .click();
       await page.getByRole("heading", { name: "Run Agent" }).waitFor({
         timeout: 30_000,
@@ -194,12 +194,12 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
         .getByRole("link", { name: "Continue getting started" })
         .click();
       await page
-        .getByRole("heading", { name: "First agent run succeeded" })
+        .getByRole("heading", { name: /Your first agent test succeeded/i })
         .waitFor({ timeout: 30_000 });
 
       await page.reload();
       await page
-        .getByRole("heading", { name: "First agent run succeeded" })
+        .getByRole("heading", { name: /Your first agent test succeeded/i })
         .waitFor({ timeout: 30_000 });
     } finally {
       await browser.close();

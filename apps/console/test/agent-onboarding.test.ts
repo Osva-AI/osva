@@ -8,11 +8,18 @@ import {
   developerOnboardingSteps,
   findPrimaryOnboardingStep,
   firstAgentOnboardingSteps,
+  deriveRecommendedVisualStage,
+  deriveVisualStageStepperItemState,
+  visualStageStepperStatusLabel,
   guidedOnboardingCoreSteps,
   guidedStepVisualState,
+  listUsableModelProfileVersions,
   noCodeFirstAgentSteps,
   onboardingSearch,
   parseOnboardingContext,
+  parseOnboardingViewStage,
+  visualStageEvidenceComplete,
+  visualStagePrerequisitesMet,
 } from "../src/client/lib/agent-onboarding";
 import { buildRuntimeReadiness } from "../src/client/lib/agent-readiness";
 import { parseBuilderHandoff } from "../src/client/lib/builder-handoff";
@@ -494,6 +501,66 @@ describe("agent onboarding helpers", () => {
     expect(guidedStepVisualState(inspectStep!, failedFlags)).toBe(
       "needs_attention",
     );
+  });
+
+  it("maps four visual stages onto granular evidence", () => {
+    const context = parseOnboardingContext(new URLSearchParams());
+    const flags = deriveOnboardingProgress({
+      ...baseProgressInput,
+      agentVersions: [],
+      runs: [],
+    });
+    expect(
+      deriveRecommendedVisualStage({
+        primaryGranularStepId: "publish",
+        flags,
+        controlPlaneReachable: true,
+      }),
+    ).toBe("review-test");
+    expect(visualStageEvidenceComplete("choose-model", flags, true)).toBe(true);
+    expect(visualStagePrerequisitesMet("review-test", flags, true)).toBe(true);
+    expect(parseOnboardingViewStage(new URLSearchParams("stage=3"))).toBe(
+      "create-agent",
+    );
+    expect(onboardingSearch(context, { viewStage: "get-ready" })).toBe(
+      "?stage=get-ready",
+    );
+    const usable = listUsableModelProfileVersions({
+      modelProfiles: baseProgressInput.modelProfiles,
+      modelProfileVersions: baseProgressInput.modelProfileVersions,
+    });
+    expect(usable).toHaveLength(1);
+    expect(usable[0]?.version.id).toBe("mpv-1");
+  });
+
+  it("separates viewing, action required, and evidence on the stepper", () => {
+    const flags = deriveOnboardingProgress({
+      ...baseProgressInput,
+      runs: [],
+    });
+    const viewingEarlier = deriveVisualStageStepperItemState("get-ready", {
+      viewedStageId: "get-ready",
+      recommendedStageId: "choose-model",
+      flags,
+      controlPlaneReachable: true,
+    });
+    expect(viewingEarlier.isViewing).toBe(true);
+    expect(viewingEarlier.evidenceComplete).toBe(true);
+    expect(visualStageStepperStatusLabel(viewingEarlier)).toBe("Complete");
+    const needsModel = deriveOnboardingProgress({
+      ...baseProgressInput,
+      modelConnections: [],
+      modelProfileVersions: [],
+      modelProfiles: [],
+      runs: [],
+    });
+    const action = deriveVisualStageStepperItemState("choose-model", {
+      viewedStageId: "get-ready",
+      recommendedStageId: "choose-model",
+      flags: needsModel,
+      controlPlaneReachable: true,
+    });
+    expect(visualStageStepperStatusLabel(action)).toBe("Your task");
   });
 
   it("parses builder handoff ids from the query string", () => {

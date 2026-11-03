@@ -1,16 +1,17 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { RuntimeReadinessPanel } from "../components/agent/runtime-readiness-panel";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { OnboardingContextBanner } from "../components/onboarding/onboarding-context-banner";
-import { OnboardingPrimaryStep } from "../components/onboarding/onboarding-primary-step";
-import {
-  OnboardingProgressStepper,
-  onboardingStepperSummary,
-} from "../components/onboarding/onboarding-progress-stepper";
+import { OnboardingDeveloperPath } from "../components/onboarding/onboarding-developer-path";
+import { OnboardingStageAside } from "../components/onboarding/onboarding-stage-aside";
+import { OnboardingStageFooter } from "../components/onboarding/onboarding-stage-footer";
+import { OnboardingStagePanel } from "../components/onboarding/onboarding-stage-panel";
+import { OnboardingVisualStepper } from "../components/onboarding/onboarding-visual-stepper";
 import { WorkspaceSetupPanel } from "../components/workspace/workspace-setup-panel";
-import { LinkButton } from "../components/ui/button";
+import { Button, LinkButton } from "../components/ui/button";
 import { PageHeader } from "../components/ui/page-header";
 import {
   useAgentVersionCatalogQuery,
@@ -27,20 +28,15 @@ import { useRunQuery, useRunsListQuery } from "../hooks/use-runs";
 import { useWorkflowsListQuery } from "../hooks/use-workflows";
 import { useAuth } from "../context/auth-context";
 import {
-  HELLO_AGENT_GOLDEN_PATH_COMMAND,
-  HELLO_AGENT_INPUT_EXAMPLE,
-  HELLO_AGENT_OUTPUT_EXAMPLE,
-  HELLO_AGENT_SOURCE_PATH,
-} from "../lib/agent-example";
-import {
   deriveOnboardingJourneyState,
   deriveOnboardingProgress,
-  developerOnboardingSteps,
+  deriveRecommendedVisualStage,
   findPrimaryOnboardingStep,
-  guidedOnboardingCoreSteps,
   noCodeFirstAgentSteps,
   onboardingSearch,
   parseOnboardingContext,
+  parseOnboardingViewStage,
+  type GuidedVisualStageId,
 } from "../lib/agent-onboarding";
 import { getExampleById } from "../lib/osva-examples-catalog";
 import {
@@ -48,16 +44,12 @@ import {
   roleCanWriteControlPlaneResources,
 } from "../lib/permissions";
 
-const ONBOARDING_REQUIRES_WRITE_ROLE =
-  "This step requires DEVELOPER, ADMIN, or OWNER.";
-const ONBOARDING_REQUIRES_EXECUTE_ROLE =
-  "This step requires OPERATOR, DEVELOPER, ADMIN, or OWNER.";
-
 const ONBOARDING_RUNS_PAGE_LIMIT = 25;
 
 export function OnboardingPage() {
   const [searchParams] = useSearchParams();
   const context = parseOnboardingContext(searchParams);
+  const parsedViewStage = parseOnboardingViewStage(searchParams);
   const exampleEntry =
     context.exampleId !== undefined
       ? getExampleById(context.exampleId)
@@ -81,6 +73,22 @@ export function OnboardingPage() {
   const modelBindingQuery = useModelBindingReadinessQuery();
   const modelProfilesQuery = useModelProfilesListQuery();
   const modelConnectionsQuery = useModelProviderConnectionsListQuery();
+
+  const [developerPathOpen, setDeveloperPathOpen] = useState(false);
+  const developerPathRef = useRef<HTMLDetailsElement>(null);
+
+  const openDeveloperPath = useCallback(() => {
+    setDeveloperPathOpen(true);
+    requestAnimationFrame(() => {
+      developerPathRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (window.location.hash === "#developer-onboarding") {
+      openDeveloperPath();
+    }
+  }, [openDeveloperPath]);
 
   const canWrite =
     authQuery.data !== undefined &&
@@ -128,49 +136,66 @@ export function OnboardingPage() {
   );
 
   const noCodeSteps = noCodeFirstAgentSteps(context, progress);
-  const coreSteps = guidedOnboardingCoreSteps(noCodeSteps);
   const primaryStep = findPrimaryOnboardingStep(noCodeSteps);
-  const stepperSummary = onboardingStepperSummary(coreSteps, progress);
-  const developerSteps = developerOnboardingSteps(context);
   const optionalWorkflowStep = noCodeSteps.find(
     (step) => step.id === "workflow",
   );
 
-  const onboardingContextLink = `/onboarding${onboardingSearch({
-    agentId: context.agentId ?? progress.onboardingRun?.agentId,
-    agentVersionId:
-      context.agentVersionId ??
-      progress.onboardingRun?.effectiveBindings.agentVersionId,
-    runId: progress.onboardingRun?.id ?? context.runId,
-    exampleId: exampleEntry?.id,
-  })}`;
+  const controlPlaneReachable = authQuery.data !== undefined;
+  const recommendedStageId = deriveRecommendedVisualStage({
+    primaryGranularStepId: primaryStep?.id,
+    flags: progress,
+    controlPlaneReachable,
+  });
+  const viewedStageId: GuidedVisualStageId =
+    parsedViewStage ?? recommendedStageId;
+
+  const onboardingContextLink = `/onboarding${onboardingSearch(
+    {
+      agentId: context.agentId ?? progress.onboardingRun?.agentId,
+      agentVersionId:
+        context.agentVersionId ??
+        progress.onboardingRun?.effectiveBindings.agentVersionId,
+      runId: progress.onboardingRun?.id ?? context.runId,
+      exampleId: exampleEntry?.id,
+    },
+    { viewStage: viewedStageId },
+  )}`;
 
   const showPrimaryContent = !progressLoading && !progressLoadError;
+  const showSuccessExperience =
+    progress.sampleRunSucceeded &&
+    !progress.progressIndeterminate &&
+    !progressLoadError;
 
   return (
-    <>
+    <div className="onboarding-v2-page">
       <PageHeader
         title="Get your first agent running"
-        subtitle="A guided path from workspace setup to a successful test Run. Progress reflects real API evidence in this workspace—creating a Run is not the same as SUCCEEDED execution."
+        subtitle="A short guided path to configure your workspace, create an agent, and confirm a successful test."
         actions={
           <>
             <LinkButton variant="secondary" to="/overview">
               Go to Home
             </LinkButton>
-            <LinkButton variant="ghost" to="#developer-onboarding">
-              Developer path
-            </LinkButton>
+            {!showSuccessExperience ? (
+              <Button variant="ghost" type="button" onClick={openDeveloperPath}>
+                Developer path
+              </Button>
+            ) : null}
           </>
         }
       />
 
-      <OnboardingContextBanner
-        workspace={auth.selectedWorkspace}
-        journeyState={journeyState}
-        context={context}
-        exampleTitle={exampleEntry?.title}
-        invalidExampleId={invalidExampleId}
-      />
+      {!showSuccessExperience ? (
+        <OnboardingContextBanner
+          workspace={auth.selectedWorkspace}
+          journeyState={journeyState}
+          context={context}
+          exampleTitle={exampleEntry?.title}
+          invalidExampleId={invalidExampleId}
+        />
+      ) : null}
 
       {progressLoadError ? (
         <ErrorState
@@ -190,18 +215,20 @@ export function OnboardingPage() {
         <LoadingBlock label="Loading onboarding progress…" />
       ) : null}
 
-      {progress.sampleRunSucceeded &&
-      !progress.progressIndeterminate &&
-      !progressLoadError ? (
-        <section className="panel onboarding-step-complete" role="status">
-          <h2 className="panel-title">First agent run succeeded</h2>
-          <p className="muted">
-            Run{" "}
-            <span className="mono">
-              {progress.onboardingRun?.id ?? context.runId}
-            </span>{" "}
-            reached SUCCEEDED in this workspace. Inspect persisted output on Run
-            Detail, then explore workflows or additional agents when ready.
+      {showSuccessExperience ? (
+        <section
+          className="panel onboarding-v2-completion"
+          role="status"
+          data-testid="onboarding-completion"
+        >
+          <p className="onboarding-v2-stage-eyebrow">You did it</p>
+          <h2 className="onboarding-v2-completion-title">
+            Your first agent test succeeded
+          </h2>
+          <p className="muted onboarding-v2-completion-lead">
+            The sample task finished successfully in this workspace. Review the
+            output, then explore workflows or build another agent when you are
+            ready.
           </p>
           <div className="toolbar">
             {progress.onboardingRun !== undefined ? (
@@ -209,7 +236,7 @@ export function OnboardingPage() {
                 className="button primary"
                 to={`/runs/${encodeURIComponent(progress.onboardingRun.id)}`}
               >
-                Open Run output
+                Open run output
               </Link>
             ) : null}
             {context.agentId !== undefined &&
@@ -218,7 +245,7 @@ export function OnboardingPage() {
                 className="button"
                 to={`/agents/${encodeURIComponent(context.agentId)}/versions/${encodeURIComponent(context.agentVersionId)}`}
               >
-                View AgentVersion
+                Open agent details
               </Link>
             ) : null}
             <Link className="button" to="/workflows/new">
@@ -228,68 +255,76 @@ export function OnboardingPage() {
               Return Home
             </Link>
           </div>
+          {optionalWorkflowStep !== undefined && canWrite ? (
+            <div className="onboarding-v2-completion-secondary">
+              <p className="muted">{optionalWorkflowStep.description}</p>
+              <LinkButton variant="secondary" to={optionalWorkflowStep.to}>
+                {optionalWorkflowStep.actionLabel}
+              </LinkButton>
+            </div>
+          ) : null}
+          <details className="onboarding-technical-disclosure">
+            <summary>Technical details</summary>
+            <p className="muted">
+              Run{" "}
+              <span className="mono">
+                {progress.onboardingRun?.id ?? context.runId}
+              </span>{" "}
+              reached status SUCCEEDED in loaded workspace data.
+              {context.agentVersionId !== undefined ? (
+                <>
+                  {" "}
+                  Immutable AgentVersion{" "}
+                  <span className="mono">{context.agentVersionId}</span>.
+                </>
+              ) : null}
+            </p>
+          </details>
         </section>
       ) : null}
 
-      {showPrimaryContent ? (
+      {showPrimaryContent && !showSuccessExperience ? (
         <>
-          <section className="panel onboarding-guided-overview">
-            <div className="panel-header-row">
-              <div>
-                <h2 className="panel-title">Progress overview</h2>
-                <p className="panel-description muted">
-                  {stepperSummary.completeCount} of {coreSteps.length} core
-                  stages complete
-                  {stepperSummary.currentVisual === "needs_attention"
-                    ? " · one stage needs attention"
-                    : ""}
-                  . Optional workflow exploration appears after your first
-                  success.
-                </p>
-              </div>
-            </div>
-            {progress.runsListIncomplete ? (
-              <p className="muted" role="status">
-                Run history is paginated ({ONBOARDING_RUNS_PAGE_LIMIT} most
-                recent Runs loaded). Open Runs or add{" "}
-                <span className="mono">runId</span> to the URL to track a
-                specific Run.
-              </p>
-            ) : null}
-            <OnboardingProgressStepper steps={coreSteps} flags={progress} />
-          </section>
+          <OnboardingVisualStepper
+            context={context}
+            viewedStageId={viewedStageId}
+            recommendedStageId={recommendedStageId}
+            flags={progress}
+            controlPlaneReachable={controlPlaneReachable}
+          />
 
-          {primaryStep !== undefined &&
-          primaryStep.id !== "workflow" &&
-          !progress.sampleRunSucceeded ? (
-            <OnboardingPrimaryStep
-              step={primaryStep}
+          <div className="onboarding-v2-grid">
+            <OnboardingStagePanel
+              stageId={viewedStageId}
+              recommendedStageId={recommendedStageId}
               flags={progress}
+              context={context}
+              controlPlaneReachable={controlPlaneReachable}
+              primaryGranularStep={
+                viewedStageId === recommendedStageId ? primaryStep : undefined
+              }
               canWrite={canWrite}
               canExecute={canExecute}
+              agents={agentsQuery.data?.agents}
+              modelProfiles={modelProfilesQuery.data?.modelProfiles}
+              modelProfileVersions={modelBindingQuery.data?.profileVersions}
+              modelConnections={modelConnectionsQuery.data?.connections}
+              exampleEntry={exampleEntry}
             />
-          ) : null}
+            <OnboardingStageAside stageId={viewedStageId} />
+          </div>
 
-          {progress.sampleRunSucceeded && optionalWorkflowStep !== undefined ? (
-            <section className="panel onboarding-optional-workflow">
-              <h2 className="panel-title">{optionalWorkflowStep.title}</h2>
-              <p className="muted">{optionalWorkflowStep.description}</p>
-              <p className="muted">{optionalWorkflowStep.statusDetail}</p>
-              {canWrite ? (
-                <LinkButton variant="secondary" to={optionalWorkflowStep.to}>
-                  {optionalWorkflowStep.actionLabel}
-                </LinkButton>
-              ) : (
-                <p className="muted">{ONBOARDING_REQUIRES_WRITE_ROLE}</p>
-              )}
-            </section>
-          ) : null}
+          <OnboardingStageFooter
+            context={context}
+            viewedStageId={viewedStageId}
+            recommendedStageId={recommendedStageId}
+          />
 
           <details className="onboarding-disclosure">
             <summary>Workspace setup and readiness details</summary>
             <div className="onboarding-disclosure-body">
               <WorkspaceSetupPanel
-                controlPlaneReachable={authQuery.data !== undefined}
+                controlPlaneReachable={controlPlaneReachable}
                 agents={agentsQuery.data?.agents}
                 modelProfiles={modelProfilesQuery.data?.modelProfiles}
                 modelConnections={modelConnectionsQuery.data?.connections}
@@ -298,7 +333,7 @@ export function OnboardingPage() {
                 }
               />
               <RuntimeReadinessPanel
-                controlPlaneReachable={authQuery.data !== undefined}
+                controlPlaneReachable={controlPlaneReachable}
                 selectedVersion={versionQuery.data}
               />
             </div>
@@ -310,57 +345,17 @@ export function OnboardingPage() {
               {onboardingContextLink}
             </Link>
           </p>
+
+          <OnboardingDeveloperPath
+            ref={developerPathRef}
+            context={context}
+            canWrite={canWrite}
+            canExecute={canExecute}
+            open={developerPathOpen}
+            onOpenChange={setDeveloperPathOpen}
+          />
         </>
       ) : null}
-
-      <section className="panel" id="developer-onboarding">
-        <h2 className="panel-title">Developer / Hello Agent (advanced)</h2>
-        <p className="muted">
-          Code-based execution with trusted runtimes and the public{" "}
-          <span className="mono">examples/hello-agent</span> project. Use this
-          when declarative Agent Studio is not sufficient. Skipping the guide
-          above does not bypass model, publish, or execute permissions.
-        </p>
-        <p className="muted">
-          Golden path:{" "}
-          <span className="mono">{HELLO_AGENT_GOLDEN_PATH_COMMAND}</span>.
-          Source: <span className="mono">{HELLO_AGENT_SOURCE_PATH}</span>.
-          Example I/O:{" "}
-          <span className="mono">
-            {JSON.stringify(HELLO_AGENT_INPUT_EXAMPLE)}
-          </span>{" "}
-          →{" "}
-          <span className="mono">
-            {JSON.stringify(HELLO_AGENT_OUTPUT_EXAMPLE)}
-          </span>
-        </p>
-        <ol className="onboarding-steps">
-          {developerSteps.map((step, index) => {
-            const blockedWrite = step.requiresWrite === true && !canWrite;
-            const blockedExecute = step.requiresExecute === true && !canExecute;
-            const blocked = blockedWrite || blockedExecute;
-            return (
-              <li key={step.id}>
-                <strong>
-                  {index + 1}. {step.title}
-                </strong>
-                <p className="muted">{step.description}</p>
-                {blocked ? (
-                  <p className="muted">
-                    {blockedWrite
-                      ? ONBOARDING_REQUIRES_WRITE_ROLE
-                      : ONBOARDING_REQUIRES_EXECUTE_ROLE}
-                  </p>
-                ) : (
-                  <Link className="button button-secondary" to={step.to}>
-                    {step.actionLabel}
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-    </>
+    </div>
   );
 }
