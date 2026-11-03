@@ -264,11 +264,16 @@ describe("UX V2 Home browser acceptance", () => {
       await page.getByText(/recent run didn't finish/i).waitFor();
       await page.getByText(/Needs review · Failed/).waitFor();
       expect(
-        await page.locator(".home-v2-attention-inline-detail").getByText(/status FAILED/i).count(),
+        await page
+          .locator(".home-v2-attention-inline-detail")
+          .getByText(/status FAILED/i)
+          .count(),
       ).toBe(0);
       const reviewRun = page.getByRole("link", { name: "Review run" }).first();
       await reviewRun.waitFor();
-      expect(await reviewRun.getAttribute("href")).toMatch(/\/runs\/run-failed/);
+      expect(await reviewRun.getAttribute("href")).toMatch(
+        /\/runs\/run-failed/,
+      );
       await assertNoHorizontalOverflow(page);
       await capture(page, "desktop-1440-returning-failed-light.png");
 
