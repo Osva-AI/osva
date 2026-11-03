@@ -13,6 +13,7 @@ import {
 } from "./m12-3-harness.js";
 import type { PostgresTestContext } from "../../../../packages/db/test/integration/postgres-harness.js";
 import type { ValkeyTestContext } from "../../../../adapters/bullmq/test/integration/valkey-harness.js";
+import { waitForOverview } from "./m18-1a-browser-helpers.js";
 
 async function loginAndSelectWorkspaceA(
   page: Page,
@@ -32,9 +33,13 @@ async function loginAndSelectWorkspaceA(
     await page.waitForURL(/\/overview/, { timeout: 30_000 });
   }
 
-  await page.getByRole("heading", { name: "Home", level: 1 }).waitFor({
+  await waitForOverview(page);
+  await page.getByRole("navigation", { name: "Location" }).waitFor({
     timeout: 30_000,
   });
+  await page
+    .getByRole("link", { name: "Start guided setup" })
+    .waitFor({ timeout: 30_000 });
 }
 
 async function assertNoSentinelInPage(page: Page): Promise<void> {

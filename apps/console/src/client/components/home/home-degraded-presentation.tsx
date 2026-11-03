@@ -1,30 +1,16 @@
-import { InlineMessage } from "../ui/inline-message";
-import { HomePartialErrors } from "./home-partial-errors";
-import { HomePresentationSwitch } from "./home-presentation-switch";
-import type { HomePresentationPreference } from "../../lib/home-presentation-preference";
+import type { HomePageData } from "../../hooks/use-home-page-data";
+import { HomeV2Unavailable } from "./home-v2-unavailable";
 
 export function HomeDegradedPresentation({
   reason,
-  partialErrors,
-  preference,
-  onPreferenceChange,
+  data,
 }: {
   readonly reason: string;
-  readonly partialErrors: readonly string[];
-  readonly preference: HomePresentationPreference;
-  readonly onPreferenceChange: (preference: HomePresentationPreference) => void;
+  readonly data: HomePageData;
 }) {
   return (
-    <div className="home-stack">
-      <InlineMessage tone="error" title="Home data is incomplete">
-        {reason} Resources or runs may still exist—we could not confirm an empty
-        workspace from the queries that succeeded.
-      </InlineMessage>
-      <HomePartialErrors messages={partialErrors} />
-      <HomePresentationSwitch
-        preference={preference}
-        onPreferenceChange={onPreferenceChange}
-      />
+    <div className="home-v2 home-v2-degraded">
+      <HomeV2Unavailable reason={reason} data={data} />
     </div>
   );
 }

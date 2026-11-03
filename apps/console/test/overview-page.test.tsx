@@ -57,7 +57,7 @@ describe("OverviewPage route (/overview Home)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: "Home", level: 1 }),
+        screen.getByRole("heading", { name: /Build your first/i }),
       ).toBeTruthy();
     });
   });
