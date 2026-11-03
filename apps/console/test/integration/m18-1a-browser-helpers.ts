@@ -293,3 +293,109 @@ export async function waitForOverview(page: Page): Promise<void> {
     timeout: 30_000,
   });
 }
+
+export function expectViewportSize(
+  page: Page,
+  width: number,
+  height: number,
+): void {
+  const size = page.viewportSize();
+  if (size === null) {
+    throw new Error("Expected viewport size but viewportSize() returned null");
+  }
+  if (size.width !== width || size.height !== height) {
+    throw new Error(
+      `Expected viewport ${width}x${height}, got ${size.width}x${size.height}`,
+    );
+  }
+}
+
+export async function waitForMobileNavDrawerSettled(page: Page): Promise<void> {
+  await page.waitForSelector(".app-shell.mobile-nav-open");
+  await page.waitForSelector('.shell-sidebar-drawer[data-open="true"]');
+  await page.waitForFunction(() => {
+    const drawer = document.querySelector(
+      '.shell-sidebar-drawer[data-open="true"]',
+    );
+    if (!(drawer instanceof HTMLElement)) {
+      return false;
+    }
+    const rect = drawer.getBoundingClientRect();
+    if (rect.left < -1 || rect.width < 200) {
+      return false;
+    }
+    const matrix = new DOMMatrix(getComputedStyle(drawer).transform);
+    return Math.abs(matrix.m41) < 2;
+  });
+}
+
+export async function clickResourcesNavLink(
+  page: Page,
+  label: "Models" | "Integrations" | "Knowledge" | "Memory",
+): Promise<void> {
+  const resourcesButton = page.getByRole("button", { name: "Resources" });
+  if ((await resourcesButton.getAttribute("aria-expanded")) !== "true") {
+    await resourcesButton.click();
+  }
+  await page
+    .getByRole("navigation", { name: "Primary" })
+    .getByRole("link", { name: label, exact: true })
+    .click();
+}
+
+export async function assertMobileNavDrawerVisible(page: Page): Promise<void> {
+  const drawer = page.locator('.shell-sidebar-drawer[data-open="true"]');
+  await drawer.waitFor({ state: "visible" });
+
+  const box = await drawer.boundingBox();
+  if (box === null || box.x > 1 || box.width < 200) {
+    throw new Error(
+      `Mobile drawer not fully on-screen: ${JSON.stringify(box)}`,
+    );
+  }
+
+  const primaryNav = page.getByRole("navigation", { name: "Primary" });
+  for (const label of [
+    "Home",
+    "Agents",
+    "Workflows",
+    "Activity",
+    "Testing",
+    "Settings",
+  ]) {
+    await primaryNav.getByRole("link", { name: label, exact: true }).waitFor({
+      state: "visible",
+    });
+  }
+}
+
+export async function setShellThemePreference(
+  page: Page,
+  theme: "light" | "dark" | "system",
+): Promise<void> {
+  await page.getByLabel("Theme").click();
+  const label = theme.charAt(0).toUpperCase() + theme.slice(1);
+  await page.getByRole("radio", { name: label }).click();
+  if (theme !== "system") {
+    await page.waitForFunction(
+      (expected) => document.documentElement.dataset.theme === expected,
+      theme,
+    );
+  }
+}
+
+export async function switchShellWorkspace(
+  page: Page,
+  workspaceName: string | RegExp,
+): Promise<void> {
+  await page.getByRole("button", { name: "Account and workspace" }).click();
+  const dialog = page.getByRole("dialog", { name: "Account and workspace" });
+  const workspaceTrigger = dialog.getByRole("button", { name: /Switch/i });
+  if ((await workspaceTrigger.count()) > 0) {
+    await workspaceTrigger.first().click();
+  }
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: workspaceName })
+    .click();
+}

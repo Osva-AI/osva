@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { setShellThemePreference } from "./m18-1a-browser-helpers.js";
 import {
   readHorizontalOverflow,
   routeActiveWorkspace,
@@ -57,10 +58,7 @@ describe("M18.2 browser acceptance (Adaptive Home)", () => {
         .waitFor();
       await screenshotHome(page, "desktop-1440-new-light.png");
 
-      await page.getByLabel("Theme preference").selectOption("dark");
-      await page.waitForFunction(
-        () => document.documentElement.dataset.theme === "dark",
-      );
+      await setShellThemePreference(page, "dark");
       await screenshotHome(page, "desktop-1440-new-dark.png");
 
       // Advanced presentation

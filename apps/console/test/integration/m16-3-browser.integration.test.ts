@@ -73,7 +73,8 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
       const page = await browser.newPage();
       await loginAndSelectWorkspaceA(page, stack.consoleOrigin);
 
-      await page.getByRole("link", { name: "Getting started" }).click();
+      await page.getByLabel("Help").click();
+      await page.getByRole("link", { name: "Guided setup" }).click();
       await page
         .getByRole("heading", {
           name: "Get your first agent running",

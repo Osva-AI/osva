@@ -80,7 +80,8 @@ describe("M18.3 browser acceptance (Outcome discovery)", () => {
         .waitFor();
       await screenshotPage(page, "desktop-1440-example-detail-light.png");
 
-      await page.getByLabel("Theme preference").selectOption("dark");
+      await page.getByLabel("Theme").click();
+      await page.getByRole("radio", { name: "Dark" }).click();
       await page.waitForFunction(
         () => document.documentElement.dataset.theme === "dark",
       );

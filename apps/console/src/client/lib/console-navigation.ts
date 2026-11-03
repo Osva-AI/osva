@@ -12,62 +12,50 @@ export interface ConsoleNavSection {
   readonly items: readonly ConsoleNavItem[];
 }
 
+export const HOME_NAV_ITEM: ConsoleNavItem = {
+  label: "Home",
+  to: "/overview",
+  end: true,
+  navId: "home",
+};
+
+export const BUILD_NAV_ITEMS: readonly ConsoleNavItem[] = [
+  { label: "Agents", to: "/agents", navId: "agents" },
+  { label: "Workflows", to: "/workflows", navId: "workflows" },
+];
+
+export const MANAGE_NAV_ITEMS: readonly ConsoleNavItem[] = [
+  { label: "Activity", to: "/activity", navId: "activity" },
+  { label: "Testing", to: "/testing", navId: "testing" },
+];
+
+export const RESOURCES_NAV_ITEMS: readonly ConsoleNavItem[] = [
+  { label: "Models", to: "/models", navId: "models" },
+  { label: "Integrations", to: "/tools", navId: "tools" },
+  { label: "Knowledge", to: "/knowledge", navId: "knowledge" },
+  { label: "Memory", to: "/memory", navId: "memory" },
+];
+
+export const FOOTER_NAV_ITEMS: readonly ConsoleNavItem[] = [
+  { label: "Settings", to: "/settings", navId: "settings" },
+];
+
+/** @deprecated Use section-specific exports; kept for tests migrating off M18 sections. */
 export const CONSOLE_NAV_SECTIONS: readonly ConsoleNavSection[] = [
   {
     title: "Start",
     sectionId: "start",
-    items: [
-      { label: "Home", to: "/overview", end: true, navId: "home" },
-      {
-        label: "Getting started",
-        to: "/onboarding",
-        navId: "getting-started",
-      },
-      {
-        label: "Examples",
-        to: "/examples",
-        navId: "examples",
-      },
-    ],
+    items: [HOME_NAV_ITEM],
   },
   {
     title: "Build",
     sectionId: "build",
-    items: [
-      { label: "Agents", to: "/agents", navId: "agents" },
-      { label: "Workflows", to: "/workflows", navId: "workflows" },
-    ],
+    items: BUILD_NAV_ITEMS,
   },
   {
-    title: "Resources",
-    sectionId: "resources",
-    items: [
-      { label: "Models", to: "/models", navId: "models" },
-      {
-        label: "Tools / Connectors",
-        to: "/tools",
-        navId: "tools",
-      },
-      { label: "Knowledge", to: "/knowledge", navId: "knowledge" },
-      { label: "Memory", to: "/memory", navId: "memory" },
-    ],
-  },
-  {
-    title: "Operate",
-    sectionId: "operate",
-    items: [
-      { label: "Runs", to: "/runs", navId: "runs" },
-      {
-        label: "Workflow Runs",
-        to: "/workflow-runs",
-        navId: "workflow-runs",
-      },
-      {
-        label: "Testing Studio",
-        to: "/testing",
-        navId: "testing-studio",
-      },
-    ],
+    title: "Manage",
+    sectionId: "manage",
+    items: MANAGE_NAV_ITEMS,
   },
 ];
 
@@ -83,3 +71,64 @@ export const WORKSPACE_NAV_ITEMS: readonly ConsoleNavItem[] = [
     navId: "security-activity",
   },
 ];
+
+const RESOURCE_PATH_PREFIXES = [
+  "/models",
+  "/tools",
+  "/connectors",
+  "/knowledge",
+  "/memory",
+] as const;
+
+export function isResourcesRoute(pathname: string): boolean {
+  return RESOURCE_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+export function isActivityRoute(pathname: string): boolean {
+  return (
+    pathname === "/activity" ||
+    pathname.startsWith("/runs") ||
+    pathname.startsWith("/workflow-runs")
+  );
+}
+
+export function isSettingsRoute(pathname: string): boolean {
+  return (
+    pathname === "/settings" ||
+    pathname.startsWith("/workspace/access") ||
+    pathname.startsWith("/workspace/security")
+  );
+}
+
+export function navItemMatchesPath(
+  item: ConsoleNavItem,
+  pathname: string,
+): boolean {
+  if (item.navId === "activity") {
+    return isActivityRoute(pathname);
+  }
+  if (item.navId === "settings") {
+    return isSettingsRoute(pathname);
+  }
+  if (item.end === true) {
+    return pathname === item.to;
+  }
+  return pathname === item.to || pathname.startsWith(`${item.to}/`);
+}
+
+export function resourceNavItemMatchesPath(
+  item: ConsoleNavItem,
+  pathname: string,
+): boolean {
+  if (item.navId === "tools") {
+    return (
+      pathname === "/tools" ||
+      pathname.startsWith("/tools/") ||
+      pathname === "/connectors" ||
+      pathname.startsWith("/connectors/")
+    );
+  }
+  return navItemMatchesPath(item, pathname);
+}

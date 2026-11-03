@@ -248,7 +248,12 @@ describe("M12.3 browser acceptance (Playwright)", () => {
       await stepRows.first().waitFor({ state: "visible", timeout: 30_000 });
 
       // Workspace isolation in UI
-      await page.getByLabel("Workspace switcher").selectOption("ws-m12-3-b");
+      await page.getByLabel("Account and workspace").click();
+      await page
+        .getByRole("button", { name: /Switch/i })
+        .first()
+        .click();
+      await page.getByRole("button", { name: /M12\.3 Workspace B/i }).click();
       await page.goto(`${stack.consoleOrigin}/models/connections`);
       await page
         .getByRole("heading", { name: "Provider connections" })

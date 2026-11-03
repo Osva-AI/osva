@@ -36,7 +36,9 @@ import { ConnectorsPage } from "./routes/connectors-page";
 import { ConnectorDetailPage } from "./routes/connector-detail-page";
 import { ExampleDetailPage } from "./routes/example-detail-page";
 import { ExamplesPage } from "./routes/examples-page";
+import { ActivityPage } from "./routes/activity-page";
 import { OverviewPage } from "./routes/overview-page";
+import { SettingsPage } from "./routes/settings-page";
 import { KnowledgePage } from "./routes/knowledge-page";
 import { KnowledgeSourcePage } from "./routes/knowledge-source-page";
 import { MemoryPage } from "./routes/memory-page";
@@ -73,6 +75,8 @@ export function App() {
                     element={<Navigate to="/overview" replace />}
                   />
                   <Route path="/overview" element={<OverviewPage />} />
+                  <Route path="/activity" element={<ActivityPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/examples" element={<ExamplesPage />} />
                   <Route
                     path="/examples/:exampleId"

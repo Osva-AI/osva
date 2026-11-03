@@ -44,6 +44,9 @@ docker-compose.override.yml
 *.tsbuildinfo
 .cache/
 
+# Local UX/design reference kit (not for GitHub)
+OSVA_V2_DESIGN_REVIEW_KIT/
+
 # Python SDK artifacts
 __pycache__/
 *.py[cod]
