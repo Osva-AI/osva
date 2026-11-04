@@ -502,8 +502,10 @@ export async function routeAgentStudioRunDetail(
 }
 
 export async function assertRunDetailLoaded(page: Page): Promise<void> {
-  await waitVisible(page.getByRole("heading", { name: "Run", exact: true }));
-  await waitVisible(page.getByText(/Individual Run \(not a WorkflowRun\)/));
+  await waitVisible(
+    page.getByRole("heading", { name: "Agent run", exact: true }),
+  );
+  await waitVisible(page.getByTestId("run-detail-v2"));
 }
 
 export async function assertReviewBlockersFixture(page: Page): Promise<void> {

@@ -155,9 +155,7 @@ describe("RunDetailPage artifacts", () => {
     await waitFor(() => {
       expect(screen.getByText("report.md")).toBeTruthy();
     });
-    expect(
-      screen.getByText(/Individual Run \(not a WorkflowRun\)/),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Agent run" })).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "agent-1" }).getAttribute("href"),
     ).toBe("/agents/agent-1");
@@ -504,7 +502,9 @@ describe("RunDetailPage artifacts", () => {
     });
     expect(screen.getByRole("link", { name: "Back to runs" })).toBeTruthy();
     expect(screen.queryByText("No output recorded yet.")).toBeNull();
-    expect(screen.getByText("Output")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Output", level: 3 }),
+    ).toBeTruthy();
   });
 
   it("shows queued guidance without claiming the worker is offline", async () => {

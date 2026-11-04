@@ -21,6 +21,7 @@ interface WorkflowEventEmitFormProps {
   readonly workflowInput: unknown;
   readonly workflowRunId: string;
   readonly canExecute: boolean;
+  readonly compact?: boolean;
 }
 
 export function WorkflowEventEmitForm({
@@ -28,6 +29,7 @@ export function WorkflowEventEmitForm({
   workflowInput,
   workflowRunId,
   canExecute,
+  compact = false,
 }: WorkflowEventEmitFormProps) {
   const mutation = useIngestWorkflowEventMutation(workflowRunId);
   const initialCorrelation = useMemo(
@@ -89,13 +91,28 @@ export function WorkflowEventEmitForm({
     }
   }
 
+  const requiredEventLabel = `${wait.source} / ${wait.eventType}`;
+
   return (
     <section className="operator-actions">
       <h3 className="section-title">Emit event</h3>
-      <p className="muted">
-        Submitting an event does not force-resume the workflow. OSVA resumes
-        only when the event matches this wait configuration.
+      <p className="workflow-event-required">
+        Required event: <strong>{requiredEventLabel}</strong>
       </p>
+      {compact ? (
+        <details className="workflow-event-resume-details">
+          <summary>Resume semantics</summary>
+          <p className="muted">
+            Submitting an event does not force-resume the workflow. OSVA resumes
+            only when the event matches this wait configuration.
+          </p>
+        </details>
+      ) : (
+        <p className="muted">
+          Submitting an event does not force-resume the workflow. OSVA resumes
+          only when the event matches this wait configuration.
+        </p>
+      )}
       <div className="stack">
         <div className="field">
           <label htmlFor="event-source">Source</label>

@@ -1,13 +1,18 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import {
+  ExecutionHistoryList,
+  ExecutionHistoryPagination,
+} from "../components/execution/execution-history-list";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
-import { StatusChip } from "../components/status/status-chip";
+import { LinkButton } from "../components/ui/button";
+import { PageHeader } from "../components/ui/page-header";
 import { useRunsListQuery } from "../hooks/use-runs";
-import { formatTimestamp } from "../lib/formatting";
-import { runStatusCategory } from "../lib/statuses";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
+import { buildAgentRunHistoryRows } from "../lib/execution-history-feed";
 
 const RUN_STATUSES = [
   "",
@@ -20,7 +25,10 @@ const RUN_STATUSES = [
   "CANCELLED",
 ] as const;
 
+const PAGE_LIMIT = 25;
+
 export function RunsPage() {
+  const workspaceId = useWorkspaceQueryScope();
   const [status, setStatus] = useState("");
   const [agentId, setAgentId] = useState("");
   const [agentVersionId, setAgentVersionId] = useState("");
@@ -32,35 +40,66 @@ export function RunsPage() {
       agentId: agentId.trim() || undefined,
       agentVersionId: agentVersionId.trim() || undefined,
       cursor: cursorStack[cursorStack.length - 1],
-      limit: 25,
+      limit: PAGE_LIMIT,
     }),
     [status, agentId, agentVersionId, cursorStack],
   );
 
   const runsQuery = useRunsListQuery(filters);
   const nextCursor = runsQuery.data?.nextCursor;
+  const workspaceReady = workspaceId !== undefined;
+
+  const rows = useMemo(
+    () => buildAgentRunHistoryRows(runsQuery.data?.runs ?? []),
+    [runsQuery.data?.runs],
+  );
+
+  const initialLoading =
+    workspaceReady && runsQuery.isPending && runsQuery.data === undefined;
+
+  if (!workspaceReady) {
+    return (
+      <LoadingBlock label="Select a workspace to view agent run history." />
+    );
+  }
 
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Runs</h1>
-          <p className="page-subtitle">
-            Individual Runs from the OSVA control plane. Launch from an
-            AgentVersion; this list is not WorkflowRuns.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="button"
-          onClick={() => void runsQuery.refetch()}
-          disabled={runsQuery.isFetching}
-        >
-          Refresh
-        </button>
-      </header>
+    <div
+      className="execution-history-v2 page-stack activity-v2"
+      data-testid="agent-runs-history-page"
+    >
+      <PageHeader
+        title="Agent run history"
+        subtitle="Paginated agent runs in this workspace."
+        actions={
+          <>
+            {runsQuery.isFetching && !initialLoading ? (
+              <span className="muted activity-v2-refresh-hint" role="status">
+                Refreshing…
+              </span>
+            ) : null}
+            <button
+              type="button"
+              className="button"
+              onClick={() => void runsQuery.refetch()}
+              disabled={runsQuery.isFetching}
+            >
+              Refresh
+            </button>
+          </>
+        }
+      />
 
-      <section className="panel">
+      <nav className="activity-v2-history-nav" aria-label="Related views">
+        <LinkButton variant="secondary" to="/activity">
+          Activity
+        </LinkButton>
+        <LinkButton variant="secondary" to="/workflow-runs">
+          Workflow run history
+        </LinkButton>
+      </nav>
+
+      <section className="panel execution-history-v2-filters">
         <div className="filters">
           <div className="field">
             <label htmlFor="status-filter">Status</label>
@@ -103,84 +142,74 @@ export function RunsPage() {
               placeholder="Filter by agentVersionId"
             />
           </div>
+          {(status.length > 0 ||
+            agentId.trim().length > 0 ||
+            agentVersionId.trim().length > 0) && (
+            <div className="field execution-history-v2-filter-reset">
+              <span className="muted">Filters</span>
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  setStatus("");
+                  setAgentId("");
+                  setAgentVersionId("");
+                  setCursorStack([]);
+                }}
+              >
+                Reset filters
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
-      {runsQuery.isLoading ? <LoadingBlock label="Loading runs…" /> : null}
+      {initialLoading ? <LoadingBlock label="Loading runs…" /> : null}
       {runsQuery.isError ? (
-        <ErrorState title="Failed to load runs" error={runsQuery.error} />
+        <ErrorState title="Could not load agent runs" error={runsQuery.error} />
       ) : null}
 
-      {runsQuery.data !== undefined && runsQuery.data.runs.length === 0 ? (
+      {runsQuery.data !== undefined &&
+      rows.length === 0 &&
+      !runsQuery.isError ? (
         <EmptyState
           title="No runs yet."
           description="Runs created through the OSVA API will appear here."
+          action={
+            <Link className="button primary" to="/agents/new">
+              Create agent
+            </Link>
+          }
         />
       ) : null}
 
-      {runsQuery.data !== undefined && runsQuery.data.runs.length > 0 ? (
-        <section className="panel">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Run ID</th>
-                <th>Agent ID</th>
-                <th>Status</th>
-                <th>Agent version</th>
-                <th>Created</th>
-                <th>Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {runsQuery.data.runs.map((run) => (
-                <tr key={run.id}>
-                  <td>
-                    <Link className="mono" to={`/runs/${run.id}`}>
-                      {run.id}
-                    </Link>
-                  </td>
-                  <td className="mono">{run.agentId}</td>
-                  <td>
-                    <StatusChip
-                      status={run.status}
-                      category={runStatusCategory(run.status)}
-                    />
-                  </td>
-                  <td className="mono">
-                    {run.effectiveBindings.agentVersionId}
-                  </td>
-                  <td>{formatTimestamp(run.createdAt)}</td>
-                  <td>{formatTimestamp(run.updatedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="toolbar" style={{ marginTop: 16 }}>
-            <button
-              type="button"
-              className="button"
-              disabled={cursorStack.length === 0}
-              onClick={() => {
-                setCursorStack((stack) => stack.slice(0, -1));
-              }}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              className="button"
-              disabled={nextCursor === undefined}
-              onClick={() => {
-                if (nextCursor !== undefined) {
-                  setCursorStack((stack) => [...stack, nextCursor]);
-                }
-              }}
-            >
-              Next
-            </button>
-          </div>
-        </section>
+      {rows.length > 0 ? (
+        <>
+          <ExecutionHistoryList
+            rows={rows}
+            listTestId="agent-runs-history-list"
+            ariaLabel="Agent runs"
+          />
+          <ExecutionHistoryPagination
+            canGoPrevious={cursorStack.length > 0}
+            canGoNext={nextCursor !== undefined}
+            isFetching={runsQuery.isFetching}
+            onPrevious={() => {
+              setCursorStack((stack) => stack.slice(0, -1));
+            }}
+            onNext={() => {
+              if (nextCursor !== undefined) {
+                setCursorStack((stack) => [...stack, nextCursor]);
+              }
+            }}
+          />
+          <p className="muted activity-v2-footnote">
+            Ordered by creation time (newest first). Each page shows up to{" "}
+            {PAGE_LIMIT} runs. Use filters and pagination to browse the full
+            history.
+          </p>
+        </>
       ) : null}
-    </>
+    </div>
   );
 }

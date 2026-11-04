@@ -36,6 +36,8 @@ interface WorkflowNodeExecutionCardProps {
   readonly workflowInput: unknown;
   readonly canExecute: boolean;
   readonly showConnector: boolean;
+  readonly hideOperatorActions?: boolean;
+  readonly displayTitle?: string;
 }
 
 export function WorkflowNodeExecutionCard({
@@ -49,6 +51,8 @@ export function WorkflowNodeExecutionCard({
   workflowInput,
   canExecute,
   showConnector,
+  hideOperatorActions = false,
+  displayTitle,
 }: WorkflowNodeExecutionCardProps) {
   const incoming = incomingNodeKeys(definition, node.key);
   const hasRecord = nodeRun !== undefined;
@@ -61,9 +65,10 @@ export function WorkflowNodeExecutionCard({
         <header className="execution-node-header">
           <div>
             <div className="execution-node-title">
-              <span className="mono">{node.key}</span>{" "}
-              <span className="muted">({node.type})</span>
+              {displayTitle ?? node.key}
+              <span className="muted execution-node-type"> ({node.type})</span>
             </div>
+            <p className="muted mono execution-node-key">{node.key}</p>
             {incoming.length > 0 ? (
               <div className="muted" style={{ fontSize: 12 }}>
                 After: {incoming.join(", ")}
@@ -186,12 +191,13 @@ export function WorkflowNodeExecutionCard({
           nodeRuns={nodeRuns}
         />
 
-        {node.type === "APPROVAL" ? (
+        {node.type === "APPROVAL" && !hideOperatorActions ? (
           <WorkflowApprovalActions
             node={node}
             approvalRequest={approvalRequest}
             workflowRunId={workflowRunId}
             canExecute={canExecute}
+            workflowNodeRunStatus={nodeRun?.status}
           />
         ) : null}
 
@@ -201,7 +207,8 @@ export function WorkflowNodeExecutionCard({
 
         {node.type === "WAIT" &&
         isEventWaitNode(node) &&
-        nodeRun?.status === "WAITING" ? (
+        nodeRun?.status === "WAITING" &&
+        !hideOperatorActions ? (
           <WorkflowEventEmitForm
             wait={node.wait as EventWaitConfig}
             workflowInput={workflowInput}

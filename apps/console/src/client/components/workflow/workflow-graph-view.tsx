@@ -3,6 +3,7 @@ import { useMemo } from "react";
 
 import { definitionToFlow } from "../../lib/workflow-definition-graph-adapter";
 import type { WorkflowDefinitionView } from "../../lib/workflow-definition";
+import type { WorkflowCanvasLabelContext } from "../../lib/workflow-canvas-labels";
 import { workflowGraphNodeTypes } from "./workflow-graph-node";
 
 import "@xyflow/react/dist/style.css";
@@ -14,6 +15,7 @@ export interface WorkflowGraphViewProps {
   readonly edgeAppearanceById?: Readonly<Record<string, string>>;
   readonly selectedNodeKey?: string;
   readonly onNodeSelect?: (nodeKey: string | undefined) => void;
+  readonly canvasLabelContext?: WorkflowCanvasLabelContext;
 }
 
 export function WorkflowGraphView({
@@ -23,6 +25,7 @@ export function WorkflowGraphView({
   edgeAppearanceById,
   selectedNodeKey,
   onNodeSelect,
+  canvasLabelContext,
 }: WorkflowGraphViewProps) {
   const inspectable = onNodeSelect !== undefined;
   const { nodes, edges } = useMemo(
@@ -32,8 +35,15 @@ export function WorkflowGraphView({
         errorNodeKeys,
         executionStatusByNodeKey,
         edgeAppearanceById,
+        canvasLabelContext,
       }),
-    [definition, edgeAppearanceById, errorNodeKeys, executionStatusByNodeKey],
+    [
+      canvasLabelContext,
+      definition,
+      edgeAppearanceById,
+      errorNodeKeys,
+      executionStatusByNodeKey,
+    ],
   );
 
   const nodesWithSelection = useMemo(
@@ -51,6 +61,10 @@ export function WorkflowGraphView({
       data-testid="workflow-graph-view"
       aria-label="Workflow definition graph (read-only)"
     >
+      <p className="workflow-graph-interaction-hint muted">
+        Drag to pan, scroll or pinch to zoom. Select a node to inspect persisted
+        execution, or use the execution records list below.
+      </p>
       <ReactFlow
         nodes={nodesWithSelection}
         edges={edges}

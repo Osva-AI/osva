@@ -4,10 +4,12 @@ import type { Database } from "@osva/db";
 
 import { ensureConsoleClientDistForBrowserTests } from "./ensure-console-client-dist.js";
 import {
+  consoleJson,
   resetM12_3Data,
   startM12_3HumanConsoleStack,
   startM12_3Infra,
   stopM12_3Infra,
+  waitForRunSucceeded,
   HUMAN_PASSWORD,
   OPERATOR_EMAIL,
 } from "./m12-3-harness.js";
@@ -180,18 +182,41 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
         .getByRole("button", { name: "Confirm start run" })
         .click({ timeout: 15_000 });
 
+      await page.waitForURL(/\/runs\/[^/?]+/, { timeout: 60_000 });
+      const runUrlMatch = /\/runs\/([^/?]+)/.exec(page.url());
+      expect(runUrlMatch).not.toBeNull();
+      const runId = runUrlMatch?.[1] ?? "";
+      expect(runId.length).toBeGreaterThan(0);
+
+      await waitForRunSucceeded(stack, stack.workspaceA, runId);
+
       await pollUntil({
-        label: "first onboarding run terminal",
-        deadlineMs: 120_000,
+        label: "first onboarding run V2.6B succeeded label",
+        deadlineMs: 30_000,
         intervalMs: 500,
         probe: async () => {
           await page.getByRole("button", { name: "Refresh" }).click();
-          const succeeded = await page
-            .getByText("SUCCEEDED", { exact: true })
-            .first()
+          const run = await consoleJson(
+            stack,
+            stack.workspaceA,
+            `/api/v1/runs/${encodeURIComponent(runId)}`,
+          );
+          const apiStatus = (run.body as { status?: string } | null)?.status;
+          const uiSucceededVisible = await page
+            .locator(".run-detail-outcome-headline")
+            .getByText("Succeeded", { exact: true })
             .isVisible()
             .catch(() => false);
-          return { done: succeeded, lastState: { succeeded } };
+          return {
+            done: uiSucceededVisible,
+            lastState: {
+              runId,
+              pageUrl: page.url(),
+              apiHttpStatus: run.status,
+              apiStatus,
+              uiSucceededVisible,
+            },
+          };
         },
       });
 

@@ -3,17 +3,32 @@ import type { Page } from "playwright";
 import type { Database } from "@osva/db";
 
 import {
+  assertNoSentinelLeak,
+  consoleJson,
   resetM12_3Data,
   SENTINEL_CREDENTIAL,
   startM12_3HumanConsoleStack,
   startM12_3Infra,
   stopM12_3Infra,
+  waitForRunSucceeded,
   HUMAN_PASSWORD,
   OPERATOR_EMAIL,
 } from "./m12-3-harness.js";
 import type { PostgresTestContext } from "../../../../packages/db/test/integration/postgres-harness.js";
 import type { ValkeyTestContext } from "../../../../adapters/bullmq/test/integration/valkey-harness.js";
+import { pollUntil } from "./poll-deadline.js";
 import { waitForOverview } from "./m18-1a-browser-helpers.js";
+
+function runStepTimelineHeading(kind: string): string {
+  switch (kind) {
+    case "MODEL":
+      return "Model call";
+    case "TOOL":
+      return "Tool call";
+    default:
+      return kind.replaceAll("_", " ");
+  }
+}
 
 async function loginAndSelectWorkspaceA(
   page: Page,
@@ -253,22 +268,101 @@ describe("M12.3 browser acceptance (Playwright)", () => {
 
       await page.getByRole("button", { name: "Run test" }).click();
       await page.getByRole("button", { name: "Confirm test run" }).click();
-      await page.waitForURL(/\/runs\//, { timeout: 60_000 });
+      await page.waitForURL(/\/runs\/[^/?]+/, { timeout: 60_000 });
+      const runUrlMatch = /\/runs\/([^/?]+)/.exec(page.url());
+      expect(runUrlMatch).not.toBeNull();
+      const runId = runUrlMatch?.[1] ?? "";
+      expect(runId.length).toBeGreaterThan(0);
 
-      await expect
-        .poll(
-          async () => {
-            await page.getByRole("button", { name: "Refresh" }).click();
-            return page.getByText("SUCCEEDED", { exact: true }).count();
-          },
-          { timeout: 120_000 },
-        )
-        .toBeGreaterThan(0);
+      await waitForRunSucceeded(stack, stack.workspaceA, runId);
+
+      await pollUntil({
+        label: "M12.3 run detail V2.6B succeeded label",
+        deadlineMs: 30_000,
+        intervalMs: 500,
+        probe: async () => {
+          await page.getByRole("button", { name: "Refresh" }).click();
+          const run = await consoleJson(
+            stack,
+            stack.workspaceA,
+            `/api/v1/runs/${encodeURIComponent(runId)}`,
+          );
+          const apiStatus = (run.body as { status?: string } | null)?.status;
+          const uiSucceededVisible = await page
+            .locator(".run-detail-outcome-headline")
+            .getByText("Succeeded", { exact: true })
+            .isVisible()
+            .catch(() => false);
+          return {
+            done: uiSucceededVisible,
+            lastState: {
+              runId,
+              pageUrl: page.url(),
+              apiHttpStatus: run.status,
+              apiStatus,
+              uiSucceededVisible,
+            },
+          };
+        },
+      });
+
+      const attemptsResponse = await consoleJson(
+        stack,
+        stack.workspaceA,
+        `/api/v1/runs/${encodeURIComponent(runId)}/attempts`,
+      );
+      expect(attemptsResponse.status).toBe(200);
+      assertNoSentinelLeak(attemptsResponse.text);
+      const attemptRows =
+        (attemptsResponse.body as { attempts?: Array<{ id: string }> })
+          .attempts ?? [];
+      expect(attemptRows.length).toBeGreaterThan(0);
+      const runAttemptId = attemptRows[attemptRows.length - 1]!.id;
+
+      const stepsResponse = await consoleJson(
+        stack,
+        stack.workspaceA,
+        `/api/v1/runs/${encodeURIComponent(runId)}/attempts/${encodeURIComponent(runAttemptId)}/steps`,
+      );
+      expect(stepsResponse.status).toBe(200);
+      assertNoSentinelLeak(stepsResponse.text);
+      const persistedSteps =
+        (
+          stepsResponse.body as {
+            steps?: Array<{ kind: string; bindingName?: string }>;
+          }
+        ).steps ?? [];
+      expect(persistedSteps.length).toBeGreaterThan(0);
+      const persistedKinds = persistedSteps.map((step) => step.kind);
+      expect(persistedKinds).toContain("MODEL");
+      expect(persistedKinds).toContain("TOOL");
 
       await page.getByRole("button", { name: "Refresh" }).click();
-      await page.getByText("Loading run steps…").waitFor({ state: "hidden" });
-      const stepRows = page.locator(".data-table tbody tr");
-      await stepRows.first().waitFor({ state: "visible", timeout: 30_000 });
+      await page
+        .getByText("Loading execution timeline…")
+        .waitFor({ state: "hidden", timeout: 30_000 });
+      const timeline = page.getByTestId("run-step-timeline");
+      await timeline.waitFor({ timeout: 30_000 });
+      expect(await timeline.locator(".run-step-timeline-item").count()).toBe(
+        persistedSteps.length,
+      );
+      for (const kind of new Set(persistedKinds)) {
+        await timeline
+          .getByRole("heading", {
+            name: runStepTimelineHeading(kind),
+            exact: true,
+          })
+          .first()
+          .waitFor({ timeout: 15_000 });
+      }
+      for (const step of persistedSteps) {
+        if (step.bindingName === undefined || step.bindingName.length === 0) {
+          continue;
+        }
+        await timeline.getByText(step.bindingName, { exact: true }).waitFor({
+          timeout: 15_000,
+        });
+      }
 
       // Workspace isolation in UI
       await page.getByLabel("Account and workspace").click();

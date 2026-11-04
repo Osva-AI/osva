@@ -5,6 +5,9 @@ import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { JsonView } from "../components/json-view/json-view";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
+import { RunStepTimeline } from "../components/run/run-step-timeline";
+import { RunUsageSummary } from "../components/run/run-usage-summary";
 import { StatusChip } from "../components/status/status-chip";
 import {
   useArtifactsQuery,
@@ -14,19 +17,30 @@ import {
   useRunStepsQuery,
   useRunUsageQuery,
 } from "../hooks/use-runs";
-import {
-  formatDurationMs,
-  formatTimestamp,
-  formatUsdMicros,
-} from "../lib/formatting";
+import { shortenResourceId } from "../lib/activity-feed";
 import { executionStateLabel } from "../lib/execution-diagnostics";
+import {
+  formatActivityTimestamp,
+  formatAttemptDuration,
+  formatTimestamp,
+} from "../lib/formatting";
+import { onboardingSearch } from "../lib/agent-onboarding";
 import {
   describeRunAttemptFailureGuidance,
   describeRunLifecycleGuidance,
 } from "../lib/operator-diagnostics";
-import { attemptStatusCategory, runStatusCategory } from "../lib/statuses";
-import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
-import { onboardingSearch } from "../lib/agent-onboarding";
+import { runExecutionStatusLabel } from "../lib/run-execution-labels";
+import {
+  attemptStatusCategory,
+  isRunLive,
+  runStatusCategory,
+} from "../lib/statuses";
+
+function useRunDetailQuerySuffix(): string {
+  const [searchParams] = useSearchParams();
+  const query = searchParams.toString();
+  return query.length > 0 ? `?${query}` : "";
+}
 
 export function RunDetailPage() {
   const { runId, runAttemptId } = useParams<{
@@ -34,16 +48,16 @@ export function RunDetailPage() {
     runAttemptId?: string;
   }>();
   const [searchParams] = useSearchParams();
+  const querySuffix = useRunDetailQuerySuffix();
   const fromOnboarding = searchParams.get("from") === "onboarding";
 
   const runQuery = useRunQuery(runId);
   const attemptsQuery = useRunAttemptsQuery(runId, runQuery.data?.status);
 
-  const selectedAttemptId =
-    runAttemptId ??
-    attemptsQuery.data?.attempts[attemptsQuery.data.attempts.length - 1]?.id;
+  const attempts = attemptsQuery.data?.attempts ?? [];
+  const selectedAttemptId = runAttemptId ?? attempts[attempts.length - 1]?.id;
 
-  const selectedAttemptMeta = attemptsQuery.data?.attempts.find(
+  const selectedAttemptMeta = attempts.find(
     (attempt) => attempt.id === selectedAttemptId,
   );
 
@@ -62,16 +76,34 @@ export function RunDetailPage() {
     selectedAttemptId,
     selectedAttemptMeta?.status,
   );
+
+  const runLive =
+    runQuery.data !== undefined && isRunLive(runQuery.data.status);
+  const attemptLive =
+    selectedAttemptMeta?.status === "PENDING" ||
+    selectedAttemptMeta?.status === "RUNNING";
+  const artifactsLive = runLive || attemptLive;
+
   const artifactsQuery = useArtifactsQuery({
     runId,
     runAttemptId: selectedAttemptId,
-    live:
-      selectedAttemptMeta?.status === "PENDING" ||
-      selectedAttemptMeta?.status === "RUNNING" ||
-      runQuery.data?.status === "PENDING" ||
-      runQuery.data?.status === "QUEUED" ||
-      runQuery.data?.status === "RUNNING",
+    live: artifactsLive,
   });
+
+  const refreshing =
+    runQuery.isFetching ||
+    attemptsQuery.isFetching ||
+    attemptQuery.isFetching ||
+    stepsQuery.isFetching;
+
+  function refreshAll(): void {
+    void runQuery.refetch();
+    void attemptsQuery.refetch();
+    void attemptQuery.refetch();
+    void stepsQuery.refetch();
+    void usageQuery.refetch();
+    void artifactsQuery.refetch();
+  }
 
   if (runQuery.isLoading) {
     return <LoadingBlock label="Loading run…" />;
@@ -100,26 +132,64 @@ export function RunDetailPage() {
     attemptStatus: selectedAttemptMeta?.status,
     execution: selectedAttemptForGuidance?.execution,
   });
-  const failureGuidance =
-    selectedAttemptForGuidance?.status === "FAILED" || run.status === "FAILED"
-      ? describeRunAttemptFailureGuidance({
-          error: selectedAttemptForGuidance?.error,
-          execution: selectedAttemptForGuidance?.execution,
-        })
-      : undefined;
+  const runStepCount = stepsQuery.data?.steps?.length ?? 0;
+  const showFailureFirst =
+    run.status === "FAILED" ||
+    run.status === "TIMED_OUT" ||
+    selectedAttemptForGuidance?.status === "FAILED" ||
+    selectedAttemptForGuidance?.status === "TIMED_OUT";
+  const failureGuidance = showFailureFirst
+    ? describeRunAttemptFailureGuidance({
+        error: selectedAttemptForGuidance?.error,
+        execution: selectedAttemptForGuidance?.execution,
+        runStepCount,
+        runStatus: run.status,
+        attemptStatus: selectedAttemptForGuidance?.status,
+      })
+    : undefined;
+
+  const attemptUrlMissing =
+    runAttemptId !== undefined &&
+    attemptsQuery.data !== undefined &&
+    !attempts.some((attempt) => attempt.id === runAttemptId);
 
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Run</h1>
-          <p className="page-subtitle mono">{run.id}</p>
-          <p className="muted">
-            Individual Run (not a WorkflowRun). Attempts below are RunAttempts,
-            not WorkflowNodeRuns.
+    <div className="run-detail-v2 page-stack" data-testid="run-detail-v2">
+      <header className="run-detail-outcome panel">
+        <div className="run-detail-outcome-main">
+          <div className="run-detail-outcome-headline">
+            <h1 className="run-detail-title">Agent run</h1>
+            <StatusChip
+              status={run.status}
+              category={runStatusCategory(run.status)}
+              label={runExecutionStatusLabel(run.status)}
+            />
+            {runLive ? (
+              <span className="run-detail-live muted" role="status">
+                Live
+              </span>
+            ) : null}
+          </div>
+          <p className="muted run-detail-run-meta">
+            <span className="mono" title={run.id}>
+              {shortenResourceId(run.id)}
+            </span>
+            {" · "}
+            Created {formatActivityTimestamp(run.createdAt)}
+            {" · "}
+            Updated {formatActivityTimestamp(run.updatedAt)}
+          </p>
+          <p className="visually-hidden">
+            Individual Run (not a WorkflowRun). RunAttempts below are not
+            WorkflowNodeRuns.
           </p>
         </div>
-        <div className="toolbar">
+        <div className="toolbar run-detail-toolbar">
+          {refreshing ? (
+            <span className="muted run-detail-refresh-hint" role="status">
+              Refreshing…
+            </span>
+          ) : null}
           {fromOnboarding || run.status !== "SUCCEEDED" ? (
             <Link className="button" to={onboardingLink}>
               Continue getting started
@@ -128,36 +198,48 @@ export function RunDetailPage() {
           <Link className="button" to="/runs">
             Back to runs
           </Link>
-          <button
-            type="button"
-            className="button"
-            onClick={() => {
-              void runQuery.refetch();
-              void attemptsQuery.refetch();
-              void attemptQuery.refetch();
-              void stepsQuery.refetch();
-              void usageQuery.refetch();
-              void artifactsQuery.refetch();
-            }}
-          >
+          <Link className="button" to="/activity">
+            Activity
+          </Link>
+          <button type="button" className="button" onClick={refreshAll}>
             Refresh
           </button>
         </div>
+        {failureGuidance !== undefined ? (
+          <section
+            className="run-detail-failure-inline"
+            aria-labelledby="run-detail-failure-title"
+          >
+            <h2
+              id="run-detail-failure-title"
+              className="run-detail-failure-inline-title"
+            >
+              What happened
+            </h2>
+            <OperatorGuidancePanel
+              guidance={failureGuidance}
+              testId="run-failure-guidance"
+            />
+          </section>
+        ) : null}
+        {lifecycleGuidance !== undefined ? (
+          <OperatorGuidancePanel
+            guidance={lifecycleGuidance}
+            testId="run-lifecycle-guidance"
+          />
+        ) : null}
       </header>
 
-      <section className="panel">
+      <section
+        className="run-detail-context panel"
+        aria-labelledby="run-detail-context-title"
+      >
+        <h2 id="run-detail-context-title" className="panel-title">
+          Agent context
+        </h2>
         <dl className="meta-grid">
           <div>
-            <dt>Status</dt>
-            <dd>
-              <StatusChip
-                status={run.status}
-                category={runStatusCategory(run.status)}
-              />
-            </dd>
-          </div>
-          <div>
-            <dt>Agent ID</dt>
+            <dt>Agent</dt>
             <dd>
               <Link className="mono" to={`/agents/${run.agentId}`}>
                 {run.agentId}
@@ -165,7 +247,7 @@ export function RunDetailPage() {
             </dd>
           </div>
           <div>
-            <dt>Agent version ID</dt>
+            <dt>Agent version</dt>
             <dd>
               <Link
                 className="mono"
@@ -175,55 +257,35 @@ export function RunDetailPage() {
               </Link>
             </dd>
           </div>
-          <div>
-            <dt>Created</dt>
-            <dd>{formatTimestamp(run.createdAt)}</dd>
-          </div>
-          <div>
-            <dt>Updated</dt>
-            <dd>{formatTimestamp(run.updatedAt)}</dd>
-          </div>
           {run.evaluationRunId !== undefined ? (
             <div>
-              <dt>Evaluation run ID</dt>
-              <dd className="mono">{run.evaluationRunId}</dd>
+              <dt>Evaluation run</dt>
+              <dd>
+                <Link
+                  className="mono"
+                  to={`/testing/runs/${encodeURIComponent(run.evaluationRunId)}`}
+                >
+                  {run.evaluationRunId}
+                </Link>
+              </dd>
             </div>
           ) : null}
           {run.evaluationCaseId !== undefined ? (
             <div>
-              <dt>Evaluation case ID</dt>
+              <dt>Evaluation case</dt>
               <dd className="mono">{run.evaluationCaseId}</dd>
             </div>
           ) : null}
         </dl>
-        {lifecycleGuidance !== undefined ? (
-          <OperatorGuidancePanel
-            guidance={lifecycleGuidance}
-            testId="run-lifecycle-guidance"
-          />
-        ) : null}
       </section>
 
-      <section className="panel">
-        <h2 className="panel-title">Effective bindings</h2>
-        <JsonView
-          label="Bindings"
-          value={{
-            agentVersionId: run.effectiveBindings.agentVersionId,
-            modelProfileVersionBindings:
-              run.effectiveBindings.modelProfileVersionBindings,
-            toolVersionBindings: run.effectiveBindings.toolVersionBindings,
-          }}
-        />
-      </section>
-
-      <section className="panel">
-        <h2 className="panel-title">Input</h2>
-        <JsonView value={run.input} />
-      </section>
-
-      <section className="panel">
-        <h2 className="panel-title">Attempts</h2>
+      <section
+        className="run-detail-attempts panel"
+        aria-labelledby="run-detail-attempts-title"
+      >
+        <h2 id="run-detail-attempts-title" className="panel-title">
+          Attempts
+        </h2>
         {attemptsQuery.isLoading ? (
           <LoadingBlock label="Loading attempts…" />
         ) : null}
@@ -233,43 +295,50 @@ export function RunDetailPage() {
             error={attemptsQuery.error}
           />
         ) : null}
-        {attemptsQuery.data?.attempts.length === 0 ? (
+        {attempts.length === 0 && !attemptsQuery.isLoading ? (
           <EmptyState title="No attempts yet." />
         ) : null}
-        {attemptsQuery.data !== undefined &&
-        attemptsQuery.data.attempts.length > 0 ? (
-          <div className="attempt-list">
-            {attemptsQuery.data.attempts.map((attempt) => (
+        {attemptUrlMissing ? (
+          <ErrorState
+            title="Attempt not found"
+            error={
+              new Error(
+                "This RunAttempt is not listed for the Run. Select another attempt or refresh.",
+              )
+            }
+          />
+        ) : null}
+        {attempts.length > 0 ? (
+          <div className="run-detail-attempt-list attempt-list">
+            {attempts.map((attempt) => (
               <Link
                 key={attempt.id}
-                to={`/runs/${run.id}/attempts/${attempt.id}`}
+                to={`/runs/${run.id}/attempts/${attempt.id}${querySuffix}`}
                 className={`attempt-card${selectedAttemptId === attempt.id ? " selected" : ""}`}
+                aria-current={
+                  selectedAttemptId === attempt.id ? "true" : undefined
+                }
               >
-                <div
-                  className="toolbar"
-                  style={{ justifyContent: "space-between" }}
-                >
-                  <strong className="mono">#{attempt.sequence}</strong>
+                <div className="run-detail-attempt-card-head">
+                  <strong>Attempt {attempt.sequence}</strong>
                   <StatusChip
                     status={attempt.status}
                     category={attemptStatusCategory(attempt.status)}
+                    label={runExecutionStatusLabel(attempt.status)}
                   />
                 </div>
-                <div className="mono">{attempt.id}</div>
-                <div>
-                  Created {formatTimestamp(attempt.createdAt)} · Started{" "}
-                  {formatTimestamp(attempt.startedAt)} · Completed{" "}
-                  {formatTimestamp(attempt.completedAt)}
-                </div>
-                <div>
+                <p className="muted">
                   Duration{" "}
-                  {formatDurationMs(attempt.startedAt, attempt.completedAt)}
-                </div>
-                {attempt.error !== undefined ? (
-                  <div className="mono">
-                    {attempt.error.code}: {attempt.error.message}
-                  </div>
-                ) : null}
+                  {formatAttemptDuration(
+                    attempt.startedAt,
+                    attempt.completedAt,
+                    attempt.status === "PENDING" ||
+                      attempt.status === "RUNNING",
+                  )}
+                </p>
+                <p className="mono run-detail-attempt-id" title={attempt.id}>
+                  {shortenResourceId(attempt.id)}
+                </p>
               </Link>
             ))}
           </div>
@@ -278,10 +347,42 @@ export function RunDetailPage() {
 
       {selectedAttemptId !== undefined ? (
         <>
-          <section className="panel">
-            <h2 className="panel-title">Run attempt</h2>
+          <section
+            className="run-detail-timeline panel"
+            aria-labelledby="run-detail-timeline-title"
+          >
+            <h2 id="run-detail-timeline-title" className="panel-title">
+              Execution timeline
+            </h2>
+            {stepsQuery.isError ? (
+              <ErrorState
+                title="Failed to load activity"
+                error={stepsQuery.error}
+              />
+            ) : (
+              <RunStepTimeline
+                steps={stepsQuery.data?.steps}
+                isLoading={stepsQuery.isLoading}
+                isLive={attemptLive}
+                terminalSucceeded={
+                  !attemptLive &&
+                  (run.status === "SUCCEEDED" ||
+                    selectedAttemptMeta?.status === "SUCCEEDED")
+                }
+              />
+            )}
+          </section>
+
+          <section
+            className="run-detail-results panel"
+            aria-labelledby="run-detail-results-title"
+          >
+            <h2 id="run-detail-results-title" className="panel-title">
+              Results
+            </h2>
+            <h3 className="section-title">Output</h3>
             {attemptQuery.isLoading ? (
-              <LoadingBlock label="Loading attempt…" />
+              <LoadingBlock label="Loading attempt output…" />
             ) : null}
             {attemptQuery.isError ? (
               <ErrorState
@@ -289,246 +390,175 @@ export function RunDetailPage() {
                 error={attemptQuery.error}
               />
             ) : null}
-            {attemptQuery.data !== undefined ? (
-              <>
-                <dl className="meta-grid">
-                  <div>
-                    <dt>RunAttempt ID</dt>
-                    <dd className="mono">{attemptQuery.data.id}</dd>
-                  </div>
-                  <div>
-                    <dt>Sequence</dt>
-                    <dd>{attemptQuery.data.sequence}</dd>
-                  </div>
-                  <div>
-                    <dt>Status</dt>
-                    <dd>
-                      <StatusChip
-                        status={attemptQuery.data.status}
-                        category={attemptStatusCategory(
-                          attemptQuery.data.status,
-                        )}
-                      />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Duration</dt>
-                    <dd>
-                      {formatDurationMs(
-                        attemptQuery.data.startedAt,
-                        attemptQuery.data.completedAt,
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-                {attemptQuery.data.execution !== undefined ? (
-                  <div data-testid="execution-diagnostics">
-                    <h3 className="panel-title">Execution diagnostics</h3>
-                    <dl className="meta-grid">
-                      <div>
-                        <dt>Execution state</dt>
-                        <dd>
-                          {executionStateLabel(
-                            attemptQuery.data.execution.state,
-                          )}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Leased</dt>
-                        <dd>
-                          {attemptQuery.data.execution.leased ? "Yes" : "No"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Lease expires</dt>
-                        <dd>
-                          {formatTimestamp(
-                            attemptQuery.data.execution.leaseExpiresAt,
-                          )}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Execution generation</dt>
-                        <dd>
-                          {attemptQuery.data.execution.executionGeneration}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Interrupted</dt>
-                        <dd>
-                          {attemptQuery.data.execution.interrupted
-                            ? "Yes"
-                            : "No"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Recovery reason</dt>
-                        <dd className="mono">
-                          {attemptQuery.data.execution.recoveryReason ?? "—"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Observed at</dt>
-                        <dd>
-                          {formatTimestamp(
-                            attemptQuery.data.execution.observedAt,
-                          )}
-                        </dd>
-                      </div>
-                    </dl>
-                    <p className="muted">
-                      Lease timestamps are persisted PostgreSQL state. Recovery
-                      eligibility uses PostgreSQL <code>now()</code>, not this
-                      browser clock or worker process time. An expired lease is
-                      not proof that a worker is down.
-                    </p>
-                  </div>
-                ) : null}
-                {failureGuidance !== undefined ? (
-                  <OperatorGuidancePanel
-                    guidance={failureGuidance}
-                    testId="run-failure-guidance"
-                  />
-                ) : null}
-                {attemptQuery.data.error !== undefined ? (
-                  <JsonView label="Error" value={attemptQuery.data.error} />
-                ) : null}
-                {attemptQuery.data.output !== undefined ? (
-                  <JsonView label="Output" value={attemptQuery.data.output} />
-                ) : (
-                  <EmptyState title="No output recorded yet." />
-                )}
-              </>
-            ) : null}
-          </section>
-
-          <section className="panel">
-            <h2 className="panel-title">Activity</h2>
-            {stepsQuery.isLoading ? (
-              <LoadingBlock label="Loading run steps…" />
-            ) : null}
-            {stepsQuery.isError ? (
-              <ErrorState
-                title="Failed to load activity"
-                error={stepsQuery.error}
+            {attemptQuery.data?.output !== undefined ? (
+              <JsonView value={attemptQuery.data.output} />
+            ) : (
+              <EmptyState
+                title={
+                  attemptLive
+                    ? "Output is not ready yet."
+                    : "No output recorded for this attempt."
+                }
+                description={
+                  attemptLive
+                    ? "Terminal attempts publish output when execution succeeds."
+                    : undefined
+                }
               />
-            ) : null}
-            {stepsQuery.data?.steps.length === 0 ? (
-              <EmptyState title="No RunSteps persisted yet." />
-            ) : null}
-            {stepsQuery.data !== undefined &&
-            stepsQuery.data.steps.length > 0 ? (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Kind</th>
-                    <th>Binding</th>
-                    <th>Status</th>
-                    <th>Started</th>
-                    <th>Duration</th>
-                    <th>Model / tool</th>
-                    <th>Tokens</th>
-                    <th>Cost</th>
-                    <th>Error</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stepsQuery.data.steps.map((step) => (
-                    <tr key={step.id}>
-                      <td>{step.kind}</td>
-                      <td className="mono">{step.bindingName}</td>
-                      <td>{step.status}</td>
-                      <td>{formatTimestamp(step.startedAt)}</td>
-                      <td>
-                        {formatDurationMs(step.startedAt, step.completedAt)}
-                      </td>
-                      <td className="mono">
-                        {step.modelProfileVersionId ??
-                          step.toolVersionId ??
-                          "—"}
-                      </td>
-                      <td>{step.totalTokens ?? "—"}</td>
-                      <td>{formatUsdMicros(step.estimatedCostUsdMicros)}</td>
-                      <td className="mono">{step.errorCode ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : null}
-          </section>
+            )}
 
-          <section className="panel">
-            <h2 className="panel-title">Usage</h2>
-            {usageQuery.isLoading ? (
-              <LoadingBlock label="Loading usage…" />
-            ) : null}
+            <RunArtifactsSection
+              artifacts={artifactsQuery.data?.items}
+              isLoading={artifactsQuery.isLoading}
+              isError={artifactsQuery.isError}
+              error={artifactsQuery.error}
+              live={artifactsLive}
+            />
+
+            <h3 className="section-title">Usage</h3>
             {usageQuery.isError ? (
               <ErrorState
                 title="Failed to load usage"
                 error={usageQuery.error}
               />
-            ) : null}
-            {usageQuery.data !== undefined ? (
-              <dl className="meta-grid">
-                <div>
-                  <dt>Model calls</dt>
-                  <dd>{usageQuery.data.modelCalls}</dd>
-                </div>
-                <div>
-                  <dt>Tool calls</dt>
-                  <dd>{usageQuery.data.toolCalls}</dd>
-                </div>
-                <div>
-                  <dt>Input tokens</dt>
-                  <dd>{usageQuery.data.inputTokens}</dd>
-                </div>
-                <div>
-                  <dt>Output tokens</dt>
-                  <dd>{usageQuery.data.outputTokens}</dd>
-                </div>
-                <div>
-                  <dt>Total tokens</dt>
-                  <dd>{usageQuery.data.totalTokens}</dd>
-                </div>
-                <div>
-                  <dt>Cached input tokens</dt>
-                  <dd>{usageQuery.data.cachedInputTokens}</dd>
-                </div>
-                <div>
-                  <dt>Estimated cost</dt>
-                  <dd>
-                    {formatUsdMicros(usageQuery.data.estimatedCostUsdMicros)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Priced model calls</dt>
-                  <dd>{usageQuery.data.pricedModelCalls}</dd>
-                </div>
-                <div>
-                  <dt>Unpriced model calls</dt>
-                  <dd>{usageQuery.data.unpricedModelCalls}</dd>
-                </div>
-              </dl>
             ) : (
-              <EmptyState title="No usage available." />
+              <RunUsageSummary
+                usage={usageQuery.data}
+                isLoading={usageQuery.isLoading}
+                isError={usageQuery.isError}
+              />
             )}
           </section>
 
-          <RunArtifactsSection
-            artifacts={artifactsQuery.data?.items}
-            isLoading={artifactsQuery.isLoading}
-            isError={artifactsQuery.isError}
-            error={artifactsQuery.error}
-            live={
-              selectedAttemptMeta?.status === "PENDING" ||
-              selectedAttemptMeta?.status === "RUNNING" ||
-              run.status === "PENDING" ||
-              run.status === "QUEUED" ||
-              run.status === "RUNNING"
-            }
-          />
+          <details className="run-detail-advanced panel">
+            <summary className="run-detail-advanced-summary">
+              Advanced technical details
+            </summary>
+            <div className="run-detail-advanced-body">
+              <h3 className="section-title">Run input</h3>
+              <JsonView value={run.input} />
+
+              <h3 className="section-title">Effective bindings</h3>
+              <JsonView
+                label="Bindings"
+                value={{
+                  agentVersionId: run.effectiveBindings.agentVersionId,
+                  modelProfileVersionBindings:
+                    run.effectiveBindings.modelProfileVersionBindings,
+                  toolVersionBindings:
+                    run.effectiveBindings.toolVersionBindings,
+                }}
+              />
+
+              {attemptQuery.data !== undefined ? (
+                <>
+                  <h3 className="section-title">RunAttempt</h3>
+                  <dl className="meta-grid">
+                    <div>
+                      <dt>RunAttempt ID</dt>
+                      <dd className="mono">{attemptQuery.data.id}</dd>
+                    </div>
+                    <div>
+                      <dt>Sequence</dt>
+                      <dd>{attemptQuery.data.sequence}</dd>
+                    </div>
+                    <div>
+                      <dt>Attempt status</dt>
+                      <dd>
+                        <StatusChip
+                          status={attemptQuery.data.status}
+                          category={attemptStatusCategory(
+                            attemptQuery.data.status,
+                          )}
+                          label={runExecutionStatusLabel(
+                            attemptQuery.data.status,
+                          )}
+                        />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Started</dt>
+                      <dd>{formatTimestamp(attemptQuery.data.startedAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Completed</dt>
+                      <dd>{formatTimestamp(attemptQuery.data.completedAt)}</dd>
+                    </div>
+                  </dl>
+
+                  {attemptQuery.data.execution !== undefined ? (
+                    <div data-testid="execution-diagnostics">
+                      <h3 className="section-title">Execution diagnostics</h3>
+                      <dl className="meta-grid">
+                        <div>
+                          <dt>Execution state</dt>
+                          <dd>
+                            {executionStateLabel(
+                              attemptQuery.data.execution.state,
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Leased</dt>
+                          <dd>
+                            {attemptQuery.data.execution.leased ? "Yes" : "No"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Lease expires</dt>
+                          <dd>
+                            {formatTimestamp(
+                              attemptQuery.data.execution.leaseExpiresAt,
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Execution generation</dt>
+                          <dd>
+                            {attemptQuery.data.execution.executionGeneration}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Interrupted</dt>
+                          <dd>
+                            {attemptQuery.data.execution.interrupted
+                              ? "Yes"
+                              : "No"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Recovery reason</dt>
+                          <dd className="mono">
+                            {attemptQuery.data.execution.recoveryReason ?? "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Observed at</dt>
+                          <dd>
+                            {formatTimestamp(
+                              attemptQuery.data.execution.observedAt,
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+                      <p className="muted">
+                        Lease timestamps are persisted PostgreSQL state.
+                        Recovery eligibility uses PostgreSQL <code>now()</code>,
+                        not this browser clock or worker process time. An
+                        expired lease is not proof that a worker is down.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {attemptQuery.data.error !== undefined ? (
+                    <JsonView label="Error" value={attemptQuery.data.error} />
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          </details>
         </>
       ) : null}
-    </>
+    </div>
   );
 }
