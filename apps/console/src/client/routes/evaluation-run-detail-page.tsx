@@ -37,6 +37,9 @@ import {
   isEvaluationRunLive,
 } from "../lib/evaluation-run-status";
 import { ConsoleApiError } from "../lib/console-api";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
+import { formatEvaluationRunStatusLabel } from "../lib/testing-resource-presentation";
 
 export function EvaluationRunDetailPage() {
   const { evaluationRunId } = useParams<{ evaluationRunId: string }>();
@@ -116,44 +119,58 @@ export function EvaluationRunDetailPage() {
     formatDurationMs(evaluationRun.startedAt, evaluationRun.completedAt),
   );
 
+  const pageTitle =
+    suiteVersionQuery.data !== undefined
+      ? `${suiteVersionQuery.data.suite.name} · v${String(suiteVersionQuery.data.version.version)}`
+      : "Evaluation run";
+
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Evaluation run</h1>
-          <p className="page-subtitle mono">{evaluationRun.id}</p>
-          {suiteVersionQuery.data !== undefined ? (
-            <p className="muted">
-              {suiteVersionQuery.data.suite.name} — v
-              {suiteVersionQuery.data.version.version}
-            </p>
-          ) : null}
-        </div>
-        <div className="toolbar">
-          <Link className="button" to="/testing">
-            Testing Studio
-          </Link>
-          <button
-            type="button"
-            className="button button-secondary"
-            disabled={runQuery.isFetching || caseResultsQuery.isFetching}
-            onClick={() => {
-              void runQuery.refetch();
-              void caseResultsQuery.refetch();
-              void suiteVersionQuery.refetch();
-            }}
-          >
-            Refresh
-          </button>
-        </div>
-      </header>
+    <div
+      className="testing-v2 page-stack activity-v2"
+      data-testid="evaluation-run-detail-page"
+    >
+      <PageHeader
+        title={pageTitle}
+        subtitle={`Lifecycle: ${formatEvaluationRunStatusLabel(evaluationRun.status)}. Quality gate verdict is separate and may differ when status is COMPLETED.`}
+        actions={
+          <>
+            <Link className="button button-secondary" to="/testing">
+              Testing Studio
+            </Link>
+            <button
+              type="button"
+              className="button"
+              disabled={runQuery.isFetching || caseResultsQuery.isFetching}
+              onClick={() => {
+                void runQuery.refetch();
+                void caseResultsQuery.refetch();
+                void suiteVersionQuery.refetch();
+              }}
+            >
+              Refresh
+            </button>
+          </>
+        }
+      />
+
+      <details className="testing-v2-tech-details panel">
+        <summary>Technical run identifiers</summary>
+        <p className="mono testing-v2-id-line">Run ID: {evaluationRun.id}</p>
+        <p className="mono testing-v2-id-line">
+          Suite version: {evaluationRun.evaluationSuiteVersionId}
+        </p>
+        <p className="mono testing-v2-id-line">
+          Target: {evaluationRun.targetType} {evaluationRun.targetVersionId}
+        </p>
+      </details>
 
       {isEvaluationRunLive(evaluationRun.status) ? (
-        <p className="muted">Live progress updates every few seconds.</p>
+        <p className="muted" role="status">
+          Live progress updates every few seconds.
+        </p>
       ) : null}
 
-      <section className="panel">
-        <h2 className="panel-title">Run status</h2>
+      <SectionPanel title="Run status">
         <dl className="meta-grid">
           <div>
             <dt>Status</dt>
@@ -162,16 +179,6 @@ export function EvaluationRunDetailPage() {
                 status={evaluationRun.status}
                 category={evaluationRunStatusCategory(evaluationRun.status)}
               />
-            </dd>
-          </div>
-          <div>
-            <dt>Suite version</dt>
-            <dd className="mono">{evaluationRun.evaluationSuiteVersionId}</dd>
-          </div>
-          <div>
-            <dt>Target</dt>
-            <dd className="mono">
-              {evaluationRun.targetType} {evaluationRun.targetVersionId}
             </dd>
           </div>
           <div>
@@ -187,10 +194,11 @@ export function EvaluationRunDetailPage() {
             <dd>{durationLabel}</dd>
           </div>
         </dl>
-      </section>
+      </SectionPanel>
 
-      <section className="panel">
-        <h2 className="panel-title">Aggregate results</h2>
+      <EvaluationQualityGatePanel evaluationRun={evaluationRun} />
+
+      <SectionPanel title="Aggregate results">
         <dl className="meta-grid">
           <div>
             <dt>Total cases</dt>
@@ -299,12 +307,9 @@ export function EvaluationRunDetailPage() {
           may be PASS, FAIL, or ERROR while the run is still{" "}
           {evaluationRun.status}.
         </p>
-      </section>
+      </SectionPanel>
 
-      <EvaluationQualityGatePanel evaluationRun={evaluationRun} />
-
-      <section className="panel">
-        <h2 className="panel-title">Case results</h2>
+      <SectionPanel title="Case results">
         {suiteVersionQuery.isLoading ? (
           <LoadingBlock label="Loading suite cases…" />
         ) : null}
@@ -327,7 +332,7 @@ export function EvaluationRunDetailPage() {
         caseResultsQuery.data !== undefined ? (
           <EvaluationCaseResultsTable rows={rows} />
         ) : null}
-      </section>
-    </>
+      </SectionPanel>
+    </div>
   );
 }

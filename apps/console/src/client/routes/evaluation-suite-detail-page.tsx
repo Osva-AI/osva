@@ -48,7 +48,10 @@ export function EvaluationSuiteDetailPage() {
   }
 
   return (
-    <>
+    <div
+      className="testing-v2 page-stack activity-v2"
+      data-testid="evaluation-suite-detail-page"
+    >
       <header className="page-header">
         <div>
           <h1 className="page-title">
@@ -58,7 +61,10 @@ export function EvaluationSuiteDetailPage() {
             {suiteQuery.data?.description ??
               "Published suite versions are immutable."}
           </p>
-          <p className="muted mono">ID: {evaluationSuiteId}</p>
+          <details className="testing-v2-tech-details">
+            <summary>Suite ID</summary>
+            <span className="mono">{evaluationSuiteId}</span>
+          </details>
         </div>
         <div className="toolbar">
           {canWrite ? (
@@ -170,6 +176,6 @@ export function EvaluationSuiteDetailPage() {
           </table>
         ) : null}
       </section>
-    </>
+    </div>
   );
 }

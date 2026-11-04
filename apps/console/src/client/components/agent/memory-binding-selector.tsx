@@ -5,6 +5,11 @@ import type { MemoryAccessMode } from "@osva-ai/contracts";
 
 import { useMemoryNamespacesQuery } from "../../hooks/use-knowledge-memory";
 import {
+  describeMemoryAccessMode,
+  formatMemoryAccessModeLabel,
+  formatMemoryNamespaceOption,
+} from "../../lib/memory-resource-presentation";
+import {
   applyMemoryBindingsToManifestText,
   describeMemoryBindingNameError,
   extractMemoryBindingRows,
@@ -84,8 +89,7 @@ export function MemoryBindingSelector(props: {
         allows run-time reads only; READ_WRITE permits persistent writes through
         the memory gateway when the runtime supports them. Declarative agents
         currently use read snapshots only — writes are not executed
-        automatically. Manage namespaces in{" "}
-        <Link to="/memory">Memory Studio</Link>.
+        automatically. Manage namespaces in <Link to="/memory">Memory</Link>.
       </p>
       {namespacesQuery.isLoading ? (
         <p className="muted">Loading namespaces…</p>
@@ -169,7 +173,7 @@ export function MemoryBindingSelector(props: {
                 <option value="">Select namespace…</option>
                 {namespaces.map((namespace) => (
                   <option key={namespace.id} value={namespace.id}>
-                    {namespace.name} ({namespace.key})
+                    {formatMemoryNamespaceOption(namespace)}
                   </option>
                 ))}
               </select>
@@ -186,13 +190,21 @@ export function MemoryBindingSelector(props: {
                   })
                 }
               >
-                <option value="READ_ONLY">READ_ONLY</option>
-                <option value="READ_WRITE">READ_WRITE</option>
+                <option value="READ_ONLY">
+                  {formatMemoryAccessModeLabel("READ_ONLY")}
+                </option>
+                <option value="READ_WRITE">
+                  {formatMemoryAccessModeLabel("READ_WRITE")}
+                </option>
               </select>
-              <p className="muted">
-                READ_WRITE does not bypass gateway authorization for persistent
-                writes.
-              </p>
+              <p className="muted">{describeMemoryAccessMode(row.access)}</p>
+              {row.namespaceId.length > 0 ? (
+                <Link
+                  to={`/memory/namespaces/${encodeURIComponent(row.namespaceId)}`}
+                >
+                  View namespace
+                </Link>
+              ) : null}
             </div>
             <button
               type="button"

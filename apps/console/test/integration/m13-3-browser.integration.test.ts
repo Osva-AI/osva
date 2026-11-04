@@ -13,6 +13,7 @@ import {
 } from "./m12-3-harness.js";
 import type { PostgresTestContext } from "../../../../packages/db/test/integration/postgres-harness.js";
 import type { ValkeyTestContext } from "../../../../adapters/bullmq/test/integration/valkey-harness.js";
+import { goToStudioStage } from "./agent-studio-v2-browser-helpers.js";
 
 async function loginAndSelectWorkspaceA(
   page: Page,
@@ -81,12 +82,15 @@ describe("M13.3 browser acceptance (no-code Agent Studio)", () => {
         .waitFor({
           timeout: 30_000,
         });
+      await page.getByTestId("agent-studio-v2").waitFor({ timeout: 30_000 });
       await page.fill("#create-agent-name", "Browser Declarative Agent");
       await page.fill("#studio-instructions", "Answer support questions.");
+      await page
+        .getByRole("button", { name: "Continue to capabilities" })
+        .click();
+      await page.getByRole("button", { name: "Continue to review" }).click();
       expect(
-        await page
-          .getByRole("button", { name: "Publish agent version" })
-          .isDisabled(),
+        await page.getByTestId("agent-studio-publish-button").isDisabled(),
       ).toBe(true);
 
       await page.goto(`${stack.consoleOrigin}/models/connections`);
@@ -120,6 +124,7 @@ describe("M13.3 browser acceptance (no-code Agent Studio)", () => {
       await page.getByRole("button", { name: "Create profile" }).click();
       await page.getByRole("link", { name: "Studio Primary" }).click();
       await page.fill("#model-profile-model", "gpt-studio-declarative");
+      await page.getByText("Advanced: paste connection version ID").click();
       await page.fill("#model-profile-connection-version", connectionVersionId);
       await page.getByRole("button", { name: "Append version" }).click();
       await page.getByRole("cell", { name: "gpt-studio-declarative" }).waitFor({
@@ -127,8 +132,13 @@ describe("M13.3 browser acceptance (no-code Agent Studio)", () => {
       });
 
       await page.goto(`${stack.consoleOrigin}/agents/new`);
+      await page.getByTestId("agent-studio-v2").waitFor({ timeout: 30_000 });
+      await goToStudioStage(page, "describe");
       await page.fill("#create-agent-name", "Browser Declarative Agent");
       await page.fill("#studio-instructions", "Answer support questions.");
+      await page
+        .getByRole("button", { name: "Continue to capabilities" })
+        .click();
       await page.selectOption("#agent-model-profile", {
         label: "Studio Primary (studio-primary)",
       });
@@ -136,17 +146,33 @@ describe("M13.3 browser acceptance (no-code Agent Studio)", () => {
         state: "attached",
       });
       await page.selectOption("#agent-primary-model", { index: 1 });
-      await page.getByRole("button", { name: "Validate and review" }).click();
-      await page.getByText(/Review before publishing/i).waitFor({
-        timeout: 30_000,
-      });
+      await page.getByRole("button", { name: "Continue to review" }).click();
+      await page
+        .getByRole("heading", { name: "Review your agent" })
+        .waitFor({ timeout: 30_000 });
+      const versionCreatePromise = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          response.url().includes("/agents/") &&
+          response.url().includes("/versions") &&
+          response.status() === 201,
+      );
       await page.getByRole("button", { name: "Publish agent version" }).click();
-      await page.getByText(/This AgentVersion is now saved/i).waitFor({
+      await page.locator('[data-confirm-dialog="confirm"]').click();
+      const versionResponse = await versionCreatePromise;
+      const createdVersion = (await versionResponse.json()) as { id: string };
+      expect(createdVersion.id.length).toBeGreaterThan(0);
+      await page.getByTestId("agent-studio-test-stage").waitFor({
         timeout: 60_000,
       });
-      await page.getByRole("heading", { name: "Run Agent" }).waitFor({
-        timeout: 30_000,
-      });
+      await page
+        .getByRole("heading", { name: "Test your agent" })
+        .waitFor({ timeout: 30_000 });
+      await page
+        .getByRole("heading", { name: "Try a task" })
+        .waitFor({ timeout: 30_000 });
+      const versionUrl = page.url();
+      expect(/\/agents\/[^/]+\/versions\/[^/?]+/.test(versionUrl)).toBe(true);
     } finally {
       await browser.close();
       await stack.close();

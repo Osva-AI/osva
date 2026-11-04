@@ -1,56 +1,45 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
+import { ModelsSectionNav } from "../components/models/models-section-nav";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
+import { Button, LinkButton } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
+import { TextField } from "../components/ui/field";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useAppendModelProviderConnectionVersionMutation,
+  useModelProviderConnectionVersionsQuery,
   useModelProviderConnectionsListQuery,
   useTestModelProviderConnectionVersionMutation,
 } from "../hooks/use-models";
-import { consoleFetch } from "../lib/console-api";
-import {
-  roleCanExecuteControlPlaneActions,
-  roleCanWriteControlPlaneResources,
-} from "../lib/permissions";
-import { useQuery } from "@tanstack/react-query";
-import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
+import { ConsoleApiError } from "../lib/console-api";
 import type { OperatorGuidance } from "../lib/operator-diagnostics";
 import {
   describeConsoleApiError,
   describeModelConnectivityResult,
 } from "../lib/operator-diagnostics";
-import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
-import { ConsoleApiError } from "../lib/console-api";
+import {
+  describeModelsExecuteRoleRequirement,
+  describeModelsWriteRoleRequirement,
+  formatConnectionCredentialStatus,
+  formatConnectionEndpointSummary,
+  formatModelProviderLabel,
+} from "../lib/model-resource-presentation";
+import {
+  roleCanExecuteControlPlaneActions,
+  roleCanWriteControlPlaneResources,
+} from "../lib/permissions";
 
 export function ModelConnectionDetailPage() {
   const { connectionId } = useParams<{ connectionId: string }>();
   const authQuery = useAuthContextQuery();
   const connectionsQuery = useModelProviderConnectionsListQuery();
-  const workspaceId = useWorkspaceQueryScope();
-  const versionsQuery = useQuery({
-    queryKey: [
-      "model-provider-connections",
-      workspaceId,
-      connectionId,
-      "versions",
-    ],
-    enabled: workspaceId !== undefined && connectionId !== undefined,
-    queryFn: () =>
-      consoleFetch<{
-        versions: Array<{
-          id: string;
-          version: number;
-          provider: string;
-          endpoint?: { baseUrl: string };
-          credential?: { configured: true };
-          createdAt: string;
-        }>;
-      }>(
-        `/api/v1/model-provider-connections/${encodeURIComponent(connectionId ?? "")}/versions`,
-      ),
-  });
+  const versionsQuery = useModelProviderConnectionVersionsQuery(connectionId);
   const appendMutation = useAppendModelProviderConnectionVersionMutation(
     connectionId ?? "",
   );
@@ -61,6 +50,7 @@ export function ModelConnectionDetailPage() {
   const [connectivityGuidance, setConnectivityGuidance] = useState<
     OperatorGuidance | undefined
   >();
+  const [appendMessage, setAppendMessage] = useState<string | undefined>();
 
   const canWrite =
     authQuery.data !== undefined &&
@@ -86,49 +76,94 @@ export function ModelConnectionDetailPage() {
     return <LoadingBlock label="Loading connection…" />;
   }
 
+  if (connectionsQuery.isError) {
+    return (
+      <ErrorState
+        title="Failed to load connection"
+        error={connectionsQuery.error}
+      />
+    );
+  }
+
+  if (versionsQuery.isError) {
+    return (
+      <ErrorState
+        title="Failed to load connection versions"
+        error={versionsQuery.error}
+      />
+    );
+  }
+
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{connection?.name ?? "Connection"}</h1>
-          <p className="page-subtitle mono">{connectionId}</p>
-        </div>
-        <Link className="button" to="/models/connections">
-          Back
-        </Link>
-      </header>
+    <div
+      className="models-v2 page-stack activity-v2"
+      data-testid="models-connection-detail-page"
+    >
+      <PageHeader
+        title={connection?.name ?? "Provider connection"}
+        subtitle={
+          connection !== undefined
+            ? `${formatModelProviderLabel(connection.provider)} · key ${connection.key}`
+            : "Connection detail"
+        }
+        actions={
+          <LinkButton variant="secondary" to="/models/connections">
+            Back to connections
+          </LinkButton>
+        }
+      />
+
+      <ModelsSectionNav active="connections" />
+
+      <details className="models-v2-tech-details">
+        <summary>Technical identifiers</summary>
+        <dl className="meta-list">
+          <div>
+            <dt>Connection ID</dt>
+            <dd className="mono">{connectionId}</dd>
+          </div>
+          {connection !== undefined ? (
+            <div>
+              <dt>Provider</dt>
+              <dd>{formatModelProviderLabel(connection.provider)}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </details>
+
+      {!canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Read-only access</p>
+          <p className="muted">{describeModelsWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
 
       {canWrite ? (
-        <section className="panel">
-          <h2 className="section-title">Append connection version</h2>
-          <p className="muted">
-            Enter a new external secret reference name only when rotating
-            credentials. Existing names are never shown.
-          </p>
-          <div className="filters">
-            <div className="field">
-              <label htmlFor="connection-endpoint">
-                Endpoint base URL (OpenAI-compatible)
-              </label>
-              <input
-                id="connection-endpoint"
-                value={baseUrl}
-                onChange={(event) => setBaseUrl(event.target.value)}
-                placeholder="https://litellm.example.com/v1"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="connection-credential">
-                Secret reference key (optional)
-              </label>
-              <input
-                id="connection-credential"
-                value={credentialKey}
-                onChange={(event) => setCredentialKey(event.target.value)}
-                placeholder="OPENAI_API_KEY"
-                autoComplete="off"
-              />
-            </div>
+        <SectionPanel
+          title="Append connection version"
+          description="Enter a new external secret reference only when rotating credentials. Existing reference names are never shown."
+        >
+          <div className="filters models-v2-filters">
+            <TextField
+              id="connection-endpoint"
+              label="Endpoint base URL"
+              hint="OpenAI-compatible base URL. Leave empty to use the provider default."
+              value={baseUrl}
+              onChange={(event) => {
+                setBaseUrl(event.target.value);
+                setAppendMessage(undefined);
+              }}
+              placeholder="https://litellm.example.com/v1"
+            />
+            <TextField
+              id="connection-credential"
+              label="Secret reference key"
+              optional
+              value={credentialKey}
+              onChange={(event) => setCredentialKey(event.target.value)}
+              placeholder="OPENAI_API_KEY"
+              autoComplete="off"
+            />
             <label className="checkbox">
               <input
                 type="checkbox"
@@ -138,10 +173,15 @@ export function ModelConnectionDetailPage() {
               Allow private/loopback networks for this endpoint
             </label>
           </div>
-          <button
+          {appendMessage !== undefined ? (
+            <p className="models-v2-success" role="status">
+              {appendMessage}
+            </p>
+          ) : null}
+          <Button
             type="button"
-            className="button primary"
-            disabled={appendMutation.isPending}
+            variant="primary"
+            loading={appendMutation.isPending}
             onClick={() =>
               void appendMutation
                 .mutateAsync({
@@ -157,42 +197,55 @@ export function ModelConnectionDetailPage() {
                     ? { credentialRef: { key: credentialKey.trim() } }
                     : {}),
                 })
-                .then(() => versionsQuery.refetch())
+                .then((created) => {
+                  setBaseUrl("");
+                  setCredentialKey("");
+                  setAppendMessage(
+                    `Appended connection version ${String(created.version)}.`,
+                  );
+                  void versionsQuery.refetch();
+                })
+                .catch(() => {
+                  setAppendMessage(undefined);
+                })
             }
           >
             Append version
-          </button>
-        </section>
+          </Button>
+        </SectionPanel>
       ) : null}
 
       {versionsQuery.data !== undefined ? (
-        <section className="panel">
-          <h2 className="section-title">Versions</h2>
+        <SectionPanel
+          title="Immutable versions"
+          description="Model profile versions bind to one of these ids."
+        >
           {canExecute ? (
-            <div className="field">
-              <label htmlFor="connection-test-model">
-                Connectivity test model identifier
-              </label>
-              <input
-                id="connection-test-model"
-                value={testModel}
-                onChange={(event) => setTestModel(event.target.value)}
-                placeholder="Model id from a ModelProfileVersion (e.g. gpt-4o)"
-              />
-              <p className="muted">
-                Tests call generateText once with this model; use the same id as
-                your ModelProfileVersion when binding this connection.
-              </p>
-            </div>
-          ) : null}
-          <div className="table-scroll">
-            <table className="data-table">
+            <TextField
+              id="connection-test-model"
+              label="Connectivity test model identifier"
+              hint="Tests call generateText once. Use the same model id as your ModelProfileVersion."
+              value={testModel}
+              onChange={(event) => setTestModel(event.target.value)}
+              placeholder="Model id from a ModelProfileVersion (e.g. gpt-4o)"
+            />
+          ) : (
+            <p className="muted" role="status">
+              {describeModelsExecuteRoleRequirement()}
+            </p>
+          )}
+          {versionsQuery.data.versions.length === 0 ? (
+            <p className="muted" role="status">
+              No versions yet. Append endpoint and credential references above.
+            </p>
+          ) : (
+            <DataTableRegion caption="Connection versions">
               <thead>
                 <tr>
-                  <th>Version</th>
-                  <th>Endpoint</th>
-                  <th>Credential</th>
-                  <th>Actions</th>
+                  <th scope="col">Version</th>
+                  <th scope="col">Endpoint</th>
+                  <th scope="col">Credential</th>
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -207,17 +260,17 @@ export function ModelConnectionDetailPage() {
                   />
                 ))}
               </tbody>
-            </table>
-          </div>
+            </DataTableRegion>
+          )}
           {connectivityGuidance !== undefined ? (
             <OperatorGuidancePanel
               guidance={connectivityGuidance}
               testId="model-connectivity-guidance"
             />
           ) : null}
-        </section>
+        </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -240,19 +293,22 @@ function VersionRow(props: {
 
   return (
     <tr>
-      <td>{props.version.version}</td>
-      <td className="mono">{props.version.endpoint?.baseUrl ?? "—"}</td>
       <td>
-        {props.version.credential?.configured === true ? "Configured" : "—"}
+        <span>{props.version.version}</span>
+        <details className="models-v2-tech-details">
+          <summary className="mono">Version ID</summary>
+          <span className="mono">{props.version.id}</span>
+        </details>
       </td>
+      <td className="mono">{formatConnectionEndpointSummary(props.version)}</td>
+      <td>{formatConnectionCredentialStatus(props.version)}</td>
       <td>
         {props.canExecute ? (
-          <button
+          <Button
             type="button"
-            className="button"
-            disabled={
-              testMutation.isPending || props.testModel.trim().length === 0
-            }
+            variant="secondary"
+            loading={testMutation.isPending}
+            disabled={props.testModel.trim().length === 0}
             onClick={() => {
               props.onTestGuidance(undefined);
               void testMutation
@@ -293,7 +349,7 @@ function VersionRow(props: {
             }}
           >
             Test
-          </button>
+          </Button>
         ) : null}
       </td>
     </tr>

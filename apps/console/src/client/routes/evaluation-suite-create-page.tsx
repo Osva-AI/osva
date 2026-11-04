@@ -53,7 +53,10 @@ export function EvaluationSuiteCreatePage() {
   }
 
   return (
-    <>
+    <div
+      className="testing-v2 page-stack activity-v2"
+      data-testid="evaluation-suite-create-page"
+    >
       <header className="page-header">
         <div>
           <h1 className="page-title">Create evaluation suite</h1>
@@ -135,6 +138,6 @@ export function EvaluationSuiteCreatePage() {
           </button>
         </div>
       </form>
-    </>
+    </div>
   );
 }

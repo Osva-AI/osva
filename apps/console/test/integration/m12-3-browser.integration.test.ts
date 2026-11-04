@@ -158,6 +158,7 @@ describe("M12.3 browser acceptance (Playwright)", () => {
       await page.getByRole("button", { name: "Create profile" }).click();
       await page.getByRole("link", { name: "Primary" }).click();
       await page.fill("#model-profile-model", "gpt-browser-combined");
+      await page.getByText("Advanced: paste connection version ID").click();
       await page.fill("#model-profile-connection-version", connectionVersionId);
       await page.getByRole("button", { name: "Append version" }).click();
       await page.getByRole("cell", { name: "gpt-browser-combined" }).waitFor({
@@ -186,9 +187,36 @@ describe("M12.3 browser acceptance (Playwright)", () => {
       const connectorVersionId = (
         (await connectorVersionResponse.json()) as { id: string }
       ).id;
+      await page.waitForFunction(
+        ({ selectId, versionId }) => {
+          const select = document.querySelector<HTMLSelectElement>(
+            `#${selectId}`,
+          );
+          if (select === null) {
+            return false;
+          }
+          return Array.from(select.options).some(
+            (option) => option.value === versionId,
+          );
+        },
+        { selectId: "discover-version", versionId: connectorVersionId },
+      );
       await page.selectOption("#discover-version", connectorVersionId);
+      const discoverResponsePromise = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          response.url().includes("/discover") &&
+          response.status() === 200,
+      );
       await page.getByRole("button", { name: "Discover tools" }).click();
-      await page.getByText(/Found \d+ tool/).waitFor({ timeout: 30_000 });
+      const discoverResponse = await discoverResponsePromise;
+      const discoverBody = (await discoverResponse.json()) as {
+        tools?: unknown[];
+      };
+      expect((discoverBody.tools ?? []).length).toBeGreaterThan(0);
+      await page
+        .getByText(/Found \d+ remote tool/)
+        .waitFor({ timeout: 30_000 });
       await page.locator('tbody input[type="checkbox"]').first().check();
       await page.getByRole("button", { name: "Review import" }).click();
       await page.getByRole("button", { name: "Confirm import" }).click();

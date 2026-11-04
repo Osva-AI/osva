@@ -1,13 +1,23 @@
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
+import { IntegrationsSectionNav } from "../components/integrations/integrations-section-nav";
 import { JsonView } from "../components/json-view/json-view";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { LinkButton } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
 import {
   useToolQuery,
   useToolVersionsQuery,
   type McpToolVersionResource,
+  type ToolVersionResource,
 } from "../hooks/use-tools-connectors";
+import {
+  formatToolTypeLabel,
+  summarizeToolVersion,
+} from "../lib/tool-resource-presentation";
 
 export function ToolDetailPage() {
   const { toolId } = useParams<{ toolId: string }>();
@@ -24,86 +34,149 @@ export function ToolDetailPage() {
     return <LoadingBlock label="Loading tool…" />;
   }
 
-  return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{toolQuery.data?.name ?? "Tool"}</h1>
-          <p className="page-subtitle mono">{toolId}</p>
-        </div>
-        <Link className="button" to="/tools">
-          Back to tools
-        </Link>
-      </header>
+  if (toolQuery.isError) {
+    return <ErrorState title="Failed to load tool" error={toolQuery.error} />;
+  }
 
-      {toolQuery.data !== undefined ? (
-        <section className="panel">
-          <h2 className="section-title">Identity</h2>
-          <p>
-            Key <span className="mono">{toolQuery.data.key}</span>
-          </p>
-        </section>
-      ) : null}
+  const versions = versionsQuery.data?.versions ?? [];
+  const latest = versions.reduce<ToolVersionResource | undefined>(
+    (best, version) =>
+      best === undefined || version.version > best.version ? version : best,
+    undefined,
+  );
+
+  const latestSummary =
+    latest !== undefined ? summarizeToolVersion(latest) : undefined;
+
+  return (
+    <div
+      className="integrations-v2 page-stack activity-v2"
+      data-testid="integrations-tool-detail-page"
+    >
+      <PageHeader
+        title={toolQuery.data?.name ?? "Tool"}
+        subtitle={
+          latestSummary !== undefined
+            ? `${latestSummary.typeLabel} tool · ${latestSummary.capability}`
+            : "Tool detail"
+        }
+        actions={
+          <LinkButton variant="secondary" to="/tools">
+            Back to registry
+          </LinkButton>
+        }
+      />
+
+      <IntegrationsSectionNav active="tools" />
+
+      <details className="integrations-v2-tech-details">
+        <summary>Technical identifiers</summary>
+        <dl className="meta-list">
+          <div>
+            <dt>Tool ID</dt>
+            <dd className="mono">{toolId}</dd>
+          </div>
+          {toolQuery.data !== undefined ? (
+            <div>
+              <dt>Key</dt>
+              <dd className="mono">{toolQuery.data.key}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </details>
 
       {versionsQuery.data !== undefined ? (
-        <section className="panel">
-          <h2 className="section-title">Immutable versions</h2>
-          <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Version</th>
-                  <th>Type</th>
-                  <th>Implementation</th>
-                  <th>MCP origin</th>
-                  <th>Version ID</th>
-                </tr>
-              </thead>
-              <tbody>
-                {versionsQuery.data.versions.map((version) => {
-                  const mcp =
-                    version.type === "MCP"
-                      ? (version as McpToolVersionResource)
-                      : undefined;
-                  return (
-                    <tr key={version.id}>
-                      <td>{version.version}</td>
-                      <td>{version.type}</td>
-                      <td className="mono">
-                        {version.type === "INTERNAL"
-                          ? version.implementation
-                          : version.implementation}
-                      </td>
-                      <td className="mono">
-                        {mcp === undefined ? "—" : mcp.mcp.connectorVersionId}
-                      </td>
-                      <td className="mono">{version.id}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {versionsQuery.data.versions.map((version) =>
-            version.type === "MCP" ? (
-              <div key={`schema-${version.id}`} className="panel nested">
-                <h3 className="section-title">
-                  v{version.version} input schema ({version.id})
-                </h3>
-                <p className="muted">
-                  Remote tool{" "}
-                  <span className="mono">
-                    {(version as McpToolVersionResource).mcp.remoteToolName}
-                  </span>
-                </p>
-                <JsonView
-                  value={(version as McpToolVersionResource).mcp.inputSchema}
-                />
-              </div>
-            ) : null,
+        <SectionPanel
+          title="Immutable versions"
+          description="Agent Studio binds one ToolVersion id per logical binding."
+        >
+          {versions.length === 0 ? (
+            <p className="muted" role="status">
+              No versions registered for this tool yet.
+            </p>
+          ) : (
+            <>
+              <DataTableRegion caption="Tool versions">
+                <thead>
+                  <tr>
+                    <th scope="col">Version</th>
+                    <th scope="col">Kind</th>
+                    <th scope="col">Origin</th>
+                    <th scope="col">Implementation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {versions.map((version) => {
+                    const summary = summarizeToolVersion(version);
+                    return (
+                      <tr key={version.id}>
+                        <td>{version.version}</td>
+                        <td>{formatToolTypeLabel(version.type)}</td>
+                        <td>{summary.origin}</td>
+                        <td className="mono">
+                          {version.type === "INTERNAL"
+                            ? version.implementation
+                            : version.implementation}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </DataTableRegion>
+              {versions.map((version) => (
+                <details
+                  key={`meta-${version.id}`}
+                  className="integrations-v2-tech-details integrations-v2-version-details"
+                >
+                  <summary>
+                    v{version.version} · {formatToolTypeLabel(version.type)}{" "}
+                    technical details
+                  </summary>
+                  <dl className="meta-list">
+                    <div>
+                      <dt>ToolVersion ID</dt>
+                      <dd className="mono">{version.id}</dd>
+                    </div>
+                    {version.type === "MCP" ? (
+                      <>
+                        <div>
+                          <dt>Remote tool name</dt>
+                          <dd className="mono">
+                            {
+                              (version as McpToolVersionResource).mcp
+                                .remoteToolName
+                            }
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>ConnectorVersion ID</dt>
+                          <dd className="mono">
+                            {
+                              (version as McpToolVersionResource).mcp
+                                .connectorVersionId
+                            }
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Input schema</dt>
+                          <dd>
+                            <JsonView
+                              value={
+                                (version as McpToolVersionResource).mcp
+                                  .inputSchema
+                              }
+                            />
+                          </dd>
+                        </div>
+                      </>
+                    ) : null}
+                  </dl>
+                </details>
+              ))}
+            </>
           )}
-        </section>
+        </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }

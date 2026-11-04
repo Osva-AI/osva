@@ -86,7 +86,7 @@ export function ModelProfileVersionSelector(props: {
         <p className="muted" role="status">
           Selected version <span className="mono">{props.value}</span> is not
           available in this workspace catalog. Choose a visible version or{" "}
-          <Link to="/models/profiles">open Models</Link>.
+          <Link to="/models">open Models</Link>.
         </p>
       ) : null}
       {resolvedSelection !== undefined && presentation === "studio" ? (
@@ -122,7 +122,7 @@ export function ModelProfileVersionSelector(props: {
               : "No model profiles yet."}
           </p>
           <div className="toolbar">
-            <Link className="button button-secondary" to="/models/profiles">
+            <Link className="button button-secondary" to="/models">
               Open Models
             </Link>
             {presentation === "default" ? (
@@ -194,7 +194,7 @@ export function ModelProfileVersionSelector(props: {
           {profileId.length > 0 && options.length === 0 ? (
             <p className="muted">
               This profile has no published versions yet.{" "}
-              <Link to={`/models/profiles/${profileId}`}>Open profile</Link>.
+              <Link to={`/models/${profileId}`}>Open profile</Link>.
             </p>
           ) : null}
         </div>

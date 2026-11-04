@@ -6,6 +6,7 @@ import type {
 } from "../../hooks/use-evaluations";
 import { resolveEvaluationCaseExpected } from "../../lib/evaluation-case-expected";
 import { evaluationCaseOutcomeCategory } from "../../lib/evaluation-run-status";
+import { DataTableRegion } from "../ui/data-table-region";
 import { JsonView } from "../json-view/json-view";
 import { StatusChip } from "../status/status-chip";
 import { EvaluationCaseActualOutput } from "./evaluation-case-actual-output";
@@ -28,16 +29,16 @@ export function EvaluationCaseResultsTable({
   }
 
   return (
-    <table className="data-table">
+    <DataTableRegion caption="Evaluation case results">
       <thead>
         <tr>
-          <th>Case</th>
-          <th>Execution</th>
-          <th>Outcome</th>
-          <th>Expected</th>
-          <th>Actual</th>
-          <th>Evaluator</th>
-          <th>Run</th>
+          <th scope="col">Case</th>
+          <th scope="col">Execution</th>
+          <th scope="col">Outcome</th>
+          <th scope="col">Expected</th>
+          <th scope="col">Actual</th>
+          <th scope="col">Evaluator</th>
+          <th scope="col">Run</th>
         </tr>
       </thead>
       <tbody>
@@ -107,7 +108,7 @@ export function EvaluationCaseResultsTable({
           );
         })}
       </tbody>
-    </table>
+    </DataTableRegion>
   );
 }
 

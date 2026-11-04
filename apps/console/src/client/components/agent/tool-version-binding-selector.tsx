@@ -1,10 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import {
-  useToolsCatalogQuery,
-  type ToolVersionResource,
-} from "../../hooks/use-tools-connectors";
+import { useToolsCatalogQuery } from "../../hooks/use-tools-connectors";
+import { toolVersionSelectLabel } from "../../lib/tool-resource-presentation";
 import {
   applyToolBindingsToManifestText,
   describeToolBindingNameError,
@@ -12,14 +10,6 @@ import {
   type AgentToolBindingRow,
 } from "../../lib/agent-tool-bindings";
 import { parseWorkflowRunInputJson } from "../../lib/workflow-run-input";
-
-function versionLabel(version: ToolVersionResource): string {
-  if (version.type === "INTERNAL") {
-    return `v${String(version.version)} · INTERNAL · ${version.implementation}`;
-  }
-  const remote = version.mcp.remoteToolName;
-  return `v${String(version.version)} · MCP · ${remote}`;
-}
 
 export function ToolVersionBindingSelector(props: {
   readonly manifestText: string;
@@ -123,7 +113,10 @@ export function ToolVersionBindingSelector(props: {
               : "No tools in this workspace yet. Register tools from Connectors or the control plane API."}
           </p>
           <Link className="button button-secondary" to="/tools/connectors">
-            Open Integrations
+            MCP connectors
+          </Link>
+          <Link className="button button-ghost" to="/tools">
+            Tool registry
           </Link>
         </div>
       ) : null}
@@ -225,10 +218,15 @@ export function ToolVersionBindingSelector(props: {
                 <option value="">Select version…</option>
                 {versions.map((version) => (
                   <option key={version.id} value={version.id}>
-                    {versionLabel(version)}
+                    {toolVersionSelectLabel(version)}
                   </option>
                 ))}
               </select>
+              {row.toolId.length > 0 ? (
+                <p className="muted">
+                  <Link to={`/tools/${row.toolId}`}>Open tool detail</Link>
+                </p>
+              ) : null}
             </div>
             <button
               type="button"

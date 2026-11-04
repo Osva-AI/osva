@@ -5,6 +5,7 @@ import {
   useRunAttemptsQuery,
   useRunQuery,
 } from "../../hooks/use-runs";
+import { isRunLive } from "../../lib/statuses";
 
 export interface EvaluationCaseActualOutputProps {
   readonly runId: string;
@@ -43,18 +44,25 @@ export function EvaluationCaseActualOutput({
     return <span className="muted">Run unavailable</span>;
   }
 
+  if (attemptsQuery.isError) {
+    return <span className="muted">Run attempts unavailable</span>;
+  }
+
   const runStatus = runQuery.data?.status;
-  if (
-    runStatus === undefined ||
-    runStatus === "PENDING" ||
-    runStatus === "QUEUED" ||
-    runStatus === "RUNNING"
-  ) {
+  if (runStatus === undefined || isRunLive(runStatus)) {
     return <span className="muted">Run in progress</span>;
+  }
+
+  if (latestAttemptId === undefined) {
+    return <span className="muted">No output recorded</span>;
   }
 
   if (attemptQuery.isLoading) {
     return <LoadingBlock label="Loading attempt output…" />;
+  }
+
+  if (attemptQuery.isError) {
+    return <span className="muted">Output unavailable</span>;
   }
 
   if (attemptQuery.data?.output === undefined) {

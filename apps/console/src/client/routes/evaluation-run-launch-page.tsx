@@ -25,11 +25,16 @@ import {
 } from "../lib/evaluation-launch-validation";
 import { ConsoleApiError } from "../lib/console-api";
 import { roleCanExecuteControlPlaneActions } from "../lib/permissions";
+import { PageHeader } from "../components/ui/page-header";
+import { TestingSectionNav } from "../components/testing/testing-section-nav";
+import { describeTestingExecuteRoleRequirement } from "../lib/testing-resource-presentation";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
 export function EvaluationRunLaunchPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const submittingRef = useRef(false);
+  const workspaceId = useWorkspaceQueryScope();
 
   const authQuery = useAuthContextQuery();
   const canExecute =
@@ -48,6 +53,7 @@ export function EvaluationRunLaunchPage() {
   );
   const [submitError, setSubmitError] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();
+  const [showValidation, setShowValidation] = useState(false);
   const [gatesEnabled, setGatesEnabled] = useState(false);
   const [gateRules, setGateRules] = useState<readonly QualityGateRuleDraft[]>(
     [],
@@ -76,7 +82,7 @@ export function EvaluationRunLaunchPage() {
     (version) => version.id === agentVersionId,
   );
 
-  const caseCount = selectedVersion?.cases.length ?? 0;
+  const caseCount = selectedVersion?.cases?.length ?? 0;
   const evaluatorTypes = useMemo(
     () => uniqueEvaluatorTypes(selectedVersion?.cases ?? []),
     [selectedVersion?.cases],
@@ -120,6 +126,7 @@ export function EvaluationRunLaunchPage() {
   }, [validationIssues]);
 
   async function handleLaunch() {
+    setShowValidation(true);
     if (
       !canExecute ||
       validationIssues.length > 0 ||
@@ -153,30 +160,38 @@ export function EvaluationRunLaunchPage() {
   }
 
   function fieldError(field: EvaluationLaunchValidationIssue["field"]) {
+    if (!showValidation) {
+      return undefined;
+    }
     return issuesByField.get(field);
   }
 
+  const visibleGateIssues = showValidation ? gateIssues : [];
+
+  if (workspaceId === undefined) {
+    return <LoadingBlock label="Select a workspace to launch evaluations." />;
+  }
+
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Launch batch evaluation</h1>
-          <p className="page-subtitle">
-            Run every case in an immutable EvaluationSuiteVersion against a
-            published AgentVersion.
-          </p>
-        </div>
-        <Link className="button button-secondary" to="/testing">
-          Back to Testing Studio
-        </Link>
-      </header>
+    <div
+      className="testing-v2 page-stack activity-v2"
+      data-testid="evaluation-launch-page"
+    >
+      <PageHeader
+        title="Launch batch evaluation"
+        subtitle="Run every case in an immutable suite version against a published agent version. Optional quality gates assess results separately from run completion."
+        actions={
+          <Link className="button button-secondary" to="/testing">
+            Testing Studio
+          </Link>
+        }
+      />
+      <TestingSectionNav active="launch" canExecute={canExecute} />
 
       {!canExecute ? (
-        <section className="panel">
-          <p className="error-text">
-            Your workspace role cannot EXECUTE evaluations. Ask an admin to
-            grant execution permission.
-          </p>
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Execute access required</p>
+          <p className="muted">{describeTestingExecuteRoleRequirement()}</p>
         </section>
       ) : null}
 
@@ -242,12 +257,15 @@ export function EvaluationRunLaunchPage() {
                 {(versionsQuery.data?.items ?? [])
                   .slice()
                   .sort((left, right) => right.version - left.version)
-                  .map((version) => (
-                    <option key={version.id} value={version.id}>
-                      v{version.version} — {version.cases.length} case
-                      {version.cases.length === 1 ? "" : "s"}
-                    </option>
-                  ))}
+                  .map((version) => {
+                    const versionCaseCount = version.cases?.length ?? 0;
+                    return (
+                      <option key={version.id} value={version.id}>
+                        v{version.version} — {versionCaseCount} case
+                        {versionCaseCount === 1 ? "" : "s"}
+                      </option>
+                    );
+                  })}
               </select>
               {versionsQuery.isLoading ? (
                 <p className="muted">Loading versions…</p>
@@ -297,7 +315,7 @@ export function EvaluationRunLaunchPage() {
                 <option value="">Select a version…</option>
                 {(agentVersionsQuery.data?.versions ?? []).map((version) => (
                   <option key={version.id} value={version.id}>
-                    v{version.version} — {version.id}
+                    v{version.version}
                   </option>
                 ))}
               </select>
@@ -318,7 +336,7 @@ export function EvaluationRunLaunchPage() {
           <EvaluationQualityGateRulesEditor
             enabled={gatesEnabled}
             rules={gateRules}
-            issues={gateIssues}
+            issues={visibleGateIssues}
             onEnabledChange={(enabled) => {
               setGatesEnabled(enabled);
               if (enabled && gateRules.length === 0) {
@@ -425,12 +443,7 @@ export function EvaluationRunLaunchPage() {
           <button
             type="button"
             className="button primary"
-            disabled={
-              !canExecute ||
-              validationIssues.length > 0 ||
-              gateIssues.length > 0 ||
-              launchMutation.isPending
-            }
+            disabled={!canExecute || launchMutation.isPending}
             onClick={() => {
               void handleLaunch();
             }}
@@ -439,6 +452,6 @@ export function EvaluationRunLaunchPage() {
           </button>
         </section>
       ) : null}
-    </>
+    </div>
   );
 }
