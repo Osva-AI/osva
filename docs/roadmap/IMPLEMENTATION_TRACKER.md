@@ -133,3 +133,33 @@ See [`../implementation/M17-REAL-WORLD-AGENT-ADOPTION-AND-PUBLIC-DISTRIBUTION.md
 - ✅ M17 closeout — acceptance/closeout summaries; npm **`latest`** / **`stable-candidate`** → **1.1.4**
 
 **M17 acceptance vs distribution:** Milestone **acceptance** is **complete (scoped)**. Platform remains **1.1.1**; public npm line is **1.1.4**; Python SDK remains **1.1.1** on PyPI. M17.9 install smoke **does not** supersede M17.8 workflow evidence. **`m16-111`** harness npm pin (**1.1.2**) refresh remains **open** maintenance.
+
+## M18 — Console UX V2 (product experience)
+
+See [`../operations/M18_ACCEPTANCE_SUMMARY.md`](../operations/M18_ACCEPTANCE_SUMMARY.md) · [`../operations/M18_CLOSEOUT_SUMMARY.md`](../operations/M18_CLOSEOUT_SUMMARY.md).
+
+- ✅ M18.1 Design foundation — shell, tokens, shared UI — PR **#80** → **`028aad3`** · [`../operations/M18_1_ACCEPTANCE_SUMMARY.md`](../operations/M18_1_ACCEPTANCE_SUMMARY.md)
+- ✅ M18.2 Adaptive Home — PR **#81** → **`128035d`** · [`../operations/M18_2_ACCEPTANCE_SUMMARY.md`](../operations/M18_2_ACCEPTANCE_SUMMARY.md)
+- ✅ M18.3 Outcome discovery and examples catalog — PR **#82** → **`abbc02b`** · [`../operations/M18_3_ACCEPTANCE_SUMMARY.md`](../operations/M18_3_ACCEPTANCE_SUMMARY.md)
+- ✅ M18.4 Unified guided onboarding — PR **#83** → **`64bafa1`** · [`../operations/M18_4_ACCEPTANCE_SUMMARY.md`](../operations/M18_4_ACCEPTANCE_SUMMARY.md)
+- ✅ M18.5 Agent Studio UX refinement — PR **#84** → **`1747b78`** · [`../operations/M18_5_ACCEPTANCE_SUMMARY.md`](../operations/M18_5_ACCEPTANCE_SUMMARY.md)
+- ✅ UX V2.1 Global product shell — PR **#85** → **`bfb6b65`**
+- ✅ UX V2.2 Home redesign — PR **#86** → **`380efc0`**
+- ✅ UX V2.3 Guided onboarding — PR **#87** → **`77ebeee`**
+- ✅ UX V2.4 Agent Studio + V2.5 Workflow Studio — PR **#88–#89** → **`814e9ca`**, **`8fbf032`**
+- ✅ UX V2.6 Activity and execution experience — PR **#90** → **`0d8df08`**
+- ✅ UX V2.7 Resources and testing experience — PR **#91** → **`b3c20e3`**
+- ✅ M18.10 Milestone closeout — acceptance/closeout summaries (feature-complete; integration-profile exception documented)
+
+**M18 acceptance vs verification:** Milestone **feature-complete**. **Combined** local `verify:branch --profile=integration` for the V2.7 diff did **not** achieve **LOCAL_PASS** (M13.7.5 scenario A timeout under combined run; **PASS** in isolation per PR **#91**). Full accessibility/performance certification **not** claimed.
+
+## M19 — Ecosystem readiness (planned)
+
+See [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md).
+
+- ⬜ M19.1 Ecosystem compatibility documentation refresh (**1.1.4** / platform **1.1.1** truth)
+- ⬜ M19.2 Example 19 external-consumer harness (npm-only; complements M17.8)
+- ⬜ M19.3 Connector SDK alignment and targeted npm publication (6/15 published today)
+- ⬜ M19.4 osva-examples **1.1.x** track (01–18 still on **1.0.0**)
+- ⬜ M19.5 Adapters + runtime-cli-sidecar distribution strategy
+- ⬜ M19.6 Integration hardening (`m16-111` pin refresh; M13.7.5 combined-run flake)
