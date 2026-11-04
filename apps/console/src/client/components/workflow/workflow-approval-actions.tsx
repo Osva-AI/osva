@@ -7,12 +7,14 @@ import {
 import type { WorkflowDefinitionNode } from "../../lib/workflow-definition";
 import { ConsoleApiError } from "../../lib/console-api";
 import { formatTimestamp } from "../../lib/formatting";
+import { describeMissingApprovalRequestCopy } from "../../lib/workflow-execution-labels";
 
 interface WorkflowApprovalActionsProps {
   readonly node: WorkflowDefinitionNode;
   readonly approvalRequest: ApprovalRequestResource | undefined;
   readonly workflowRunId: string;
   readonly canExecute: boolean;
+  readonly workflowNodeRunStatus?: string;
 }
 
 export function WorkflowApprovalActions({
@@ -20,6 +22,7 @@ export function WorkflowApprovalActions({
   approvalRequest,
   workflowRunId,
   canExecute,
+  workflowNodeRunStatus,
 }: WorkflowApprovalActionsProps) {
   const mutation = useApprovalDecisionMutation(workflowRunId);
   const [comment, setComment] = useState("");
@@ -28,7 +31,9 @@ export function WorkflowApprovalActions({
 
   if (approvalRequest === undefined) {
     return (
-      <p className="muted">No ApprovalRequest record for this node yet.</p>
+      <p className="muted" data-testid="approval-request-missing-copy">
+        {describeMissingApprovalRequestCopy(workflowNodeRunStatus)}
+      </p>
     );
   }
 

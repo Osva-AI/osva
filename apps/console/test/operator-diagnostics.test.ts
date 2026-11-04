@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ConsoleApiError } from "../src/client/lib/console-api";
+import { formatAttemptDuration } from "../src/client/lib/formatting";
 import {
   describeConsoleApiError,
   describeHttpStatusGuidance,
@@ -10,6 +11,35 @@ import {
 } from "../src/client/lib/operator-diagnostics";
 
 describe("operator diagnostics", () => {
+  it("shows in progress for live attempts without completedAt", () => {
+    expect(
+      formatAttemptDuration("2026-01-01T00:00:00.000Z", undefined, true),
+    ).toBe("In progress");
+  });
+
+  it("warns when a terminal Run has a RUNNING attempt selected", () => {
+    const guidance = describeRunLifecycleGuidance({
+      runStatus: "FAILED",
+      attemptStatus: "RUNNING",
+    });
+    expect(guidance?.title).toMatch(/Status mismatch/i);
+    expect(guidance?.explanation).toMatch(/Run\.status/i);
+    expect(guidance?.title).not.toBe("Execution in progress");
+  });
+
+  it("omits RunSteps next steps when failure guidance has no steps", () => {
+    const guidance = describeRunAttemptFailureGuidance({
+      error: { code: "RUN_FAILED", message: "boom" },
+      runStepCount: 0,
+    });
+    expect(guidance?.nextSteps.join(" ")).toMatch(
+      /no RunSteps were persisted/i,
+    );
+    expect(guidance?.nextSteps.join(" ")).not.toMatch(
+      /Inspect RunSteps in the execution timeline/i,
+    );
+  });
+
   it("does not claim worker failure for QUEUED runs", () => {
     const guidance = describeRunLifecycleGuidance({ runStatus: "QUEUED" });
     expect(guidance?.title).toBe("Queued for execution");

@@ -320,7 +320,10 @@ describe("M13.6 browser acceptance (no-code workflow builder)", () => {
       await page.getByText(/Waiting for human approval/i).waitFor({
         timeout: 60_000,
       });
-      await page.getByRole("button", { name: "Approve" }).click();
+      await page
+        .getByTestId("workflow-run-waiting-action")
+        .getByRole("button", { name: "Approve", exact: true })
+        .click();
 
       await waitForWorkflowRunStatus(
         stack,

@@ -215,12 +215,37 @@ export function describeConsoleApiError(
   return undefined;
 }
 
+const RUN_TERMINAL_STATUSES = new Set([
+  "SUCCEEDED",
+  "FAILED",
+  "TIMED_OUT",
+  "CANCELLED",
+]);
+
+function isRunTerminalStatus(status: string): boolean {
+  return RUN_TERMINAL_STATUSES.has(status);
+}
+
 export function describeRunLifecycleGuidance(input: {
   readonly runStatus: string;
   readonly attemptStatus?: string;
   readonly execution?: RunAttemptExecutionDiagnostics;
 }): OperatorGuidance | undefined {
   const { runStatus, attemptStatus, execution } = input;
+
+  if (isRunTerminalStatus(runStatus) && attemptStatus === "RUNNING") {
+    return {
+      title: "Status mismatch on persisted records",
+      explanation:
+        "The Run is terminal while the selected RunAttempt still shows RUNNING. The overall outcome follows Run.status; refresh before treating this attempt as actively executing.",
+      nextSteps: [
+        "Refresh Run Detail to load the latest PostgreSQL state.",
+        "Compare Run.status and RunAttempt.status under Advanced technical details.",
+      ],
+      severity: "warning",
+      recoverable: true,
+    };
+  }
 
   if (runStatus === "QUEUED" || attemptStatus === "PENDING") {
     return {
@@ -237,7 +262,10 @@ export function describeRunLifecycleGuidance(input: {
     };
   }
 
-  if (runStatus === "RUNNING" || attemptStatus === "RUNNING") {
+  if (
+    runStatus === "RUNNING" ||
+    (attemptStatus === "RUNNING" && !isRunTerminalStatus(runStatus))
+  ) {
     if (execution?.state === "running_lease_expired") {
       return {
         title: "Lease expired while running",
@@ -269,8 +297,8 @@ export function describeRunLifecycleGuidance(input: {
       explanation:
         "A worker may be executing this RunAttempt. Active lease timestamps are persisted PostgreSQL state, not a worker heartbeat.",
       nextSteps: [
-        "Keep polling Run Detail while status is RUNNING.",
-        "Inspect RunSteps and usage as they appear.",
+        "Refresh Run Detail while Run.status is RUNNING; terminal outcomes are not guaranteed until PostgreSQL records them.",
+        "Model and tool steps appear in the execution timeline when persisted; usage totals follow the same attempt.",
       ],
       severity: "info",
       recoverable: true,
@@ -299,9 +327,36 @@ export function describeRunLifecycleGuidance(input: {
 export function describeRunAttemptFailureGuidance(input: {
   readonly error?: { readonly code?: string; readonly message?: string };
   readonly execution?: RunAttemptExecutionDiagnostics;
+  readonly runStepCount?: number;
+  readonly runStatus?: string;
+  readonly attemptStatus?: string;
 }): OperatorGuidance | undefined {
   const code = input.error?.code?.trim() ?? "";
   const execution = input.execution;
+
+  if (input.runStatus === "TIMED_OUT" || input.attemptStatus === "TIMED_OUT") {
+    const nextSteps: string[] = [];
+    if ((input.runStepCount ?? 0) > 0) {
+      nextSteps.push(
+        "Inspect RunSteps in the execution timeline for long-running model or tool work before the timeout.",
+      );
+    } else {
+      nextSteps.push(
+        "Review Run input, timeouts, and Advanced technical details; no RunSteps were persisted for this attempt.",
+      );
+    }
+    nextSteps.push(
+      "Adjust agent or worker timeout configuration and start a new Run if work should continue.",
+    );
+    return {
+      title: "Run timed out",
+      explanation:
+        "OSVA recorded a terminal TIMED_OUT outcome. The sanitized error payload below may include additional context when the worker persisted one.",
+      nextSteps,
+      severity: "error",
+      recoverable: true,
+    };
+  }
 
   if (code === "EXECUTION_INTERRUPTED" || execution?.interrupted === true) {
     return {
@@ -364,14 +419,24 @@ export function describeRunAttemptFailureGuidance(input: {
   }
 
   if (input.error !== undefined && code.length > 0) {
+    const nextSteps: string[] = [];
+    if ((input.runStepCount ?? 0) > 0) {
+      nextSteps.push(
+        "Inspect RunSteps in the execution timeline for model or tool failures leading to this outcome.",
+      );
+    } else {
+      nextSteps.push(
+        "Review the error payload and Advanced technical details; no RunSteps were persisted for this attempt.",
+      );
+    }
+    nextSteps.push(
+      "Fix configuration and start a new Run; automatic retry of the same attempt is not offered in Console.",
+    );
     return {
       title: "RunAttempt failed",
       explanation:
         "The worker persisted a terminal failure for this attempt. The sanitized error payload is shown below.",
-      nextSteps: [
-        "Inspect RunSteps for model or tool failures leading to this outcome.",
-        "Fix configuration and start a new Run; automatic retry of the same attempt is not offered in Console.",
-      ],
+      nextSteps,
       severity: "error",
       recoverable: true,
     };
@@ -504,7 +569,7 @@ export function describeWorkflowRunGuidance(input: {
       explanation:
         "The WorkflowRun is waiting for approval or an external event. Workers are not kept alive during waits.",
       nextSteps: [
-        "Use the Waiting section and node execution cards to approve or emit events.",
+        "Use the Action required panel or node inspector to approve or emit events.",
         "Graph overlay reflects persisted WorkflowNodeRun status only.",
       ],
       severity: "info",

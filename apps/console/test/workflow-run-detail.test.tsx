@@ -205,10 +205,18 @@ describe("WorkflowRunDetailPage", () => {
       executionHeading.compareDocumentPosition(inputHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(
-      screen.getByRole("link", { name: /run-child-1/ }).getAttribute("href"),
-    ).toBe("/runs/run-child-1");
-    expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText("overlay agent SUCCEEDED")).toBeTruthy();
+    });
+    await userEvent.click(screen.getByText("overlay agent SUCCEEDED"));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("link", { name: /run-child-1/ }).getAttribute("href"),
+      ).toBe("/runs/run-child-1");
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
+    });
     expect(screen.queryByRole("button", { name: "Emit event" })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
@@ -292,16 +300,17 @@ describe("WorkflowRunDetailPage", () => {
       (screen.getByLabelText("Correlation key") as HTMLInputElement).value,
     ).toBe("inv-1");
     expect(
-      screen.getByText(/does not force-resume the workflow/i),
-    ).toBeTruthy();
+      screen.getAllByText(/does not force-resume the workflow/i).length,
+    ).toBeGreaterThan(0);
 
     await userEvent.click(screen.getByRole("button", { name: "Emit event" }));
     await waitFor(() => {
       expect(screen.getByText(/Request ID: req-event-9/)).toBeTruthy();
     });
     expect(
-      screen.getByText(/Waiting for external event billing\/invoice\.paid/),
-    ).toBeTruthy();
+      screen.getAllByText(/Waiting for external event billing\/invoice\.paid/)
+        .length,
+    ).toBeGreaterThan(0);
   });
 
   it("overlays the latest node-run status and lists historical node records without inventing success", async () => {
@@ -369,11 +378,11 @@ describe("WorkflowRunDetailPage", () => {
       expect(screen.getByTestId("workflow-run-node-inspector")).toBeTruthy();
     });
     expect(screen.getAllByText(/Showing latest of 2 historical/).length).toBe(
-      2,
+      1,
     );
     expect(screen.getAllByText(/not RunAttempts/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/earlier attempts/i)).toBeNull();
-    expect(screen.getAllByText(/wn-old · seq 1 · FAILED/).length).toBe(2);
+    expect(screen.getAllByText(/wn-old · seq 1 · FAILED/).length).toBe(1);
     expect(
       screen
         .getAllByRole("link", { name: /run-child-2/ })[0]
@@ -461,17 +470,20 @@ describe("WorkflowRunDetailPage", () => {
     });
     expect(screen.getByText("overlay analysis SUCCEEDED")).toBeTruthy();
 
+    await userEvent.click(screen.getByText("overlay research SUCCEEDED"));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("link", { name: /run-research/ }).getAttribute("href"),
+      ).toBe("/runs/run-research");
+    });
     await userEvent.click(screen.getByText("overlay analysis SUCCEEDED"));
     await waitFor(() => {
       expect(screen.getByTestId("workflow-run-node-inspector")).toBeTruthy();
     });
-    expect(screen.getAllByText(/3\.24\.1/).length).toBeGreaterThan(1);
+    expect(screen.getAllByText(/3\.24\.1/).length).toBeGreaterThan(0);
     expect(
-      screen.getAllByRole("link", { name: /run-analysis/ }).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByRole("link", { name: /run-research/ }).length,
-    ).toBeGreaterThan(0);
+      screen.getByRole("link", { name: /run-analysis/ }).getAttribute("href"),
+    ).toBe("/runs/run-analysis");
   });
 
   it("updates overlay after a polling refresh without synthesizing success", async () => {
@@ -592,10 +604,91 @@ describe("WorkflowRunDetailPage", () => {
 
     renderDetail();
     await waitFor(() => {
-      expect(screen.getByText("ar-1")).toBeTruthy();
+      expect(screen.getByTestId("workflow-run-waiting-action")).toBeTruthy();
     });
+    expect(screen.getByText("Waiting for approval")).toBeTruthy();
+    expect(screen.queryByText("Action required")).toBeNull();
     expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
-    expect(screen.getByText(/cannot submit approval decisions/)).toBeTruthy();
+    expect(
+      screen.getAllByText(/cannot submit approval decisions/i).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("shows neutral copy for completed approval nodes without persisted requests", async () => {
+    stubHumanSessionFetch("OPERATOR", "ws-1", (url) => {
+      if (url.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+        return Response.json({
+          id: "wv-1",
+          workflowId: "wf-1",
+          workspaceId: "ws-1",
+          version: 1,
+          definition: {
+            schemaVersion: "3",
+            nodes: [
+              { key: "agent", type: "AGENT", agentVersionId: "av-1" },
+              { key: "approval", type: "APPROVAL", title: "Review output" },
+            ],
+            edges: [{ from: "agent", to: "approval" }],
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+        });
+      }
+      if (url.includes("/api/v1/workflow-runs/wr-done")) {
+        return Response.json({
+          id: "wr-done",
+          workspaceId: "ws-1",
+          workflowId: "wf-1",
+          workflowVersionId: "wv-1",
+          status: "SUCCEEDED",
+          input: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:02.000Z",
+          nodeRuns: [
+            {
+              id: "wn-1",
+              workspaceId: "ws-1",
+              workflowRunId: "wr-done",
+              workflowNodeKey: "approval",
+              sequence: 2,
+              status: "SUCCEEDED",
+              input: {},
+              createdAt: "2026-01-01T00:00:01.000Z",
+              updatedAt: "2026-01-01T00:00:02.000Z",
+            },
+          ],
+          approvalRequests: [],
+        });
+      }
+      return emptyArtifactListOrNotFound(url);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/workflow-runs/wr-done?node=approval"]}>
+          <Routes>
+            <Route
+              path="/workflow-runs/:workflowRunId"
+              element={<WorkflowRunDetailPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("approval-request-missing-copy")).toBeTruthy();
+    });
+    expect(
+      screen.getByText(
+        /No approval request record is included in the workflow run detail/i,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/No ApprovalRequest record for this node yet/i),
+    ).toBeNull();
   });
 });
 

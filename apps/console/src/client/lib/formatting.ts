@@ -9,6 +9,39 @@ export function formatTimestamp(value: string | undefined): string {
   return date.toLocaleString();
 }
 
+/** Locale-aware display with explicit month name and timezone (Activity feed). */
+export function formatActivityTimestamp(value: string | undefined): string {
+  if (value === undefined || value.trim().length === 0) {
+    return "—";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
+export function formatAttemptDuration(
+  startedAt: string | undefined,
+  completedAt: string | undefined,
+  isLive: boolean,
+): string {
+  if (startedAt === undefined) {
+    return "—";
+  }
+  if (completedAt === undefined && isLive) {
+    return "In progress";
+  }
+  return formatDurationMs(startedAt, completedAt);
+}
+
 export function formatDurationMs(
   startedAt: string | undefined,
   completedAt: string | undefined,

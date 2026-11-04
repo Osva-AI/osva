@@ -16,7 +16,7 @@ export function StatusChip({ status, category, label }: StatusChipProps) {
       {...(label !== undefined ? { "aria-label": accessibleLabel } : {})}
     >
       <span className="status-dot" aria-hidden="true" />
-      {status}
+      {label ?? status}
     </span>
   );
 }
