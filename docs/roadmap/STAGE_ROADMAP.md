@@ -105,4 +105,20 @@ Delivered **published** Node SDK capability resources, **Example 19** on publish
 
 **Not implied by M17:** M17.9 clean install reruns the M17.8 full workflow; automated **`m16-111`** harness refresh to npm **1.1.4**; PyPI/GHCR republication beyond **1.1.1** platform pins.
 
-Still ahead (post-M17): deeper isolation, richer AI Office, ecosystem scale, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).
+### M18 — Console UX V2 (complete, scoped)
+
+Delivered the **UX V2** Console product line: design foundation (M18.1–M18.5), global shell through Resources (PR **#85–#91**), mocked and live browser acceptance, and CI **`verify`** success on merge **#91** ([`../operations/M18_CLOSEOUT_SUMMARY.md`](../operations/M18_CLOSEOUT_SUMMARY.md)).
+
+| Slice | Status |
+| --- | --- |
+| **M18.1–M18.5** | **Complete** — shell, home, discovery, onboarding, Agent Studio refinement |
+| **UX V2.1–V2.7** | **Complete** — shell, home, onboarding, Agent/Workflow studios, activity, resources |
+| **M18.10** | **Complete** — closeout with documented verification exceptions |
+
+**Not implied by M18:** unconditional **`verify:branch --profile=integration` LOCAL_PASS** on a V2.7-sized diff; WCAG/Lighthouse certification; platform or npm version changes.
+
+### M19 — Ecosystem readiness (next)
+
+Cross-repository audit and execution plan: [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md). Prioritized slices **M19.1–M19.6** (compatibility truth, Example 19 external harness, connector publication/SDK alignment, examples **1.1.x** track, adapters/sidecar distribution, integration hardening).
+
+Still ahead (post-M19): deeper isolation, richer AI Office, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).
