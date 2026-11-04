@@ -1,5 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useParams,
+} from "react-router-dom";
 
 import { RequireAuth, RequireWorkspace } from "./components/auth/require-auth";
 import { AppShell } from "./components/app-shell/app-shell";
@@ -53,6 +59,14 @@ import { EvaluationRunLaunchPage } from "./routes/evaluation-run-launch-page";
 import { EvaluationRunDetailPage } from "./routes/evaluation-run-detail-page";
 
 const queryClient = createQueryClient();
+
+function LegacyModelProfilesRedirect() {
+  const { modelProfileId } = useParams<{ modelProfileId: string }>();
+  if (modelProfileId === undefined) {
+    return <Navigate to="/models" replace />;
+  }
+  return <Navigate to={`/models/${modelProfileId}`} replace />;
+}
 
 export function App() {
   return (
@@ -109,6 +123,14 @@ export function App() {
                   <Route
                     path="/models/connections/:connectionId"
                     element={<ModelConnectionDetailPage />}
+                  />
+                  <Route
+                    path="/models/profiles/:modelProfileId"
+                    element={<LegacyModelProfilesRedirect />}
+                  />
+                  <Route
+                    path="/models/profiles"
+                    element={<Navigate to="/models" replace />}
                   />
                   <Route
                     path="/models/:modelProfileId"

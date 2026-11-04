@@ -1,9 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { IntegrationsSectionNav } from "../components/integrations/integrations-section-nav";
 import { JsonView } from "../components/json-view/json-view";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { Button, LinkButton } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
+import { TextField } from "../components/ui/field";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useAppendConnectorVersionMutation,
@@ -12,12 +18,18 @@ import {
   useDiscoverConnectorToolsMutation,
   useImportMcpToolsMutation,
   useUpdateConnectorMutation,
-  type ConnectorVersionResource,
   type DiscoveredMcpTool,
 } from "../hooks/use-tools-connectors";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 import { describeConnectorDiscoveryGuidance } from "../lib/operator-diagnostics";
 import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
+import {
+  connectorTransportSummary,
+  describeIntegrationsWriteRoleRequirement,
+  formatConnectorAuthSummary,
+  formatConnectorVersionOption,
+  formatTransportLabel,
+} from "../lib/tool-resource-presentation";
 
 type ImportDraft = {
   readonly remoteToolName: string;
@@ -25,14 +37,6 @@ type ImportDraft = {
   readonly toolName: string;
   readonly selected: boolean;
 };
-
-function transportSummary(version: ConnectorVersionResource): string {
-  const cfg = version.transportConfig;
-  if ("endpointUrl" in cfg) {
-    return cfg.endpointUrl;
-  }
-  return `${cfg.command} ${cfg.args.join(" ")}`.trim();
-}
 
 export function ConnectorDetailPage() {
   const { connectorId } = useParams<{ connectorId: string }>();
@@ -150,42 +154,71 @@ export function ConnectorDetailPage() {
   }
 
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{connector?.name ?? "Connector"}</h1>
-          <p className="page-subtitle mono">{connectorId}</p>
-        </div>
-        <Link className="button" to="/tools/connectors">
-          Back
-        </Link>
-      </header>
+    <div
+      className="integrations-v2 page-stack activity-v2"
+      data-testid="integrations-connector-detail-page"
+    >
+      <PageHeader
+        title={connector?.name ?? "Connector"}
+        subtitle={
+          connector?.description !== undefined &&
+          connector.description.length > 0
+            ? connector.description
+            : "Review versions, discover MCP tools, and import into the registry."
+        }
+        actions={
+          <LinkButton variant="secondary" to="/tools/connectors">
+            Back to connectors
+          </LinkButton>
+        }
+      />
+
+      <IntegrationsSectionNav active="connectors" />
+
+      <details className="integrations-v2-tech-details">
+        <summary>Technical identifiers</summary>
+        <dl className="meta-list">
+          <div>
+            <dt>Connector ID</dt>
+            <dd className="mono">{connectorId}</dd>
+          </div>
+          {connector !== undefined ? (
+            <div>
+              <dt>Key</dt>
+              <dd className="mono">{connector.key}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </details>
+
+      {!canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Read-only access</p>
+          <p className="muted">{describeIntegrationsWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
 
       {canWrite && connector !== undefined ? (
-        <section className="panel">
-          <h2 className="section-title">Update metadata</h2>
-          <div className="filters">
-            <div className="field">
-              <label htmlFor="connector-edit-name">Name</label>
-              <input
-                id="connector-edit-name"
-                defaultValue={connector.name}
-                onChange={(event) => setEditName(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="connector-edit-description">Description</label>
-              <input
-                id="connector-edit-description"
-                defaultValue={connector.description ?? ""}
-                onChange={(event) => setEditDescription(event.target.value)}
-              />
-            </div>
+        <SectionPanel title="Update metadata">
+          <div className="filters integrations-v2-filters">
+            <TextField
+              id="connector-edit-name"
+              label="Name"
+              defaultValue={connector.name}
+              onChange={(event) => setEditName(event.target.value)}
+            />
+            <TextField
+              id="connector-edit-description"
+              label="Description"
+              optional
+              defaultValue={connector.description ?? ""}
+              onChange={(event) => setEditDescription(event.target.value)}
+            />
           </div>
-          <button
+          <Button
             type="button"
-            className="button"
-            disabled={updateMutation.isPending}
+            variant="secondary"
+            loading={updateMutation.isPending}
             onClick={() =>
               void updateMutation.mutateAsync({
                 name:
@@ -197,42 +230,40 @@ export function ConnectorDetailPage() {
             }
           >
             Save metadata
-          </button>
-        </section>
+          </Button>
+        </SectionPanel>
       ) : null}
 
-      <section className="panel">
-        <h2 className="section-title">ConnectorVersions</h2>
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Version</th>
-                <th>Transport</th>
-                <th>Configuration</th>
-                <th>Auth</th>
-                <th>Version ID</th>
+      <SectionPanel
+        title="Immutable versions"
+        description="Select a version below for discovery and import."
+      >
+        <DataTableRegion caption="Connector versions">
+          <thead>
+            <tr>
+              <th scope="col">Version</th>
+              <th scope="col">Transport</th>
+              <th scope="col">Configuration</th>
+              <th scope="col">Auth</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedVersions.map((version) => (
+              <tr key={version.id}>
+                <td>
+                  {version.version}
+                  <details className="integrations-v2-tech-details">
+                    <summary className="mono">Version ID</summary>
+                    {version.id}
+                  </details>
+                </td>
+                <td>{formatTransportLabel(version.transport)}</td>
+                <td className="mono">{connectorTransportSummary(version)}</td>
+                <td>{formatConnectorAuthSummary(version)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {sortedVersions.map((version) => (
-                <tr key={version.id}>
-                  <td>{version.version}</td>
-                  <td>{version.transport}</td>
-                  <td className="mono">{transportSummary(version)}</td>
-                  <td>
-                    {version.auth === undefined
-                      ? "—"
-                      : version.auth.configured
-                        ? version.auth.type
-                        : "—"}
-                  </td>
-                  <td className="mono">{version.id}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </DataTableRegion>
         {sortedVersions.some((v) => v.transport === "STDIO") ? (
           <p className="muted">
             STDIO ConnectorVersions are shown read-only in Console. New STDIO
@@ -240,29 +271,27 @@ export function ConnectorDetailPage() {
             provisioning when STDIO is enabled on the control plane.
           </p>
         ) : null}
-      </section>
+      </SectionPanel>
 
       {canWrite ? (
-        <section className="panel">
-          <h2 className="section-title">Append Streamable HTTP version</h2>
-          <p className="muted">
-            Provide MCP endpoint URL and optional secret reference keys. Secret
-            reference names are sent once and never returned in API responses.
-          </p>
-          <div className="filters">
-            <div className="field">
-              <label htmlFor="connector-endpoint">MCP endpoint URL</label>
-              <input
-                id="connector-endpoint"
-                value={endpointUrl}
-                onChange={(event) => setEndpointUrl(event.target.value)}
-                placeholder="https://mcp.example.com/mcp"
-              />
-            </div>
+        <SectionPanel
+          title="Append Streamable HTTP version"
+          description="Secret reference names are sent once and never returned in API responses."
+        >
+          <div className="filters integrations-v2-filters">
+            <TextField
+              id="connector-endpoint"
+              label="MCP endpoint URL"
+              required
+              value={endpointUrl}
+              onChange={(event) => setEndpointUrl(event.target.value)}
+              placeholder="https://mcp.example.com/mcp"
+            />
             <div className="field">
               <label htmlFor="connector-auth-type">Authentication</label>
               <select
                 id="connector-auth-type"
+                className="ui-control"
                 value={authType}
                 onChange={(event) =>
                   setAuthType(
@@ -276,35 +305,28 @@ export function ConnectorDetailPage() {
               </select>
             </div>
             {authType === "HEADER" ? (
-              <div className="field">
-                <label htmlFor="connector-header-name">Header name</label>
-                <input
-                  id="connector-header-name"
-                  value={headerName}
-                  onChange={(event) => setHeaderName(event.target.value)}
-                />
-              </div>
+              <TextField
+                id="connector-header-name"
+                label="Header name"
+                value={headerName}
+                onChange={(event) => setHeaderName(event.target.value)}
+              />
             ) : null}
             {authType !== "NONE" ? (
-              <div className="field">
-                <label htmlFor="connector-secret-key">
-                  Secret reference key
-                </label>
-                <input
-                  id="connector-secret-key"
-                  value={secretKey}
-                  onChange={(event) => setSecretKey(event.target.value)}
-                  autoComplete="off"
-                />
-              </div>
+              <TextField
+                id="connector-secret-key"
+                label="Secret reference key"
+                value={secretKey}
+                onChange={(event) => setSecretKey(event.target.value)}
+                autoComplete="off"
+              />
             ) : null}
           </div>
-          <button
+          <Button
             type="button"
-            className="button primary"
-            disabled={
-              appendMutation.isPending || endpointUrl.trim().length === 0
-            }
+            variant="primary"
+            loading={appendMutation.isPending}
+            disabled={endpointUrl.trim().length === 0}
             onClick={() => {
               const auth =
                 authType === "BEARER" && secretKey.trim().length > 0
@@ -330,7 +352,7 @@ export function ConnectorDetailPage() {
             }}
           >
             Append version
-          </button>
+          </Button>
           {appendMutation.isError ? (
             <ErrorState
               title="Failed to append ConnectorVersion"
@@ -338,21 +360,19 @@ export function ConnectorDetailPage() {
               guidanceContext="generic"
             />
           ) : null}
-        </section>
+        </SectionPanel>
       ) : null}
 
       {canWrite ? (
-        <section className="panel">
-          <h2 className="section-title">Discover MCP tools</h2>
-          <p className="muted">
-            Discovery lists remote tool metadata only. Import registers
-            immutable ToolVersion snapshots — it does not grant execution
-            permission until bound on an AgentVersion.
-          </p>
+        <SectionPanel
+          title="Discover and import MCP tools"
+          description="Discovery lists remote metadata only. Import creates immutable ToolVersions — bind them on an AgentVersion to execute."
+        >
           <div className="field">
-            <label htmlFor="discover-version">ConnectorVersion</label>
+            <label htmlFor="discover-version">Connector version</label>
             <select
               id="discover-version"
+              className="ui-control"
               value={selectedVersionId}
               onChange={(event) => {
                 setSelectedVersionId(event.target.value);
@@ -363,21 +383,20 @@ export function ConnectorDetailPage() {
               <option value="">Select version…</option>
               {sortedVersions.map((version) => (
                 <option key={version.id} value={version.id}>
-                  v{version.version} · {version.transport} · {version.id}
+                  {formatConnectorVersionOption(version)}
                 </option>
               ))}
             </select>
           </div>
-          <button
+          <Button
             type="button"
-            className="button primary"
-            disabled={
-              selectedVersionId.length === 0 || discoverMutation.isPending
-            }
+            variant="primary"
+            loading={discoverMutation.isPending}
+            disabled={selectedVersionId.length === 0}
             onClick={() => void discoverTools()}
           >
-            {discoverMutation.isPending ? "Discovering…" : "Discover tools"}
-          </button>
+            Discover tools
+          </Button>
           {discoverMutation.isError ? (
             <ErrorState
               title="MCP discovery failed"
@@ -390,73 +409,77 @@ export function ConnectorDetailPage() {
           ) : null}
           {discoveredTools !== undefined ? (
             <>
-              <p>
-                Found {discoveredTools.length} tool
-                {discoveredTools.length === 1 ? "" : "s"} on{" "}
-                <span className="mono">{selectedVersionId}</span>.
+              <p role="status">
+                Found {discoveredTools.length} remote tool
+                {discoveredTools.length === 1 ? "" : "s"} for{" "}
+                {selectedVersion !== undefined
+                  ? `version ${String(selectedVersion.version)}`
+                  : "the selected version"}
+                .
               </p>
-              <div className="table-scroll">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Import</th>
-                      <th>Remote name</th>
-                      <th>OSVA key</th>
-                      <th>OSVA name</th>
-                      <th>Schema</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {importDrafts.map((row, index) => (
-                      <tr key={row.remoteToolName}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={row.selected}
-                            onChange={(event) => {
-                              setImportDrafts((current) =>
-                                current.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? {
-                                        ...item,
-                                        selected: event.target.checked,
-                                      }
-                                    : item,
-                                ),
-                              );
-                            }}
-                          />
-                        </td>
-                        <td className="mono">{row.remoteToolName}</td>
-                        <td>
-                          <input
-                            value={row.toolKey}
-                            onChange={(event) => {
-                              setImportDrafts((current) =>
-                                current.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, toolKey: event.target.value }
-                                    : item,
-                                ),
-                              );
-                            }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            value={row.toolName}
-                            onChange={(event) => {
-                              setImportDrafts((current) =>
-                                current.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, toolName: event.target.value }
-                                    : item,
-                                ),
-                              );
-                            }}
-                          />
-                        </td>
-                        <td>
+              <DataTableRegion caption="Discovered MCP tools">
+                <thead>
+                  <tr>
+                    <th scope="col">Import</th>
+                    <th scope="col">Remote name</th>
+                    <th scope="col">OSVA key</th>
+                    <th scope="col">OSVA name</th>
+                    <th scope="col">Schema</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importDrafts.map((row, index) => (
+                    <tr key={row.remoteToolName}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={row.selected}
+                          onChange={(event) => {
+                            setImportDrafts((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? {
+                                      ...item,
+                                      selected: event.target.checked,
+                                    }
+                                  : item,
+                              ),
+                            );
+                          }}
+                        />
+                      </td>
+                      <td className="mono">{row.remoteToolName}</td>
+                      <td>
+                        <input
+                          value={row.toolKey}
+                          onChange={(event) => {
+                            setImportDrafts((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, toolKey: event.target.value }
+                                  : item,
+                              ),
+                            );
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={row.toolName}
+                          onChange={(event) => {
+                            setImportDrafts((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, toolName: event.target.value }
+                                  : item,
+                              ),
+                            );
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <details className="integrations-v2-tech-details">
+                          <summary>View schema</summary>
                           <JsonView
                             value={
                               discoveredTools.find(
@@ -464,21 +487,21 @@ export function ConnectorDetailPage() {
                               )?.inputSchema ?? {}
                             }
                           />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </details>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </DataTableRegion>
               {importPhase === "idle" ? (
-                <button
+                <Button
                   type="button"
-                  className="button primary"
+                  variant="primary"
                   disabled={!importDrafts.some((row) => row.selected)}
                   onClick={beginImportReview}
                 >
                   Review import
-                </button>
+                </Button>
               ) : null}
               {importPhase === "review" ? (
                 <section className="panel nested">
@@ -507,21 +530,21 @@ export function ConnectorDetailPage() {
                         </li>
                       ))}
                   </ul>
-                  <button
+                  <Button
                     type="button"
-                    className="button primary"
-                    disabled={importMutation.isPending}
+                    variant="primary"
+                    loading={importMutation.isPending}
                     onClick={() => void confirmImport()}
                   >
                     Confirm import
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="button"
+                    variant="secondary"
                     onClick={() => setImportPhase("idle")}
                   >
                     Back
-                  </button>
+                  </Button>
                 </section>
               ) : null}
               {importMutation.isError ? (
@@ -547,8 +570,8 @@ export function ConnectorDetailPage() {
               ) : null}
             </>
           ) : null}
-        </section>
+        </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }

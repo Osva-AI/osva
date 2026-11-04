@@ -100,6 +100,25 @@ export function useModelProviderConnectionsListQuery() {
   });
 }
 
+export function useModelProviderConnectionVersionsQuery(
+  connectionId: string | undefined,
+) {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: [
+      "model-provider-connections",
+      workspaceId,
+      connectionId,
+      "versions",
+    ],
+    enabled: workspaceId !== undefined && connectionId !== undefined,
+    queryFn: () =>
+      consoleFetch<{ versions: ModelProviderConnectionVersionResource[] }>(
+        `/api/v1/model-provider-connections/${encodeURIComponent(connectionId ?? "")}/versions`,
+      ),
+  });
+}
+
 export function useCreateModelProviderConnectionMutation() {
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceQueryScope();

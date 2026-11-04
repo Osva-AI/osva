@@ -117,10 +117,46 @@ export function useKnowledgeIndexesQuery(sourceId: string | undefined) {
     queryKey: ["knowledge", workspaceId, "source", sourceId, "indexes"],
     enabled: workspaceId !== undefined && sourceId !== undefined,
     staleTime: 10_000,
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      if (
+        items.some(
+          (index) => index.status === "PENDING" || index.status === "RUNNING",
+        )
+      ) {
+        return 5_000;
+      }
+      return false;
+    },
     queryFn: () =>
       consoleFetch<{ items: KnowledgeIndexResource[]; nextCursor?: string }>(
         `/api/v1/knowledge-sources/${encodeURIComponent(sourceId ?? "")}/indexes`,
       ),
+  });
+}
+
+export function useKnowledgeSourcesCatalogQuery(params?: {
+  readonly limit?: number;
+}) {
+  const workspaceId = useWorkspaceQueryScope();
+  const sourcesQuery = useKnowledgeSourcesQuery(params);
+  return useQuery({
+    queryKey: ["knowledge", workspaceId, "sources-catalog", params?.limit],
+    enabled: workspaceId !== undefined && sourcesQuery.data !== undefined,
+    queryFn: async () => {
+      const sources = sourcesQuery.data?.items ?? [];
+      const entries = await Promise.all(
+        sources.map(async (source) => {
+          const page = await consoleFetch<{
+            items: KnowledgeIndexResource[];
+          }>(
+            `/api/v1/knowledge-sources/${encodeURIComponent(source.id)}/indexes`,
+          );
+          return { source, indexes: page.items };
+        }),
+      );
+      return entries;
+    },
   });
 }
 

@@ -5,6 +5,7 @@ import {
   useReadyKnowledgeIndexesCatalogQuery,
   type KnowledgeIndexResource,
 } from "../../hooks/use-knowledge-memory";
+import { formatKnowledgeIndexSelectLabel } from "../../lib/knowledge-resource-presentation";
 import {
   applyKnowledgeBindingsToManifestText,
   describeKnowledgeBindingNameError,
@@ -116,7 +117,7 @@ export function KnowledgeBindingSelector(props: {
       <p className="muted">
         Attach READY knowledge indexes by logical binding name. Only indexes in
         READY state can be selected. Manage sources and indexing in{" "}
-        <Link to="/knowledge">Knowledge Studio</Link>.
+        <Link to="/knowledge">Knowledge</Link>.
       </p>
       {catalogQuery.isLoading ? (
         <p className="muted">Loading READY indexes…</p>
@@ -191,7 +192,7 @@ export function KnowledgeBindingSelector(props: {
                 {readyIndexes.map(({ source, index: ki }) => {
                   const checked = row.knowledgeIndexIds.includes(ki.id);
                   return (
-                    <label key={ki.id}>
+                    <label key={ki.id} className="knowledge-v2-binding-option">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -199,11 +200,19 @@ export function KnowledgeBindingSelector(props: {
                         onChange={(event) =>
                           toggleIndex(index, ki.id, event.target.checked)
                         }
-                      />{" "}
-                      <span className="mono">{ki.id}</span>{" "}
-                      <span className="muted">
-                        ({source.name} / {source.key})
-                      </span>
+                      />
+                      <span>
+                        {formatKnowledgeIndexSelectLabel({ source, index: ki })}
+                      </span>{" "}
+                      <Link
+                        to={`/knowledge/sources/${encodeURIComponent(source.id)}`}
+                      >
+                        View source
+                      </Link>
+                      <details className="knowledge-v2-tech-details inline-details">
+                        <summary>Index ID</summary>
+                        <span className="mono">{ki.id}</span>
+                      </details>
                     </label>
                   );
                 })}

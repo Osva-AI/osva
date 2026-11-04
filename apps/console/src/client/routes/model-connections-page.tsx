@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 
+import { ModelsSectionNav } from "../components/models/models-section-nav";
+import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
-import { Button, LinkButton } from "../components/ui/button";
+import { Button } from "../components/ui/button";
 import { DataTableRegion } from "../components/ui/data-table-region";
 import { SelectField, TextField } from "../components/ui/field";
 import { PageHeader } from "../components/ui/page-header";
@@ -13,9 +15,15 @@ import {
   useCreateModelProviderConnectionMutation,
   useModelProviderConnectionsListQuery,
 } from "../hooks/use-models";
+import {
+  describeModelsWriteRoleRequirement,
+  formatModelProviderLabel,
+} from "../lib/model-resource-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
 export function ModelConnectionsPage() {
+  const workspaceId = useWorkspaceQueryScope();
   const authQuery = useAuthContextQuery();
   const connectionsQuery = useModelProviderConnectionsListQuery();
   const createMutation = useCreateModelProviderConnectionMutation();
@@ -27,17 +35,38 @@ export function ModelConnectionsPage() {
     authQuery.data !== undefined &&
     roleCanWriteControlPlaneResources(authQuery.data.role);
 
+  if (workspaceId === undefined) {
+    return <LoadingBlock label="Select a workspace to manage connections." />;
+  }
+
   return (
-    <>
+    <div
+      className="models-v2 page-stack activity-v2"
+      data-testid="models-connections-page"
+    >
       <PageHeader
         title="Provider connections"
-        subtitle="Workspace-owned provider connections with immutable versions."
+        subtitle="Workspace-owned endpoints and secret references with immutable versions."
         actions={
-          <LinkButton variant="secondary" to="/models">
-            Back to models
-          </LinkButton>
+          <button
+            type="button"
+            className="button"
+            onClick={() => void connectionsQuery.refetch()}
+            disabled={connectionsQuery.isFetching}
+          >
+            Refresh
+          </button>
         }
       />
+
+      <ModelsSectionNav active="connections" />
+
+      {!canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Read-only access</p>
+          <p className="muted">{describeModelsWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
 
       {connectionsQuery.isLoading ? (
         <LoadingBlock label="Loading connections…" />
@@ -54,7 +83,7 @@ export function ModelConnectionsPage() {
           title="Create connection"
           description="Keys must be unique within the workspace. Secrets are stored as references, not shown here."
         >
-          <div className="filters">
+          <div className="filters models-v2-filters">
             <TextField
               id="connection-key"
               label="Key"
@@ -83,9 +112,9 @@ export function ModelConnectionsPage() {
               value={provider}
               onChange={(event) => setProvider(event.target.value)}
             >
-              <option value="OPENAI">OPENAI</option>
-              <option value="ANTHROPIC">ANTHROPIC</option>
-              <option value="GOOGLE_GEMINI">GOOGLE_GEMINI</option>
+              <option value="OPENAI">OpenAI</option>
+              <option value="ANTHROPIC">Anthropic</option>
+              <option value="GOOGLE_GEMINI">Google Gemini</option>
             </SelectField>
           </div>
           <Button
@@ -108,30 +137,37 @@ export function ModelConnectionsPage() {
 
       {connectionsQuery.data !== undefined ? (
         <SectionPanel title="Connections">
-          <DataTableRegion caption="Model provider connections">
-            <thead>
-              <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Provider</th>
-                <th scope="col">Key</th>
-              </tr>
-            </thead>
-            <tbody>
-              {connectionsQuery.data.connections.map((connection) => (
-                <tr key={connection.id}>
-                  <td>
-                    <Link to={`/models/connections/${connection.id}`}>
-                      {connection.name}
-                    </Link>
-                  </td>
-                  <td>{connection.provider}</td>
-                  <td className="mono">{connection.key}</td>
+          {connectionsQuery.data.connections.length === 0 ? (
+            <EmptyState
+              title="No provider connections"
+              description="Create a connection to store endpoint and credential references."
+            />
+          ) : (
+            <DataTableRegion caption="Model provider connections">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Provider</th>
+                  <th scope="col">Key</th>
                 </tr>
-              ))}
-            </tbody>
-          </DataTableRegion>
+              </thead>
+              <tbody>
+                {connectionsQuery.data.connections.map((connection) => (
+                  <tr key={connection.id}>
+                    <td>
+                      <Link to={`/models/connections/${connection.id}`}>
+                        {connection.name}
+                      </Link>
+                    </td>
+                    <td>{formatModelProviderLabel(connection.provider)}</td>
+                    <td className="mono">{connection.key}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTableRegion>
+          )}
         </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }

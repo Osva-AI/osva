@@ -206,7 +206,7 @@ export async function installMockConsoleApi(
       await fulfillJson(route, { items: [] });
       return;
     }
-    if (pathname.startsWith("/api/v1/evaluation-runs")) {
+    if (pathname === "/api/v1/evaluation-runs") {
       await fulfillJson(route, { items: [], nextCursor: undefined });
       return;
     }

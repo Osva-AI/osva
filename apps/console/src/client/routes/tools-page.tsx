@@ -1,124 +1,165 @@
 import { Link } from "react-router-dom";
 
+import { IntegrationsConceptsPanel } from "../components/integrations/integrations-concepts-panel";
+import { IntegrationsSectionNav } from "../components/integrations/integrations-section-nav";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { LinkButton } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useToolsCatalogQuery,
   type ToolVersionResource,
 } from "../hooks/use-tools-connectors";
+import {
+  describeIntegrationsWriteRoleRequirement,
+  formatToolTypeLabel,
+  summarizeToolVersion,
+} from "../lib/tool-resource-presentation";
+import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
-function summarizeLatestVersion(versions: readonly ToolVersionResource[]): {
-  readonly type: string;
-  readonly detail: string;
-  readonly versionNumber: number | undefined;
-} {
+function latestVersion(
+  versions: readonly ToolVersionResource[],
+): ToolVersionResource | undefined {
   if (versions.length === 0) {
-    return { type: "—", detail: "No versions", versionNumber: undefined };
+    return undefined;
   }
-  const latest = versions.reduce((left, right) =>
+  return versions.reduce((left, right) =>
     right.version > left.version ? right : left,
   );
-  if (latest.type === "INTERNAL") {
-    return {
-      type: "INTERNAL",
-      detail: latest.implementation,
-      versionNumber: latest.version,
-    };
-  }
-  return {
-    type: "MCP",
-    detail: latest.mcp.remoteToolName,
-    versionNumber: latest.version,
-  };
 }
 
 export function ToolsPage() {
+  const workspaceId = useWorkspaceQueryScope();
+  const authQuery = useAuthContextQuery();
   const catalogQuery = useToolsCatalogQuery();
+  const canWrite =
+    authQuery.data !== undefined &&
+    roleCanWriteControlPlaneResources(authQuery.data.role);
+
+  if (workspaceId === undefined) {
+    return <LoadingBlock label="Select a workspace to view tools." />;
+  }
+
+  const initialLoading =
+    catalogQuery.isPending && catalogQuery.data === undefined;
 
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Tools</h1>
-          <p className="page-subtitle">
-            Workspace tool registry entries and immutable ToolVersions. Latest
-            version shown for display only — AgentVersions bind explicit
-            ToolVersion IDs.
-          </p>
-        </div>
-        <div className="toolbar">
-          <Link className="button primary" to="/tools/connectors">
-            Connectors
-          </Link>
-          <button
-            type="button"
-            className="button"
-            onClick={() => void catalogQuery.refetch()}
-          >
-            Refresh
-          </button>
-        </div>
-      </header>
+    <div
+      className="integrations-v2 page-stack activity-v2"
+      data-testid="integrations-tools-page"
+    >
+      <PageHeader
+        title="Tools & integrations"
+        subtitle="Registry of internal and MCP tools. Connectors import MCP capabilities as immutable ToolVersions."
+        actions={
+          <>
+            {catalogQuery.isFetching && !initialLoading ? (
+              <span className="muted activity-v2-refresh-hint" role="status">
+                Refreshing…
+              </span>
+            ) : null}
+            <LinkButton variant="primary" to="/tools/connectors">
+              MCP connectors
+            </LinkButton>
+            <button
+              type="button"
+              className="button"
+              onClick={() => void catalogQuery.refetch()}
+              disabled={catalogQuery.isFetching}
+            >
+              Refresh
+            </button>
+          </>
+        }
+      />
 
-      {catalogQuery.isLoading ? <LoadingBlock label="Loading tools…" /> : null}
+      <IntegrationsSectionNav active="tools" />
+      <IntegrationsConceptsPanel />
+
+      {!canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Read-only access</p>
+          <p className="muted">{describeIntegrationsWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
+
+      {initialLoading ? <LoadingBlock label="Loading tools…" /> : null}
       {catalogQuery.isError ? (
         <ErrorState title="Failed to load tools" error={catalogQuery.error} />
       ) : null}
 
       {catalogQuery.data !== undefined ? (
-        <section className="panel">
+        <SectionPanel
+          title="Tool registry"
+          description="Latest version is shown for discovery only. Agents bind a specific ToolVersion."
+        >
           {catalogQuery.data.length === 0 ? (
             <EmptyState
-              title="No tools yet."
-              description="Import MCP tools from a connector or register internal tools through the control plane API."
+              title="No tools in this workspace"
+              description="Import MCP tools from a connector, or register internal tools through the control plane API."
+              action={
+                canWrite ? (
+                  <LinkButton variant="primary" to="/tools/connectors">
+                    Set up MCP connector
+                  </LinkButton>
+                ) : undefined
+              }
             />
           ) : (
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Key</th>
-                    <th>Type</th>
-                    <th>Latest</th>
-                    <th>Versions</th>
-                    <th>Capability</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {catalogQuery.data.map(({ tool, versions }) => {
-                    const summary = summarizeLatestVersion(versions);
-                    const mcpLatest =
-                      versions.find((v) => v.type === "MCP") ?? undefined;
-                    const description =
-                      mcpLatest?.type === "MCP"
-                        ? (mcpLatest.mcp.description ??
-                          mcpLatest.mcp.remoteToolName)
-                        : summary.detail;
-                    return (
-                      <tr key={tool.id}>
-                        <td>
-                          <Link to={`/tools/${tool.id}`}>{tool.name}</Link>
-                        </td>
-                        <td className="mono">{tool.key}</td>
-                        <td>{summary.type}</td>
-                        <td className="mono">
-                          {summary.versionNumber === undefined
-                            ? "—"
-                            : `v${String(summary.versionNumber)}`}
-                        </td>
-                        <td>{versions.length}</td>
-                        <td>{description}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTableRegion caption="Workspace tools">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Kind</th>
+                  <th scope="col">Latest</th>
+                  <th scope="col">Versions</th>
+                  <th scope="col">Capability</th>
+                  <th scope="col">Key</th>
+                </tr>
+              </thead>
+              <tbody>
+                {catalogQuery.data.map(({ tool, versions }) => {
+                  const latest = latestVersion(versions);
+                  const summary =
+                    latest !== undefined
+                      ? summarizeToolVersion(latest)
+                      : undefined;
+                  return (
+                    <tr key={tool.id}>
+                      <td>
+                        <Link to={`/tools/${tool.id}`}>{tool.name}</Link>
+                      </td>
+                      <td>
+                        {summary !== undefined
+                          ? formatToolTypeLabel(latest?.type ?? "—")
+                          : "—"}
+                      </td>
+                      <td>
+                        {latest === undefined
+                          ? "—"
+                          : `v${String(latest.version)}`}
+                      </td>
+                      <td>{versions.length}</td>
+                      <td>{summary?.capability ?? "—"}</td>
+                      <td className="mono">
+                        <details className="integrations-v2-tech-details">
+                          <summary>Show key</summary>
+                          {tool.key}
+                        </details>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </DataTableRegion>
           )}
-        </section>
+        </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }

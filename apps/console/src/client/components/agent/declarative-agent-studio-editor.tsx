@@ -225,9 +225,8 @@ export function DeclarativeAgentStudioEditor(props: {
       <p className="muted">
         Missing profiles or connections?{" "}
         <Link to="/models/connections">Configure model connections</Link> and{" "}
-        <Link to="/models/profiles">publish a model profile version</Link>.
-        Registering a connection does not prove provider calls succeed until a
-        Run executes.
+        <Link to="/models">publish a model profile version</Link>. Registering a
+        connection does not prove provider calls succeed until a Run executes.
       </p>
     </section>
   );

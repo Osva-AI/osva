@@ -386,7 +386,7 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
 
       await page.reload();
       await page
-        .getByRole("heading", { name: "Evaluation run", level: 1 })
+        .getByTestId("evaluation-run-detail-page")
         .waitFor({ timeout: 30_000 });
       await waitForGateVerdictLabel(page, "Pass");
 

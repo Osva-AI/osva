@@ -203,7 +203,43 @@ function matchRules(paths, packages) {
       normalized.includes("routes/workflow-run-detail-page.tsx") ||
       normalized.includes("routes/connector-detail-page.tsx") ||
       normalized.includes("routes/model-connection-detail-page.tsx") ||
+      normalized.includes("routes/models-page.tsx") ||
+      normalized.includes("routes/model-profile-detail-page.tsx") ||
+      normalized.includes("routes/model-connections-page.tsx") ||
+      normalized.includes("components/models/") ||
+      normalized.includes("model-resource-presentation.ts") ||
+      normalized.includes("ux-v2-models-browser") ||
+      normalized.includes("models-page.test") ||
+      normalized.includes("routes/tools-page.tsx") ||
+      normalized.includes("routes/tool-detail-page.tsx") ||
+      normalized.includes("routes/connectors-page.tsx") ||
+      normalized.includes("routes/connector-detail-page.tsx") ||
+      normalized.includes("components/integrations/") ||
+      normalized.includes("tool-resource-presentation.ts") ||
+      normalized.includes("ux-v2-integrations-browser") ||
+      normalized.includes("tools-page.test") ||
+      normalized.includes("tool-resource-presentation.test") ||
+      normalized.includes("routes/knowledge-page.tsx") ||
       normalized.includes("routes/knowledge-source-page.tsx") ||
+      normalized.includes("components/knowledge/") ||
+      normalized.includes("knowledge-resource-presentation.ts") ||
+      normalized.includes("ux-v2-knowledge-browser") ||
+      normalized.includes("knowledge-page.test") ||
+      normalized.includes("knowledge-resource-presentation.test") ||
+      normalized.includes("routes/memory-page.tsx") ||
+      normalized.includes("routes/memory-namespace-page.tsx") ||
+      normalized.includes("components/memory/") ||
+      normalized.includes("memory-resource-presentation.ts") ||
+      normalized.includes("ux-v2-memory-browser") ||
+      normalized.includes("memory-page.test") ||
+      normalized.includes("memory-resource-presentation.test") ||
+      normalized.includes("routes/testing-studio-page.tsx") ||
+      normalized.includes("routes/agent-playground-page.tsx") ||
+      normalized.includes("components/testing/") ||
+      normalized.includes("testing-resource-presentation.ts") ||
+      normalized.includes("ux-v2-testing-browser") ||
+      normalized.includes("testing-studio-page.test") ||
+      normalized.includes("testing-resource-presentation.test") ||
       normalized.includes("components/error-state/error-state.tsx")
     ) {
       note("operator-diagnostics", normalized);

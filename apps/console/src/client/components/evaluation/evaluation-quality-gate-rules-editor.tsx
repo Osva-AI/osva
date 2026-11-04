@@ -61,24 +61,21 @@ export function EvaluationQualityGateRulesEditor({
   }
 
   return (
-    <section
-      className="stack"
-      style={{ gap: 12 }}
-      aria-labelledby="gate-heading"
-    >
+    <section className="stack" style={{ gap: 12 }}>
       <div className="field">
         <label className="checkbox-row" htmlFor="quality-gates-enabled">
           <input
             id="quality-gates-enabled"
             type="checkbox"
             checked={enabled}
+            aria-describedby="quality-gates-help"
             onChange={(event) => {
               onEnabledChange(event.target.checked);
             }}
           />
-          <span id="gate-heading">Enable quality gates</span>
+          <span>Enable quality gates</span>
         </label>
-        <p className="muted">
+        <p id="quality-gates-help" className="muted">
           Optional thresholds on aggregate evaluation metrics. Gates do not
           change run lifecycle status.
         </p>

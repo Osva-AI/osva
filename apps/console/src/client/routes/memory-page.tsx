@@ -1,23 +1,32 @@
-import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { useState, type FormEvent } from "react";
 
+import { MemoryConceptsPanel } from "../components/memory/memory-concepts-panel";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
-import { useAuth } from "../context/auth-context";
+import { Button } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { TextField } from "../components/ui/field";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useCreateMemoryNamespaceMutation,
   useMemoryNamespacesQuery,
 } from "../hooks/use-knowledge-memory";
+import { describeMemoryWriteRoleRequirement } from "../lib/memory-resource-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
 export function MemoryPage() {
-  const auth = useAuth();
-  const role = auth.selectedWorkspace?.role;
-  const canWrite =
-    role !== undefined && roleCanWriteControlPlaneResources(role);
+  const workspaceId = useWorkspaceQueryScope();
+  const authQuery = useAuthContextQuery();
   const namespacesQuery = useMemoryNamespacesQuery();
   const createMutation = useCreateMemoryNamespaceMutation();
+  const canWrite =
+    authQuery.data !== undefined &&
+    roleCanWriteControlPlaneResources(authQuery.data.role);
 
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
@@ -41,70 +50,89 @@ export function MemoryPage() {
     }
   }
 
+  if (workspaceId === undefined) {
+    return <LoadingBlock label="Select a workspace to manage memory." />;
+  }
+
+  const initialLoading =
+    namespacesQuery.isPending && namespacesQuery.data === undefined;
+
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Memory</h1>
-          <p className="page-subtitle">
-            Workspace-scoped memory namespaces hold durable JSON records for
-            agents. Record writes at run time flow through the memory gateway;
-            this studio does not expose arbitrary record mutation APIs.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="button"
-          onClick={() => void namespacesQuery.refetch()}
-        >
-          Refresh
-        </button>
-      </header>
+    <div
+      className="memory-v2 page-stack activity-v2"
+      data-testid="memory-v2-page"
+    >
+      <PageHeader
+        title="Memory"
+        subtitle="Workspace namespaces hold durable JSON records for agents. Record writes at run time use the memory gateway — not this UI."
+        actions={
+          <>
+            {namespacesQuery.isFetching && !initialLoading ? (
+              <span className="muted activity-v2-refresh-hint" role="status">
+                Refreshing…
+              </span>
+            ) : null}
+            <button
+              type="button"
+              className="button"
+              onClick={() => void namespacesQuery.refetch()}
+              disabled={namespacesQuery.isFetching}
+            >
+              Refresh
+            </button>
+          </>
+        }
+      />
+
+      <MemoryConceptsPanel />
+
+      {authQuery.isSuccess && !canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Read-only access</p>
+          <p className="muted">{describeMemoryWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
 
       {canWrite ? (
-        <section className="panel">
-          <h2 className="section-title">Create namespace</h2>
+        <SectionPanel
+          title="Create namespace"
+          description="Namespaces are registry identities. Agents bind them with explicit access modes."
+        >
           <form
-            className="filters"
+            className="memory-v2-create-form filters"
             onSubmit={(event) => void handleCreate(event)}
           >
-            <div className="field">
-              <label htmlFor="mem-key">Key</label>
-              <input
-                id="mem-key"
-                value={key}
-                onChange={(event) => setKey(event.target.value)}
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="mem-name">Name</label>
-              <input
-                id="mem-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-              />
-            </div>
-            <button
+            <TextField
+              id="mem-key"
+              label="Key"
+              value={key}
+              onChange={(event) => setKey(event.target.value)}
+              required
+            />
+            <TextField
+              id="mem-name"
+              label="Display name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+            />
+            <Button
               type="submit"
-              className="button primary"
+              variant="primary"
               disabled={createMutation.isPending}
             >
               Create namespace
-            </button>
+            </Button>
           </form>
           {formError !== undefined ? (
             <p className="error-inline" role="alert">
               {formError}
             </p>
           ) : null}
-        </section>
-      ) : (
-        <p className="muted">Viewer role: memory namespaces are read-only.</p>
-      )}
+        </SectionPanel>
+      ) : null}
 
-      {namespacesQuery.isLoading ? (
+      {initialLoading ? (
         <LoadingBlock label="Loading memory namespaces…" />
       ) : null}
       {namespacesQuery.isError ? (
@@ -115,42 +143,47 @@ export function MemoryPage() {
       ) : null}
 
       {namespacesQuery.data !== undefined ? (
-        <section className="panel">
+        <SectionPanel title="Namespaces">
           {namespacesQuery.data.items.length === 0 ? (
             <EmptyState
-              title="No memory namespaces yet."
-              description="Create a namespace, then bind it to an agent with explicit READ_ONLY or READ_WRITE access."
+              title="No memory namespaces yet"
+              description="Create a namespace, then bind it in Agent Studio with READ_ONLY or READ_WRITE access."
             />
           ) : (
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Key</th>
-                    <th>Created</th>
+            <DataTableRegion caption="Workspace memory namespaces">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Created</th>
+                  <th scope="col">Key</th>
+                </tr>
+              </thead>
+              <tbody>
+                {namespacesQuery.data.items.map((namespace) => (
+                  <tr key={namespace.id}>
+                    <td>
+                      <Link
+                        to={`/memory/namespaces/${encodeURIComponent(namespace.id)}`}
+                      >
+                        {namespace.name}
+                      </Link>
+                    </td>
+                    <td>{namespace.description ?? "—"}</td>
+                    <td>{new Date(namespace.createdAt).toLocaleString()}</td>
+                    <td>
+                      <details className="memory-v2-tech-details">
+                        <summary>Show key</summary>
+                        <span className="mono">{namespace.key}</span>
+                      </details>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {namespacesQuery.data.items.map((namespace) => (
-                    <tr key={namespace.id}>
-                      <td>
-                        <Link
-                          to={`/memory/namespaces/${encodeURIComponent(namespace.id)}`}
-                        >
-                          {namespace.name}
-                        </Link>
-                      </td>
-                      <td className="mono">{namespace.key}</td>
-                      <td>{new Date(namespace.createdAt).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </DataTableRegion>
           )}
-        </section>
+        </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }

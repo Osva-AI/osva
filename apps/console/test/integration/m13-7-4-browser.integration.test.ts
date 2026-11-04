@@ -88,7 +88,7 @@ describe("M13.7.4 browser acceptance (Batch evaluation launch & results)", () =>
 
       await page.getByRole("button", { name: "Launch evaluation" }).click();
       await page
-        .getByRole("heading", { name: "Evaluation run", level: 1 })
+        .getByTestId("evaluation-run-detail-page")
         .waitFor({ timeout: 30_000 });
 
       await pollUntil({

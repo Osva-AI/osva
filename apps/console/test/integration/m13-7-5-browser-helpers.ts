@@ -87,7 +87,7 @@ export async function configureQualityGateRule(
 export async function launchEvaluationFromPage(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Launch evaluation" }).click();
   await page
-    .getByRole("heading", { name: "Evaluation run", level: 1 })
+    .getByTestId("evaluation-run-detail-page")
     .waitFor({ timeout: 30_000 });
 }
 

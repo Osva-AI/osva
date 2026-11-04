@@ -1,14 +1,25 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
+import { ConnectionVersionPicker } from "../components/models/connection-version-picker";
+import { ModelsSectionNav } from "../components/models/models-section-nav";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { Button, LinkButton } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
+import { SelectField, TextField } from "../components/ui/field";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useAppendModelProfileVersionMutation,
   useModelProfileVersionsQuery,
   useModelProfilesListQuery,
 } from "../hooks/use-models";
+import {
+  describeModelsWriteRoleRequirement,
+  formatModelProviderLabel,
+} from "../lib/model-resource-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
 export function ModelProfileDetailPage() {
@@ -22,6 +33,7 @@ export function ModelProfileDetailPage() {
   const [provider, setProvider] = useState("OPENAI");
   const [model, setModel] = useState("");
   const [connectionVersionId, setConnectionVersionId] = useState("");
+  const [appendMessage, setAppendMessage] = useState<string | undefined>();
 
   const canWrite =
     authQuery.data !== undefined &&
@@ -41,64 +53,95 @@ export function ModelProfileDetailPage() {
   );
 
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{profile?.name ?? "Model profile"}</h1>
-          <p className="page-subtitle mono">{modelProfileId}</p>
-        </div>
-        <Link className="button" to="/models">
-          Back
-        </Link>
-      </header>
+    <div
+      className="models-v2 page-stack activity-v2"
+      data-testid="models-profile-detail-page"
+    >
+      <PageHeader
+        title={profile?.name ?? "Model profile"}
+        subtitle={
+          profile !== undefined
+            ? `Key ${profile.key} · append immutable versions agents bind in Studio.`
+            : "Model profile detail"
+        }
+        actions={
+          <LinkButton variant="secondary" to="/models">
+            Back to profiles
+          </LinkButton>
+        }
+      />
+
+      <ModelsSectionNav active="profiles" />
+
+      <details className="models-v2-tech-details">
+        <summary>Technical identifiers</summary>
+        <dl className="meta-list">
+          <div>
+            <dt>ModelProfile ID</dt>
+            <dd className="mono">{modelProfileId}</dd>
+          </div>
+          {profile !== undefined ? (
+            <div>
+              <dt>Key</dt>
+              <dd className="mono">{profile.key}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </details>
+
+      {!canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Read-only access</p>
+          <p className="muted">{describeModelsWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
 
       {canWrite ? (
-        <section className="panel">
-          <h2 className="section-title">Append ModelProfileVersion</h2>
-          <p className="muted">
-            Bind a provider model id to an optional
-            ModelProviderConnectionVersion from a provider connection detail
-            page.
-          </p>
-          <div className="filters">
-            <div className="field">
-              <label htmlFor="model-profile-provider">Provider</label>
-              <select
-                id="model-profile-provider"
-                value={provider}
-                onChange={(event) => setProvider(event.target.value)}
-              >
-                <option value="OPENAI">OPENAI</option>
-                <option value="ANTHROPIC">ANTHROPIC</option>
-                <option value="GOOGLE_GEMINI">GOOGLE_GEMINI</option>
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="model-profile-model">Model identifier</label>
-              <input
-                id="model-profile-model"
-                value={model}
-                onChange={(event) => setModel(event.target.value)}
-                placeholder="gpt-4o"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="model-profile-connection-version">
-                Connection version ID (optional)
-              </label>
-              <input
-                id="model-profile-connection-version"
-                value={connectionVersionId}
-                onChange={(event) => setConnectionVersionId(event.target.value)}
-                className="mono"
-                spellCheck={false}
-              />
-            </div>
+        <SectionPanel
+          title="Append model profile version"
+          description="Each append is immutable. Bind a connection version so runs can reach your provider."
+        >
+          <div className="filters models-v2-filters">
+            <SelectField
+              id="model-profile-provider"
+              label="Provider"
+              value={provider}
+              onChange={(event) => setProvider(event.target.value)}
+            >
+              <option value="OPENAI">OpenAI</option>
+              <option value="ANTHROPIC">Anthropic</option>
+              <option value="GOOGLE_GEMINI">Google Gemini</option>
+            </SelectField>
+            <TextField
+              id="model-profile-model"
+              label="Model identifier"
+              hint="Provider model id (for example gpt-4o)."
+              required
+              value={model}
+              onChange={(event) => {
+                setModel(event.target.value);
+                setAppendMessage(undefined);
+              }}
+              placeholder="gpt-4o"
+            />
           </div>
-          <button
+          <ConnectionVersionPicker
+            value={connectionVersionId}
+            onChange={(next) => {
+              setConnectionVersionId(next);
+              setAppendMessage(undefined);
+            }}
+          />
+          {appendMessage !== undefined ? (
+            <p className="models-v2-success" role="status">
+              {appendMessage}
+            </p>
+          ) : null}
+          <Button
             type="button"
-            className="button primary"
-            disabled={appendMutation.isPending || model.trim().length === 0}
+            variant="primary"
+            loading={appendMutation.isPending}
+            disabled={model.trim().length === 0}
             onClick={() =>
               void appendMutation
                 .mutateAsync({
@@ -111,52 +154,85 @@ export function ModelProfileDetailPage() {
                       }
                     : {}),
                 })
-                .then(() => {
+                .then((created) => {
                   setModel("");
                   setConnectionVersionId("");
+                  setAppendMessage(
+                    `Appended version ${String(created.version)} (${formatModelProviderLabel(created.provider)} / ${created.model}).`,
+                  );
                   void versionsQuery.refetch();
+                })
+                .catch(() => {
+                  setAppendMessage(undefined);
                 })
             }
           >
             Append version
-          </button>
-        </section>
+          </Button>
+        </SectionPanel>
       ) : null}
 
       {versionsQuery.isLoading ? (
         <LoadingBlock label="Loading versions…" />
       ) : null}
+      {versionsQuery.isError ? (
+        <ErrorState
+          title="Failed to load profile versions"
+          error={versionsQuery.error}
+        />
+      ) : null}
       {versionsQuery.data !== undefined ? (
-        <section className="panel">
-          <h2 className="section-title">Immutable versions</h2>
-          <div className="table-scroll">
-            <table className="data-table">
+        <SectionPanel
+          title="Immutable versions"
+          description="Agent Studio binds one of these ids when you publish."
+        >
+          {versionsQuery.data.versions.length === 0 ? (
+            <p className="muted" role="status">
+              No versions yet. Append one above to make this profile usable in
+              agents.
+            </p>
+          ) : (
+            <DataTableRegion caption="Model profile versions">
               <thead>
                 <tr>
-                  <th>Version</th>
-                  <th>Provider</th>
-                  <th>Model</th>
-                  <th>Connection version</th>
-                  <th>Version ID</th>
+                  <th scope="col">Version</th>
+                  <th scope="col">Provider</th>
+                  <th scope="col">Model</th>
+                  <th scope="col">Connection</th>
+                  <th scope="col">Version ID</th>
                 </tr>
               </thead>
               <tbody>
                 {versionsQuery.data.versions.map((version) => (
                   <tr key={version.id}>
                     <td>{version.version}</td>
-                    <td>{version.provider}</td>
+                    <td>{formatModelProviderLabel(version.provider)}</td>
                     <td className="mono">{version.model}</td>
-                    <td className="mono">
-                      {version.modelProviderConnectionVersionId ?? "—"}
+                    <td>
+                      {version.modelProviderConnectionVersionId !== undefined &&
+                      version.modelProviderConnectionVersionId.length > 0 ? (
+                        <details className="models-v2-tech-details">
+                          <summary>Bound</summary>
+                          <span className="mono">
+                            {version.modelProviderConnectionVersionId}
+                          </span>
+                        </details>
+                      ) : (
+                        <span className="muted">Not bound</span>
+                      )}
                     </td>
-                    <td className="mono">{version.id}</td>
+                    <td>
+                      <details className="models-v2-tech-details">
+                        <summary className="mono">{version.id}</summary>
+                      </details>
+                    </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        </section>
+            </DataTableRegion>
+          )}
+        </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }

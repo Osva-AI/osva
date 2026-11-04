@@ -1,16 +1,48 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 
+import { IntegrationsSectionNav } from "../components/integrations/integrations-section-nav";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { Button } from "../components/ui/button";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
+import { TextField } from "../components/ui/field";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useConnectorsListQuery,
   useConnectorVersionsQuery,
   useCreateConnectorMutation,
 } from "../hooks/use-tools-connectors";
+import {
+  connectorTransportSummary,
+  describeIntegrationsWriteRoleRequirement,
+  formatTransportLabel,
+} from "../lib/tool-resource-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
+
+function ConnectorLatestSummary(props: { readonly connectorId: string }) {
+  const versionsQuery = useConnectorVersionsQuery(props.connectorId);
+  if (versionsQuery.isLoading) {
+    return <>…</>;
+  }
+  const versions = versionsQuery.data?.versions ?? [];
+  if (versions.length === 0) {
+    return <span className="muted">No versions yet</span>;
+  }
+  const latest = versions.reduce((left, right) =>
+    right.version > left.version ? right : left,
+  );
+  return (
+    <>
+      {formatTransportLabel(latest.transport)} ·{" "}
+      <span className="mono">{connectorTransportSummary(latest)}</span>
+    </>
+  );
+}
 
 function ConnectorVersionCount(props: { readonly connectorId: string }) {
   const versionsQuery = useConnectorVersionsQuery(props.connectorId);
@@ -20,22 +52,8 @@ function ConnectorVersionCount(props: { readonly connectorId: string }) {
   return <>{versionsQuery.data?.versions.length ?? 0}</>;
 }
 
-function ConnectorLatestTransport(props: { readonly connectorId: string }) {
-  const versionsQuery = useConnectorVersionsQuery(props.connectorId);
-  if (versionsQuery.isLoading) {
-    return <>…</>;
-  }
-  const versions = versionsQuery.data?.versions ?? [];
-  if (versions.length === 0) {
-    return <>—</>;
-  }
-  const latest = versions.reduce((left, right) =>
-    right.version > left.version ? right : left,
-  );
-  return <>{latest.transport}</>;
-}
-
 export function ConnectorsPage() {
+  const workspaceId = useWorkspaceQueryScope();
   const authQuery = useAuthContextQuery();
   const connectorsQuery = useConnectorsListQuery();
   const createMutation = useCreateConnectorMutation();
@@ -46,21 +64,38 @@ export function ConnectorsPage() {
     authQuery.data !== undefined &&
     roleCanWriteControlPlaneResources(authQuery.data.role);
 
+  if (workspaceId === undefined) {
+    return <LoadingBlock label="Select a workspace to manage connectors." />;
+  }
+
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Connectors</h1>
-          <p className="page-subtitle">
-            MCP connector identities with immutable ConnectorVersions.
-            Credentials are secret references configured at version creation —
-            never displayed after submit.
-          </p>
-        </div>
-        <Link className="button" to="/tools">
-          Back to tools
-        </Link>
-      </header>
+    <div
+      className="integrations-v2 page-stack activity-v2"
+      data-testid="integrations-connectors-page"
+    >
+      <PageHeader
+        title="Connectors"
+        subtitle="MCP connector identities with immutable versions. Secret references are never shown after save."
+        actions={
+          <button
+            type="button"
+            className="button"
+            onClick={() => void connectorsQuery.refetch()}
+            disabled={connectorsQuery.isFetching}
+          >
+            Refresh
+          </button>
+        }
+      />
+
+      <IntegrationsSectionNav active="connectors" />
+
+      {!canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Read-only access</p>
+          <p className="muted">{describeIntegrationsWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
 
       {connectorsQuery.isLoading ? (
         <LoadingBlock label="Loading connectors…" />
@@ -73,42 +108,39 @@ export function ConnectorsPage() {
       ) : null}
 
       {canWrite ? (
-        <section className="panel">
-          <h2 className="section-title">Create connector</h2>
-          <div className="filters">
-            <div className="field">
-              <label htmlFor="connector-key">Key</label>
-              <input
-                id="connector-key"
-                value={key}
-                onChange={(event) => setKey(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="connector-name">Name</label>
-              <input
-                id="connector-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="connector-description">Description</label>
-              <input
-                id="connector-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </div>
+        <SectionPanel
+          title="Create connector"
+          description="Keys must be unique in the workspace."
+          className="integrations-v2-create-panel"
+        >
+          <div className="filters integrations-v2-filters">
+            <TextField
+              id="connector-key"
+              label="Key"
+              required
+              value={key}
+              onChange={(event) => setKey(event.target.value)}
+            />
+            <TextField
+              id="connector-name"
+              label="Name"
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+            <TextField
+              id="connector-description"
+              label="Description"
+              optional
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
           </div>
-          <button
+          <Button
             type="button"
-            className="button primary"
-            disabled={
-              createMutation.isPending ||
-              key.trim().length === 0 ||
-              name.trim().length === 0
-            }
+            variant="primary"
+            loading={createMutation.isPending}
+            disabled={key.trim().length === 0 || name.trim().length === 0}
             onClick={() =>
               void createMutation.mutateAsync({
                 key: key.trim(),
@@ -120,51 +152,54 @@ export function ConnectorsPage() {
             }
           >
             Create connector
-          </button>
-        </section>
+          </Button>
+        </SectionPanel>
       ) : null}
 
       {connectorsQuery.data !== undefined ? (
-        <section className="panel">
+        <SectionPanel title="Connectors">
           {connectorsQuery.data.connectors.length === 0 ? (
             <EmptyState
-              title="No connectors yet."
-              description="Create an MCP connector, append a ConnectorVersion, then discover and import tools."
+              title="No MCP connectors"
+              description="Create a connector, append a Streamable HTTP version, then discover and import tools."
             />
           ) : (
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Key</th>
-                    <th>Transport (latest)</th>
-                    <th>Versions</th>
+            <DataTableRegion caption="MCP connectors">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Latest transport</th>
+                  <th scope="col">Versions</th>
+                  <th scope="col">Key</th>
+                </tr>
+              </thead>
+              <tbody>
+                {connectorsQuery.data.connectors.map((connector) => (
+                  <tr key={connector.id}>
+                    <td>
+                      <Link to={`/tools/connectors/${connector.id}`}>
+                        {connector.name}
+                      </Link>
+                    </td>
+                    <td>
+                      <ConnectorLatestSummary connectorId={connector.id} />
+                    </td>
+                    <td>
+                      <ConnectorVersionCount connectorId={connector.id} />
+                    </td>
+                    <td className="mono">
+                      <details className="integrations-v2-tech-details">
+                        <summary>Show key</summary>
+                        {connector.key}
+                      </details>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {connectorsQuery.data.connectors.map((connector) => (
-                    <tr key={connector.id}>
-                      <td>
-                        <Link to={`/tools/connectors/${connector.id}`}>
-                          {connector.name}
-                        </Link>
-                      </td>
-                      <td className="mono">{connector.key}</td>
-                      <td>
-                        <ConnectorLatestTransport connectorId={connector.id} />
-                      </td>
-                      <td>
-                        <ConnectorVersionCount connectorId={connector.id} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </DataTableRegion>
           )}
-        </section>
+        </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }

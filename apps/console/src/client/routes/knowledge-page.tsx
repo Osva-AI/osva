@@ -1,202 +1,111 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
+import { KnowledgeConceptsPanel } from "../components/knowledge/knowledge-concepts-panel";
+import { KnowledgeCreateSourceForm } from "../components/knowledge/knowledge-create-source-form";
+import { KnowledgeIndexStatus } from "../components/knowledge/knowledge-index-status";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
+import { useKnowledgeSourcesCatalogQuery } from "../hooks/use-knowledge-memory";
 import {
-  useCreateKnowledgeSourceMutation,
-  useKnowledgeSourcesQuery,
-} from "../hooks/use-knowledge-memory";
-import { useAuth } from "../context/auth-context";
-import { consoleFetch } from "../lib/console-api";
+  describeKnowledgeWriteRoleRequirement,
+  summarizeSourceIndexReadiness,
+} from "../lib/knowledge-resource-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
 export function KnowledgePage() {
-  const navigate = useNavigate();
-  const auth = useAuth();
-  const role = auth.selectedWorkspace?.role;
-  const canWrite =
-    role !== undefined && roleCanWriteControlPlaneResources(role);
-  const sourcesQuery = useKnowledgeSourcesQuery({ limit: 50 });
-  const createMutation = useCreateKnowledgeSourceMutation();
   const workspaceId = useWorkspaceQueryScope();
+  const authQuery = useAuthContextQuery();
+  const catalogQuery = useKnowledgeSourcesCatalogQuery({ limit: 50 });
+  const canWrite =
+    authQuery.data !== undefined &&
+    roleCanWriteControlPlaneResources(authQuery.data.role);
 
-  const artifactsQuery = useQuery({
-    queryKey: ["artifacts", workspaceId, "list"],
-    enabled: workspaceId !== undefined,
-    queryFn: () =>
-      consoleFetch<{
-        items: Array<{ id: string; name: string; mediaType: string }>;
-      }>("/api/v1/artifacts?limit=50"),
-  });
-
-  const [key, setKey] = useState("");
-  const [name, setName] = useState("");
-  const [artifactId, setArtifactId] = useState("");
-  const [formError, setFormError] = useState<string | undefined>();
-
-  async function handleCreate(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    setFormError(undefined);
-    if (!canWrite) {
-      setFormError("Your role cannot create knowledge sources.");
-      return;
-    }
-    try {
-      const created = await createMutation.mutateAsync({
-        key: key.trim(),
-        name: name.trim(),
-        artifactId: artifactId.trim(),
-      });
-      setKey("");
-      setName("");
-      setArtifactId("");
-      navigate(`/knowledge/sources/${encodeURIComponent(created.id)}`);
-    } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : "Failed to create source.",
-      );
-    }
+  if (workspaceId === undefined) {
+    return <LoadingBlock label="Select a workspace to manage knowledge." />;
   }
 
+  const initialLoading =
+    catalogQuery.isPending && catalogQuery.data === undefined;
+
   return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Knowledge</h1>
-          <p className="page-subtitle">
-            Register document artifacts as knowledge sources, index them for
-            semantic retrieval, and bind READY indexes to agents. Supported
-            parsers include plain text, Markdown, and PDF (via the indexing
-            worker). Sources reference existing workspace artifacts — upload
-            artifacts through the control plane API if needed.
-          </p>
-        </div>
-        <div className="toolbar">
-          <button
-            type="button"
-            className="button"
-            onClick={() => void sourcesQuery.refetch()}
-          >
-            Refresh
-          </button>
-        </div>
-      </header>
-
-      {canWrite ? (
-        <section className="panel">
-          <h2 className="section-title">Create source</h2>
-          <form
-            className="filters"
-            onSubmit={(event) => void handleCreate(event)}
-          >
-            <div className="field">
-              <label htmlFor="ks-key">Key</label>
-              <input
-                id="ks-key"
-                value={key}
-                onChange={(event) => setKey(event.target.value)}
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="ks-name">Name</label>
-              <input
-                id="ks-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="ks-artifact">Artifact ID</label>
-              <input
-                id="ks-artifact"
-                className="mono"
-                value={artifactId}
-                onChange={(event) => setArtifactId(event.target.value)}
-                required
-              />
-              <p className="muted">
-                Pick an existing workspace artifact or paste an ID from a prior
-                upload.
-              </p>
-              {artifactsQuery.data?.items !== undefined &&
-              artifactsQuery.data.items.length > 0 ? (
-                <select
-                  aria-label="Recent artifacts"
-                  value=""
-                  onChange={(event) => {
-                    if (event.target.value.length > 0) {
-                      setArtifactId(event.target.value);
-                    }
-                  }}
-                >
-                  <option value="">Select recent artifact…</option>
-                  {artifactsQuery.data.items.map((artifact) => (
-                    <option key={artifact.id} value={artifact.id}>
-                      {artifact.name} ({artifact.mediaType})
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-            </div>
+    <div
+      className="knowledge-v2 page-stack activity-v2"
+      data-testid="knowledge-v2-page"
+    >
+      <PageHeader
+        title="Knowledge"
+        subtitle="Register workspace artifacts as sources, index them for semantic search, and bind READY indexes to agents."
+        actions={
+          <>
+            {catalogQuery.isFetching && !initialLoading ? (
+              <span className="muted activity-v2-refresh-hint" role="status">
+                Refreshing…
+              </span>
+            ) : null}
             <button
-              type="submit"
-              className="button primary"
-              disabled={createMutation.isPending}
+              type="button"
+              className="button"
+              onClick={() => void catalogQuery.refetch()}
+              disabled={catalogQuery.isFetching}
             >
-              Create source
+              Refresh
             </button>
-          </form>
-          {formError !== undefined ? (
-            <p className="error-inline" role="alert">
-              {formError}
-            </p>
-          ) : null}
-          <p className="muted">
-            Indexing runs asynchronously in the knowledge worker. Ensure the
-            worker, embedding provider, and vector store are operational before
-            expecting READY status.
-          </p>
-        </section>
-      ) : (
-        <p className="muted">Viewer role: knowledge sources are read-only.</p>
-      )}
+          </>
+        }
+      />
 
-      {sourcesQuery.isLoading ? (
+      <KnowledgeConceptsPanel />
+
+      {authQuery.isSuccess && !canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Read-only access</p>
+          <p className="muted">{describeKnowledgeWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
+
+      {canWrite ? <KnowledgeCreateSourceForm /> : null}
+
+      {initialLoading ? (
         <LoadingBlock label="Loading knowledge sources…" />
       ) : null}
-      {sourcesQuery.isError ? (
+      {catalogQuery.isError ? (
         <ErrorState
           title="Failed to load knowledge sources"
-          error={sourcesQuery.error}
+          error={catalogQuery.error}
         />
       ) : null}
 
-      {sourcesQuery.data !== undefined ? (
-        <section className="panel">
-          {sourcesQuery.data.items.length === 0 ? (
+      {catalogQuery.data !== undefined ? (
+        <SectionPanel
+          title="Knowledge sources"
+          description="Index readiness reflects live API status — not connectivity probes."
+        >
+          {catalogQuery.data.length === 0 ? (
             <EmptyState
-              title="No knowledge sources yet."
-              description="Create a source pointing at a workspace artifact, then create an index on the source detail page."
+              title="No knowledge sources yet"
+              description="Create a source from an existing artifact, then open it to start indexing."
             />
           ) : (
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Key</th>
-                    <th>Artifact</th>
-                    <th>Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sourcesQuery.data.items.map((source) => (
+            <DataTableRegion caption="Workspace knowledge sources">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Indexes</th>
+                  <th scope="col">Readiness</th>
+                  <th scope="col">Artifact</th>
+                  <th scope="col">Key</th>
+                </tr>
+              </thead>
+              <tbody>
+                {catalogQuery.data.map(({ source, indexes }) => {
+                  const readiness = summarizeSourceIndexReadiness(indexes);
+                  return (
                     <tr key={source.id}>
                       <td>
                         <Link
@@ -205,17 +114,51 @@ export function KnowledgePage() {
                           {source.name}
                         </Link>
                       </td>
-                      <td className="mono">{source.key}</td>
-                      <td className="mono">{source.artifactId}</td>
-                      <td>{new Date(source.createdAt).toLocaleString()}</td>
+                      <td>{readiness.total}</td>
+                      <td className="knowledge-v2-readiness-cell">
+                        {readiness.total === 0 ? (
+                          <span className="muted">{readiness.headline}</span>
+                        ) : (
+                          <div className="knowledge-v2-readiness-stack">
+                            {readiness.latestStatus !== undefined ? (
+                              <KnowledgeIndexStatus
+                                status={readiness.latestStatus}
+                              />
+                            ) : null}
+                            {readiness.readyCount > 0 ? (
+                              <span className="muted">
+                                {readiness.readyCount} of {readiness.total}{" "}
+                                READY
+                              </span>
+                            ) : (
+                              <span className="muted">
+                                {readiness.total} index
+                                {readiness.total === 1 ? "" : "es"}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <details className="knowledge-v2-tech-details">
+                          <summary>View artifact ID</summary>
+                          <span className="mono">{source.artifactId}</span>
+                        </details>
+                      </td>
+                      <td>
+                        <details className="knowledge-v2-tech-details">
+                          <summary>Show key</summary>
+                          <span className="mono">{source.key}</span>
+                        </details>
+                      </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </DataTableRegion>
           )}
-        </section>
+        </SectionPanel>
       ) : null}
-    </>
+    </div>
   );
 }

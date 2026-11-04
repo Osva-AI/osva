@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { AuthProvider } from "../src/client/context/auth-context";
 import { ConnectorsPage } from "../src/client/routes/connectors-page";
 import { ToolsPage } from "../src/client/routes/tools-page";
 import { stubHumanSessionFetch } from "./human-auth-fetch-stub";
@@ -13,12 +14,14 @@ function renderTools(initialPath: string) {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialPath]}>
-        <Routes>
-          <Route path="/tools" element={<ToolsPage />} />
-          <Route path="/tools/connectors" element={<ConnectorsPage />} />
-        </Routes>
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <Routes>
+            <Route path="/tools" element={<ToolsPage />} />
+            <Route path="/tools/connectors" element={<ConnectorsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
     </QueryClientProvider>,
   );
 }
@@ -26,23 +29,14 @@ function renderTools(initialPath: string) {
 describe("Tools UI", () => {
   afterEach(() => {
     cleanup();
-    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("renders tools list with catalog summaries", async () => {
-    stubHumanSessionFetch("DEVELOPER", "ws-1", (url) => {
-      if (url.endsWith("/api/v1/tools")) {
-        return Response.json({
-          tools: [
-            {
-              id: "tool-1",
-              workspaceId: "ws-1",
-              key: "echo",
-              name: "Echo Tool",
-              createdAt: "2026-01-01T00:00:00.000Z",
-            },
-          ],
-        });
+    stubHumanSessionFetch("DEVELOPER", "ws-1", (url, init) => {
+      const method = init?.method ?? "GET";
+      if (method !== "GET") {
+        return undefined;
       }
       if (url.includes("/api/v1/tools/tool-1/versions")) {
         return Response.json({
@@ -63,6 +57,19 @@ describe("Tools UI", () => {
           ],
         });
       }
+      if (url.includes("/api/v1/tools") && !url.includes("/versions")) {
+        return Response.json({
+          tools: [
+            {
+              id: "tool-1",
+              workspaceId: "ws-1",
+              key: "echo",
+              name: "Echo Tool",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
       return undefined;
     });
 
@@ -71,6 +78,7 @@ describe("Tools UI", () => {
       expect(screen.getByText("Echo Tool")).toBeTruthy();
     });
     expect(screen.getByText("MCP")).toBeTruthy();
+    expect(screen.queryByText(/Read-only access/i)).toBeNull();
   });
 
   it("hides connector create form for VIEWER", async () => {
@@ -82,8 +90,10 @@ describe("Tools UI", () => {
     });
     renderTools("/tools/connectors");
     await waitFor(() => {
-      expect(screen.getByText("Connectors")).toBeTruthy();
+      expect(screen.getByTestId("integrations-connectors-page")).toBeTruthy();
     });
-    expect(screen.queryByText("Create connector")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Create connector" }),
+    ).toBeNull();
   });
 });

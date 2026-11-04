@@ -122,6 +122,7 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
       await page.getByRole("button", { name: "Create profile" }).click();
       await page.getByRole("link", { name: "Onboarding Primary" }).click();
       await page.fill("#model-profile-model", "gpt-onboarding");
+      await page.getByText("Advanced: paste connection version ID").click();
       await page.fill("#model-profile-connection-version", connectionVersionId);
       await page.getByRole("button", { name: "Append version" }).click();
 

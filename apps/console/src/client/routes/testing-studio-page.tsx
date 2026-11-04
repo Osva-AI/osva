@@ -1,10 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { TestingConceptsPanel } from "../components/testing/testing-concepts-panel";
+import { TestingSectionNav } from "../components/testing/testing-section-nav";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { StatusChip } from "../components/status/status-chip";
+import { DataTableRegion } from "../components/ui/data-table-region";
+import { PageHeader } from "../components/ui/page-header";
+import { SectionPanel } from "../components/ui/section-panel";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useEvaluationRunsListQuery,
@@ -16,6 +21,14 @@ import {
   roleCanWriteControlPlaneResources,
 } from "../lib/permissions";
 import { evaluationRunStatusCategory } from "../lib/evaluation-run-status";
+import {
+  describeTestingExecuteRoleRequirement,
+  describeTestingWriteRoleRequirement,
+  evaluationRunGateHint,
+  formatEvaluationRunStatusLabel,
+  formatEvaluationTargetSummary,
+} from "../lib/testing-resource-presentation";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
 const EVALUATION_RUN_STATUSES = [
   "",
@@ -27,6 +40,7 @@ const EVALUATION_RUN_STATUSES = [
 ] as const;
 
 export function TestingStudioPage() {
+  const workspaceId = useWorkspaceQueryScope();
   const [status, setStatus] = useState("");
   const [evaluationSuiteId, setEvaluationSuiteId] = useState("");
   const [agentVersionId, setAgentVersionId] = useState("");
@@ -54,68 +68,78 @@ export function TestingStudioPage() {
     authQuery.data !== undefined &&
     roleCanExecuteControlPlaneActions(authQuery.data.role);
 
-  return (
-    <>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Testing Studio</h1>
-          <p className="page-subtitle">
-            Build JSON test suites, publish immutable versions, and review
-            evaluation run history for this workspace.
-          </p>
-        </div>
-        <div className="toolbar">
-          {canExecute ? (
-            <Link className="button primary" to="/testing/runs/new">
-              Launch evaluation
-            </Link>
-          ) : null}
-          {canWrite ? (
-            <Link className="button" to="/testing/suites/new">
-              Create evaluation suite
-            </Link>
-          ) : null}
-          <Link className="button" to="/testing/playground">
-            Agent playground
-          </Link>
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => {
-              void suitesQuery.refetch();
-              void runsQuery.refetch();
-            }}
-            disabled={suitesQuery.isFetching || runsQuery.isFetching}
-          >
-            Refresh
-          </button>
-        </div>
-      </header>
+  if (workspaceId === undefined) {
+    return <LoadingBlock label="Select a workspace to use Testing Studio." />;
+  }
 
-      <section className="panel">
-        <h2 className="panel-title">Interactive testing</h2>
-        <p className="muted">
-          Launch single-agent test Runs, inspect output, and open the canonical
-          Run detail without leaving the Console.
-        </p>
+  const runsInitialLoading =
+    runsQuery.isPending && runsQuery.data === undefined;
+
+  return (
+    <div
+      className="testing-v2 page-stack activity-v2"
+      data-testid="testing-v2-page"
+    >
+      <PageHeader
+        title="Testing Studio"
+        subtitle="Try agents in the playground, author evaluation suites, and review batch run history."
+        actions={
+          <>
+            {canExecute ? (
+              <Link className="button primary" to="/testing/runs/new">
+                Launch evaluation
+              </Link>
+            ) : null}
+            {canWrite ? (
+              <Link className="button" to="/testing/suites/new">
+                Create evaluation suite
+              </Link>
+            ) : null}
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => {
+                void suitesQuery.refetch();
+                void runsQuery.refetch();
+              }}
+              disabled={suitesQuery.isFetching || runsQuery.isFetching}
+            >
+              Refresh
+            </button>
+          </>
+        }
+      />
+
+      <TestingSectionNav active="hub" canExecute={canExecute} />
+      <TestingConceptsPanel />
+
+      {authQuery.isSuccess && !canExecute ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">Execute access required</p>
+          <p className="muted">{describeTestingExecuteRoleRequirement()}</p>
+        </section>
+      ) : null}
+      {authQuery.isSuccess && !canWrite ? (
+        <section className="activity-v2-degraded" role="status">
+          <p className="activity-v2-degraded-title">
+            Read-only suite authoring
+          </p>
+          <p className="muted">{describeTestingWriteRoleRequirement()}</p>
+        </section>
+      ) : null}
+
+      <SectionPanel
+        title="Interactive testing"
+        description="Single-run checks without publishing a full evaluation batch."
+      >
         <div className="toolbar">
           <Link className="button" to="/testing/playground">
             Open Agent playground
           </Link>
-          {canExecute ? (
-            <Link className="button" to="/testing/runs/new">
-              Launch batch evaluation
-            </Link>
-          ) : (
-            <p className="muted">
-              Your workspace role cannot EXECUTE evaluations.
-            </p>
-          )}
         </div>
-      </section>
+      </SectionPanel>
 
-      <section className="panel">
-        <h2 className="panel-title">Evaluation suites</h2>
+      <SectionPanel title="Evaluation suites">
         {suitesQuery.isLoading ? (
           <LoadingBlock label="Loading evaluation suites…" />
         ) : null}
@@ -127,30 +151,37 @@ export function TestingStudioPage() {
         ) : null}
         {suitesQuery.data?.items.length === 0 ? (
           <EmptyState
-            title="No evaluation suites yet."
+            title="No evaluation suites yet"
             description={
               canWrite
-                ? "Create a suite to author JSON test cases."
+                ? "Create a suite, publish an immutable version, then launch a batch evaluation."
                 : "Suites created in this workspace will appear here."
             }
           />
         ) : null}
         {suitesQuery.data !== undefined && suitesQuery.data.items.length > 0 ? (
-          <table className="data-table">
+          <DataTableRegion caption="Workspace evaluation suites">
             <thead>
               <tr>
-                <th>Key</th>
-                <th>Name</th>
-                <th>Updated</th>
-                <th>Details</th>
+                <th scope="col">Name</th>
+                <th scope="col">Updated</th>
+                <th scope="col">Key</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
               {suitesQuery.data.items.map((suite) => (
                 <tr key={suite.id}>
-                  <td className="mono">{suite.key}</td>
-                  <td>{suite.name}</td>
+                  <td>
+                    <Link to={`/testing/suites/${suite.id}`}>{suite.name}</Link>
+                  </td>
                   <td>{formatTimestamp(suite.updatedAt)}</td>
+                  <td>
+                    <details className="testing-v2-tech-details">
+                      <summary>Show key</summary>
+                      <span className="mono">{suite.key}</span>
+                    </details>
+                  </td>
                   <td>
                     <Link
                       className="button button-secondary"
@@ -162,15 +193,14 @@ export function TestingStudioPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </DataTableRegion>
         ) : null}
-      </section>
+      </SectionPanel>
 
-      <section className="panel">
-        <h2 className="panel-title">Recent evaluation runs</h2>
-        <div className="filters">
+      <SectionPanel title="Evaluation runs">
+        <div className="filters testing-v2-run-filters">
           <div className="field">
-            <label htmlFor="er-status-filter">Status</label>
+            <label htmlFor="er-status-filter">Run status</label>
             <select
               id="er-status-filter"
               value={status}
@@ -181,38 +211,50 @@ export function TestingStudioPage() {
             >
               {EVALUATION_RUN_STATUSES.map((value) => (
                 <option key={value || "all"} value={value}>
-                  {value.length === 0 ? "All statuses" : value}
+                  {value.length === 0
+                    ? "All statuses"
+                    : formatEvaluationRunStatusLabel(value)}
                 </option>
               ))}
             </select>
           </div>
           <div className="field">
-            <label htmlFor="er-suite-id">EvaluationSuite ID</label>
-            <input
-              id="er-suite-id"
+            <label htmlFor="er-suite-filter">Evaluation suite</label>
+            <select
+              id="er-suite-filter"
               value={evaluationSuiteId}
               onChange={(event) => {
                 setEvaluationSuiteId(event.target.value);
                 setCursorStack([]);
               }}
-              placeholder="Filter by evaluationSuiteId"
-            />
+            >
+              <option value="">All suites</option>
+              {(suitesQuery.data?.items ?? []).map((suite) => (
+                <option key={suite.id} value={suite.id}>
+                  {suite.name}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="field">
-            <label htmlFor="er-agent-version-id">AgentVersion ID</label>
-            <input
-              id="er-agent-version-id"
-              value={agentVersionId}
-              onChange={(event) => {
-                setAgentVersionId(event.target.value);
-                setCursorStack([]);
-              }}
-              placeholder="Filter by target agentVersionId"
-            />
-          </div>
+          <details className="testing-v2-tech-details testing-v2-advanced-filters">
+            <summary>Advanced filters</summary>
+            <div className="field">
+              <label htmlFor="er-agent-version-id">Agent version ID</label>
+              <input
+                id="er-agent-version-id"
+                className="mono"
+                value={agentVersionId}
+                onChange={(event) => {
+                  setAgentVersionId(event.target.value);
+                  setCursorStack([]);
+                }}
+                placeholder="Filter by target AgentVersion ID"
+              />
+            </div>
+          </details>
         </div>
 
-        {runsQuery.isLoading ? (
+        {runsInitialLoading ? (
           <LoadingBlock label="Loading evaluation runs…" />
         ) : null}
         {runsQuery.isError ? (
@@ -226,15 +268,15 @@ export function TestingStudioPage() {
         ) : null}
         {runsQuery.data !== undefined && runsQuery.data.items.length > 0 ? (
           <>
-            <table className="data-table">
+            <DataTableRegion caption="Recent evaluation runs">
               <thead>
                 <tr>
-                  <th>Status</th>
-                  <th>Run ID</th>
-                  <th>Suite version</th>
-                  <th>Target</th>
-                  <th>Created</th>
-                  <th>Details</th>
+                  <th scope="col">Lifecycle</th>
+                  <th scope="col">Suite version</th>
+                  <th scope="col">Target</th>
+                  <th scope="col">Quality gate</th>
+                  <th scope="col">Created</th>
+                  <th scope="col">Run</th>
                 </tr>
               </thead>
               <tbody>
@@ -242,18 +284,25 @@ export function TestingStudioPage() {
                   <tr key={evaluationRun.id}>
                     <td>
                       <StatusChip
-                        status={evaluationRun.status}
+                        status={formatEvaluationRunStatusLabel(
+                          evaluationRun.status,
+                        )}
                         category={evaluationRunStatusCategory(
                           evaluationRun.status,
                         )}
                       />
                     </td>
-                    <td className="mono">{evaluationRun.id}</td>
-                    <td className="mono">
-                      {evaluationRun.evaluationSuiteVersionId}
+                    <td>
+                      <details className="testing-v2-tech-details">
+                        <summary>View version ID</summary>
+                        <span className="mono">
+                          {evaluationRun.evaluationSuiteVersionId}
+                        </span>
+                      </details>
                     </td>
-                    <td className="mono">
-                      {evaluationRun.targetType} {evaluationRun.targetVersionId}
+                    <td>{formatEvaluationTargetSummary(evaluationRun)}</td>
+                    <td className="muted">
+                      {evaluationRunGateHint(evaluationRun.status)}
                     </td>
                     <td>{formatTimestamp(evaluationRun.createdAt)}</td>
                     <td>
@@ -261,13 +310,17 @@ export function TestingStudioPage() {
                         className="button button-secondary"
                         to={`/testing/runs/${evaluationRun.id}`}
                       >
-                        Open
+                        View results
                       </Link>
+                      <details className="testing-v2-tech-details">
+                        <summary>Run ID</summary>
+                        <span className="mono">{evaluationRun.id}</span>
+                      </details>
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTableRegion>
             <div className="toolbar">
               <button
                 type="button"
@@ -294,7 +347,7 @@ export function TestingStudioPage() {
             </div>
           </>
         ) : null}
-      </section>
-    </>
+      </SectionPanel>
+    </div>
   );
 }
