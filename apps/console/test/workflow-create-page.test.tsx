@@ -40,6 +40,29 @@ function renderCreatePage() {
   );
 }
 
+async function fillWorkflowRegistry(
+  user: ReturnType<typeof userEvent.setup>,
+  key: string,
+  name: string,
+) {
+  await user.click(screen.getByRole("button", { name: "Edit details" }));
+  await user.clear(screen.getByLabelText("Registry key"));
+  await user.type(screen.getByLabelText("Registry key"), key);
+  await user.clear(screen.getByLabelText("Name"));
+  await user.type(screen.getByLabelText("Name"), name);
+  await user.click(screen.getByRole("button", { name: "Done" }));
+}
+
+async function addAgentStep(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /^AI agent\b/ }));
+}
+
+async function openAccessibleStepsList(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  await user.click(screen.getByText("Accessible steps list"));
+}
+
 describe("Workflow create page", () => {
   afterEach(() => {
     cleanup();
@@ -115,12 +138,11 @@ describe("Workflow create page", () => {
 
     renderCreatePage();
     await waitFor(() => {
-      expect(screen.getByLabelText("Key")).toBeTruthy();
+      expect(screen.getByTestId("workflow-studio-v2")).toBeTruthy();
     });
 
-    await user.type(screen.getByLabelText("Key"), "demo-wf");
-    await user.type(screen.getByLabelText("Name"), "Demo WF");
-    await user.click(screen.getByRole("button", { name: "Add Run AI agent" }));
+    await fillWorkflowRegistry(user, "demo-wf", "Demo WF");
+    await addAgentStep(user);
     await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
     await waitFor(() => {
       expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
@@ -218,12 +240,11 @@ describe("Workflow create page", () => {
 
     renderCreatePage();
     await waitFor(() => {
-      expect(screen.getByLabelText("Key")).toBeTruthy();
+      expect(screen.getByTestId("workflow-studio-v2")).toBeTruthy();
     });
 
-    await user.type(screen.getByLabelText("Key"), "partial");
-    await user.type(screen.getByLabelText("Name"), "Partial");
-    await user.click(screen.getByRole("button", { name: "Add Run AI agent" }));
+    await fillWorkflowRegistry(user, "partial", "Partial");
+    await addAgentStep(user);
     await user.selectOptions(screen.getByLabelText("Agent"), "agent-1");
     await waitFor(() => {
       expect(screen.getByLabelText("Agent version (immutable)")).toBeTruthy();
@@ -246,9 +267,7 @@ describe("Workflow create page", () => {
     expect(versionCalls).toBe(1);
     expect(screen.getByTestId("workflow-publish-upstream-error")).toBeTruthy();
 
-    await user.click(
-      screen.getByRole("button", { name: "Confirm publish new version" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retry publishing" }));
     await waitFor(() => {
       expect(screen.getByText("Published version")).toBeTruthy();
     });
@@ -308,11 +327,7 @@ describe("Workflow create page", () => {
       screen.getByRole("button", { name: "Restore saved draft" }),
     );
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /Demo Agent \(v1\)/i }),
-      ).toBeTruthy();
-    });
+    await openAccessibleStepsList(user);
     await user.click(
       screen.getByRole("button", { name: /Demo Agent \(v1\)/i }),
     );
@@ -381,17 +396,20 @@ describe("Workflow create page", () => {
       screen.getByRole("button", { name: "Restore saved draft" }),
     );
 
+    await openAccessibleStepsList(user);
     await user.click(
-      screen.getByRole("button", { name: /Agent version unavailable/i }),
+      screen.getAllByRole("button", { name: /Agent version unavailable/i })[0]!,
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/not visible in this workspace/i)).toBeTruthy();
+      expect(
+        screen.getAllByText(/not visible in this workspace/i).length,
+      ).toBeGreaterThan(0);
     });
     expect(screen.getAllByText(/av-missing/).length).toBeGreaterThan(0);
-    const versionSelect = screen.getByLabelText(
+    const versionSelect = screen.getAllByLabelText(
       "Agent version (immutable)",
-    ) as HTMLSelectElement;
+    )[0] as HTMLSelectElement;
     expect(versionSelect.value).toBe("av-missing");
     expect(versionSelect.disabled).toBe(true);
   });
@@ -429,23 +447,25 @@ describe("Workflow create page", () => {
 
     renderCreatePage();
     await waitFor(() => {
-      expect(screen.getByLabelText("Key")).toBeTruthy();
+      expect(screen.getByTestId("workflow-studio-v2")).toBeTruthy();
     });
-    await user.type(screen.getByLabelText("Key"), "demo-wf");
-    await user.type(screen.getByLabelText("Name"), "Demo WF");
-    await user.click(screen.getByRole("button", { name: "Add Run AI agent" }));
+    await fillWorkflowRegistry(user, "demo-wf", "Demo WF");
+    await addAgentStep(user);
 
     await waitFor(() => {
       expect(screen.getByTestId("workflow-validation-panel")).toBeTruthy();
     });
     expect(
       screen.getByTestId("workflow-validation-summary").textContent,
-    ).toMatch(/error/);
+    ).toMatch(/issue/);
 
+    await user.click(screen.getByRole("button", { name: "View issues" }));
     await user.click(
-      screen.getByRole("button", { name: "Focus agent-step-1" }),
+      screen.getByTestId("workflow-validation-fix-agent-step-1"),
     );
-    expect(screen.getByTestId("workflow-inspector-errors")).toBeTruthy();
+    expect(
+      screen.getAllByTestId("workflow-inspector-errors").length,
+    ).toBeGreaterThan(0);
 
     await user.click(
       screen.getByRole("button", { name: "Review and publish" }),
@@ -470,7 +490,97 @@ describe("Workflow create page", () => {
     await waitFor(() => {
       expect(
         screen.getByTestId("workflow-validation-summary").textContent,
-      ).toMatch(/No blocking errors/);
+      ).toMatch(/No blocking issues/);
     });
   }, 15_000);
+
+  it("collapses palette and inspector in focus mode", async () => {
+    const user = userEvent.setup();
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    renderCreatePage();
+    await waitFor(() => {
+      expect(screen.getByTestId("workflow-studio-v2")).toBeTruthy();
+    });
+    await user.click(screen.getByRole("button", { name: "Focus mode" }));
+    expect(
+      document.querySelector(".workflow-studio-editor--focus"),
+    ).toBeTruthy();
+    expect(
+      document.querySelector(".workflow-studio-editor-palette"),
+    ).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Show steps" }));
+    expect(
+      document.querySelector(".workflow-studio-editor-palette"),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Exit focus" }));
+    expect(document.querySelector(".workflow-studio-editor--focus")).toBeNull();
+  });
+
+  it("confirms before replacing a draft with a template", async () => {
+    const user = userEvent.setup();
+    stubHumanSessionFetch("ADMIN", "ws-1");
+    renderCreatePage();
+    await waitFor(() => {
+      expect(screen.getByTestId("workflow-studio-v2")).toBeTruthy();
+    });
+    await fillWorkflowRegistry(user, "demo-wf", "Demo WF");
+    await user.click(screen.getByRole("button", { name: "Templates" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Apply template" })[0]!,
+    );
+    expect(screen.getByText("Replace current draft?")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Replace draft" }));
+    await waitFor(() => {
+      expect(screen.getByText("Accessible steps list")).toBeTruthy();
+    });
+    await user.click(screen.getByText("Accessible steps list"));
+    expect(
+      screen.getAllByRole("button", { name: /Run AI agent/i }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("connects steps from the keyboard graph panel", async () => {
+    const user = userEvent.setup();
+    stubHumanSessionFetch("ADMIN", "ws-1", (url) => {
+      if (url.includes("/api/v1/agents")) {
+        return Response.json({ agents: [] });
+      }
+      return undefined;
+    });
+    renderCreatePage();
+    await waitFor(() => {
+      expect(screen.getByTestId("workflow-studio-v2")).toBeTruthy();
+    });
+    await addAgentStep(user);
+    await addAgentStep(user);
+    await user.click(screen.getByText("Accessible steps list"));
+    await user.selectOptions(
+      screen.getByLabelText("Source step"),
+      "agent-step-1",
+    );
+    await user.selectOptions(
+      screen.getByLabelText("Destination step"),
+      "agent-step-2",
+    );
+    await user.click(screen.getByRole("button", { name: "Connect steps" }));
+    expect(
+      screen.getByText(/Connected agent-step-1 → agent-step-2/),
+    ).toBeTruthy();
+  });
+
+  it("blocks publish controls for VIEWER role", async () => {
+    stubHumanSessionFetch("VIEWER", "ws-1");
+    renderCreatePage();
+    await waitFor(() => {
+      expect(screen.getByTestId("workflow-studio-v2")).toBeTruthy();
+    });
+    expect(screen.getByText(/cannot publish workflows/i)).toBeTruthy();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Review and publish",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
 });

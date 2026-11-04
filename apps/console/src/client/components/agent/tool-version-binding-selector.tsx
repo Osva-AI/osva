@@ -24,8 +24,10 @@ function versionLabel(version: ToolVersionResource): string {
 export function ToolVersionBindingSelector(props: {
   readonly manifestText: string;
   readonly disabled?: boolean;
+  readonly presentation?: "default" | "studio";
   readonly onManifestChange: (next: string) => void;
 }) {
+  const presentation = props.presentation ?? "default";
   const catalogQuery = useToolsCatalogQuery();
   const parsed = parseWorkflowRunInputJson(props.manifestText);
   const rowsFromManifest = parsed.ok
@@ -35,7 +37,12 @@ export function ToolVersionBindingSelector(props: {
   const [draftRows, setDraftRows] = useState<AgentToolBindingRow[]>(() =>
     rowsFromManifest.length > 0
       ? rowsFromManifest.map((row) => ({ ...row, toolId: "" }))
-      : [{ bindingName: "", toolId: "", toolVersionId: "" }],
+      : presentation === "studio"
+        ? []
+        : [{ bindingName: "", toolId: "", toolVersionId: "" }],
+  );
+  const [touchedRows, setTouchedRows] = useState<ReadonlySet<number>>(
+    () => new Set(),
   );
 
   const toolOptions = useMemo(
@@ -69,13 +76,32 @@ export function ToolVersionBindingSelector(props: {
   function removeRow(index: number): void {
     setDraftRows((current) => {
       const next = current.filter((_row, rowIndex) => rowIndex !== index);
-      const normalized =
-        next.length === 0
-          ? [{ bindingName: "", toolId: "", toolVersionId: "" }]
-          : next;
-      syncManifest(normalized);
-      return normalized;
+      syncManifest(next);
+      return next;
     });
+    setTouchedRows((current) => {
+      const rebuilt = new Set<number>();
+      for (const value of current) {
+        if (value < index) {
+          rebuilt.add(value);
+        } else if (value > index) {
+          rebuilt.add(value - 1);
+        }
+      }
+      return rebuilt;
+    });
+  }
+
+  function markTouched(index: number): void {
+    setTouchedRows((current) => new Set([...current, index]));
+  }
+
+  function rowHasDraftContent(row: AgentToolBindingRow): boolean {
+    return (
+      row.bindingName.trim().length > 0 ||
+      row.toolId.length > 0 ||
+      row.toolVersionId.length > 0
+    );
   }
 
   return (
@@ -90,11 +116,34 @@ export function ToolVersionBindingSelector(props: {
         <p className="muted">Loading tool catalog…</p>
       ) : null}
       {toolOptions.length === 0 && !catalogQuery.isLoading ? (
-        <p className="muted">
-          No tools in this workspace yet. Register tools from{" "}
-          <Link to="/tools/connectors">Connectors</Link> or the control plane
-          API.
-        </p>
+        <div className="agent-studio-capability-empty" role="status">
+          <p className="muted">
+            {presentation === "studio"
+              ? "No tools are available in this workspace yet. Connect an integration, then return here — your agent draft is preserved."
+              : "No tools in this workspace yet. Register tools from Connectors or the control plane API."}
+          </p>
+          <Link className="button button-secondary" to="/tools/connectors">
+            Open Integrations
+          </Link>
+        </div>
+      ) : null}
+      {presentation === "studio" &&
+      toolOptions.length > 0 &&
+      draftRows.length === 0 ? (
+        <div className="agent-studio-capability-empty">
+          <p className="muted">
+            Add a tool binding when you are ready. You will choose an immutable
+            ToolVersion and binding name.
+          </p>
+          <button
+            type="button"
+            className="button"
+            disabled={props.disabled}
+            onClick={addRow}
+          >
+            Add tool binding
+          </button>
+        </div>
       ) : null}
       {draftRows.map((row, index) => {
         const catalogEntry = catalogQuery.data?.find(
@@ -102,6 +151,11 @@ export function ToolVersionBindingSelector(props: {
         );
         const versions = catalogEntry?.versions ?? [];
         const nameError = describeToolBindingNameError(row.bindingName);
+        const showNameError =
+          nameError !== undefined &&
+          (presentation !== "studio" ||
+            touchedRows.has(index) ||
+            rowHasDraftContent(row));
         const duplicateName =
           row.bindingName.trim().length > 0 &&
           draftRows.filter(
@@ -122,9 +176,10 @@ export function ToolVersionBindingSelector(props: {
                 onChange={(event) =>
                   updateRow(index, { bindingName: event.target.value })
                 }
+                onBlur={() => markTouched(index)}
               />
-              {nameError !== undefined ? (
-                <span className="muted">{nameError}</span>
+              {showNameError ? (
+                <span className="field-error">{nameError}</span>
               ) : null}
               {duplicateName ? (
                 <span className="muted">Duplicate binding name.</span>
@@ -178,7 +233,10 @@ export function ToolVersionBindingSelector(props: {
             <button
               type="button"
               className="button"
-              disabled={props.disabled || draftRows.length <= 1}
+              disabled={
+                props.disabled ||
+                (presentation !== "studio" && draftRows.length <= 1)
+              }
               onClick={() => removeRow(index)}
             >
               Remove
@@ -186,14 +244,16 @@ export function ToolVersionBindingSelector(props: {
           </div>
         );
       })}
-      <button
-        type="button"
-        className="button"
-        disabled={props.disabled}
-        onClick={addRow}
-      >
-        Add tool binding
-      </button>
+      {draftRows.length > 0 ? (
+        <button
+          type="button"
+          className="button"
+          disabled={props.disabled}
+          onClick={addRow}
+        >
+          Add tool binding
+        </button>
+      ) : null}
     </section>
   );
 }

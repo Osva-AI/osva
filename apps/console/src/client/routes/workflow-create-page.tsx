@@ -9,6 +9,7 @@ import type { WorkflowBuilderDraft } from "../lib/workflow-builder-draft";
 export function WorkflowCreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const openTemplates = searchParams.get("templates") === "1";
   const authQuery = useAuthContextQuery();
   const [draft, setDraft] = useState<WorkflowBuilderDraft | undefined>();
 
@@ -30,6 +31,7 @@ export function WorkflowCreatePage() {
       subtitle="Design a business process with agents, approvals, and waits. Published versions are immutable."
       initialDraft={draft}
       handoffSearchParams={searchParams}
+      initialTemplatesOpen={openTemplates}
       backLink={{ to: "/workflows", label: "All workflows" }}
       onPublished={({ workflowId, versionId }) => {
         navigate(`/workflows/${workflowId}/versions/${versionId}`, {

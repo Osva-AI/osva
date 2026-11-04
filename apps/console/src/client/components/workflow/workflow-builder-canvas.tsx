@@ -1,6 +1,7 @@
 import {
   Background,
   BackgroundVariant,
+  Controls,
   ReactFlow,
   ReactFlowProvider,
   type Connection,
@@ -33,6 +34,7 @@ export interface WorkflowBuilderCanvasProps {
   readonly onSelectNodeKey: (nodeKey: string | undefined) => void;
   readonly errorNodeKeys?: ReadonlySet<string>;
   readonly canvasLabelContext?: WorkflowCanvasLabelContext;
+  readonly showTechnicalKey?: boolean;
 }
 
 export function WorkflowBuilderCanvas(props: WorkflowBuilderCanvasProps) {
@@ -51,6 +53,7 @@ function WorkflowBuilderCanvasInner({
   onSelectNodeKey,
   errorNodeKeys,
   canvasLabelContext,
+  showTechnicalKey,
 }: WorkflowBuilderCanvasProps) {
   const { nodes, edges } = useMemo(
     () =>
@@ -59,8 +62,9 @@ function WorkflowBuilderCanvasInner({
         interaction: disabled ? "readonly" : "editable",
         errorNodeKeys,
         canvasLabelContext,
+        showTechnicalKey,
       }),
-    [draft, disabled, errorNodeKeys, canvasLabelContext],
+    [draft, disabled, errorNodeKeys, canvasLabelContext, showTechnicalKey],
   );
 
   const nodesWithSelection = useMemo(
@@ -166,6 +170,7 @@ function WorkflowBuilderCanvasInner({
           size={1}
           color="var(--border)"
         />
+        <Controls showInteractive={!disabled} position="bottom-right" />
       </ReactFlow>
     </div>
   );

@@ -27,9 +27,14 @@ export function WorkflowsPage() {
         </div>
         <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
           {canWrite ? (
-            <Link className="button primary" to="/workflows/new">
-              Create workflow
-            </Link>
+            <>
+              <Link className="button primary" to="/workflows/new">
+                Create workflow
+              </Link>
+              <Link className="button" to="/workflows/new?templates=1">
+                Templates
+              </Link>
+            </>
           ) : null}
           <button
             type="button"

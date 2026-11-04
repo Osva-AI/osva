@@ -44,11 +44,13 @@ export function DeclarativeAgentStudioEditor(props: {
   readonly manifestText: string;
   readonly disabled?: boolean;
   readonly mode: AgentStudioEditorMode;
+  readonly layoutVariant?: "sections" | "advanced-only";
   readonly onManifestTextChange: (next: string) => void;
   readonly onModeChange?: (mode: AgentStudioEditorMode) => void;
   readonly showManifestKeyFields?: boolean;
   readonly validation?: ManifestValidationView;
 }) {
+  const layoutVariant = props.layoutVariant ?? "sections";
   const parsed = parseManifestRecord(props.manifestText);
   const fields = parsed.ok
     ? extractDeclarativeStudioFields(parsed.value)
@@ -93,26 +95,27 @@ export function DeclarativeAgentStudioEditor(props: {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  const modeToggle = props.onModeChange ? (
-    <div className="toolbar agent-studio-mode-toggle">
-      <button
-        type="button"
-        className={`button${props.mode === "guided" ? " primary" : ""}`}
-        disabled={props.disabled}
-        onClick={() => props.onModeChange?.("guided")}
-      >
-        Guided
-      </button>
-      <button
-        type="button"
-        className={`button${props.mode === "advanced" ? " primary" : ""}`}
-        disabled={props.disabled}
-        onClick={() => props.onModeChange?.("advanced")}
-      >
-        Advanced JSON
-      </button>
-    </div>
-  ) : null;
+  const modeToggle =
+    props.onModeChange && layoutVariant === "sections" ? (
+      <div className="toolbar agent-studio-mode-toggle">
+        <button
+          type="button"
+          className={`button${props.mode === "guided" ? " primary" : ""}`}
+          disabled={props.disabled}
+          onClick={() => props.onModeChange?.("guided")}
+        >
+          Guided
+        </button>
+        <button
+          type="button"
+          className={`button${props.mode === "advanced" ? " primary" : ""}`}
+          disabled={props.disabled}
+          onClick={() => props.onModeChange?.("advanced")}
+        >
+          Advanced JSON
+        </button>
+      </div>
+    ) : null;
 
   const invalidJsonGuidance =
     !parsed.ok && props.mode === "guided" ? (
@@ -470,7 +473,7 @@ export function DeclarativeAgentStudioEditor(props: {
   );
 
   const guidedSections =
-    props.mode === "guided" ? (
+    props.mode === "guided" && layoutVariant === "sections" ? (
       <>
         {invalidJsonGuidance}
         {identitySection}
@@ -483,7 +486,7 @@ export function DeclarativeAgentStudioEditor(props: {
     ) : null;
 
   const advancedSections =
-    props.mode === "advanced" ? (
+    props.mode === "advanced" || layoutVariant === "advanced-only" ? (
       <>
         {!parsed.ok ? (
           <InlineMessage tone="error" title="JSON syntax invalid">
@@ -506,6 +509,14 @@ export function DeclarativeAgentStudioEditor(props: {
   );
 
   const errorSectionId = firstSectionWithError(validation.fieldErrors);
+
+  if (layoutVariant === "advanced-only") {
+    return (
+      <div className="agent-studio-editor agent-studio-editor-advanced-only">
+        <div className="agent-studio-main stack">{advancedSections}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="agent-studio-editor">
@@ -594,6 +605,7 @@ export function DeclarativeAgentStudioEditor(props: {
 
 export function AgentVersionReviewPanel(props: {
   readonly manifestText: string;
+  readonly variant?: "default" | "studio";
 }) {
   const parsed = parseManifestRecord(props.manifestText);
   const assurance = describeManifestAssurance(props.manifestText);
@@ -606,15 +618,34 @@ export function AgentVersionReviewPanel(props: {
   }
   const fields = extractDeclarativeStudioFields(parsed.value);
   const validation = describeDeclarativeManifestValidation(parsed.value);
+  const variant = props.variant ?? "default";
+  const toolBindings = isRecord(parsed.value.tools)
+    ? Object.keys(parsed.value.tools).join(", ") || "None"
+    : "None";
+  const knowledgeBindings =
+    extractKnowledgeBindingRows(parsed.value)
+      .map((row) => `${row.bindingName} → ${row.knowledgeIndexIds.join(", ")}`)
+      .join("; ") || "None";
+  const memoryBindings =
+    extractMemoryBindingRows(parsed.value)
+      .map((row) => `${row.bindingName} → ${row.namespaceId} (${row.access})`)
+      .join("; ") || "None";
+  const instructionsPreview =
+    fields.instructions.trim().length > 0
+      ? fields.instructions.trim().slice(0, 320)
+      : "(empty)";
+
   return (
     <section className="panel agent-studio-review">
       <h2 className="section-title">Review before publishing</h2>
-      <InlineMessage
-        tone={validation.ok ? "info" : "warning"}
-        title={assurance.title}
-      >
-        {assurance.detail}
-      </InlineMessage>
+      {variant === "default" ? (
+        <InlineMessage
+          tone={validation.ok ? "info" : "warning"}
+          title={assurance.title}
+        >
+          {assurance.detail}
+        </InlineMessage>
+      ) : null}
       <ul className="muted agent-studio-review-notes">
         <li>
           Publishing creates a new immutable AgentVersion. Earlier versions stay
@@ -625,93 +656,150 @@ export function AgentVersionReviewPanel(props: {
           Model and tool usage during Runs may incur external provider cost.
         </li>
       </ul>
-      <dl className="meta-grid">
-        <div>
-          <dt>Name</dt>
-          <dd>{fields.manifestName}</dd>
-        </div>
-        <div>
-          <dt>Key</dt>
-          <dd className="mono">{fields.manifestKey}</dd>
-        </div>
-        <div>
-          <dt>Model version</dt>
-          <dd className="mono">
-            {fields.modelProfileVersionId.length > 0
-              ? fields.modelProfileVersionId
-              : "Not selected"}
-          </dd>
-        </div>
-        <div>
-          <dt>Tool bindings</dt>
-          <dd>
-            {isRecord(parsed.value.tools)
-              ? Object.keys(parsed.value.tools).join(", ") || "None"
-              : "None"}
-          </dd>
-        </div>
-        <div>
-          <dt>Knowledge bindings</dt>
-          <dd>
-            {extractKnowledgeBindingRows(parsed.value)
-              .map(
-                (row) =>
-                  `${row.bindingName} → ${row.knowledgeIndexIds.join(", ")}`,
-              )
-              .join("; ") || "None"}
-          </dd>
-        </div>
-        <div>
-          <dt>Memory bindings</dt>
-          <dd>
-            {extractMemoryBindingRows(parsed.value)
-              .map(
-                (row) =>
-                  `${row.bindingName} → ${row.namespaceId} (${row.access})`,
-              )
-              .join("; ") || "None"}
-          </dd>
-        </div>
-        <div>
-          <dt>Timeout</dt>
-          <dd>{fields.timeoutMs} ms</dd>
-        </div>
-        <div>
-          <dt>Max attempts</dt>
-          <dd>{fields.maxAttempts}</dd>
-        </div>
-        <div>
-          <dt>Model call budget</dt>
-          <dd>{fields.maxModelInvocations}</dd>
-        </div>
-        <div>
-          <dt>Tool call budget</dt>
-          <dd>{fields.maxToolInvocations}</dd>
-        </div>
-        {fields.maxOutputTokens.trim().length > 0 ? (
-          <div>
-            <dt>Max output tokens</dt>
-            <dd>{fields.maxOutputTokens}</dd>
-          </div>
-        ) : null}
-      </dl>
-      <p className="muted">
-        Instructions preview:{" "}
-        {fields.instructions.trim().length > 0
-          ? fields.instructions.trim().slice(0, 320)
-          : "(empty)"}
-        {fields.instructions.length > 320 ? "…" : ""}
-      </p>
-      {!validation.ok ? (
-        <p className="field-error" role="alert">
-          Fix validation issues before publishing.
-        </p>
+      {variant === "studio" ? (
+        <>
+          <dl className="meta-grid agent-studio-review-primary">
+            <div>
+              <dt>Name</dt>
+              <dd>{fields.manifestName}</dd>
+            </div>
+            <div>
+              <dt>Model</dt>
+              <dd>
+                {fields.modelProfileVersionId.length > 0
+                  ? "Workspace model version selected"
+                  : "Not selected"}
+              </dd>
+            </div>
+            <div>
+              <dt>Tools</dt>
+              <dd>{toolBindings}</dd>
+            </div>
+            <div>
+              <dt>Knowledge</dt>
+              <dd>{knowledgeBindings}</dd>
+            </div>
+            <div>
+              <dt>Memory</dt>
+              <dd>{memoryBindings}</dd>
+            </div>
+          </dl>
+          <p className="muted agent-studio-review-instructions">
+            <strong>Instructions</strong> — {instructionsPreview}
+            {fields.instructions.length > 320 ? "…" : ""}
+          </p>
+          <details className="agent-studio-v2-tech-details">
+            <summary>Technical details</summary>
+            <dl className="meta-grid">
+              <div>
+                <dt>Key</dt>
+                <dd className="mono">{fields.manifestKey}</dd>
+              </div>
+              <div>
+                <dt>ModelProfileVersion ID</dt>
+                <dd className="mono">
+                  {fields.modelProfileVersionId.length > 0
+                    ? fields.modelProfileVersionId
+                    : "Not selected"}
+                </dd>
+              </div>
+              <div>
+                <dt>Timeout</dt>
+                <dd>{fields.timeoutMs} ms</dd>
+              </div>
+              <div>
+                <dt>Max attempts</dt>
+                <dd>{fields.maxAttempts}</dd>
+              </div>
+              <div>
+                <dt>Model call budget</dt>
+                <dd>{fields.maxModelInvocations}</dd>
+              </div>
+              <div>
+                <dt>Tool call budget</dt>
+                <dd>{fields.maxToolInvocations}</dd>
+              </div>
+              {fields.maxOutputTokens.trim().length > 0 ? (
+                <div>
+                  <dt>Max output tokens</dt>
+                  <dd>{fields.maxOutputTokens}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </details>
+        </>
       ) : (
-        <p className="muted" role="status">
-          Configuration passes local manifest validation. Execute a Run to
-          verify provider and runtime behavior.
-        </p>
+        <>
+          <dl className="meta-grid">
+            <div>
+              <dt>Name</dt>
+              <dd>{fields.manifestName}</dd>
+            </div>
+            <div>
+              <dt>Key</dt>
+              <dd className="mono">{fields.manifestKey}</dd>
+            </div>
+            <div>
+              <dt>Model version</dt>
+              <dd className="mono">
+                {fields.modelProfileVersionId.length > 0
+                  ? fields.modelProfileVersionId
+                  : "Not selected"}
+              </dd>
+            </div>
+            <div>
+              <dt>Tool bindings</dt>
+              <dd>{toolBindings}</dd>
+            </div>
+            <div>
+              <dt>Knowledge bindings</dt>
+              <dd>{knowledgeBindings}</dd>
+            </div>
+            <div>
+              <dt>Memory bindings</dt>
+              <dd>{memoryBindings}</dd>
+            </div>
+            <div>
+              <dt>Timeout</dt>
+              <dd>{fields.timeoutMs} ms</dd>
+            </div>
+            <div>
+              <dt>Max attempts</dt>
+              <dd>{fields.maxAttempts}</dd>
+            </div>
+            <div>
+              <dt>Model call budget</dt>
+              <dd>{fields.maxModelInvocations}</dd>
+            </div>
+            <div>
+              <dt>Tool call budget</dt>
+              <dd>{fields.maxToolInvocations}</dd>
+            </div>
+            {fields.maxOutputTokens.trim().length > 0 ? (
+              <div>
+                <dt>Max output tokens</dt>
+                <dd>{fields.maxOutputTokens}</dd>
+              </div>
+            ) : null}
+          </dl>
+          <p className="muted">
+            Instructions preview: {instructionsPreview}
+            {fields.instructions.length > 320 ? "…" : ""}
+          </p>
+        </>
       )}
+      {variant === "default" ? (
+        !validation.ok ? (
+          <p className="field-error" role="alert">
+            Fix validation issues before publishing.
+          </p>
+        ) : (
+          <p className="muted" role="status">
+            Configuration passes local manifest validation. Execute a Run to
+            verify provider and runtime behavior.
+          </p>
+        )
+      ) : null}
     </section>
   );
 }

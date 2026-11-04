@@ -231,10 +231,28 @@ describe("M12.3 browser acceptance (Playwright)", () => {
       );
 
       await page.getByRole("button", { name: "Create AgentVersion" }).click();
-      await page.waitForURL(/\/agents\/.*\/versions\//, { timeout: 60_000 });
+      await page.waitForURL(
+        /\/agents\/[^/]+\/versions\/(?!new)[^/?#]+(\?.*)?$/,
+        { timeout: 60_000 },
+      );
+      expect(page.url()).toContain("published=1");
+      expect(page.url()).toContain("studio=test");
 
-      await page.getByRole("button", { name: "Run Agent" }).click();
-      await page.getByRole("button", { name: "Confirm start run" }).click();
+      await page.getByTestId("agent-studio-test-handoff-page").waitFor({
+        timeout: 30_000,
+      });
+      await page.getByTestId("agent-studio-test-stage").waitFor({
+        timeout: 30_000,
+      });
+      await page.getByRole("heading", { name: "Test your agent" }).waitFor({
+        timeout: 30_000,
+      });
+      await page.getByTestId("agent-studio-run-launch").waitFor({
+        timeout: 30_000,
+      });
+
+      await page.getByRole("button", { name: "Run test" }).click();
+      await page.getByRole("button", { name: "Confirm test run" }).click();
       await page.waitForURL(/\/runs\//, { timeout: 60_000 });
 
       await expect

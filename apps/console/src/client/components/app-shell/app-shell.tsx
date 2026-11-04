@@ -23,6 +23,7 @@ import {
   syncThemeFromPreference,
   type ThemePreference,
 } from "../../lib/theme-preference";
+import { isWorkflowStudioBuilderPath } from "../../lib/workflow-builder-studio-routes";
 import { SidebarNav } from "./sidebar-nav";
 import { ShellHeader } from "./shell-header";
 import { NavIconBrand } from "./nav-icons";
@@ -149,15 +150,20 @@ export function AppShell() {
     setMobileNavOpen(false);
   }, []);
 
+  const workflowStudioBuilder = isWorkflowStudioBuilderPath(location.pathname);
+  const effectiveSidebarCollapsed =
+    workflowStudioBuilder && !isMobile ? true : sidebarCollapsed;
+
   const shellClassName = [
     "app-shell",
-    sidebarCollapsed && !isMobile ? "sidebar-collapsed" : "",
+    effectiveSidebarCollapsed && !isMobile ? "sidebar-collapsed" : "",
     mobileNavOpen ? "mobile-nav-open" : "",
+    workflowStudioBuilder ? "app-shell--workflow-studio" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  const compactNav = sidebarCollapsed && !isMobile;
+  const compactNav = effectiveSidebarCollapsed && !isMobile;
 
   const handleWorkspaceChange = (workspaceId: string): void => {
     const nextWorkspace = auth.workspaces.find(
@@ -247,7 +253,7 @@ export function AppShell() {
       )}
       <div className="shell-main-wrap">
         <ShellHeader
-          sidebarCollapsed={sidebarCollapsed}
+          sidebarCollapsed={effectiveSidebarCollapsed}
           isMobile={isMobile}
           mobileNavOpen={mobileNavOpen}
           mobileNavId={mobileNavId}
@@ -287,7 +293,10 @@ export function AppShell() {
           }}
           onWorkspaceChange={handleWorkspaceChange}
         />
-        <main className="main-panel shell-main-content" id="main-content">
+        <main
+          className={`main-panel shell-main-content${workflowStudioBuilder ? " shell-main-content--workflow-studio" : ""}`}
+          id="main-content"
+        >
           <Outlet />
         </main>
       </div>

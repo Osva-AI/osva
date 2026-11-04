@@ -16,8 +16,10 @@ import { parseWorkflowRunInputJson } from "../../lib/workflow-run-input";
 export function KnowledgeBindingSelector(props: {
   readonly manifestText: string;
   readonly disabled?: boolean;
+  readonly presentation?: "default" | "studio";
   readonly onManifestChange: (next: string) => void;
 }) {
+  const presentation = props.presentation ?? "default";
   const catalogQuery = useReadyKnowledgeIndexesCatalogQuery(true);
   const parsed = parseWorkflowRunInputJson(props.manifestText);
   const rowsFromManifest = parsed.ok
@@ -30,7 +32,12 @@ export function KnowledgeBindingSelector(props: {
           ...row,
           knowledgeIndexIds: [...row.knowledgeIndexIds],
         }))
-      : [{ bindingName: "", knowledgeIndexIds: [] }],
+      : presentation === "studio"
+        ? []
+        : [{ bindingName: "", knowledgeIndexIds: [] }],
+  );
+  const [touchedRows, setTouchedRows] = useState<ReadonlySet<number>>(
+    () => new Set(),
   );
 
   const readyIndexes = catalogQuery.data ?? [];
@@ -94,11 +101,13 @@ export function KnowledgeBindingSelector(props: {
   function removeRow(index: number): void {
     setDraftRows((current) => {
       const next = current.filter((_row, rowIndex) => rowIndex !== index);
-      const normalized =
-        next.length === 0 ? [{ bindingName: "", knowledgeIndexIds: [] }] : next;
-      syncManifest(normalized);
-      return normalized;
+      syncManifest(next);
+      return next;
     });
+  }
+
+  function markTouched(index: number): void {
+    setTouchedRows((current) => new Set([...current, index]));
   }
 
   return (
@@ -113,10 +122,32 @@ export function KnowledgeBindingSelector(props: {
         <p className="muted">Loading READY indexes…</p>
       ) : null}
       {readyIndexes.length === 0 && !catalogQuery.isLoading ? (
-        <p className="muted">
-          No READY indexes in this workspace yet. Create a source, run indexing,
-          and wait for READY status before binding.
-        </p>
+        <div className="agent-studio-capability-empty" role="status">
+          <p className="muted">
+            No knowledge indexes are READY in this workspace. Set up a source in
+            Knowledge, wait for READY, then return — your draft is preserved.
+          </p>
+          <Link className="button button-secondary" to="/knowledge">
+            Open Knowledge
+          </Link>
+        </div>
+      ) : null}
+      {presentation === "studio" &&
+      readyIndexes.length > 0 &&
+      draftRows.length === 0 ? (
+        <div className="agent-studio-capability-empty">
+          <p className="muted">
+            Add a knowledge binding when you need grounded answers from indexes.
+          </p>
+          <button
+            type="button"
+            className="button"
+            disabled={props.disabled}
+            onClick={addRow}
+          >
+            Add knowledge binding
+          </button>
+        </div>
       ) : null}
       {draftRows.map((row, index) => {
         const nameError = describeKnowledgeBindingNameError(row.bindingName);
@@ -127,6 +158,12 @@ export function KnowledgeBindingSelector(props: {
               other.bindingName.trim() === row.bindingName.trim() &&
               other !== row,
           ).length > 0;
+        const showNameError =
+          (nameError !== undefined || duplicateName) &&
+          (presentation !== "studio" ||
+            touchedRows.has(index) ||
+            row.bindingName.trim().length > 0 ||
+            row.knowledgeIndexIds.length > 0);
         return (
           <div className="filters" key={`knowledge-binding-${String(index)}`}>
             <div className="field">
@@ -140,8 +177,9 @@ export function KnowledgeBindingSelector(props: {
                 onChange={(event) =>
                   updateRow(index, { bindingName: event.target.value })
                 }
+                onBlur={() => markTouched(index)}
               />
-              {nameError !== undefined || duplicateName ? (
+              {showNameError ? (
                 <p className="error-inline" role="alert">
                   {duplicateName ? "Binding names must be unique." : nameError}
                 </p>
@@ -188,14 +226,16 @@ export function KnowledgeBindingSelector(props: {
           </div>
         );
       })}
-      <button
-        type="button"
-        className="button"
-        disabled={props.disabled}
-        onClick={addRow}
-      >
-        Add knowledge binding
-      </button>
+      {draftRows.length > 0 ? (
+        <button
+          type="button"
+          className="button"
+          disabled={props.disabled}
+          onClick={addRow}
+        >
+          Add knowledge binding
+        </button>
+      ) : null}
     </section>
   );
 }

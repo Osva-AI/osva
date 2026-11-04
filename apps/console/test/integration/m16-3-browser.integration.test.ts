@@ -124,11 +124,15 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
       await page.getByRole("button", { name: "Append version" }).click();
 
       await page.goto(`${stack.consoleOrigin}/agents/new`);
+      await page.getByTestId("agent-studio-v2").waitFor({ timeout: 30_000 });
       await page.fill("#create-agent-name", "Onboarding Declarative Agent");
       await page.fill(
         "#studio-instructions",
         "Reply with a short helpful sentence.",
       );
+      await page
+        .getByRole("button", { name: "Continue to capabilities" })
+        .click();
       await page.selectOption("#agent-model-profile", {
         label: "Onboarding Primary (onboarding-primary)",
       });
@@ -136,9 +140,10 @@ describe("M16.3 browser acceptance (first-agent onboarding journey)", () => {
         state: "attached",
       });
       await page.selectOption("#agent-primary-model", { index: 1 });
-      await page.getByRole("button", { name: "Validate and review" }).click();
+      await page.getByRole("button", { name: "Continue to review" }).click();
       await page.getByRole("button", { name: "Publish agent version" }).click();
-      await page.getByText(/This AgentVersion is now saved/i).waitFor({
+      await page.locator('[data-confirm-dialog="confirm"]').click();
+      await page.getByTestId("agent-studio-test-stage").waitFor({
         timeout: 60_000,
       });
 

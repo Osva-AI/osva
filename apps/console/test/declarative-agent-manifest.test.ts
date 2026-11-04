@@ -8,6 +8,7 @@ import {
   extractDeclarativeStudioFields,
   manifestToText,
   parseManifestRecord,
+  readPrimaryModelProfileVersionId,
   slugAgentKeyFromName,
   syncDeclarativeToolBudgets,
 } from "../src/client/lib/declarative-agent-manifest";
@@ -21,7 +22,7 @@ describe("declarative agent manifest studio", () => {
     });
     expect(manifest.runtime).toMatchObject({ type: "DECLARATIVE" });
     const validation = describeDeclarativeManifestValidation(manifest);
-    expect(validation.fieldErrors.instructions).toBeUndefined();
+    expect(validation.fieldErrors.instructions).toMatch(/required/i);
     expect(validation.fieldErrors.model).toBeDefined();
   });
 
@@ -29,6 +30,17 @@ describe("declarative agent manifest studio", () => {
     expect(slugAgentKeyFromName("  Acme Support Bot  ")).toBe(
       "acme-support-bot",
     );
+  });
+
+  it("clears primary model binding when the studio selection is removed", () => {
+    const withModel = applyPrimaryModelToManifest(
+      defaultDeclarativeManifestTemplate({ key: "bot", name: "Bot" }),
+      "mpv-clear-test",
+    );
+    const cleared = applyDeclarativeStudioPatch(withModel, {
+      modelProfileVersionId: "",
+    });
+    expect(readPrimaryModelProfileVersionId(cleared)).toBeUndefined();
   });
 
   it("binds a selected model without dropping unrelated manifest fields", () => {

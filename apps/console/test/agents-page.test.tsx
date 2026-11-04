@@ -432,7 +432,7 @@ describe("Agents UI", () => {
       expect(screen.getByText("Agent version handoff")).toBeTruthy();
     });
     expect(screen.getAllByText("av-echo").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Run AI agent/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/choose version/i)).toBeTruthy();
+    expect(screen.getByText(/select the agent/i)).toBeTruthy();
+    expect(screen.getByText(/then choose version/i)).toBeTruthy();
   });
 });

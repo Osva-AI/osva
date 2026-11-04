@@ -39,27 +39,28 @@ export function WorkflowPublishReview({
     draft.definition.nodes.some((node) => node.type === "JOIN") ||
     draft.definition.nodes.some((node) => node.type === "BRANCH");
 
+  const blockingIssues = report.issues.filter(
+    (item) => item.severity === "error",
+  );
+
   return (
     <section
-      className="panel"
+      className="workflow-publish-review"
       data-testid="workflow-publish-review"
       aria-labelledby="workflow-publish-review-title"
     >
       <h2 className="section-title" id="workflow-publish-review-title">
-        Publish review
+        {retry ? "Retry publishing" : "Publish review"}
       </h2>
-      <p className="muted">
-        Publishing creates an immutable workflow version. Existing published
-        versions stay unchanged and remain available for runs.
+      <p className="muted workflow-publish-review-lead">
+        Publishing creates an immutable workflow version. It does not run the
+        workflow. Existing published versions stay unchanged.
       </p>
-      <dl className="meta-grid">
+
+      <dl className="workflow-publish-review-summary">
         <div>
-          <dt>Workflow name</dt>
-          <dd>{draft.registry.name || "(missing)"}</dd>
-        </div>
-        <div>
-          <dt>Key</dt>
-          <dd className="mono">{draft.registry.key || "(missing)"}</dd>
+          <dt>Workflow</dt>
+          <dd>{draft.registry.name.trim() || "(name required)"}</dd>
         </div>
         <div>
           <dt>Steps</dt>
@@ -71,44 +72,89 @@ export function WorkflowPublishReview({
         </div>
       </dl>
 
-      <h3 className="panel-title">Steps in this version</h3>
+      <h3 className="workflow-publish-review-subtitle">What will run</h3>
       {hasParallelism ? (
         <p className="muted">
-          This graph includes branches or parallel paths. Execution order
-          depends on runtime decisions, not a single linear list.
+          This graph includes branches or parallel paths. Runtime order depends
+          on decisions and parallel completion, not one fixed list.
         </p>
       ) : orderedKeys.length > 0 ? (
-        <p className="muted">
-          Typical entry-to-exit order for this graph (one possible path):
-        </p>
+        <p className="muted">One possible entry-to-exit path for this graph:</p>
       ) : null}
       {steps.length === 0 ? (
-        <p className="muted">No steps configured.</p>
+        <p className="muted">No steps configured yet.</p>
       ) : (
-        <ol className="stack">
+        <ol className="workflow-publish-review-steps">
           {steps.map((step) => (
             <li key={step.nodeKey}>
-              <strong>{step.type}</strong>: {step.presentationLabel}
-              <p className="muted">{step.detail}</p>
-              <p className="mono">{step.nodeKey}</p>
+              <strong>{step.presentationLabel}</strong>
+              <span className="workflow-publish-review-step-type muted">
+                {step.type}
+              </span>
+              {step.detail.trim().length > 0 ? (
+                <p className="muted">{step.detail}</p>
+              ) : null}
             </li>
           ))}
         </ol>
       )}
 
-      <p data-testid="workflow-publish-review-validation">
+      {blockingIssues.length > 0 ? (
+        <div
+          className="workflow-publish-review-blockers"
+          data-testid="workflow-publish-review-blockers"
+        >
+          <h3 className="workflow-publish-review-subtitle">Blocking issues</h3>
+          <ul>
+            {blockingIssues.map((item) => (
+              <li key={item.id}>{item.message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <p
+        className="workflow-publish-review-validation"
+        data-testid="workflow-publish-review-validation"
+      >
         {report.canPublish
-          ? "Validation passed in the Console. The control plane performs a final check when you confirm."
+          ? "This draft passes Console validation. The control plane performs a final check when you confirm."
           : `${String(report.errorCount)} issue${report.errorCount === 1 ? "" : "s"} must be fixed before publishing.`}
       </p>
-      <div className="stack" style={{ flexDirection: "row", gap: 8 }}>
+
+      <details className="workflow-studio-tech-details">
+        <summary>Technical details</summary>
+        <dl className="meta-grid">
+          <div>
+            <dt>Registry key</dt>
+            <dd className="mono">{draft.registry.key || "(missing)"}</dd>
+          </div>
+          {draft.createdWorkflowId !== undefined ? (
+            <div>
+              <dt>Workflow id</dt>
+              <dd className="mono">{draft.createdWorkflowId}</dd>
+            </div>
+          ) : null}
+        </dl>
+        {steps.length > 0 ? (
+          <ul className="workflow-publish-review-tech-keys">
+            {steps.map((step) => (
+              <li key={step.nodeKey} className="mono">
+                {step.nodeKey}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </details>
+
+      <div className="workflow-publish-review-actions">
         <button
           type="button"
           className="button primary"
           disabled={!report.canPublish || publishing}
           onClick={onConfirm}
         >
-          {retry ? "Confirm publish new version" : "Confirm publish"}
+          {retry ? "Retry publishing" : "Confirm publish"}
         </button>
         <button
           type="button"

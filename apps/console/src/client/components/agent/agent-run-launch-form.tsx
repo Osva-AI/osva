@@ -21,6 +21,7 @@ export interface AgentRunLaunchFormProps {
   readonly selectedVersion: AgentVersionResource;
   readonly canExecute: boolean;
   readonly versionLoading?: boolean;
+  readonly presentation?: "default" | "studio";
 }
 
 export function AgentRunLaunchForm({
@@ -30,7 +31,9 @@ export function AgentRunLaunchForm({
   selectedVersion,
   canExecute,
   versionLoading = false,
+  presentation = "default",
 }: AgentRunLaunchFormProps) {
+  const studio = presentation === "studio";
   const navigate = useNavigate();
   const mutation = useCreateRunMutation();
   const submittingRef = useRef(false);
@@ -125,36 +128,64 @@ export function AgentRunLaunchForm({
       : describeCreateRunFailure(errorStatus);
 
   return (
-    <section className="panel" aria-labelledby="agent-run-launch-title">
+    <section
+      className={`panel${studio ? " agent-studio-run-launch" : ""}`}
+      aria-labelledby="agent-run-launch-title"
+      data-testid={studio ? "agent-studio-run-launch" : undefined}
+    >
+      {studio ? (
+        <p className="agent-studio-run-agent-name" role="status">
+          {agentName ?? agentKey ?? "Your agent"}
+        </p>
+      ) : null}
       <h2 className="panel-title" id="agent-run-launch-title">
-        Run Agent
+        {studio ? "Try a task" : "Run Agent"}
       </h2>
       <p className="muted">
-        Starts an individual Run from this immutable AgentVersion. This is not a
-        WorkflowRun. HTTP success queues execution; inspect the returned Run and
-        its RunAttempts for the actual outcome.
+        {studio
+          ? "Send a sample task to your published agent. Queued means the Run is waiting to start; running means execution is in progress; succeeded or failed is the final outcome."
+          : "Starts an individual Run from this immutable AgentVersion. This is not a WorkflowRun. HTTP success queues execution; inspect the returned Run and its RunAttempts for the actual outcome."}
       </p>
-      <dl className="meta-grid">
-        <div>
-          <dt>Agent</dt>
-          <dd>
-            {agentName ?? agentKey ?? <span className="mono">{agentId}</span>}
-          </dd>
-        </div>
-        <div>
-          <dt>Agent ID</dt>
-          <dd className="mono">{agentId}</dd>
-        </div>
-        <div>
-          <dt>AgentVersion</dt>
-          <dd>
-            v{selectedVersion.version}{" "}
-            <span className="mono">({selectedVersion.id})</span>
-          </dd>
-        </div>
-      </dl>
+      {!studio ? (
+        <dl className="meta-grid">
+          <div>
+            <dt>Agent</dt>
+            <dd>
+              {agentName ?? agentKey ?? <span className="mono">{agentId}</span>}
+            </dd>
+          </div>
+          <div>
+            <dt>Agent ID</dt>
+            <dd className="mono">{agentId}</dd>
+          </div>
+          <div>
+            <dt>AgentVersion</dt>
+            <dd>
+              v{selectedVersion.version}{" "}
+              <span className="mono">({selectedVersion.id})</span>
+            </dd>
+          </div>
+        </dl>
+      ) : null}
 
-      <AgentInputContractPanel contract={contract} />
+      {studio ? (
+        <details className="agent-studio-v2-tech-details">
+          <summary>Technical details</summary>
+          <dl className="meta-grid">
+            <div>
+              <dt>Agent ID</dt>
+              <dd className="mono">{agentId}</dd>
+            </div>
+            <div>
+              <dt>AgentVersion</dt>
+              <dd className="mono">{selectedVersion.id}</dd>
+            </div>
+          </dl>
+          <AgentInputContractPanel contract={contract} compact />
+        </details>
+      ) : (
+        <AgentInputContractPanel contract={contract} />
+      )}
 
       {!canExecute ? (
         <p className="muted">
@@ -163,7 +194,9 @@ export function AgentRunLaunchForm({
       ) : null}
 
       <div className="field">
-        <label htmlFor="agent-run-input-json">Run input (JSON)</label>
+        <label htmlFor="agent-run-input-json">
+          {studio ? "Task input (JSON)" : "Run input (JSON)"}
+        </label>
         <textarea
           id="agent-run-input-json"
           rows={8}
@@ -201,7 +234,11 @@ export function AgentRunLaunchForm({
               onClick={() => void startRun()}
               disabled={!canSubmit}
             >
-              {mutation.isPending ? "Starting run…" : "Confirm start run"}
+              {mutation.isPending
+                ? "Starting run…"
+                : studio
+                  ? "Confirm test run"
+                  : "Confirm start run"}
             </button>
             <button
               type="button"
@@ -220,7 +257,7 @@ export function AgentRunLaunchForm({
           onClick={() => setConfirming(true)}
           disabled={!canSubmit}
         >
-          Run Agent
+          {studio ? "Run test" : "Run Agent"}
         </button>
       )}
 
@@ -248,14 +285,22 @@ export function AgentRunLaunchForm({
 
 function AgentInputContractPanel({
   contract,
+  compact = false,
 }: {
   readonly contract: ReturnType<typeof resolveAgentVersionInputContract>;
+  readonly compact?: boolean;
 }) {
   return (
     <div className="stack" aria-labelledby="agent-run-input-contract-title">
-      <h3 className="panel-title" id="agent-run-input-contract-title">
-        Input contract
-      </h3>
+      {!compact ? (
+        <h3 className="panel-title" id="agent-run-input-contract-title">
+          Input contract
+        </h3>
+      ) : (
+        <p className="muted" id="agent-run-input-contract-title">
+          Input contract
+        </p>
+      )}
       {contract.status === "available" ? (
         <>
           <p className="muted">
