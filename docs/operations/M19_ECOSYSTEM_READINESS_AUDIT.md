@@ -1,7 +1,7 @@
 # M19 Ecosystem Readiness Audit
 
-**Audit date:** 2026-11-05  
-**Auditor context:** M18.10 closeout worktree; **`origin/main`** @ **`b3c20e3`**.  
+**Audit date:** 2026-11-05
+**Auditor context:** M18.10 closeout worktree; **`origin/main`** @ **`b3c20e3`**.
 **Verification policy:** [`../engineering/DEVELOPMENT_GATES.md`](../engineering/DEVELOPMENT_GATES.md) · [`../engineering/BRANCH_VERIFICATION.md`](../engineering/BRANCH_VERIFICATION.md) (no separate `ENGINEERING_VERIFICATION_PLAYBOOK.md` in repo).
 
 **Repositories inspected (local checkouts + npm registry):**
@@ -35,10 +35,10 @@ Prior audit: [`../architecture/EXTERNAL_ECOSYSTEM_COMPATIBILITY.md`](../architec
 
 Status legend:
 
-- **Implemented** — source + README in repo  
-- **Tested** — vitest suites (unit/fake HTTP/MCP); not proof of live provider success  
-- **Published** — `npm view @osva-ai/connector-<name> version` succeeds  
-- **Externally verified** — OSVA ToolGateway cross-repo CI or operator acceptance on published tarball  
+- **Implemented** — source + README in repo
+- **Tested** — vitest suites (unit/fake HTTP/MCP); not proof of live provider success
+- **Published** — `npm view @osva-ai/connector-<name> version` succeeds
+- **Externally verified** — OSVA ToolGateway cross-repo CI or operator acceptance on published tarball
 
 | Package | Ver. | `@osva-ai/connector-sdk` pin | Published | Test evidence (repo) | Credentials / controls | Known limitations |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -126,10 +126,10 @@ Repo-wide [`COMPATIBILITY.md`](https://github.com/Osva-AI/osva-examples/blob/mai
 
 **Target path (prioritized):**
 
-1. Published OSVA platform **1.1.1** (GHCR) + npm **`@osva-ai/cli@1.1.4`** (`osva setup --remote-http-dev` or equivalent).  
-2. Published **`@osva-ai/connector-npm@0.1.0`** (stdio or HTTP bridge per Example 19).  
-3. **Example 19** (research-report-agent) — closest **1.1.x** research workflow.  
-4. Model execution via ModelGateway (operator model credentials).  
+1. Published OSVA platform **1.1.1** (GHCR) + npm **`@osva-ai/cli@1.1.4`** (`osva setup --remote-http-dev` or equivalent).
+2. Published **`@osva-ai/connector-npm@0.1.0`** (stdio or HTTP bridge per Example 19).
+3. **Example 19** (research-report-agent) — closest **1.1.x** research workflow.
+4. Model execution via ModelGateway (operator model credentials).
 5. Artifact retrieval + run inspection (M17.8 evidence).
 
 ### Existing M17 evidence (do not duplicate)
