@@ -46,6 +46,7 @@ const AREA_RULE_IDS = new Set([
   "operator-diagnostics",
   "db-migrations",
   "compose-deploy",
+  "contributor-local-scripts",
   "documentation",
   "verification-harness",
   "app-surface",
@@ -65,6 +66,7 @@ const AREA_RULE_IDS = new Set([
  * @property {boolean} docsLinkCheck
  * @property {boolean} migrationIntegrity
  * @property {boolean} runHarnessTests
+ * @property {boolean} runContributorLocalScriptTests
  * @property {boolean} globalTurbo
  */
 
@@ -268,6 +270,9 @@ function matchRules(paths, packages) {
       normalized.startsWith("scripts/deployment/")
     ) {
       note("compose-deploy", normalized);
+    }
+    if (normalized.startsWith("scripts/local/")) {
+      note("contributor-local-scripts", normalized);
     }
     if (
       normalized.startsWith("docs/") ||
@@ -630,6 +635,10 @@ export async function buildVerificationPlan(paths, options = {}) {
     startsWithAny(file, ["scripts/verification/"]),
   );
 
+  const runContributorLocalScriptTests = matchedSpecific.has(
+    "contributor-local-scripts",
+  );
+
   const prettierPaths = paths.filter((file) => {
     try {
       return isPrettierPath(file);
@@ -652,6 +661,7 @@ export async function buildVerificationPlan(paths, options = {}) {
     docsLinkCheck,
     migrationIntegrity,
     runHarnessTests,
+    runContributorLocalScriptTests,
     globalTurbo: affected.global,
   };
 }

@@ -2,6 +2,9 @@
 # Credentials and published ports are not production-safe.
 # Web and worker processes connect to PostgreSQL and Valkey.
 # Application containers are not part of this Compose file; run them with pnpm.
+#
+# Host PostgreSQL port: default 5432. Override with OSVA_POSTGRES_HOST_PORT or
+# gitignored docker-compose.override.yml (see docker-compose.override.example.yml).
 
 services:
   postgres:
@@ -12,7 +15,7 @@ services:
       POSTGRES_USER: osva
       POSTGRES_PASSWORD: osva
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${OSVA_POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - osva-postgres-data:/var/lib/postgresql/data
     healthcheck:

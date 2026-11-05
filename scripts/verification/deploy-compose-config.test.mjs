@@ -13,15 +13,21 @@ const REPO_ROOT = path.resolve(
 );
 const COMPOSE_DIR = path.join(REPO_ROOT, "deploy", "compose");
 
+/** @type {readonly string[]} */
+const COMPOSE_VALKEY_ENV_KEYS = ["OSVA_VALKEY_URL", "VALKEY_PASSWORD"];
+
 function composeConfigTestEnv(overrides = {}) {
-  const env = {
-    ...process.env,
+  const env = { ...process.env };
+  delete env.COMPOSE_PROJECT_NAME;
+  for (const key of COMPOSE_VALKEY_ENV_KEYS) {
+    delete env[key];
+  }
+  return {
+    ...env,
     POSTGRES_PASSWORD: "compose-config-test-password",
     OSVA_AUTH_SECRET: "compose-config-test-osva-auth-secret-32",
     ...overrides,
   };
-  delete env.COMPOSE_PROJECT_NAME;
-  return env;
 }
 
 describe("self-hosted compose distribution", () => {
@@ -118,6 +124,79 @@ describe("self-hosted compose distribution", () => {
     assert.doesNotMatch(result.stdout, /published: ["']?4317/);
     assert.doesNotMatch(result.stdout, /published: ["']?8889/);
     assert.match(result.stdout, /127\.0\.0\.1/);
+  });
+
+  it("clears inherited host Valkey exports before compose interpolation", () => {
+    const saved = Object.fromEntries(
+      COMPOSE_VALKEY_ENV_KEYS.map((key) => [key, process.env[key]]),
+    );
+    process.env.OSVA_VALKEY_URL = "redis://127.0.0.1:6379";
+    process.env.VALKEY_PASSWORD = "host-contributor-valkey-password";
+    try {
+      const testEnv = composeConfigTestEnv();
+      assert.equal(testEnv.OSVA_VALKEY_URL, undefined);
+      assert.equal(testEnv.VALKEY_PASSWORD, undefined);
+
+      const withAuth = composeConfigTestEnv({
+        VALKEY_PASSWORD: "compose-valkey-secret",
+        OSVA_VALKEY_URL: "redis://:compose-valkey-secret@valkey:6379",
+      });
+      assert.equal(withAuth.VALKEY_PASSWORD, "compose-valkey-secret");
+      assert.equal(
+        withAuth.OSVA_VALKEY_URL,
+        "redis://:compose-valkey-secret@valkey:6379",
+      );
+    } finally {
+      for (const key of COMPOSE_VALKEY_ENV_KEYS) {
+        const value = saved[key];
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    }
+  });
+
+  it("default compose config ignores contributor host Valkey environment", async () => {
+    const env = await loadEnvironment();
+    if (!env.docker?.version) {
+      console.log("SKIP compose host Valkey isolation test: Docker not found");
+      return;
+    }
+
+    const saved = Object.fromEntries(
+      COMPOSE_VALKEY_ENV_KEYS.map((key) => [key, process.env[key]]),
+    );
+    process.env.OSVA_VALKEY_URL = "redis://127.0.0.1:6379";
+    process.env.VALKEY_PASSWORD = "host-contributor-valkey-password";
+    try {
+      const composeCmd = env.docker.source ?? "docker";
+      const result = spawnSync(
+        composeCmd,
+        ["compose", "-f", path.join(COMPOSE_DIR, "compose.yml"), "config"],
+        {
+          cwd: COMPOSE_DIR,
+          encoding: "utf8",
+          env: composeConfigTestEnv(),
+        },
+      );
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      assert.match(result.stdout, /OSVA_VALKEY_URL: redis:\/\/valkey:6379/);
+      assert.doesNotMatch(
+        result.stdout,
+        /OSVA_VALKEY_URL: redis:\/\/127\.0\.0\.1:6379/,
+      );
+    } finally {
+      for (const key of COMPOSE_VALKEY_ENV_KEYS) {
+        const value = saved[key];
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    }
   });
 
   it("renders optional Valkey AUTH without changing the default no-auth topology", async () => {
