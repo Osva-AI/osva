@@ -360,6 +360,43 @@ async function runTargetedTests(pnpmSpec, target, records) {
   });
 }
 
+async function runContributorLocalScriptTests(records) {
+  const stage = "CONTRIBUTOR LOCAL SCRIPTS";
+  const started = Date.now();
+  console.log("");
+  console.log(`── ${stage} ──`);
+  const result = await runCommand(
+    process.execPath,
+    ["--test", "scripts/local/contributor-stack.security.test.mjs"],
+    { stdio: "inherit" },
+  );
+  const ms = Date.now() - started;
+  if (result.code !== 0) {
+    printPhaseResult(stage, "FAIL", ms);
+    records.push({
+      id: "contributor-local-scripts",
+      stage,
+      status: "FAIL",
+      durationMs: ms,
+      command: "node --test scripts/local/contributor-stack.security.test.mjs",
+    });
+    failStage(
+      stage,
+      process.execPath,
+      ["--test", "scripts/local/contributor-stack.security.test.mjs"],
+      result.code,
+    );
+  }
+  printPhaseResult(stage, "PASS", ms);
+  records.push({
+    id: "contributor-local-scripts",
+    stage,
+    status: "PASS",
+    durationMs: ms,
+    command: "node --test scripts/local/contributor-stack.security.test.mjs",
+  });
+}
+
 async function runHarnessTests(records) {
   const files = await listHarnessTestFiles();
   const stage = "HARNESS";
@@ -643,6 +680,10 @@ async function main() {
 
   if (plan.runHarnessTests) {
     await runHarnessTests(records);
+  }
+
+  if (plan.runContributorLocalScriptTests) {
+    await runContributorLocalScriptTests(records);
   }
 
   const dockerOk = await dockerAvailable(env, runSpec);

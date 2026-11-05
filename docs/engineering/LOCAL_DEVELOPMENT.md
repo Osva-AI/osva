@@ -262,7 +262,9 @@ From repository root:
 pnpm infra:up
 ```
 
-Uses root [`docker-compose.yml`](../../docker-compose.yml) (PostgreSQL 17 + Valkey 8.1.10 on `127.0.0.1:5432` and `6379`).
+Uses root [`docker-compose.yml`](../../docker-compose.yml) (PostgreSQL 17 + Valkey 8.1.10 on `127.0.0.1:5432` by default and `6379`).
+
+**PostgreSQL host port override:** when another service already binds `5432`, set `OSVA_POSTGRES_HOST_PORT` (for example `5433`) before `pnpm infra:up`, or copy [`docker-compose.override.example.yml`](../../docker-compose.override.example.yml) to gitignored `docker-compose.override.yml`. Export the same port in `OSVA_DATABASE_URL` in every app shell (see [`scripts/local/README.md`](../../scripts/local/README.md)).
 
 Routine shutdown (**preserves volumes**):
 
@@ -309,6 +311,8 @@ pnpm dev:workflow-orchestrator
 ```
 
 Optional: `pnpm dev:knowledge-worker`, `pnpm dev:mcp-server`, `pnpm dev:console`.
+
+**Windows (optional):** [`scripts/local/start-contributor-stack.ps1`](../../scripts/local/start-contributor-stack.ps1) starts web, worker, scheduler, and workflow-orchestrator with logs under `.osva/logs/` and safe stop via `stop-contributor-stack.ps1`. REMOTE_HTTP private-network exceptions require `-RemoteHttpDev` (see [`REMOTE_HTTP_LOCAL_AGENT_SETUP.md`](./REMOTE_HTTP_LOCAL_AGENT_SETUP.md)).
 
 Control plane URL on the host: **`http://127.0.0.1:3000`** (unless you changed `OSVA_WEB_PORT`).
 

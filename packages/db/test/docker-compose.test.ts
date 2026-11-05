@@ -18,6 +18,7 @@ describe("local Docker Compose topology", () => {
     expect(compose).toContain("POSTGRES_DB: osva");
     expect(compose).toContain("POSTGRES_USER: osva");
     expect(compose).toContain("POSTGRES_PASSWORD: osva");
+    expect(compose).toContain("${OSVA_POSTGRES_HOST_PORT:-5432}:5432");
     expect(compose).not.toMatch(/^[\t ]+web:/m);
     expect(compose).not.toMatch(/^[\t ]+worker:/m);
   });
