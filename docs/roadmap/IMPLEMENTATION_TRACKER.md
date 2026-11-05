@@ -132,7 +132,7 @@ See [`../implementation/M17-REAL-WORLD-AGENT-ADOPTION-AND-PUBLIC-DISTRIBUTION.md
 - ✅ M17.9 Coordinated npm **1.1.4** release — PR **#78** → **`f9fa20e`** · [`../release/M17_9_NPM_RELEASE_READINESS.md`](../release/M17_9_NPM_RELEASE_READINESS.md)
 - ✅ M17 closeout — acceptance/closeout summaries; npm **`latest`** / **`stable-candidate`** → **1.1.4**
 
-**M17 acceptance vs distribution:** Milestone **acceptance** is **complete (scoped)**. Platform remains **1.1.1**; public npm line is **1.1.4**; Python SDK remains **1.1.1** on PyPI. M17.9 install smoke **does not** supersede M17.8 workflow evidence. **`m16-111`** harness npm pin (**1.1.2**) refresh remains **open** maintenance.
+**M17 acceptance vs distribution:** Milestone **acceptance** is **complete (scoped)**. Platform remains **1.1.1**; public npm line is **1.1.4**; Python SDK remains **1.1.1** on PyPI. M17.9 install smoke **does not** supersede M17.8 workflow evidence. Registry harness default **`m17-114`** (npm **1.1.4**) added in M19.6; **`m16-111`** retained for historical replay.
 
 ## M18 — Console UX V2 (product experience)
 
@@ -157,9 +157,9 @@ See [`../operations/M18_ACCEPTANCE_SUMMARY.md`](../operations/M18_ACCEPTANCE_SUM
 
 See [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md).
 
-- ⬜ M19.1 Ecosystem compatibility documentation refresh (**1.1.4** / platform **1.1.1** truth)
-- ⬜ M19.2 Example 19 external-consumer harness (npm-only; complements M17.8)
-- ⬜ M19.3 Connector SDK alignment and targeted npm publication (6/15 published today)
+- ⬜ M19.1 Ecosystem compatibility documentation refresh (**1.1.4** / platform **1.1.1** truth) — **pending cross-repository closeout** (osva docs updated on `feat/m19-core-compat-integration`)
+- ✅ M19.2 Example 19 external-consumer harness — [osva-examples PR #12](https://github.com/Osva-AI/osva-examples/pull/12)
+- ⬜ M19.3 Connector SDK alignment and targeted npm publication (**5/15** published on npm per M19 audit)
 - ⬜ M19.4 osva-examples **1.1.x** track (01–18 still on **1.0.0**)
 - ⬜ M19.5 Adapters + runtime-cli-sidecar distribution strategy
-- ⬜ M19.6 Integration hardening (`m16-111` pin refresh; M13.7.5 combined-run flake)
+- ✅ M19.6 M19.6 implementation complete; integration closeout pending combined browser verification and registry acceptance evidence.

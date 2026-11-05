@@ -111,7 +111,7 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
       });
       await launchEvaluationFromPage(page);
 
-      await waitForEvaluationRunStatus(page, "COMPLETED");
+      await waitForEvaluationRunStatus(page, "COMPLETED", { stack });
       await waitForGateVerdictLabel(page, "Pass");
 
       const runId = evaluationRunIdFromPage(page);
@@ -123,7 +123,7 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
       await browser.close();
       await stack.close();
     }
-  }, 240_000);
+  });
 
   it("scenario B: quality gate FAIL explains threshold violation while run completes", async () => {
     const chromium = await launchChromium();
@@ -168,7 +168,7 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
       });
       await launchEvaluationFromPage(page);
 
-      await waitForEvaluationRunStatus(page, "COMPLETED");
+      await waitForEvaluationRunStatus(page, "COMPLETED", { stack });
       await waitForGateVerdictLabel(page, "Fail");
 
       expect(
@@ -196,7 +196,7 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
       await browser.close();
       await stack.close();
     }
-  }, 240_000);
+  });
 
   it("scenario C: cost gate is INDETERMINATE when pricing evidence is incomplete", async () => {
     const chromium = await launchChromium();
@@ -239,7 +239,7 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
       });
       await launchEvaluationFromPage(page);
 
-      await waitForEvaluationRunStatus(page, "COMPLETED");
+      await waitForEvaluationRunStatus(page, "COMPLETED", { stack });
       await waitForGateVerdictLabel(page, "Indeterminate");
 
       expect(
@@ -333,13 +333,13 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
         },
       });
 
-      await waitForEvaluationRunStatus(page, "COMPLETED");
+      await waitForEvaluationRunStatus(page, "COMPLETED", { stack });
       await waitForGateVerdictLabel(page, "Pass");
     } finally {
       await browser.close();
       await stack.close();
     }
-  }, 240_000);
+  });
 
   it("persists gate verdict across browser refresh", async () => {
     const chromium = await launchChromium();
@@ -378,7 +378,7 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
         thresholdDisplay: "100",
       });
       await launchEvaluationFromPage(page);
-      await waitForEvaluationRunStatus(page, "COMPLETED");
+      await waitForEvaluationRunStatus(page, "COMPLETED", { stack });
       await waitForGateVerdictLabel(page, "Pass");
 
       const runId = evaluationRunIdFromPage(page);
@@ -401,7 +401,7 @@ describe("M13.7.5 browser acceptance (Evaluation quality gates)", () => {
       await browser.close();
       await stack.close();
     }
-  }, 240_000);
+  });
 
   it("does not allow viewers to launch gated evaluations", async () => {
     const chromium = await launchChromium();

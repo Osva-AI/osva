@@ -4,11 +4,11 @@ Proves the full M16 journey using **published** npm and GHCR artifacts (Stage B)
 
 ## Stage B (published artifacts)
 
-Prerequisites: maintainer publication of platform **1.1.1** and npm **`@osva-ai/*@1.1.2`**, digests recorded on target **`m16-111`**.
+Prerequisites: maintainer publication of platform **1.1.1** and npm **`@osva-ai/*@1.1.4`**, digests recorded on target **`m17-114`**. Historical M16 npm **1.1.2** replay uses **`m16-111`**.
 
 ```powershell
 $env:OSVA_M16_REGISTRY_ACCEPTANCE = "1"
-$env:OSVA_REGISTRY_ACCEPTANCE_TARGET = "m16-111"
+$env:OSVA_REGISTRY_ACCEPTANCE_TARGET = "m17-114"
 $env:OSVA_M16_ARTIFACT_SOURCE = "published"
 $env:OSVA_ACCEPTANCE_LIVE = "1"
 pnpm acceptance:m16-registry

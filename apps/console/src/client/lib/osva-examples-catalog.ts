@@ -517,7 +517,7 @@ export const OSVA_EXAMPLE_CATALOG: readonly OsvaExampleCatalogEntry[] = [
     ],
     osvaVersion: "1.1.x",
     limitations: [
-      "Targets 1.1.x APIs—repo-wide osva-examples baseline remains 1.0.0.",
+      "Example package pins @osva-ai/sdk, contracts, and connector-sdk at 1.1.4; repo-wide osva-examples COMPATIBILITY.md still documents the 1.0.0 legacy track for examples 01–18.",
       "Live model output is non-deterministic unless using the documented fixture package.",
       "Loopback HTTP MCP bridge is example-local glue for REMOTE_HTTP demos.",
     ],

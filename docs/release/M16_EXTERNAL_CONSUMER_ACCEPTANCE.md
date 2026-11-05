@@ -4,7 +4,7 @@
 |-------|------------------------------|--------------------------------|
 | Version matrix | [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md) | Same coordinates on npm/PyPI/GHCR |
 | npm CLI M16 commands | `pnpm release:npm-pack-smoke` + local-pack harness | `pnpm acceptance:m16-registry` with **`OSVA_M16_ARTIFACT_SOURCE=published`** |
-| OCI entrypoints | `node scripts/deployment/verify-installation-image.mjs` | GHCR digest audit in target **`m16-111`** |
+| OCI entrypoints | `node scripts/deployment/verify-installation-image.mjs` | GHCR digest audit in target **`m17-114`** (current) or **`m16-111`** (historical) |
 | Install + onboarding + agent run | `acceptance:m16-registry` local-pack | Registry install group |
 | Lifecycle | `acceptance:m16-4-lifecycle` or registry lifecycle group | Registry lifecycle group |
 | **1.1.0 → 1.1.1 upgrade** | Registry **`upgrade`** group (local target image override) | Published **`1.1.0`** + **`1.1.1`** GHCR tags |
@@ -14,12 +14,12 @@
 | Artifact | Version / ref |
 |----------|----------------|
 | Platform (GHCR) | **`1.1.1`** — `ghcr.io/osva-ai/osva:1.1.1` |
-| npm (`@osva-ai/cli` and workspace packages) | **`1.1.2`** |
+| npm (`@osva-ai/cli` and workspace packages) | **`1.1.4`** (current **`latest`**); M16 Stage B recorded **`1.1.2`** on target **`m16-111`** |
 | PyPI (`osva-sdk`) | **`1.1.1`** |
 | Git tag | **`v1.1.1`** |
 | Release commit | **`20dbdb8fd52f13ff0368679ff4d6aa6edb3aa814`** |
 
-Recorded registry digests and PyPI hashes for replay audits live in **`scripts/acceptance/r11-registry-only/lib/targets.mjs`** (`M16_111_TARGET`, `registryArtifactsReady: true`).
+Recorded registry digests and PyPI hashes for replay audits live in **`scripts/acceptance/r11-registry-only/lib/targets.mjs`** (`M17_114_TARGET` default, `M16_111_TARGET` for historical npm **1.1.2** replay).
 
 ## Stage B evidence (published-only)
 
@@ -27,7 +27,7 @@ Recorded registry digests and PyPI hashes for replay audits live in **`scripts/a
 
 ```text
 OSVA_M16_REGISTRY_ACCEPTANCE=1
-OSVA_REGISTRY_ACCEPTANCE_TARGET=m16-111
+OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114
 OSVA_M16_ARTIFACT_SOURCE=published
 OSVA_ACCEPTANCE_LIVE=1
 OSVA_M16_GROUPS=preflight,install,lifecycle,upgrade

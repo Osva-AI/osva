@@ -2,13 +2,13 @@
 
 **Current platform preparation target:** **`1.1.1`** (M16 installer, Console compose, lifecycle, upgrade). See [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md).
 
-**Published platform line:** **`1.1.1`** on GHCR/PyPI (M16 registry-verified). **Published npm `latest` / `stable-candidate`:** **`1.1.4`** (five `@osva-ai/*` packages; M17.9). M16 external-consumer harness still records npm **`1.1.2`** until refreshed.
+**Published platform line:** **`1.1.1`** on GHCR/PyPI (M16 registry-verified). **Published npm `latest` / `stable-candidate`:** **`1.1.4`** (five `@osva-ai/*` packages; M17.9). Current registry harness default: **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1** + npm **1.1.4**). Historical M16 Stage B evidence remains on target **`m16-111`** (npm **1.1.2**).
 
 **Last registry-verified prerelease:** **`1.1.0-rc.4`** (git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`**). Evidence: [`M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md), [`R1_1_DISTRIBUTION_CLOSEOUT.md`](R1_1_DISTRIBUTION_CLOSEOUT.md).
 
 **npm (RC.4 verified):** all five public packages publish **`1.1.0-rc.4`** on dist-tag **`rc`**.
 
-**npm (stable corrective, registry-verified):** dist-tags **`latest`** and **`stable-candidate`** → **1.1.1** on all five `@osva-ai/*` packages; **`rc`** → **1.1.0-rc.4**. Platform **1.1.0** on PyPI/GHCR unchanged. Do not install defective **`@1.1.0`** npm tarballs — see [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md).
+**npm (current stable, registry-verified):** dist-tags **`latest`** and **`stable-candidate`** → **1.1.4** on all five `@osva-ai/*` packages; **`rc`** → **1.1.0-rc.4**. Intermediate npm **1.1.1** / **1.1.2** / **1.1.3** tarballs remain on the registry for historical installs. Do not install defective **`@1.1.0`** npm tarballs — see [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md).
 
 **PyPI and GHCR (RC.4 verified):** **`pip install osva-sdk==1.1.0rc4`**; **`ghcr.io/osva-ai/osva:1.1.0-rc.4`** (OCI index **`sha256:59148d75…`**, **linux/amd64**). Stable **`1.1.0`** coordinates are **declared** in source but **not registry-verified** until publication and [`acceptance:r11-registry`](../../scripts/acceptance/r11-registry-only/README.md) stable target readiness is updated.
 
@@ -36,7 +36,12 @@ Historical OSS **1.0.0** policy remains in git tag **`v1.0.0`** and [`CHANGELOG.
 
 RC.4 registry acceptance **does not** prove stable **`1.1.0`** binaries. Stable qualification requires post-publication registry-only replay (`OSVA_REGISTRY_ACCEPTANCE_TARGET=stable`).
 
-M16 external-consumer proof requires **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m16-111`** after platform **1.1.1** and npm **1.1.2** publish ([`M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](M16_EXTERNAL_CONSUMER_ACCEPTANCE.md)).
+M16/M17 external-consumer proof uses published artifacts:
+
+- **Current line:** **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1**, npm **1.1.4**).
+- **Historical M16 replay:** **`m16-111`** (npm **1.1.2**).
+
+See [`M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](M16_EXTERNAL_CONSUMER_ACCEPTANCE.md).
 
 ## HTTP API
 
