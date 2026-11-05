@@ -99,6 +99,22 @@ export function evaluationRunIdFromPage(page: Page): string {
   return match[1];
 }
 
+export interface EvaluationRunStatusSyncState {
+  readonly expected: string;
+  readonly apiStatus: string | null;
+  readonly uiShowsExpected: boolean;
+}
+
+/** Pure completion rule for evaluation run status polling (API + UI when stack is used). */
+export function evaluationRunStatusSyncComplete(
+  expected: string,
+  state: Pick<EvaluationRunStatusSyncState, "apiStatus" | "uiShowsExpected">,
+  options: { readonly requireApi: boolean },
+): boolean {
+  const apiOk = !options.requireApi || state.apiStatus === expected;
+  return apiOk && state.uiShowsExpected;
+}
+
 export async function waitForEvaluationRunStatus(
   page: Page,
   expected: string,
@@ -109,21 +125,18 @@ export async function waitForEvaluationRunStatus(
 ): Promise<void> {
   const deadlineMs = options?.deadlineMs ?? 180_000;
   const stack = options?.stack;
+  const requireApi = stack !== undefined;
   await pollUntil({
     label: `evaluation run status ${expected}`,
     deadlineMs,
     intervalMs: 1_000,
     probe: async () => {
+      let apiStatus: string | null = null;
       if (stack !== undefined) {
         try {
           const runId = evaluationRunIdFromPage(page);
           const detail = await fetchEvaluationRunDetail(stack, runId);
-          if (detail.status === expected) {
-            return {
-              done: true,
-              lastState: { source: "api", status: detail.status },
-            };
-          }
+          apiStatus = detail.status;
         } catch {
           // Detail URL or run id not ready yet; fall back to UI polling.
         }
@@ -136,14 +149,21 @@ export async function waitForEvaluationRunStatus(
         await page.getByRole("button", { name: "Refresh" }).click();
       }
       const statusPanel = runStatusPanel(page);
-      const visible = await statusPanel
+      const uiShowsExpected = await statusPanel
         .getByText(expected, { exact: true })
         .first()
         .isVisible()
         .catch(() => false);
+      const lastState: EvaluationRunStatusSyncState = {
+        expected,
+        apiStatus,
+        uiShowsExpected,
+      };
       return {
-        done: visible,
-        lastState: { source: "ui", expected, visible },
+        done: evaluationRunStatusSyncComplete(expected, lastState, {
+          requireApi,
+        }),
+        lastState,
       };
     },
   });
