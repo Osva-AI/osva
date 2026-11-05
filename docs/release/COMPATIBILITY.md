@@ -2,7 +2,9 @@
 
 **Current platform preparation target:** **`1.1.1`** (M16 installer, Console compose, lifecycle, upgrade). See [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md).
 
-**Published platform line:** **`1.1.1`** on GHCR/PyPI (M16 registry-verified). **Published npm `latest` / `stable-candidate`:** **`1.1.4`** (five `@osva-ai/*` packages; M17.9). Current registry harness default: **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1** + npm **1.1.4**). Historical M16 Stage B evidence remains on target **`m16-111`** (npm **1.1.2**).
+**Published platform line:** **`1.1.1`** on GHCR/PyPI (M16 registry-verified). **Published npm `latest` / `stable-candidate`:** **`1.1.4`** (five `@osva-ai/*` packages; M17.9). Current registry harness default: **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1** + npm **1.1.4**; live acceptance **38/38 PASS** at M19 closeout). Historical M16 Stage B evidence remains on target **`m16-111`** (npm **1.1.2**).
+
+**M19 ecosystem npm (sibling repositories, verified 2026-11-06):** eleven additional public packages — three **osva-adapters** releases (`adapter-artifact-memory` / `adapter-artifact-azure` **0.1.2**, `runtime-cli-sidecar` **0.1.0**) and eight **osva-connectors** releases (Wave 1 + SDK **1.1.4** realignment). Inventory: [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY.md) §5 · [osva-connectors M19_PUBLICATION_RECORD](https://github.com/Osva-AI/osva-connectors/blob/main/docs/M19_PUBLICATION_RECORD.md) · [osva-adapters COMPATIBILITY](https://github.com/Osva-AI/osva-adapters/blob/main/COMPATIBILITY.md).
 
 **Last registry-verified prerelease:** **`1.1.0-rc.4`** (git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`**). Evidence: [`M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md), [`R1_1_DISTRIBUTION_CLOSEOUT.md`](R1_1_DISTRIBUTION_CLOSEOUT.md).
 

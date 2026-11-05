@@ -159,9 +159,9 @@ See [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY
 
 - ✅ M19.1 Cross-repository compatibility documentation aligned (**1.1.4** npm / platform **1.1.1**) — osva PR **#94** → **`95d6fb0`**; [osva-examples PR #13](https://github.com/Osva-AI/osva-examples/pull/13) → **`a52892b`**; [osva-connectors PR #14](https://github.com/Osva-AI/osva-connectors/pull/14) → **`f2b2757`**; [osva-adapters PR #11](https://github.com/Osva-AI/osva-adapters/pull/11) → **`f4103ac`**
 - ✅ M19.2 Example 19 external-consumer harness — [osva-examples PR #12](https://github.com/Osva-AI/osva-examples/pull/12) → **`9a0ea78`**
-- ✅ M19.3 Connector SDK **1.1.4** alignment and publication preparation — [osva-connectors PR #14](https://github.com/Osva-AI/osva-connectors/pull/14); **npm publication acceptance not complete** (**5/15** on registry; Wave 1 + realignment pending)
+- ✅ M19.3 Connector SDK **1.1.4** alignment and **npm publication** — **8** connector packages (Wave 1 + realignment); see [M19 closeout](../operations/M19_CLOSEOUT_SUMMARY.md) §6
 - ✅ M19.4 Dual-track examples compatibility documented — Examples **01–18** on **1.0.0**; Example **19** on **`@osva-ai/*@1.1.4`** — [osva-examples PR #13](https://github.com/Osva-AI/osva-examples/pull/13)
-- ✅ M19.5 Adapter/sidecar compatibility and packaging — [osva-adapters PR #11](https://github.com/Osva-AI/osva-adapters/pull/11); repo **`0.1.2`** artifact adapters + sidecar **`0.1.0`** package-ready; **external npm publication pending**
-- ✅ M19.6 Integration hardening (osva) — osva PR **#94** → **`95d6fb0`** (`m17-114` default, M13.7.5 polling/timeouts); **combined** `verify:branch --profile=integration` and live **`m17-114`** registry replay **not run** in closeout (see closeout summary)
+- ✅ M19.5 Adapter/sidecar **npm publication** — **`0.1.2`** artifact adapters (**`latest`** promoted) + **`runtime-cli-sidecar@0.1.0`**
+- ✅ M19.6 Integration hardening and acceptance — osva PR **#94** + **#96** → **`cb46caf`**; live **`m17-114`** **38/38**; M13.7.5 browser **6/6** + helpers **4/4**
 
-**M19 acceptance vs distribution:** Milestone **implementation complete (scoped)**. Coordinated ecosystem **npm publication**, live **`m17-114`** registry acceptance, and combined M13.7.5 browser integration remain **release gates** — not claimed passed in this closeout.
+**M19 acceptance vs distribution:** Milestone **complete (scoped)**. Eleven-package npm wave, live registry acceptance, and browser suite executed per [`M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY.md). Combined integration-profile Turbo on documentation-only branches is **not** equivalent evidence and was **not** re-run for final closeout.

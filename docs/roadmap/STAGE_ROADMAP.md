@@ -125,11 +125,11 @@ Cross-repository closeout: [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operatio
 | --- | --- |
 | **M19.1** | **Complete** — compatibility matrices aligned across osva, osva-examples, osva-connectors, osva-adapters |
 | **M19.2** | **Complete** — Example 19 external-consumer harness merged |
-| **M19.3** | **Complete (package-ready)** — SDK **1.1.4** in connector source; **npm Wave 1 + realignment publication pending** |
+| **M19.3** | **Complete** — **8** connector npm releases with **`connector-sdk@1.1.4`** |
 | **M19.4** | **Complete** — dual-track examples policy (01–18 **1.0.0**, 19 **1.1.4**) |
-| **M19.5** | **Complete (package-ready)** — adapters **`0.1.2`** + sidecar **`0.1.0`** in repo; **npm publication pending** |
-| **M19.6** | **Implementation complete** — registry target **`m17-114`**, M13.7.5 hardening; **combined browser + live registry replay outstanding** |
+| **M19.5** | **Complete** — adapters **`0.1.2`** + sidecar **`0.1.0`** published; artifact **`latest`** promoted |
+| **M19.6** | **Complete** — live **`m17-114`** **38/38**; M13.7.5 browser **6/6**; sync fix **#96** |
 
-**Not implied by M19 closeout:** automatic npm publish on merge; live **`acceptance:m16-registry`** on **`m17-114`**; full **`m13-7-5-browser.integration.test.ts`** (6/6) under combined integration profile.
+**M19 milestone:** **Complete (scoped)** — see [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY.md).
 
-Still ahead (post-M19 execution): ecosystem npm publication wave, **`m17-114`** registry sign-off, optional combined integration re-run, then deeper isolation, richer AI Office, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).
+Still ahead (post-M19): seven source-only connectors; legacy example migration to **1.1.x**; deeper isolation, richer AI Office, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).
