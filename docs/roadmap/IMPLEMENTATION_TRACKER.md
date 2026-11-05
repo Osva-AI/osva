@@ -153,13 +153,15 @@ See [`../operations/M18_ACCEPTANCE_SUMMARY.md`](../operations/M18_ACCEPTANCE_SUM
 
 **M18 acceptance vs verification:** Milestone **feature-complete**. **Combined** local `verify:branch --profile=integration` for the V2.7 diff did **not** achieve **LOCAL_PASS** (M13.7.5 scenario A timeout under combined run; **PASS** in isolation per PR **#91**). Full accessibility/performance certification **not** claimed.
 
-## M19 — Ecosystem readiness (planned)
+## M19 — Ecosystem readiness
 
-See [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md).
+See [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY.md) · [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md).
 
-- ⬜ M19.1 Ecosystem compatibility documentation refresh (**1.1.4** / platform **1.1.1** truth) — **pending cross-repository closeout** (osva docs updated on `feat/m19-core-compat-integration`)
-- ✅ M19.2 Example 19 external-consumer harness — [osva-examples PR #12](https://github.com/Osva-AI/osva-examples/pull/12)
-- ⬜ M19.3 Connector SDK alignment and targeted npm publication (**5/15** published on npm per M19 audit)
-- ⬜ M19.4 osva-examples **1.1.x** track (01–18 still on **1.0.0**)
-- ⬜ M19.5 Adapters + runtime-cli-sidecar distribution strategy
-- ✅ M19.6 M19.6 implementation complete; integration closeout pending combined browser verification and registry acceptance evidence.
+- ✅ M19.1 Cross-repository compatibility documentation aligned (**1.1.4** npm / platform **1.1.1**) — osva PR **#94** → **`95d6fb0`**; [osva-examples PR #13](https://github.com/Osva-AI/osva-examples/pull/13) → **`a52892b`**; [osva-connectors PR #14](https://github.com/Osva-AI/osva-connectors/pull/14) → **`f2b2757`**; [osva-adapters PR #11](https://github.com/Osva-AI/osva-adapters/pull/11) → **`f4103ac`**
+- ✅ M19.2 Example 19 external-consumer harness — [osva-examples PR #12](https://github.com/Osva-AI/osva-examples/pull/12) → **`9a0ea78`**
+- ✅ M19.3 Connector SDK **1.1.4** alignment and publication preparation — [osva-connectors PR #14](https://github.com/Osva-AI/osva-connectors/pull/14); **npm publication acceptance not complete** (**5/15** on registry; Wave 1 + realignment pending)
+- ✅ M19.4 Dual-track examples compatibility documented — Examples **01–18** on **1.0.0**; Example **19** on **`@osva-ai/*@1.1.4`** — [osva-examples PR #13](https://github.com/Osva-AI/osva-examples/pull/13)
+- ✅ M19.5 Adapter/sidecar compatibility and packaging — [osva-adapters PR #11](https://github.com/Osva-AI/osva-adapters/pull/11); repo **`0.1.2`** artifact adapters + sidecar **`0.1.0`** package-ready; **external npm publication pending**
+- ✅ M19.6 Integration hardening (osva) — osva PR **#94** → **`95d6fb0`** (`m17-114` default, M13.7.5 polling/timeouts); **combined** `verify:branch --profile=integration` and live **`m17-114`** registry replay **not run** in closeout (see closeout summary)
+
+**M19 acceptance vs distribution:** Milestone **implementation complete (scoped)**. Coordinated ecosystem **npm publication**, live **`m17-114`** registry acceptance, and combined M13.7.5 browser integration remain **release gates** — not claimed passed in this closeout.
