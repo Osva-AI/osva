@@ -117,8 +117,19 @@ Delivered the **UX V2** Console product line: design foundation (M18.1–M18.5),
 
 **Not implied by M18:** unconditional **`verify:branch --profile=integration` LOCAL_PASS** on a V2.7-sized diff; WCAG/Lighthouse certification; platform or npm version changes.
 
-### M19 — Ecosystem readiness (next)
+### M19 — Ecosystem readiness
 
-Cross-repository audit and execution plan: [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md). Prioritized slices **M19.1–M19.6** (compatibility truth, Example 19 external harness, connector publication/SDK alignment, examples **1.1.x** track, adapters/sidecar distribution, integration hardening).
+Cross-repository closeout: [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY.md) · audit baseline [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md).
 
-Still ahead (post-M19): deeper isolation, richer AI Office, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).
+| Slice | Status |
+| --- | --- |
+| **M19.1** | **Complete** — compatibility matrices aligned across osva, osva-examples, osva-connectors, osva-adapters |
+| **M19.2** | **Complete** — Example 19 external-consumer harness merged |
+| **M19.3** | **Complete (package-ready)** — SDK **1.1.4** in connector source; **npm Wave 1 + realignment publication pending** |
+| **M19.4** | **Complete** — dual-track examples policy (01–18 **1.0.0**, 19 **1.1.4**) |
+| **M19.5** | **Complete (package-ready)** — adapters **`0.1.2`** + sidecar **`0.1.0`** in repo; **npm publication pending** |
+| **M19.6** | **Implementation complete** — registry target **`m17-114`**, M13.7.5 hardening; **combined browser + live registry replay outstanding** |
+
+**Not implied by M19 closeout:** automatic npm publish on merge; live **`acceptance:m16-registry`** on **`m17-114`**; full **`m13-7-5-browser.integration.test.ts`** (6/6) under combined integration profile.
+
+Still ahead (post-M19 execution): ecosystem npm publication wave, **`m17-114`** registry sign-off, optional combined integration re-run, then deeper isolation, richer AI Office, advanced policy, OIDC (Community), and Teams/Enterprise identity (SAML/SCIM).
