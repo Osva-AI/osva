@@ -1,5 +1,7 @@
 # External Ecosystem Compatibility (M12.4)
 
+> **Version and publication facts:** For current npm (**1.1.4**), platform (**1.1.1**), connector publication counts, and M19 execution status, use [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md) and [`../release/COMPATIBILITY.md`](../release/COMPATIBILITY.md). This file remains the **integration boundary** reference (ToolGateway, contracts, ownership).
+
 This document records the M12.4.1 audit of cross-repository integration boundaries among:
 
 | Repository | Role |

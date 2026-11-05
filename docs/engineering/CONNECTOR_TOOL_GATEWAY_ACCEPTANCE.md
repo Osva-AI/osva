@@ -129,9 +129,21 @@ Required osva-connectors changes (no OSVA core provider code):
 3. Expose a read-only MCP tool suitable for happy-path invoke (connection test tool).
 4. Pin a commit SHA in a new reusable workflow `workflow_call` row when ready.
 
+## MCP stdio operator setup (production)
+
+Stdio MCP connectors are **disabled by default**. Operators must opt in on **web**, **worker**, and **mcp-server** processes:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| [`OSVA_MCP_STDIO_CONNECTORS_ENABLED`](../deployment/CONFIGURATION.md) | `false` | Allow subprocess stdio MCP connectors |
+| [`OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS`](../deployment/CONFIGURATION.md) | `false` | Allow private-network MCP destinations (HTTP and related paths) |
+
+Security expectations for stdio gates and outbound policy are covered in §Security expectations above. Example 19 (osva-examples) documents a stdio **`connector-npm`** path; see [`../operations/M19_ECOSYSTEM_READINESS_AUDIT.md`](../operations/M19_ECOSYSTEM_READINESS_AUDIT.md) §7 for external-consumer evidence.
+
 ## Related documents
 
 - [EXTERNAL_ECOSYSTEM_COMPATIBILITY.md](../architecture/EXTERNAL_ECOSYSTEM_COMPATIBILITY.md)
 - [CONNECTOR_PROFILE_V1.md](../contracts/CONNECTOR_PROFILE_V1.md)
 - [TOOL_CONTRACT.md](../contracts/TOOL_CONTRACT.md)
+- [CONFIGURATION.md](../deployment/CONFIGURATION.md) — MCP stdio and private-network flags
 - [DEVELOPMENT_GATES.md](./DEVELOPMENT_GATES.md)

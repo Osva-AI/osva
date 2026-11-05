@@ -102,13 +102,32 @@ export function evaluationRunIdFromPage(page: Page): string {
 export async function waitForEvaluationRunStatus(
   page: Page,
   expected: string,
-  deadlineMs = 180_000,
+  options?: {
+    readonly deadlineMs?: number;
+    readonly stack?: M12_3Stack;
+  },
 ): Promise<void> {
+  const deadlineMs = options?.deadlineMs ?? 180_000;
+  const stack = options?.stack;
   await pollUntil({
     label: `evaluation run status ${expected}`,
     deadlineMs,
     intervalMs: 1_000,
     probe: async () => {
+      if (stack !== undefined) {
+        try {
+          const runId = evaluationRunIdFromPage(page);
+          const detail = await fetchEvaluationRunDetail(stack, runId);
+          if (detail.status === expected) {
+            return {
+              done: true,
+              lastState: { source: "api", status: detail.status },
+            };
+          }
+        } catch {
+          // Detail URL or run id not ready yet; fall back to UI polling.
+        }
+      }
       const refreshVisible = await page
         .getByRole("button", { name: "Refresh" })
         .isVisible()
@@ -122,7 +141,10 @@ export async function waitForEvaluationRunStatus(
         .first()
         .isVisible()
         .catch(() => false);
-      return { done: visible, lastState: { expected, visible } };
+      return {
+        done: visible,
+        lastState: { source: "ui", expected, visible },
+      };
     },
   });
 }

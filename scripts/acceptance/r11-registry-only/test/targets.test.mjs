@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   M16_111_TARGET,
+  M17_114_TARGET,
   RC4_TARGET,
   STABLE_110_TARGET,
   STABLE_NPM_111_TARGET,
@@ -33,17 +34,38 @@ describe("registry acceptance targets", () => {
     assert.equal(stableTargetReadiness(RC4_TARGET).blocked, false);
   });
 
-  it("blocks m16-111 until publication digests are recorded", () => {
-    assert.equal(stableTargetReadiness(M16_111_TARGET).blocked, true);
+  it("allows m16-111 when publication digests are recorded", () => {
+    assert.equal(stableTargetReadiness(M16_111_TARGET).blocked, false);
   });
 
-  it("resolves m16-111 target id", () => {
+  it("allows m17-114 current npm line on platform 1.1.1", () => {
+    assert.equal(stableTargetReadiness(M17_114_TARGET).blocked, false);
+    assert.equal(M17_114_TARGET.npmPackageVersion, "1.1.4");
+    assert.equal(M17_114_TARGET.productVersion, "1.1.1");
+  });
+
+  it("resolves m16-111 historical target id", () => {
     const prev = process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET;
     process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET = "m16-111";
     try {
       assert.equal(resolveAcceptanceTarget().id, "m16-111");
       assert.equal(resolveAcceptanceTarget().npmPackageVersion, "1.1.2");
       assert.equal(resolveAcceptanceTarget().productVersion, "1.1.1");
+    } finally {
+      if (prev === undefined) {
+        delete process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET;
+      } else {
+        process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET = prev;
+      }
+    }
+  });
+
+  it("resolves m17-114 current registry target id", () => {
+    const prev = process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET;
+    process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET = "m17-114";
+    try {
+      assert.equal(resolveAcceptanceTarget().id, "m17-114");
+      assert.equal(resolveAcceptanceTarget().npmPackageVersion, "1.1.4");
     } finally {
       if (prev === undefined) {
         delete process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET;

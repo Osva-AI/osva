@@ -34,7 +34,7 @@ Status: **Local acceptance complete** for M18.3 scope on branch `feat/m18-3-outc
 | `10-incident-response-worker` | 1.0.0 | Yes | Yes |
 | `11-growth-operations-worker` | 1.0.0 | Yes | Yes |
 | `16-knowledge-rag-agent` | 1.0.0 | Yes | Yes |
-| `19-research-report-agent` | **1.1.x** | Yes | Yes (example-local tests; live eval manual) |
+| `19-research-report-agent` | **1.1.4** (`@osva-ai/sdk` / `contracts` / `connector-sdk`) | Yes | Yes (example-local tests; M19.2 harness; live eval manual) |
 
 **Verification labels in UI**
 

@@ -99,11 +99,12 @@ export async function resolveM16Artifacts() {
   }
 
   const target = resolveAcceptanceTarget(
-    process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET ?? "m16-111",
+    process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET ?? "m17-114",
   );
-  if (target.id !== "m16-111") {
+  const allowedM16RegistryTargets = new Set(["m16-111", "m17-114"]);
+  if (!allowedM16RegistryTargets.has(target.id)) {
     throw new Error(
-      `M16 registry acceptance requires OSVA_REGISTRY_ACCEPTANCE_TARGET=m16-111 (got ${target.id})`,
+      `M16 registry acceptance requires OSVA_REGISTRY_ACCEPTANCE_TARGET=m16-111 or m17-114 (got ${target.id})`,
     );
   }
   assertTargetEnvGate(target);

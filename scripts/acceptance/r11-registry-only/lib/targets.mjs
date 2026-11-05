@@ -161,11 +161,48 @@ export const M16_111_TARGET = {
     "M16 installer + lifecycle + 1.1.0→1.1.1 upgrade. Prior platform image ghcr.io/osva-ai/osva:1.1.0.",
 };
 
+/**
+ * Current public npm line on M16 platform (1.1.1 GHCR/PyPI + npm 1.1.4).
+ * Same OCI/PyPI digests as {@link M16_111_TARGET}; npm coordinates only.
+ *
+ * @type {RegistryAcceptanceTarget}
+ */
+export const M17_114_TARGET = {
+  id: "m17-114",
+  productVersion: "1.1.1",
+  npmPackageVersion: "1.1.4",
+  pythonPyprojectVersion: "1.1.1",
+  pythonPep440: "1.1.1",
+  pipInstallSpec: "osva-sdk==1.1.1",
+  ghcrImageRef: "ghcr.io/osva-ai/osva:1.1.1",
+  ghcrIndexDigest:
+    "sha256:773817f4a2b2464cd75f4c64f3c1097e95eae53378e1548fae8a3b9fc148b824",
+  ghcrLinuxAmd64ManifestDigest:
+    "sha256:753963393bf0d339a3ec5ac2bc7e958f2c7def508b40d246ed22a3152d07d439",
+  pypiWheelSha256:
+    "7914d314577580204460a99464e4003c84d5c4e53df747ad0ee5272501631a4e",
+  pypiSdistSha256:
+    "7a4ac4ea31987b4bfc78077dbaabca7caff39d334fbb06cdf844f22bd4afedb4",
+  pypiWheelFilename: "osva_sdk-1.1.1-py3-none-any.whl",
+  pypiSdistFilename: "osva_sdk-1.1.1.tar.gz",
+  npmRegistryMode: "exact",
+  npmViewSelector: "1.1.4",
+  gitTag: "v1.1.1",
+  releaseCommit: "20dbdb8fd52f13ff0368679ff4d6aa6edb3aa814",
+  composeProject: "osva-m17-registry-114",
+  evidenceReleaseKey: "1.1.1-npm-1.1.4",
+  registryArtifactsReady: true,
+  envGateVar: "OSVA_M16_REGISTRY_ACCEPTANCE",
+  notes:
+    "M17.9 npm 1.1.4 on platform 1.1.1. Historical M16 registry proof remains on target m16-111 (npm 1.1.2).",
+};
+
 const TARGETS = {
   rc4: RC4_TARGET,
   stable: STABLE_110_TARGET,
   "stable-npm-111": STABLE_NPM_111_TARGET,
   "m16-111": M16_111_TARGET,
+  "m17-114": M17_114_TARGET,
 };
 
 /**
@@ -179,7 +216,7 @@ export function resolveAcceptanceTarget(
   const target = TARGETS[key];
   if (!target) {
     throw new Error(
-      `Unknown OSVA_REGISTRY_ACCEPTANCE_TARGET=${JSON.stringify(raw)} (expected rc4, stable, stable-npm-111, or m16-111)`,
+      `Unknown OSVA_REGISTRY_ACCEPTANCE_TARGET=${JSON.stringify(raw)} (expected rc4, stable, stable-npm-111, m16-111, or m17-114)`,
     );
   }
   return target;
