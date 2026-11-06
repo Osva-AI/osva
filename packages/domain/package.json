@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./builder": {
+      "types": "./dist/builder/index.d.ts",
+      "import": "./dist/builder/index.js"
+    },
     "./workflow-definition": {
       "types": "./dist/workflow-definition.d.ts",
       "import": "./dist/workflow-definition.js"

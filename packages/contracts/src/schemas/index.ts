@@ -223,6 +223,7 @@ export {
   workflowDefinitionV1Schema,
   workflowDefinitionV2NodeSchema,
   workflowDefinitionV2Schema,
+  workflowDefinitionV3Schema,
 } from "./workflow-definition.js";
 
 export {
