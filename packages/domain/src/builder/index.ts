@@ -45,3 +45,30 @@ export {
   compileBuilderProposalResolved,
   compileDeclarativeManifestFromNewAgent,
 } from "./builder-compiler.js";
+
+export type {
+  BuilderGenerationErrorCode,
+  BuilderGenerationFailureV1,
+  BuilderGenerationLimitsV1,
+  BuilderGenerationMetadataV1,
+  BuilderGenerationModelGatewayPort,
+  BuilderGenerationPreferencesV1,
+  BuilderGenerationSuccessV1,
+  GenerateBuilderProposalRequestV1,
+  GenerateBuilderProposalResultV1,
+} from "./builder-natural-language-generation-types.js";
+export {
+  BUILDER_GENERATION_PROMPT_VERSION,
+  DEFAULT_BUILDER_GENERATION_LIMITS,
+} from "./builder-natural-language-generation-types.js";
+
+export { buildBuilderGenerationMessages } from "./builder-natural-language-prompt.js";
+export { extractSingleJsonObject } from "./builder-generation-json-extract.js";
+export { validateProposalResourcePromptVisibility } from "./builder-generation-prompt-visibility.js";
+export { BuilderProposalOpenAiJsonSchema } from "./builder-proposal-openai-json-schema.js";
+export { modelProviderSupportsStructuredJsonSchema } from "./builder-provider-structured-output.js";
+
+export {
+  GenerateBuilderProposalFromNaturalLanguage,
+  type GenerateBuilderProposalFromNaturalLanguageDependencies,
+} from "./generate-builder-proposal-from-natural-language.js";

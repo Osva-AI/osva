@@ -31,10 +31,14 @@ OSVA needs an internal, deterministic path from **model-produced intent** (futur
 
 Publication (creating `AgentVersion` / `WorkflowVersion` rows) remains a separate control-plane write path (expected M20.4).
 
+## M20.2 addendum — NL generation service
+
+Natural-language generation orchestration lives in `@osva/domain/builder` as `GenerateBuilderProposalFromNaturalLanguage` (see `docs/implementation/M20-2-NATURAL-LANGUAGE-BUILDER-SERVICE.md`). It calls `ModelGateway.generateCompletion` from the **composition root** (injected port), uses M20.1 catalog + compiler, and rejects Anthropic generation profiles until structured JSON is supported there.
+
 ## Deferred (explicit)
 
-- Natural-language / LLM generation, Console wiring, conversational editing
-- Publication and execution changes
+- Console wiring, conversational editing (M20.3 / M20.5)
+- Publication and execution changes (M20.4)
 - Public HTTP or SDK surface for proposals
 - Enterprise governance beyond existing control-plane authorization
 
