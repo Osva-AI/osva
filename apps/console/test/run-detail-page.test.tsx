@@ -66,6 +66,17 @@ function defaultRunResponses(
   url: string,
   artifacts: unknown[],
 ): Response | undefined {
+  if (url.includes("/api/v1/runs/run-1/recovery")) {
+    return jsonResponse({
+      runId: "run-1",
+      runStatus: "SUCCEEDED",
+      eligible: false,
+      blockedOperations: [],
+    });
+  }
+  if (url.includes("/api/v1/runs/run-1/checkpoints")) {
+    return jsonResponse({ runId: "run-1", checkpoints: [] });
+  }
   if (url.includes("/api/v1/runs/run-1/attempts/ra-1/steps")) {
     return jsonResponse({ steps: [] });
   }
@@ -582,5 +593,219 @@ describe("RunDetailPage artifacts", () => {
     expect(screen.getByText(/PostgreSQL/)).toBeTruthy();
     expect(screen.queryByText(/worker-secret/)).toBeNull();
     expect(screen.queryByText(/postgres:\/\//)).toBeNull();
+  });
+});
+
+describe("RunDetailPage recovery", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("shows resume when recovery is eligible with checkpoint summary", async () => {
+    let resumeResolve!: (value: Response) => void;
+    const resumePromise = new Promise<Response>((resolve) => {
+      resumeResolve = resolve;
+    });
+
+    stubRunFetch((url) => {
+      if (url.endsWith("/api/v1/runs/run-1") && !url.includes("/attempts")) {
+        return jsonResponse({
+          id: "run-1",
+          agentId: "agent-1",
+          status: "INTERRUPTED",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:30.000Z",
+          input: { prompt: "hello" },
+          effectiveBindings: {
+            agentVersionId: "av-1",
+            modelProfileVersionBindings: {},
+            toolVersionBindings: {},
+          },
+        });
+      }
+      if (url.includes("/api/v1/runs/run-1/recovery")) {
+        return jsonResponse({
+          runId: "run-1",
+          runStatus: "INTERRUPTED",
+          eligible: true,
+          blockedOperations: [],
+          latestCheckpoint: {
+            id: "cp-1",
+            sequence: 1,
+            runAttemptId: "ra-1",
+            executionGeneration: 1,
+            envelopeVersion: "1",
+            cursorPhase: "after_model",
+            checkpointSequence: 1,
+            createdAt: "2026-01-01T00:00:10.000Z",
+          },
+        });
+      }
+      if (url.includes("/api/v1/runs/run-1/checkpoints")) {
+        return jsonResponse({
+          runId: "run-1",
+          checkpoints: [
+            {
+              id: "cp-1",
+              sequence: 1,
+              runAttemptId: "ra-1",
+              executionGeneration: 1,
+              envelopeVersion: "1",
+              cursorPhase: "after_model",
+              checkpointSequence: 1,
+              createdAt: "2026-01-01T00:00:10.000Z",
+            },
+          ],
+        });
+      }
+      const fallback = defaultRunResponses(url, []);
+      if (fallback !== undefined) {
+        return fallback;
+      }
+      if (
+        url === "/api/v1/runs/run-1/resume" ||
+        url.endsWith("/api/v1/runs/run-1/resume")
+      ) {
+        return resumePromise;
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+
+    renderRunDetail();
+    await waitFor(() => {
+      expect(screen.getByTestId("run-detail-recovery")).toBeTruthy();
+    });
+    expect(
+      screen.getByText(
+        /This run can be resumed from the latest durable checkpoint/i,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/after_model/)).toBeTruthy();
+    expect(screen.getByTestId("run-detail-resume")).toBeTruthy();
+    await userEvent.click(screen.getByTestId("run-detail-resume"));
+    await waitFor(() => {
+      expect(screen.getByTestId("run-detail-resume").textContent).toMatch(
+        /Scheduling/,
+      );
+    });
+    resumeResolve!(
+      jsonResponse(
+        {
+          runId: "run-1",
+          runAttemptId: "ra-2",
+          outcome: "scheduled",
+        },
+        202,
+      ),
+    );
+  });
+
+  it("hides resume when ineligible and lists blocked uncertain operations", async () => {
+    stubRunFetch((url) => {
+      if (url.endsWith("/api/v1/runs/run-1") && !url.includes("/attempts")) {
+        return jsonResponse({
+          id: "run-1",
+          agentId: "agent-1",
+          status: "INTERRUPTED",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:30.000Z",
+          input: { prompt: "hello" },
+          effectiveBindings: {
+            agentVersionId: "av-1",
+            modelProfileVersionBindings: {},
+            toolVersionBindings: {},
+          },
+        });
+      }
+      if (url.includes("/api/v1/runs/run-1/recovery")) {
+        return jsonResponse({
+          runId: "run-1",
+          runStatus: "INTERRUPTED",
+          eligible: false,
+          ineligibleCode: "RECOVERY_BLOCKED_UNCERTAIN_OPERATION",
+          ineligibleMessage:
+            "Recovery is blocked because an external operation may have succeeded without a committed result.",
+          blockedOperations: [
+            {
+              operationKey: "tool:ext",
+              status: "UNCERTAIN",
+              idempotencyClass: "UNKNOWN_WRITE",
+              bindingName: "external",
+              toolVersionId: "tv-ext",
+            },
+          ],
+          latestCheckpoint: {
+            id: "cp-1",
+            sequence: 1,
+            runAttemptId: "ra-1",
+            executionGeneration: 1,
+            envelopeVersion: "1",
+            cursorPhase: "after_tool",
+            checkpointSequence: 1,
+            createdAt: "2026-01-01T00:00:10.000Z",
+          },
+        });
+      }
+      if (url.includes("/api/v1/runs/run-1/checkpoints")) {
+        return jsonResponse({ runId: "run-1", checkpoints: [] });
+      }
+      const fallback = defaultRunResponses(url, []);
+      if (fallback !== undefined) {
+        return fallback;
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+
+    renderRunDetail();
+    await waitFor(() => {
+      expect(screen.getByTestId("run-detail-recovery")).toBeTruthy();
+    });
+    expect(
+      screen.getByText(
+        /Recovery is blocked because an external operation may have succeeded/i,
+      ),
+    ).toBeTruthy();
+    const recoveryPanel = screen.getByTestId("run-detail-recovery");
+    expect(
+      recoveryPanel.querySelector(".run-detail-recovery-blocked"),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("run-detail-resume")).toBeNull();
+  });
+
+  it("does not fetch recovery when run is live", async () => {
+    const fetchMock = stubRunFetch((url) => {
+      if (url.endsWith("/api/v1/runs/run-1") && !url.includes("/attempts")) {
+        return jsonResponse({
+          id: "run-1",
+          agentId: "agent-1",
+          status: "RUNNING",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:01.000Z",
+          input: { prompt: "hello" },
+          effectiveBindings: {
+            agentVersionId: "av-1",
+            modelProfileVersionBindings: {},
+            toolVersionBindings: {},
+          },
+        });
+      }
+      const fallback = defaultRunResponses(url, []);
+      if (fallback !== undefined) {
+        return fallback;
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+
+    renderRunDetail();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Agent run" })).toBeTruthy();
+    });
+    expect(screen.queryByTestId("run-detail-recovery")).toBeNull();
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).includes("/api/v1/runs/run-1/recovery"),
+      ),
+    ).toBe(false);
   });
 });

@@ -122,17 +122,57 @@ async function fulfillJson(
   });
 }
 
+export interface MockRunDetailResponses {
+  readonly runId: string;
+  readonly run: Readonly<Record<string, unknown>>;
+  readonly attempts: Readonly<Record<string, unknown>>;
+  readonly recovery: Readonly<Record<string, unknown>>;
+  readonly resumeResponse?: Readonly<Record<string, unknown>>;
+  readonly resumeStatus?: number;
+}
+
 export async function installMockConsoleApi(
   page: Page,
   options: {
     readonly workspaces?: readonly MockWorkspace[];
+    readonly runDetail?: MockRunDetailResponses;
   } = {},
 ): Promise<void> {
   const workspaces = options.workspaces ?? DEFAULT_WORKSPACES;
+  const runDetail = options.runDetail;
 
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
     const pathname = url.pathname;
+    const method = route.request().method();
+
+    if (runDetail !== undefined) {
+      const { runId } = runDetail;
+      if (pathname === `/api/v1/runs/${runId}` && method === "GET") {
+        await fulfillJson(route, runDetail.run);
+        return;
+      }
+      if (pathname === `/api/v1/runs/${runId}/attempts` && method === "GET") {
+        await fulfillJson(route, runDetail.attempts);
+        return;
+      }
+      if (pathname === `/api/v1/runs/${runId}/recovery` && method === "GET") {
+        await fulfillJson(route, runDetail.recovery);
+        return;
+      }
+      if (pathname === `/api/v1/runs/${runId}/resume` && method === "POST") {
+        await fulfillJson(
+          route,
+          runDetail.resumeResponse ?? {
+            runId,
+            runAttemptId: "ra-successor-1",
+            outcome: "scheduled",
+          },
+          runDetail.resumeStatus ?? 202,
+        );
+        return;
+      }
+    }
 
     if (pathname === "/api/v1/auth/session") {
       await fulfillJson(route, {

@@ -187,6 +187,12 @@
       "tag": "0030_approval_operation_binding_slice",
       "file": "0030_approval_operation_binding_slice.sql",
       "sha256": "6364b613a3258aae20a310c0c250c70ee36842c040885deaf42e65b7a3bc4366"
+    },
+    {
+      "idx": 31,
+      "tag": "0031_agent_checkpoint_resume_slice",
+      "file": "0031_agent_checkpoint_resume_slice.sql",
+      "sha256": "2989c7a9789e11984e2c53f66fe599a0a3d6400d19600f52cbc307064d664a8a"
     }
   ]
 }

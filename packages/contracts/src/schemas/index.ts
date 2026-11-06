@@ -168,6 +168,16 @@ export {
 } from "./run-lifecycle.js";
 
 export {
+  resumeRunRequestSchema,
+  resumeRunResponseSchema,
+  runCheckpointListResourceSchema,
+  runCheckpointSummaryResourceSchema,
+  runRecoveryBlockedOperationResourceSchema,
+  runRecoveryMetadataResourceSchema,
+  runRecoveryStatusResourceSchema,
+} from "./run-recovery.js";
+
+export {
   executionFailureSchema,
   executionRequestSchema,
   executionResultSchema,

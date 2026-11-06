@@ -132,6 +132,8 @@ const declarativeAgentRuntimeConfigSchema = z.strictObject({
     .min(DECLARATIVE_MIN_OUTPUT_TOKENS)
     .max(DECLARATIVE_MAX_OUTPUT_TOKENS)
     .optional(),
+  checkpointingEnabled: z.boolean().optional(),
+  automaticRecoveryEnabled: z.boolean().optional(),
 });
 
 const declarativeAgentRuntimeSchema = z.strictObject({

@@ -15,6 +15,7 @@ export const V1_ADMIN_ROUTE_KEYS = new Set<string>([
 
 export const V1_EXECUTE_ROUTE_KEYS = new Set<string>([
   "POST /v1/runs",
+  "POST /v1/runs/*/resume",
   "POST /v1/workflow-runs",
   "POST /v1/evaluation-runs",
   "POST /v1/workflow-events",

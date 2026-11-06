@@ -704,6 +704,9 @@ importers:
         specifier: ^8.17.1
         version: 8.20.0
     devDependencies:
+      '@osva/adapters-memory':
+        specifier: workspace:*
+        version: link:../memory
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4
@@ -1272,12 +1275,15 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.13.0
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@opentelemetry/api@1.9.0)(@types/node@24.13.4)(jsdom@26.1.0)(vite@8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13))
+        version: 5.0.5(@opentelemetry/api@1.9.0)(@types/node@24.13.4)(jsdom@26.1.0)(vite@8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.15))
 
   apps/workflow-orchestrator:
     dependencies:
@@ -4637,6 +4643,11 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
+  tsx@4.23.15:
+    resolution: {integrity: sha512-Yiex1Ovn8z2xPpOWckIiysV1SSyRMY9BkLF++q0yKiDxCqRhosKfMg3janKkiLBwZ5c/YryloKwGZcrEmtwxKw==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+
   turbo@2.10.13:
     resolution: {integrity: sha512-69MkPbjk+G8oyC7pC2DeBk0rPdbLz51wuH5eAT0Q4BVJkzq/b1XM4kUUidsARbmDjwIELSJwd1ezITULY9kWNw==}
     hasBin: true
@@ -6303,6 +6314,15 @@ snapshots:
     optionalDependencies:
       vite: 8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13)
 
+  '@vitest/mocker@5.0.5(vite@8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.15))':
+    dependencies:
+      '@jridgewell/trace-mapping': 0.3.31
+      '@vitest/spy': 5.0.5
+      estree-walker: 3.0.3
+      magic-string: 1.4.3
+    optionalDependencies:
+      vite: 8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.15)
+
   '@vitest/spy@5.0.5': {}
 
   '@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
@@ -7430,6 +7450,12 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
+  tsx@4.23.15:
+    dependencies:
+      esbuild: 0.28.2
+    optionalDependencies:
+      fsevents: 2.3.3
+
   turbo@2.10.13:
     optionalDependencies:
       '@turbo/darwin-64': 2.10.13
@@ -7509,6 +7535,19 @@ snapshots:
       fsevents: 2.3.3
       tsx: 4.23.13
 
+  vite@8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.15):
+    dependencies:
+      lightningcss: 1.33.0
+      picomatch: 4.0.7
+      postcss: 8.5.28
+      rolldown: 1.2.15
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 24.13.4
+      esbuild: 0.28.2
+      fsevents: 2.3.3
+      tsx: 4.23.15
+
   vitest@5.0.5(@opentelemetry/api@1.9.0)(@types/node@24.13.4)(jsdom@26.1.0)(vite@7.3.7(@types/node@24.13.4)(lightningcss@1.33.0)(tsx@4.23.13)):
     dependencies:
       '@types/chai': 5.2.3
@@ -7547,6 +7586,29 @@ snapshots:
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
       vite: 8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.13)
+      why-is-node-running: 3.2.1
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.0
+      '@types/node': 24.13.4
+      jsdom: 26.1.0
+    transitivePeerDependencies:
+      - msw
+
+  vitest@5.0.5(@opentelemetry/api@1.9.0)(@types/node@24.13.4)(jsdom@26.1.0)(vite@8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.15)):
+    dependencies:
+      '@types/chai': 5.2.3
+      '@vitest/mocker': 5.0.5(vite@8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.15))
+      chai: 6.3.0
+      es-module-lexer: 2.3.2
+      expect-type: 1.4.0
+      magic-string: 1.4.3
+      obug: 3.0.0
+      picomatch: 4.0.7
+      std-env: 4.3.0
+      tinybench: 6.2.2
+      tinyexec: 1.3.1
+      tinyglobby: 0.2.17
+      vite: 8.3.3(@types/node@24.13.4)(esbuild@0.28.2)(tsx@4.23.15)
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@opentelemetry/api': 1.9.0

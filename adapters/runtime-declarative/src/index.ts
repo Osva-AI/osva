@@ -14,3 +14,9 @@ export type {
   DeclarativeRuntimeKnowledgeGateway,
   DeclarativeRuntimeMemoryGateway,
 } from "./declarative-context-prefetch.js";
+export {
+  CHECKPOINT_CRASH_EXIT_CODE,
+  crashIfRequested,
+  setCheckpointCrashPhaseOverride,
+  type CheckpointCrashPhase,
+} from "./checkpoint-crash-hook.js";

@@ -10,6 +10,7 @@ Supported upgrade path for self-hosted Compose and Kubernetes deployments.
 | Already on **`1.1.0-rc.1`** or **`1.1.0-rc.2`** schema head | Later 1.1.x RC/GA | Apply any new append-only migrations after **`0023`** |
 | Any **`0023`** database | M11 human auth head | Through **`0026_better_auth_user_image`** (`0024` identity, `0025` human auth, `0026` user image) |
 | M12–M14 Community line (**`1.1.0-rc.4`** / **`1.1.0`**) | Same line (no new migrations in M15) | Head **`0030_approval_operation_binding_slice`** (`0027`–`0030`; see below) |
+| Checkpoint & Resume V1 (this branch / upcoming release) | Schema carries **append-only** migrations after **`0030`** | Head **`0031_agent_checkpoint_resume_slice`** (`run_checkpoints`, `run_operation_journal`, `runs.recovery_metadata`, `INTERRUPTED` status); see below |
 | **`1.1.0-rc.4`** published artifacts | **`1.1.0`** stable | **Drop-in** image/npm/PyPI version bump when all aligned packages move together; schema already at **`0030`** |
 
 See [`../release/COMPATIBILITY.md`](../release/COMPATIBILITY.md) and [`CHANGELOG.md`](../../CHANGELOG.md).
@@ -52,7 +53,7 @@ Introduced after tag **`v1.0.0`**. Adds:
 2. Run `pnpm db:migrations:integrity` against the production database URL.
 3. List legacy rows: `status = 'RUNNING' AND execution_owner IS NULL`.
 4. Confirm no worker still owns each attempt; fail settled rows with an operator UPDATE or accept manual settlement. See [`EXECUTION_RECOVERY.md`](EXECUTION_RECOVERY.md).
-5. Expect **`EXECUTION_INTERRUPTED`** on attempts whose lease expires while workers crash or stall — OSVA does **not** auto-start a new logical RunAttempt for crash recovery.
+5. Expect **`EXECUTION_INTERRUPTED`** on attempts whose lease expires while workers crash or stall. **Successor `RunAttempt` scheduling** (manual resume or automatic recovery) applies only to **opt-in checkpoint-enabled** Declarative runs after migration **`0031`** and when operation-journal safety allows — see [`EXECUTION_RECOVERY.md`](EXECUTION_RECOVERY.md). Legacy runs without checkpointing do **not** get automatic successor attempts from lease expiry alone.
 
 ### Migrations `0024`–`0026` (M11 human identity and authentication)
 
@@ -113,12 +114,28 @@ Introduced for **operation-bound workflow approvals**. Adds nullable columns on 
 3. **Legacy rows:** Approval requests created before **`0030`** may have null binding columns; decide/resume paths skip digest verification for those rows (see [`M14_5_ACCEPTANCE_SUMMARY.md`](M14_5_ACCEPTANCE_SUMMARY.md)).
 4. **Forward-only:** Do not downgrade application binaries to builds that predate M14.5 after **`0030`** is applied unless you accept unsupported schema/application skew.
 
-Repository journal head (**`1.1.0`** stable preparation, RC.4 tag **`v1.1.0-rc.4`** and later): **`0030_approval_operation_binding_slice`**. Verify with `pnpm db:migrations:verify`.
+Published **`1.1.0`** artifacts ship through **`0030_approval_operation_binding_slice`**. Checkpoint & Resume adds **`0031`** in a later line (see next section). Verify with `pnpm db:migrations:verify`.
+
+### Migration `0031_agent_checkpoint_resume_slice` (Checkpoint & Resume V1)
+
+Introduced for **opt-in** Declarative **checkpoint resume**. Adds:
+
+- Run status **`INTERRUPTED`** (constraint widen on `runs.status`)
+- Nullable `runs.recovery_metadata` (jsonb)
+- Tables **`run_checkpoints`** and **`run_operation_journal`** (durable checkpoint blobs and per-run tool operation journal)
+- Partial index **`runs_interrupted_recovery_idx`** for recovery scans
+
+**Operator steps after `0031`:**
+
+1. Run migrate before rolling **web** and **worker** (APIs expose recovery/read and resume; workers persist checkpoints and host recovery scheduling).
+2. Run `pnpm db:migrations:integrity` — journal head should include **`0031_agent_checkpoint_resume_slice`**; `schema integrity` should report **`applied_and_matches`**.
+3. **Forward-only:** Downgrading to a build that predates **`0031`** after this migration is applied is unsupported (checkpoint rows reference `run_attempts`).
 
 ## Runtime behavior changes (1.1.x)
 
 - Execution leases and fencing on RunAttempt; heartbeats renew leases in PostgreSQL time.
 - BullMQ remains transport; queue redelivery reuses the same RunAttemptId.
+- With **`0031`** and checkpoint-enabled agents: lease expiry may move a Run to **`INTERRUPTED`** and allow **`POST /v1/runs/:runId/resume`** or automatic successor attempts when safe ([`EXECUTION_RECOVERY.md`](EXECUTION_RECOVERY.md)).
 - HTTP abuse rate limits: **`429 RATE_LIMITED`**; Valkey outage on protected paths → **`503 SERVICE_UNAVAILABLE`** (fail-closed).
 - Optional RunAttempt **`execution`** diagnostics on GET attempt resources (additive JSON).
 

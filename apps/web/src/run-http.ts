@@ -299,6 +299,9 @@ function toRunResource(run: Run) {
       ? { evaluationCaseId: run.evaluationCaseId }
       : {}),
     ...(run.restrictPersistentMemory ? { restrictPersistentMemory: true } : {}),
+    ...(run.recoveryMetadata !== undefined
+      ? { recovery: run.recoveryMetadata }
+      : {}),
   });
 }
 

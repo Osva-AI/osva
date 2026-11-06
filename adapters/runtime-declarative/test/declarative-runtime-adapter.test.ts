@@ -143,6 +143,7 @@ describe("DeclarativeRuntimeAdapter", () => {
           required: ["value"],
           additionalProperties: false,
         },
+        idempotencyClass: "PURE" as const,
       })),
     });
 
@@ -203,6 +204,7 @@ describe("DeclarativeRuntimeAdapter", () => {
           required: ["value"],
           additionalProperties: false,
         },
+        idempotencyClass: "PURE" as const,
       })),
     });
 
@@ -227,6 +229,7 @@ describe("DeclarativeRuntimeAdapter", () => {
           required: ["value"],
           additionalProperties: false,
         },
+        idempotencyClass: "PURE" as const,
       })),
     });
 

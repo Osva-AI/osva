@@ -10,16 +10,22 @@ import {
   DEFAULT_EXECUTION_HEARTBEAT_INTERVAL_MS,
   DEFAULT_EXECUTION_LEASE_TTL_MS,
 } from "@osva-ai/contracts";
+import { isDeclarativeAgentRuntime } from "@osva-ai/contracts";
 import {
   isTerminalRunAttemptState,
   DomainInvariantError,
   LifecycleConflictError,
   type AgentRepository,
+  type AgentVersion,
   type Run,
   type RunAttempt,
   type RunAttemptError,
   type RunRepository,
+  type RunCheckpointRepository,
+  type RunOperationJournalRepository,
   type TerminalRunAttemptState,
+  assertCheckpointCompatible,
+  assertCheckpointStateIntegrity,
 } from "@osva/domain";
 import {
   OSVA_ATTR,
@@ -31,6 +37,9 @@ import {
   type OsvaInstrumentation,
 } from "@osva/observability";
 import { createExecutionRequest } from "@osva/runtime-core";
+
+import { createRunCheckpointPort } from "./run-checkpoint-port-adapter.js";
+import { createRunOperationJournalPort } from "./run-operation-journal-port-adapter.js";
 
 import {
   AgentVersionNotFoundError,
@@ -66,6 +75,8 @@ export interface ExecuteRunAttemptHeartbeat {
 export interface ExecuteRunAttemptDependencies {
   readonly runs: RunRepository;
   readonly agents: AgentRepository;
+  readonly checkpoints?: RunCheckpointRepository;
+  readonly operationJournal?: RunOperationJournalRepository;
   readonly runtime: RuntimeAdapter;
   readonly instrumentation?: OsvaInstrumentation;
   readonly executionOwner?: string;
@@ -275,10 +286,23 @@ export class ExecuteRunAttempt {
 
     const runningRun = acquired.run;
     const runningAttempt = acquired.runAttempt;
+    const checkpointBinding = await this.buildCheckpointBinding({
+      run: runningRun,
+      runAttempt: runningAttempt,
+      agentVersion,
+    });
+    const operationJournalPort = this.buildOperationJournalPort(agentVersion);
+
     const request = createExecutionRequest({
       run: runningRun,
       runAttempt: runningAttempt,
       agentVersion,
+      checkpoint: checkpointBinding,
+      operationJournal: operationJournalPort,
+      executionOwnership: {
+        owner: this.executionOwner,
+        generation: runningAttempt.executionGeneration,
+      },
     });
 
     let ownershipLost = false;
@@ -566,6 +590,91 @@ export class ExecuteRunAttempt {
     } catch {
       // Cancellation is best-effort and cannot undo prior external side effects.
     }
+  }
+
+  private async buildCheckpointBinding(input: {
+    readonly run: Run;
+    readonly runAttempt: RunAttempt;
+    readonly agentVersion: AgentVersion;
+  }): Promise<
+    | {
+        readonly port: import("@osva-ai/contracts").RunCheckpointPort;
+        readonly restore?: import("@osva-ai/contracts").DeclarativeRuntimeCheckpointStateV1;
+      }
+    | undefined
+  > {
+    if (this.deps.checkpoints === undefined) {
+      return undefined;
+    }
+
+    if (
+      input.agentVersion === null ||
+      !isDeclarativeAgentRuntime(input.agentVersion.manifest.runtime)
+    ) {
+      return undefined;
+    }
+
+    if (
+      input.agentVersion.manifest.runtime.config.checkpointingEnabled !== true
+    ) {
+      return undefined;
+    }
+
+    const port = createRunCheckpointPort(this.deps.checkpoints);
+    const latest = await this.deps.checkpoints.findLatestByRun(
+      input.run.workspaceId,
+      input.run.id,
+    );
+
+    if (latest === null) {
+      return { port };
+    }
+
+    if (latest.runAttemptId === input.runAttempt.id) {
+      return {
+        port,
+        restore: assertCheckpointStateIntegrity(
+          latest.state,
+          latest.payloadDigest,
+        ),
+      };
+    }
+
+    assertCheckpointCompatible({
+      expectedBindings: {
+        agentVersionId: input.run.effectiveBindings.agentVersionId,
+        modelProfileVersionBindings:
+          input.run.effectiveBindings.modelProfileVersionBindings,
+        toolVersionBindings: input.run.effectiveBindings.toolVersionBindings,
+      },
+      bindingDigest: latest.bindingDigest,
+      agentVersionId: latest.bindingIdentity.agentVersionId,
+      envelopeVersion: latest.envelopeVersion,
+      stateSchemaVersion: latest.stateSchemaVersion,
+    });
+
+    return {
+      port,
+      restore: assertCheckpointStateIntegrity(
+        latest.state,
+        latest.payloadDigest,
+      ),
+    };
+  }
+
+  private buildOperationJournalPort(
+    agentVersion: AgentVersion,
+  ): import("@osva-ai/contracts").RunOperationJournalPort | undefined {
+    if (this.deps.operationJournal === undefined) {
+      return undefined;
+    }
+    if (!isDeclarativeAgentRuntime(agentVersion.manifest.runtime)) {
+      return undefined;
+    }
+    if (agentVersion.manifest.runtime.config.checkpointingEnabled !== true) {
+      return undefined;
+    }
+    return createRunOperationJournalPort(this.deps.operationJournal);
   }
 }
 

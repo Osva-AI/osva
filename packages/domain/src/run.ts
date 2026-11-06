@@ -5,7 +5,7 @@ import type {
   RunId,
   WorkspaceId,
 } from "@osva-ai/contracts";
-import type { RunState } from "@osva-ai/contracts";
+import type { RunRecoveryMetadataV1, RunState } from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import { EffectiveRunBindings } from "./effective-run-bindings.js";
@@ -27,6 +27,7 @@ export interface RunCreateProps {
   readonly evaluationRunId?: EvaluationRunId;
   readonly evaluationCaseId?: EvaluationCaseId;
   readonly restrictPersistentMemory?: boolean;
+  readonly recoveryMetadata?: RunRecoveryMetadataV1;
 }
 
 export interface RunRehydrateProps {
@@ -42,6 +43,7 @@ export interface RunRehydrateProps {
   readonly evaluationRunId?: EvaluationRunId;
   readonly evaluationCaseId?: EvaluationCaseId;
   readonly restrictPersistentMemory?: boolean;
+  readonly recoveryMetadata?: RunRecoveryMetadataV1;
 }
 
 export class Run {
@@ -57,6 +59,7 @@ export class Run {
   readonly evaluationRunId: EvaluationRunId | undefined;
   readonly evaluationCaseId: EvaluationCaseId | undefined;
   readonly restrictPersistentMemory: boolean;
+  readonly recoveryMetadata: RunRecoveryMetadataV1 | undefined;
 
   private constructor(props: {
     readonly id: RunId;
@@ -71,6 +74,7 @@ export class Run {
     readonly evaluationRunId: EvaluationRunId | undefined;
     readonly evaluationCaseId: EvaluationCaseId | undefined;
     readonly restrictPersistentMemory: boolean;
+    readonly recoveryMetadata: RunRecoveryMetadataV1 | undefined;
   }) {
     this.id = props.id;
     this.workspaceId = props.workspaceId;
@@ -84,6 +88,7 @@ export class Run {
     this.evaluationRunId = props.evaluationRunId;
     this.evaluationCaseId = props.evaluationCaseId;
     this.restrictPersistentMemory = props.restrictPersistentMemory;
+    this.recoveryMetadata = props.recoveryMetadata;
   }
 
   get isEvaluationChildRun(): boolean {
@@ -106,6 +111,7 @@ export class Run {
       evaluationRunId: props.evaluationRunId,
       evaluationCaseId: props.evaluationCaseId,
       restrictPersistentMemory: props.restrictPersistentMemory === true,
+      recoveryMetadata: props.recoveryMetadata,
     });
   }
 
@@ -123,6 +129,28 @@ export class Run {
       evaluationRunId: props.evaluationRunId,
       evaluationCaseId: props.evaluationCaseId,
       restrictPersistentMemory: props.restrictPersistentMemory === true,
+      recoveryMetadata: props.recoveryMetadata,
+    });
+  }
+
+  withRecoveryMetadata(
+    recoveryMetadata: RunRecoveryMetadataV1 | undefined,
+    now: Date,
+  ): Run {
+    return Run.instantiate({
+      id: this.id,
+      workspaceId: this.workspaceId,
+      agentId: this.agentId,
+      status: this.status,
+      effectiveBindings: this.effectiveBindings,
+      input: this.input,
+      createdAt: this.createdAt,
+      updatedAt: now,
+      idempotencyKey: this.idempotencyKey,
+      evaluationRunId: this.evaluationRunId,
+      evaluationCaseId: this.evaluationCaseId,
+      restrictPersistentMemory: this.restrictPersistentMemory,
+      recoveryMetadata,
     });
   }
 
@@ -142,6 +170,7 @@ export class Run {
       evaluationRunId: this.evaluationRunId,
       evaluationCaseId: this.evaluationCaseId,
       restrictPersistentMemory: this.restrictPersistentMemory,
+      recoveryMetadata: this.recoveryMetadata,
     });
   }
 
@@ -158,6 +187,7 @@ export class Run {
     readonly evaluationRunId: EvaluationRunId | undefined;
     readonly evaluationCaseId: EvaluationCaseId | undefined;
     readonly restrictPersistentMemory: boolean;
+    readonly recoveryMetadata: RunRecoveryMetadataV1 | undefined;
   }): Run {
     if (!props.id) {
       throw new DomainInvariantError("Run.id is required.");
@@ -207,6 +237,7 @@ export class Run {
         evaluationRunId: props.evaluationRunId,
         evaluationCaseId: props.evaluationCaseId,
         restrictPersistentMemory: props.restrictPersistentMemory,
+        recoveryMetadata: props.recoveryMetadata,
       }),
     );
   }

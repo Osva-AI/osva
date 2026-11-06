@@ -218,6 +218,13 @@
       "when": 1790300000000,
       "tag": "0030_approval_operation_binding_slice",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790400000000,
+      "tag": "0031_agent_checkpoint_resume_slice",
+      "breakpoints": true
     }
   ]
 }

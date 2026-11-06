@@ -142,6 +142,22 @@ class FakeRunRepository implements RunRepository {
     throw new Error("not used");
   }
 
+  async interruptExpiredLeasedAttemptForRecovery(): Promise<null> {
+    throw new Error("not used");
+  }
+
+  async listInterruptedRuns(): Promise<[]> {
+    throw new Error("not used");
+  }
+
+  async scheduleRecoveryRunAttempt(): Promise<null> {
+    throw new Error("not used");
+  }
+
+  async updateInterruptedRunRecoveryMetadata(): Promise<null> {
+    return null;
+  }
+
   async listExpiredLeasedRunningAttempts(): Promise<[]> {
     throw new Error("not used");
   }

@@ -94,6 +94,7 @@ State-changing BFF methods require a loopback `Host` and a same-origin, loopback
 - Runs list with filters and cursor pagination
 - Individual Run launch from an AgentVersion (see Agents)
 - Run detail, attempts, steps, usage, and a compact execution-diagnostics panel (lease/recovery state from additive public `execution` fields). Lease expiry is persisted PostgreSQL state; the Console does not treat process or browser clocks as recovery authority. Raw execution owner is not shown.
+- **Checkpoint recovery (opt-in):** When a Run is **`INTERRUPTED`** and the recovery API reports eligibility, Run Detail shows a **Recovery** panel with checkpoint summary and an operator **Resume** action (`POST /api/v1/runs/:runId/resume` → schedules a **successor** `RunAttempt`). If recovery is **blocked** (for example uncertain tool operations in the journal), the panel lists blocked operations and **does not** offer Resume until the control plane reports eligibility. Browser coverage: `test/integration/checkpoint-resume-browser.integration.test.ts` (Playwright).
 - Artifact metadata, on-demand safe text/JSON preview (512 KiB cap), and streamed original-byte download via the Console BFF
 - Polling while runs/attempts are active
 - Run Detail distinguishes an individual Run from a WorkflowRun, and RunAttempts from WorkflowNodeRuns

@@ -14,6 +14,8 @@ import {
   useRunAttemptQuery,
   useRunAttemptsQuery,
   useRunQuery,
+  useRunRecoveryQuery,
+  useResumeRunMutation,
   useRunStepsQuery,
   useRunUsageQuery,
 } from "../hooks/use-runs";
@@ -53,6 +55,11 @@ export function RunDetailPage() {
 
   const runQuery = useRunQuery(runId);
   const attemptsQuery = useRunAttemptsQuery(runId, runQuery.data?.status);
+  const showRecovery =
+    runQuery.data?.status === "INTERRUPTED" ||
+    runQuery.data?.recovery !== undefined;
+  const recoveryQuery = useRunRecoveryQuery(runId, showRecovery);
+  const resumeRun = useResumeRunMutation(runId);
 
   const attempts = attemptsQuery.data?.attempts ?? [];
   const selectedAttemptId = runAttemptId ?? attempts[attempts.length - 1]?.id;
@@ -205,6 +212,55 @@ export function RunDetailPage() {
             Refresh
           </button>
         </div>
+        {showRecovery && recoveryQuery.data !== undefined ? (
+          <section
+            className="panel run-detail-recovery"
+            data-testid="run-detail-recovery"
+            aria-labelledby="run-detail-recovery-title"
+          >
+            <h2 id="run-detail-recovery-title">Recovery</h2>
+            <p className="muted">
+              {recoveryQuery.data.eligible
+                ? "This run can be resumed from the latest durable checkpoint."
+                : (recoveryQuery.data.ineligibleMessage ??
+                  "Recovery is not available for this run.")}
+            </p>
+            {recoveryQuery.data.latestCheckpoint !== undefined ? (
+              <p className="muted">
+                Latest checkpoint: phase{" "}
+                <span className="mono">
+                  {recoveryQuery.data.latestCheckpoint.cursorPhase}
+                </span>{" "}
+                (sequence{" "}
+                {String(recoveryQuery.data.latestCheckpoint.checkpointSequence)}
+                )
+              </p>
+            ) : null}
+            {recoveryQuery.data.blockedOperations.length > 0 ? (
+              <ul className="run-detail-recovery-blocked">
+                {recoveryQuery.data.blockedOperations.map((op) => (
+                  <li key={op.operationKey}>
+                    <span className="mono">{op.bindingName}</span> · {op.status}{" "}
+                    · {op.idempotencyClass}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {recoveryQuery.data.eligible ? (
+              <button
+                type="button"
+                className="button primary"
+                data-testid="run-detail-resume"
+                disabled={resumeRun.isPending}
+                onClick={() => {
+                  void resumeRun.mutateAsync().then(() => refreshAll());
+                }}
+              >
+                {resumeRun.isPending ? "Scheduling…" : "Resume run"}
+              </button>
+            ) : null}
+          </section>
+        ) : null}
         {failureGuidance !== undefined ? (
           <section
             className="run-detail-failure-inline"

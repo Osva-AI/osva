@@ -14,6 +14,8 @@ export { deployments } from "./deployments.js";
 export { runs } from "./runs.js";
 export { runAttempts } from "./run-attempts.js";
 export { runSteps } from "./run-steps.js";
+export { runCheckpoints } from "./run-checkpoints.js";
+export { runOperationJournal } from "./run-operation-journal.js";
 export { evaluations } from "./evaluations.js";
 export { modelProfiles } from "./model-profiles.js";
 export { modelProfileVersions } from "./model-profile-versions.js";

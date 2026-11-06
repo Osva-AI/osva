@@ -31,6 +31,10 @@ import {
 const PYTHON_SDK_ROOT = path.join(REPO_ROOT, "sdks", "python");
 const LABEL_WIDTH = 12;
 
+/** Match root `package.json` turbo scripts; reduces flaky native crashes under high parallel load on Windows. */
+const TURBO_WIN_CONCURRENCY =
+  process.platform === "win32" ? ["--concurrency=2"] : [];
+
 function printUsage() {
   console.log(`Usage: node scripts/verification/verify.mjs <mode>
 
@@ -294,7 +298,7 @@ async function quick(env) {
     lintMs = await runPhase(
       "LINT",
       pnpmSpec(env),
-      ["exec", "turbo", "run", "lint", ...turboArgs],
+      ["exec", "turbo", "run", "lint", ...TURBO_WIN_CONCURRENCY, ...turboArgs],
       {
         env: envVars,
       },
@@ -302,13 +306,20 @@ async function quick(env) {
     typecheckMs = await runPhase(
       "TYPECHECK",
       pnpmSpec(env),
-      ["exec", "turbo", "run", "typecheck", ...turboArgs],
+      [
+        "exec",
+        "turbo",
+        "run",
+        "typecheck",
+        ...TURBO_WIN_CONCURRENCY,
+        ...turboArgs,
+      ],
       { env: envVars },
     );
     testMs = await runPhase(
       "TEST",
       pnpmSpec(env),
-      ["exec", "turbo", "run", "test", ...turboArgs],
+      ["exec", "turbo", "run", "test", ...TURBO_WIN_CONCURRENCY, ...turboArgs],
       {
         env: envVars,
       },
@@ -376,19 +387,26 @@ async function changed(env) {
     lintMs = await runPhase(
       "LINT",
       pnpmSpec(env),
-      ["exec", "turbo", "run", "lint", ...turboArgs],
+      ["exec", "turbo", "run", "lint", ...TURBO_WIN_CONCURRENCY, ...turboArgs],
       { env: envVars },
     );
     typecheckMs = await runPhase(
       "TYPECHECK",
       pnpmSpec(env),
-      ["exec", "turbo", "run", "typecheck", ...turboArgs],
+      [
+        "exec",
+        "turbo",
+        "run",
+        "typecheck",
+        ...TURBO_WIN_CONCURRENCY,
+        ...turboArgs,
+      ],
       { env: envVars },
     );
     testMs = await runPhase(
       "TEST",
       pnpmSpec(env),
-      ["exec", "turbo", "run", "test", ...turboArgs],
+      ["exec", "turbo", "run", "test", ...TURBO_WIN_CONCURRENCY, ...turboArgs],
       { env: envVars },
     );
     if (harnessPathsChanged(paths)) {
@@ -397,7 +415,7 @@ async function changed(env) {
     buildMs = await runPhase(
       "BUILD",
       pnpmSpec(env),
-      ["exec", "turbo", "run", "build", ...turboArgs],
+      ["exec", "turbo", "run", "build", ...TURBO_WIN_CONCURRENCY, ...turboArgs],
       { env: envVars },
     );
   }
