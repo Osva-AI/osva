@@ -26,6 +26,13 @@ export const V1_EXECUTE_ROUTE_KEYS = new Set<string>([
   "POST /v1/office/assignments/*/launch",
   "POST /v1/office/assignments/*/cancel",
   "POST /v1/knowledge/retrieve",
+  /** M20.3 — cost-bearing model inference; not publication or execution. */
+  "POST /v1/builder/proposals/generate",
+]);
+
+/** POST routes that remain catalog/read validation only (no side effects). */
+export const V1_READ_POST_ROUTE_KEYS = new Set<string>([
+  "POST /v1/builder/proposals/validate",
 ]);
 
 export function inferV1RouteAuthorizationAction(
@@ -34,6 +41,9 @@ export function inferV1RouteAuthorizationAction(
 ): AuthorizationAction {
   if (V1_ADMIN_ROUTE_KEYS.has(structuralRouteKey)) {
     return AUTHORIZATION_ACTIONS.ADMIN;
+  }
+  if (V1_READ_POST_ROUTE_KEYS.has(structuralRouteKey)) {
+    return AUTHORIZATION_ACTIONS.READ;
   }
   if (V1_EXECUTE_ROUTE_KEYS.has(structuralRouteKey)) {
     return AUTHORIZATION_ACTIONS.EXECUTE;

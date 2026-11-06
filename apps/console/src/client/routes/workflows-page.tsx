@@ -31,6 +31,9 @@ export function WorkflowsPage() {
               <Link className="button primary" to="/workflows/new">
                 Create workflow
               </Link>
+              <Link className="button primary" to="/workflows/new/describe">
+                Describe with AI
+              </Link>
               <Link className="button" to="/workflows/new?templates=1">
                 Templates
               </Link>

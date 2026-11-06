@@ -129,6 +129,7 @@ function matchRules(paths, packages) {
     if (
       normalized.startsWith("apps/console/src/client/routes/") ||
       normalized === "apps/console/src/client/app-router.tsx" ||
+      normalized === "apps/console/src/client/app.tsx" ||
       normalized.startsWith("apps/console/src/client/navigation") ||
       normalized.includes("/agent-onboarding") ||
       normalized.includes("/components/onboarding/") ||

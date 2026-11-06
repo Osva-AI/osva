@@ -319,6 +319,14 @@ function createMockClient(
       data: { items: [] },
       requestId: "req-evaluation-case-results",
     }),
+    generateBuilderProposal: async () => ({
+      data: { ok: false },
+      requestId: "req-builder-generate",
+    }),
+    validateBuilderProposal: async () => ({
+      data: { ok: true },
+      requestId: "req-builder-validate",
+    }),
     ...overrides,
   };
 }

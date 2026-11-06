@@ -189,6 +189,73 @@ export default tseslint.config(
     },
   },
   {
+    files: ["packages/model-gateway/test/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@osva/db",
+              message:
+                "packages/model-gateway tests cannot import persistence.",
+            },
+            {
+              name: "@osva/orchestration",
+              message:
+                "packages/model-gateway tests cannot import orchestration.",
+            },
+            {
+              name: "@osva/runtime-core",
+              message:
+                "packages/model-gateway tests cannot import runtime-core.",
+            },
+            {
+              name: "@osva/web",
+              message: "packages/model-gateway tests cannot import apps.",
+            },
+            {
+              name: "@osva/worker",
+              message: "packages/model-gateway tests cannot import apps.",
+            },
+            {
+              name: "bullmq",
+              message:
+                "packages/model-gateway tests cannot import queue libraries.",
+            },
+            {
+              name: "ioredis",
+              message:
+                "packages/model-gateway tests cannot import Redis clients.",
+            },
+            {
+              name: "postgres",
+              message:
+                "packages/model-gateway tests cannot import PostgreSQL drivers.",
+            },
+            {
+              name: "drizzle-orm",
+              message:
+                "packages/model-gateway tests cannot import persistence libraries.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["openai/*"],
+              message:
+                "packages/model-gateway tests cannot import provider SDKs.",
+            },
+            {
+              group: ["drizzle-orm/*"],
+              message:
+                "packages/model-gateway tests cannot import persistence libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["adapters/model-openai/src/**/*.ts"],
     rules: {
       "no-restricted-imports": [

@@ -11,6 +11,7 @@ import { V1_HTTP_ROUTES as memoryHttpRoutes } from "../src/memory-http.js";
 import { V1_HTTP_ROUTES as modelProfileHttpRoutes } from "../src/model-profile-http.js";
 import { V1_HTTP_ROUTES as modelProviderConnectionHttpRoutes } from "../src/model-provider-connection-http.js";
 import { V1_HTTP_ROUTES as officeHttpRoutes } from "../src/office-http.js";
+import { V1_HTTP_ROUTES as builderHttpRoutes } from "../src/builder-http.js";
 import { V1_HTTP_ROUTES as runHttpRoutes } from "../src/run-http.js";
 import { V1_HTTP_ROUTES as runObservabilityHttpRoutes } from "../src/run-observability-http.js";
 import { V1_HTTP_ROUTES as scheduleHttpRoutes } from "../src/schedule-http.js";
@@ -52,6 +53,7 @@ const HANDLER_ROUTE_EXPORTS: Readonly<
   "workflow-http": workflowHttpRoutes,
   "workflow-event-http": workflowEventHttpRoutes,
   "office-http": officeHttpRoutes,
+  "builder-http": builderHttpRoutes,
 };
 
 describe("V1_ROUTE_INVENTORY", () => {

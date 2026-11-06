@@ -349,6 +349,44 @@ When `qualityGatePolicy` was supplied at launch, responses include:
 
 Terminal **COMPLETED** runs persist one immutable row in `evaluation_run_gate_assessments` (migration **`0029_evaluation_quality_gate_slice`**). Subsequent GETs return the stored assessment.
 
+### Builder proposals (M20.3 — natural-language draft)
+
+Canonical JSON shapes: domain types and compiler in `packages/domain/src/builder/`; HTTP mapping: `apps/web/src/builder-http.ts`. These endpoints produce or validate a **workspace-scoped `BuilderProposalV1` draft** only; they **do not** publish workflows or agent versions, enqueue runs, or execute tools.
+
+#### Authorization (workspace scope)
+
+| Route pattern | Method | Minimum action |
+| --- | --- | --- |
+| `/v1/builder/proposals/generate` | POST | **EXECUTE** (cost-bearing model inference) |
+| `/v1/builder/proposals/validate` | POST | READ |
+
+#### **`POST /v1/builder/proposals/generate`**
+
+Request (body fields beyond `userInstruction` are optional; see domain contract):
+
+```json
+{
+  "userInstruction": "…",
+  "generationModelProfileVersionId": "optional model profile version id"
+}
+```
+
+- Responses use the M20.2 **`GenerateBuilderProposalResultV1`** envelope (`ok: true` with proposal metadata, or `ok: false` with a typed generation failure). Provider-facing failures may surface as **422** with that structured body (not a generic error envelope).
+- Long-running generation uses an extended request/response timeout on the control plane (see `BUILDER_GENERATION_REQUEST_TIMEOUT_MS` in `builder-http.ts`); clients should not apply a shorter default than this path.
+
+#### **`POST /v1/builder/proposals/validate`**
+
+Request:
+
+```json
+{
+  "proposal": { /* BuilderProposalV1 */ }
+}
+```
+
+- Loads the **authorized workspace capability catalog** and runs `compileBuilderProposalPrePublication`. **No** ModelGateway call and **no** database writes.
+- Returns structured compiler issues and preview-oriented metadata on success; invalid JSON or parse failures return **400** `invalid_request`.
+
 ### Execution lifecycle (not exposed as separate endpoints)
 
 After **POST /v1/evaluation-runs**, the control plane enqueues one child **Run** per case. Progress is observed via run status, **`case-results`**, and **`summary`** on the evaluation run detail. There is no cancel/patch evaluation-run endpoint in V1 HTTP today.

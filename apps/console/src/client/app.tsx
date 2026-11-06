@@ -29,6 +29,7 @@ import { WorkflowRunDetailPage } from "./routes/workflow-run-detail-page";
 import { WorkflowRunsPage } from "./routes/workflow-runs-page";
 import { WorkflowVersionPage } from "./routes/workflow-version-page";
 import { WorkflowCreatePage } from "./routes/workflow-create-page";
+import { WorkflowNlBuilderPage } from "./routes/workflow-nl-builder-page";
 import { WorkflowVersionCreatePage } from "./routes/workflow-version-create-page";
 import { WorkflowsPage } from "./routes/workflows-page";
 import { WorkspaceAccessPage } from "./routes/workspace-access-page";
@@ -195,6 +196,10 @@ export function App() {
                   <Route
                     path="/workflows/new"
                     element={<WorkflowCreatePage />}
+                  />
+                  <Route
+                    path="/workflows/new/describe"
+                    element={<WorkflowNlBuilderPage />}
                   />
                   <Route
                     path="/workflows/:workflowId"

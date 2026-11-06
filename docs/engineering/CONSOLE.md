@@ -122,6 +122,16 @@ V1 and V2 versions omit the graph section (message only) and still show the stru
 
 **Route:** `/workflows/new` (linked from the Workflows list).
 
+### Natural-language builder draft (M20.3)
+
+**Route:** `/workflows/new/describe` (linked from the Workflows list as **Describe with AI**).
+
+- Submits instructions to the control plane (`POST /v1/builder/proposals/generate` via BFF `POST /api/v1/builder/proposals/generate`) using the real M20.2 domain service and ModelGateway wiring in `apps/web`
+- Requires an explicit **OpenAI or Gemini** model profile version for generation (Anthropic is rejected by M20.2 structured-output policy)
+- Surfaces an editable **internal `BuilderProposalV1` draft** with read-only React Flow preview (no fake `AgentVersionId`; NEW vs EXISTING badges)
+- **Validate** calls `POST /v1/builder/proposals/validate` (compiler only; no model, no publication)
+- **No publication or execution** in M20.3; draft recovery uses workspace-scoped `sessionStorage` only
+
 **Capabilities:**
 
 - Create a workflow registry row (`key`, `name`, optional `description`)

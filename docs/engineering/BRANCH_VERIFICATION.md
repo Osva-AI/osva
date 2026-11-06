@@ -52,7 +52,23 @@ node scripts/verification/install-pre-push-hook.mjs disable
 node scripts/verification/install-pre-push-hook.mjs status
 ```
 
-Honors non-zero exit status from `pnpm verify:branch`. Does not overwrite a foreign `.git/hooks/pre-push` unless it already contains the OSVA marker.
+The hook runs **`pnpm verify:pre-push`**: a **read-only** gate over **committed** files since `merge-base(origin/main, HEAD)`, plus a clean working tree, Prettier `--check`, and `git diff --check` on that committed range. It never runs Prettier `--write`.
+
+**`pnpm verify:branch`** remains the **development** harness: Prettier **write** then **check** on changed supported files, then incremental lint/typecheck/build/tests. A passing changed-file format pass is **not** the same as a clean-tree pre-push verification of the full committed branch.
+
+Honors non-zero exit status from `pnpm verify:pre-push`. Does not overwrite a foreign `.git/hooks/pre-push` unless it already contains the OSVA marker.
+
+### Recommended workflow
+
+1. Prettier `--write` on files you touched (or your editor format-on-save), then focused verification.
+2. Commit.
+3. `pnpm verify:pre-push` (or rely on the optional hook).
+4. Push, then let hosted CI run the authoritative matrix.
+
+```powershell
+pnpm verify:pre-push
+pnpm verify:pre-push -- --base=origin/main
+```
 
 ## Failure triage
 

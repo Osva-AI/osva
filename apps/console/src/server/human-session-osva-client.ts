@@ -1,5 +1,6 @@
 import type { ConsoleConfig } from "./config.js";
 import {
+  BUILDER_GENERATION_UPSTREAM_TIMEOUT_MS,
   createHumanSessionUpstream,
   type HumanSessionUpstreamContext,
 } from "./human-session-upstream.js";
@@ -665,13 +666,38 @@ export function createHumanSessionOsvaClient(
           path: `/v1/evaluation-runs/${encodeURIComponent(evaluationRunId)}/case-results`,
         })
         .then(toDataOnly),
+
+    generateBuilderProposal: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/builder/proposals/generate",
+          body,
+          timeoutMs: BUILDER_GENERATION_UPSTREAM_TIMEOUT_MS,
+          acceptErrorStatuses: [422],
+        })
+        .then(toDataOnly),
+
+    validateBuilderProposal: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/builder/proposals/validate",
+          body,
+        })
+        .then(toDataOnly),
   };
 }
 
 function toDataOnly<T>(
   result: ConsoleUpstreamResponse<T> & {
     readonly setCookie?: readonly string[];
+    readonly status: number;
   },
 ): ConsoleUpstreamResponse<T> {
-  return { data: result.data, requestId: result.requestId };
+  return {
+    data: result.data,
+    requestId: result.requestId,
+    status: result.status,
+  };
 }

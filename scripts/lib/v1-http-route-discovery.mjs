@@ -58,6 +58,21 @@ const STATIC_V1_SEGMENTS = new Set([
   "assignments",
   "launch",
   "cancel",
+  "me",
+  "workspaces",
+  "select",
+  "audit-events",
+  "login",
+  "logout",
+  "session",
+  "setup",
+  "recovery",
+  "complete",
+  "reset",
+  "builder",
+  "proposals",
+  "generate",
+  "validate",
 ]);
 
 export function stripV1HttpRoutesExport(source) {

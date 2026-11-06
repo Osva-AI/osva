@@ -57,6 +57,11 @@ import {
   createApiKeyApplication,
 } from "@osva/domain";
 import {
+  GenerateBuilderProposalFromNaturalLanguage,
+  GetWorkspaceBuilderCapabilityCatalog,
+  type BuilderGenerationModelGatewayPort,
+} from "@osva/domain/builder";
+import {
   CreateRun,
   IngestWorkflowEvent,
   LaunchAssignment,
@@ -244,6 +249,27 @@ export async function createTestWebApplication(options?: {
     } as never,
   });
 
+  const builderModelGateway: BuilderGenerationModelGatewayPort = {
+    async generateCompletion() {
+      throw new Error("test web: builder model gateway not configured");
+    },
+  };
+  const generateBuilderProposal =
+    new GenerateBuilderProposalFromNaturalLanguage({
+      workspaces,
+      agents,
+      modelProfiles,
+      tools,
+      modelGateway: builderModelGateway,
+    });
+  const getWorkspaceBuilderCapabilityCatalog =
+    new GetWorkspaceBuilderCapabilityCatalog({
+      workspaces,
+      agents,
+      modelProfiles,
+      tools,
+    });
+
   const server = createWebApplication({
     readinessCheck: options?.readinessCheck ?? (async () => true),
     agents: createAgentApplication({
@@ -395,6 +421,10 @@ export async function createTestWebApplication(options?: {
     knowledge: {
       knowledge: knowledgeApplication,
       retriever: knowledgeRetriever,
+    },
+    builder: {
+      generateBuilderProposal,
+      getWorkspaceBuilderCapabilityCatalog,
     },
     apiKeys: createApiKeyApplication({
       apiKeys,

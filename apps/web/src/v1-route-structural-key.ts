@@ -72,6 +72,10 @@ const STATIC_V1_SEGMENTS = new Set([
   "recovery",
   "complete",
   "reset",
+  "builder",
+  "proposals",
+  "generate",
+  "validate",
 ]);
 
 /** Structural key for an incoming request path (dynamic segments become `*`). */

@@ -5,6 +5,16 @@ import {
   PUBLIC_API_ERROR_CODES,
 } from "@osva-ai/contracts";
 import {
+  MemoryAgentRepository,
+  MemoryModelProfileRepository,
+  MemoryToolRepository,
+} from "@osva/adapters-memory";
+import {
+  GenerateBuilderProposalFromNaturalLanguage,
+  GetWorkspaceBuilderCapabilityCatalog,
+  type BuilderGenerationModelGatewayPort,
+} from "@osva/domain/builder";
+import {
   AuthenticateApiKey,
   CreateApiKey,
   DuplicateApiKeyIdError,
@@ -172,6 +182,29 @@ describe("GET /v1/auth/context", () => {
       apiKeys,
       clock: { now: () => now },
     });
+    const agentsRepo = new MemoryAgentRepository();
+    const modelProfilesRepo = new MemoryModelProfileRepository();
+    const toolsRepo = new MemoryToolRepository();
+    const builderGateway: BuilderGenerationModelGatewayPort = {
+      async generateCompletion() {
+        throw new Error("auth-http test: builder gateway unused");
+      },
+    };
+    const generateBuilderProposal =
+      new GenerateBuilderProposalFromNaturalLanguage({
+        workspaces,
+        agents: agentsRepo,
+        modelProfiles: modelProfilesRepo,
+        tools: toolsRepo,
+        modelGateway: builderGateway,
+      });
+    const getWorkspaceBuilderCapabilityCatalog =
+      new GetWorkspaceBuilderCapabilityCatalog({
+        workspaces,
+        agents: agentsRepo,
+        modelProfiles: modelProfilesRepo,
+        tools: toolsRepo,
+      });
     const server = createWebApplication({
       readinessCheck: async () => true,
       agents: {} as never,
@@ -190,6 +223,10 @@ describe("GET /v1/auth/context", () => {
       workflows: {} as never,
       office: {} as never,
       knowledge: {} as never,
+      builder: {
+        generateBuilderProposal,
+        getWorkspaceBuilderCapabilityCatalog,
+      },
       apiKeys: createApiKeyApplication({
         apiKeys,
         workspaces,
