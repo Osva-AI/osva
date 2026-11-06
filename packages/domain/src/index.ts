@@ -320,6 +320,7 @@ export {
 } from "./json-equality.js";
 export {
   assertDagWorkflowDefinition,
+  assertDagWorkflowV3GraphTopology,
   assertSequentialWorkflowDefinition,
   assertWorkflowDefinition,
   assertWorkflowDefinitionExecutable,
@@ -329,7 +330,9 @@ export {
   orderedSequentialNodeKeys,
   predecessorKeysInDefinitionOrder,
   type ExecutableWorkflowGraph,
+  type WorkflowBuilderLogicalAgentNodeV3,
   type WorkflowDefinitionNodeForDefinition,
+  type WorkflowDefinitionV3NodeForTopology,
   type WorkflowGraph,
 } from "./workflow-definition.js";
 export { selectBranchTarget } from "./workflow-branch.js";

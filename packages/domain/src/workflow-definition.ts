@@ -35,6 +35,23 @@ export { InvalidWorkflowDefinitionError } from "./errors.js";
 type DagWorkflowDefinition = WorkflowDefinitionV2 | WorkflowDefinitionV3;
 type DagWorkflowNode = WorkflowDefinitionNodeV2 | WorkflowDefinitionNodeV3;
 
+/**
+ * AGENT node used for logical (pre-publication) DAG validation: topology only,
+ * no immutable {@link AgentVersionId} binding.
+ */
+export type WorkflowBuilderLogicalAgentNodeV3 = {
+  readonly key: string;
+  readonly type: "AGENT";
+};
+
+/** V3 node shape accepted by {@link assertDagWorkflowV3GraphTopology}. */
+export type WorkflowDefinitionV3NodeForTopology =
+  WorkflowBuilderLogicalAgentNodeV3 | WorkflowDefinitionNodeV3;
+
+/** Node types that share the same DAG graph invariants (V2, full V3, or logical V3). */
+type DagGraphValidatedNode =
+  DagWorkflowNode | WorkflowDefinitionV3NodeForTopology;
+
 export type WorkflowDefinitionNodeForDefinition<D extends WorkflowDefinition> =
   D extends WorkflowDefinitionV1
     ? WorkflowDefinitionNodeV1
@@ -206,7 +223,142 @@ export function assertDagWorkflowDefinition(
 }
 
 function assertDagWorkflowDefinitionV3(definition: WorkflowDefinitionV3): void {
-  assertDagWorkflowDefinitionForSchemaVersion(definition, "3");
+  if (definition.schemaVersion !== "3") {
+    throw new InvalidWorkflowDefinitionError(
+      `Unsupported workflow definition schemaVersion '${String(definition.schemaVersion)}'.`,
+    );
+  }
+
+  for (const node of definition.nodes) {
+    assertV3Node(node);
+  }
+
+  assertDagWorkflowGraphStructure(definition.nodes, definition.edges);
+}
+
+/**
+ * Validates V3 DAG topology (single entry/terminal, cycle-free, orchestration fan-in/out,
+ * reachability) without requiring AGENT nodes to carry {@link AgentVersionId}.
+ * Reuses the same rules as persisted WorkflowDefinitionV3 graph validation.
+ */
+export function assertDagWorkflowV3GraphTopology(definition: {
+  readonly nodes: readonly WorkflowDefinitionV3NodeForTopology[];
+  readonly edges: readonly WorkflowDefinitionEdgeV1[];
+}): void {
+  if (!Array.isArray(definition.nodes) || definition.nodes.length === 0) {
+    throw new InvalidWorkflowDefinitionError(
+      "Workflow definition must contain at least one node.",
+    );
+  }
+
+  if (!Array.isArray(definition.edges)) {
+    throw new InvalidWorkflowDefinitionError(
+      "Workflow definition edges must be an array.",
+    );
+  }
+
+  for (const node of definition.nodes) {
+    assertV3NodeForGraphTopology(node, { requireAgentVersionBinding: false });
+  }
+
+  assertDagWorkflowGraphStructure(definition.nodes, definition.edges);
+}
+
+/**
+ * Shared DAG graph invariants for V2/V3 persisted definitions and logical V3 previews
+ * (after per-node validation).
+ */
+function assertDagWorkflowGraphStructure(
+  nodes: readonly DagGraphValidatedNode[],
+  edges: readonly WorkflowDefinitionEdgeV1[],
+): void {
+  const nodesByKey = new Map<string, DagGraphValidatedNode>();
+  for (const node of nodes) {
+    if (nodesByKey.has(node.key)) {
+      throw new InvalidWorkflowDefinitionError(
+        `Workflow node key '${node.key}' is duplicated.`,
+      );
+    }
+
+    nodesByKey.set(node.key, node);
+  }
+
+  const incoming = new Map<string, string[]>();
+  const outgoing = new Map<string, string[]>();
+  for (const key of nodesByKey.keys()) {
+    incoming.set(key, []);
+    outgoing.set(key, []);
+  }
+
+  const edgeKeys = new Set<string>();
+  for (const edge of edges) {
+    assertEdge(edge, nodesByKey);
+    const identity = `${edge.from}\0${edge.to}`;
+    if (edgeKeys.has(identity)) {
+      throw new InvalidWorkflowDefinitionError(
+        `Workflow edge '${edge.from}' → '${edge.to}' is duplicated.`,
+      );
+    }
+
+    edgeKeys.add(identity);
+    incoming.get(edge.to)?.push(edge.from);
+    outgoing.get(edge.from)?.push(edge.to);
+  }
+
+  if (hasCycle(nodesByKey, outgoing)) {
+    throw new InvalidWorkflowDefinitionError(
+      "Workflow definition contains a cycle.",
+    );
+  }
+
+  const entryNodes = nodes.filter(
+    (node) => (incoming.get(node.key) ?? []).length === 0,
+  );
+  const terminalNodes = nodes.filter(
+    (node) => (outgoing.get(node.key) ?? []).length === 0,
+  );
+
+  if (entryNodes.length !== 1 || entryNodes[0] === undefined) {
+    throw new InvalidWorkflowDefinitionError(
+      "Workflow definition must have exactly one entry node.",
+    );
+  }
+
+  if (terminalNodes.length !== 1 || terminalNodes[0] === undefined) {
+    throw new InvalidWorkflowDefinitionError(
+      "Workflow definition must have exactly one terminal node.",
+    );
+  }
+
+  const entryKey = entryNodes[0].key;
+  const terminalKey = terminalNodes[0].key;
+
+  for (const node of nodes) {
+    const inCount = incoming.get(node.key)?.length ?? 0;
+    const outCount = outgoing.get(node.key)?.length ?? 0;
+    assertDagNodeTopology(
+      node,
+      inCount,
+      outCount,
+      node.key === entryKey,
+      node.key === terminalKey,
+      outgoing.get(node.key) ?? [],
+    );
+  }
+
+  const reachableFromEntry = walkForward(entryKey, outgoing);
+  if (reachableFromEntry.size !== nodes.length) {
+    throw new InvalidWorkflowDefinitionError(
+      "Workflow definition contains a node that is not reachable from the entry node.",
+    );
+  }
+
+  const canReachTerminal = walkBackward(terminalKey, incoming);
+  if (canReachTerminal.size !== nodes.length) {
+    throw new InvalidWorkflowDefinitionError(
+      "Workflow definition contains a node that cannot reach the terminal node.",
+    );
+  }
 }
 
 function assertDagWorkflowDefinitionForSchemaVersion(
@@ -231,99 +383,15 @@ function assertDagWorkflowDefinitionForSchemaVersion(
     );
   }
 
-  const nodesByKey = new Map<string, DagWorkflowNode>();
   for (const node of definition.nodes) {
     if (expectedSchemaVersion === "2") {
       assertV2Node(node as WorkflowDefinitionNodeV2);
     } else {
       assertV3Node(node as WorkflowDefinitionNodeV3);
     }
-
-    if (nodesByKey.has(node.key)) {
-      throw new InvalidWorkflowDefinitionError(
-        `Workflow node key '${node.key}' is duplicated.`,
-      );
-    }
-
-    nodesByKey.set(node.key, node);
   }
 
-  const incoming = new Map<string, string[]>();
-  const outgoing = new Map<string, string[]>();
-  for (const key of nodesByKey.keys()) {
-    incoming.set(key, []);
-    outgoing.set(key, []);
-  }
-
-  const edgeKeys = new Set<string>();
-  for (const edge of definition.edges) {
-    assertEdge(edge, nodesByKey);
-    const identity = `${edge.from}\0${edge.to}`;
-    if (edgeKeys.has(identity)) {
-      throw new InvalidWorkflowDefinitionError(
-        `Workflow edge '${edge.from}' → '${edge.to}' is duplicated.`,
-      );
-    }
-
-    edgeKeys.add(identity);
-    incoming.get(edge.to)?.push(edge.from);
-    outgoing.get(edge.from)?.push(edge.to);
-  }
-
-  if (hasCycle(nodesByKey, outgoing)) {
-    throw new InvalidWorkflowDefinitionError(
-      "Workflow definition contains a cycle.",
-    );
-  }
-
-  const entryNodes = definition.nodes.filter(
-    (node) => (incoming.get(node.key) ?? []).length === 0,
-  );
-  const terminalNodes = definition.nodes.filter(
-    (node) => (outgoing.get(node.key) ?? []).length === 0,
-  );
-
-  if (entryNodes.length !== 1 || entryNodes[0] === undefined) {
-    throw new InvalidWorkflowDefinitionError(
-      "Workflow definition must have exactly one entry node.",
-    );
-  }
-
-  if (terminalNodes.length !== 1 || terminalNodes[0] === undefined) {
-    throw new InvalidWorkflowDefinitionError(
-      "Workflow definition must have exactly one terminal node.",
-    );
-  }
-
-  const entryKey = entryNodes[0].key;
-  const terminalKey = terminalNodes[0].key;
-
-  for (const node of definition.nodes) {
-    const inCount = incoming.get(node.key)?.length ?? 0;
-    const outCount = outgoing.get(node.key)?.length ?? 0;
-    assertDagNodeTopology(
-      node,
-      inCount,
-      outCount,
-      node.key === entryKey,
-      node.key === terminalKey,
-      outgoing.get(node.key) ?? [],
-    );
-  }
-
-  const reachableFromEntry = walkForward(entryKey, outgoing);
-  if (reachableFromEntry.size !== definition.nodes.length) {
-    throw new InvalidWorkflowDefinitionError(
-      "Workflow definition contains a node that is not reachable from the entry node.",
-    );
-  }
-
-  const canReachTerminal = walkBackward(terminalKey, incoming);
-  if (canReachTerminal.size !== definition.nodes.length) {
-    throw new InvalidWorkflowDefinitionError(
-      "Workflow definition contains a node that cannot reach the terminal node.",
-    );
-  }
+  assertDagWorkflowGraphStructure(definition.nodes, definition.edges);
 }
 
 export function orderedSequentialNodeKeys(
@@ -450,6 +518,17 @@ function assertAgentNode(node: WorkflowDefinitionNodeV1): void {
 }
 
 function assertV3Node(node: WorkflowDefinitionNodeV3): void {
+  assertV3NodeForGraphTopology(node, { requireAgentVersionBinding: true });
+}
+
+/**
+ * V3 node structural validation for graph topology. When `requireAgentVersionBinding` is false,
+ * AGENT nodes may omit `agentVersionId` (logical / pre-publication graphs).
+ */
+function assertV3NodeForGraphTopology(
+  node: WorkflowDefinitionV3NodeForTopology,
+  options: { readonly requireAgentVersionBinding: boolean },
+): void {
   if (typeof node.key !== "string" || node.key.trim().length === 0) {
     throw new InvalidWorkflowDefinitionError(
       "Workflow node key must be a non-empty string.",
@@ -463,26 +542,35 @@ function assertV3Node(node: WorkflowDefinitionNodeV3): void {
   }
 
   if (node.type === "AGENT") {
-    if (
-      typeof node.agentVersionId !== "string" ||
-      node.agentVersionId.trim().length === 0
-    ) {
-      throw new InvalidWorkflowDefinitionError(
-        `Workflow node '${node.key}' must bind an immutable agentVersionId.`,
-      );
+    if (options.requireAgentVersionBinding) {
+      const full = node as WorkflowDefinitionNodeV3 & { type: "AGENT" };
+      if (
+        typeof full.agentVersionId !== "string" ||
+        full.agentVersionId.trim().length === 0
+      ) {
+        throw new InvalidWorkflowDefinitionError(
+          `Workflow node '${node.key}' must bind an immutable agentVersionId.`,
+        );
+      }
     }
+
+    return;
   }
 
   if (node.type === "BRANCH") {
-    assertBranchNode(node);
+    assertBranchNode(
+      node as Extract<WorkflowDefinitionNodeV3, { type: "BRANCH" }>,
+    );
   }
 
   if (node.type === "APPROVAL") {
-    assertApprovalNode(node);
+    assertApprovalNode(
+      node as Extract<WorkflowDefinitionNodeV3, { type: "APPROVAL" }>,
+    );
   }
 
   if (node.type === "WAIT") {
-    assertWaitNode(node);
+    assertWaitNode(node as Extract<WorkflowDefinitionNodeV3, { type: "WAIT" }>);
   }
 }
 
@@ -700,7 +788,7 @@ function assertApprovalNode(
 }
 
 function assertDagNodeTopology(
-  node: DagWorkflowNode,
+  node: DagWorkflowNode | WorkflowBuilderLogicalAgentNodeV3,
   inCount: number,
   outCount: number,
   isEntry: boolean,
@@ -822,7 +910,7 @@ function assertEdge(
 }
 
 function hasCycle(
-  nodesByKey: ReadonlyMap<string, DagWorkflowNode>,
+  nodesByKey: ReadonlyMap<string, DagGraphValidatedNode>,
   outgoing: ReadonlyMap<string, readonly string[]>,
 ): boolean {
   const visiting = new Set<string>();
