@@ -46,11 +46,11 @@ export type WorkflowBuilderLogicalAgentNodeV3 = {
 
 /** V3 node shape accepted by {@link assertDagWorkflowV3GraphTopology}. */
 export type WorkflowDefinitionV3NodeForTopology =
-  | WorkflowBuilderLogicalAgentNodeV3
-  | WorkflowDefinitionNodeV3;
+  WorkflowBuilderLogicalAgentNodeV3 | WorkflowDefinitionNodeV3;
 
 /** Node types that share the same DAG graph invariants (V2, full V3, or logical V3). */
-type DagGraphValidatedNode = DagWorkflowNode | WorkflowDefinitionV3NodeForTopology;
+type DagGraphValidatedNode =
+  DagWorkflowNode | WorkflowDefinitionV3NodeForTopology;
 
 export type WorkflowDefinitionNodeForDefinition<D extends WorkflowDefinition> =
   D extends WorkflowDefinitionV1
@@ -558,11 +558,15 @@ function assertV3NodeForGraphTopology(
   }
 
   if (node.type === "BRANCH") {
-    assertBranchNode(node as Extract<WorkflowDefinitionNodeV3, { type: "BRANCH" }>);
+    assertBranchNode(
+      node as Extract<WorkflowDefinitionNodeV3, { type: "BRANCH" }>,
+    );
   }
 
   if (node.type === "APPROVAL") {
-    assertApprovalNode(node as Extract<WorkflowDefinitionNodeV3, { type: "APPROVAL" }>);
+    assertApprovalNode(
+      node as Extract<WorkflowDefinitionNodeV3, { type: "APPROVAL" }>,
+    );
   }
 
   if (node.type === "WAIT") {

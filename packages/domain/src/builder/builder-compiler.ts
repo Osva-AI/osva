@@ -80,21 +80,18 @@ export function buildBuilderCatalogIndex(
   return { agentVersionsById, modelProfileVersionsById, toolVersionsById };
 }
 
-function workflowIntentToLogicalTopology(
-  proposal: BuilderProposalV1,
-): {
+function workflowIntentToLogicalTopology(proposal: BuilderProposalV1): {
   readonly nodes: readonly WorkflowDefinitionV3NodeForTopology[];
   readonly edges: readonly WorkflowDefinitionEdgeV3[];
 } {
-  const nodes: WorkflowDefinitionV3NodeForTopology[] = proposal.workflow.nodes.map(
-    (node) => {
+  const nodes: WorkflowDefinitionV3NodeForTopology[] =
+    proposal.workflow.nodes.map((node) => {
       if (node.type === "AGENT") {
         return { key: node.key, type: "AGENT" };
       }
 
       return node;
-    },
-  );
+    });
 
   const edges = [...proposal.workflow.edges].sort((a, b) => {
     const fromCmp = a.from.localeCompare(b.from);
