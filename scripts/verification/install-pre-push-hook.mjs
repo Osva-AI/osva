@@ -9,7 +9,7 @@ const MARKER = "# osva-verify-branch-hook";
 function printUsage() {
   console.log(`Usage: node scripts/verification/install-pre-push-hook.mjs <enable|disable|status>
 
-Optional Git pre-push hook that runs \`pnpm verify:branch\`.
+Optional Git pre-push hook that runs \`pnpm verify:pre-push\` (read-only committed diff).
 Disabled by default; never installed by package postinstall.
 Does not overwrite an existing hook unless it already carries the OSVA marker.
 `);
@@ -22,7 +22,7 @@ async function main(mode) {
   const hookBody = `#!/bin/sh
 ${MARKER}
 set -e
-pnpm verify:branch
+pnpm verify:pre-push
 `;
 
   if (mode === "disable") {
@@ -30,12 +30,12 @@ pnpm verify:branch
       const existing = await fs.readFile(HOOK_PATH, "utf8");
       if (!existing.includes(MARKER)) {
         console.log(
-          "No OSVA verify:branch hook installed (foreign pre-push hook preserved).",
+          "No OSVA verify:pre-push hook installed (foreign pre-push hook preserved).",
         );
         return;
       }
       await fs.unlink(HOOK_PATH);
-      console.log("Removed OSVA verify:branch pre-push hook.");
+      console.log("Removed OSVA read-only pre-push hook.");
     } catch (error) {
       if (
         error &&
@@ -55,7 +55,7 @@ pnpm verify:branch
     const existing = await fs.readFile(HOOK_PATH, "utf8");
     if (existing.includes(MARKER)) {
       await fs.writeFile(HOOK_PATH, hookBody, "utf8");
-      console.log("Updated OSVA verify:branch pre-push hook.");
+      console.log("Updated OSVA read-only pre-push hook.");
       return;
     }
     console.error(
@@ -78,7 +78,7 @@ pnpm verify:branch
   if (process.platform !== "win32") {
     await fs.chmod(HOOK_PATH, 0o755);
   }
-  console.log("Installed OSVA verify:branch pre-push hook.");
+  console.log("Installed OSVA read-only pre-push hook (pnpm verify:pre-push).");
   console.log(
     "Disable with: node scripts/verification/install-pre-push-hook.mjs disable",
   );
@@ -95,11 +95,11 @@ if (mode === "status") {
     const existing = await fs.readFile(HOOK_PATH, "utf8");
     console.log(
       existing.includes(MARKER)
-        ? "OSVA verify:branch pre-push hook: enabled"
+        ? "OSVA read-only pre-push hook: enabled"
         : "pre-push hook: present (not OSVA-managed)",
     );
   } catch {
-    console.log("OSVA verify:branch pre-push hook: disabled");
+    console.log("OSVA read-only pre-push hook: disabled");
   }
   process.exit(0);
 }

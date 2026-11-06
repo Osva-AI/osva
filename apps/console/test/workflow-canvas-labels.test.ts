@@ -19,6 +19,18 @@ describe("workflow canvas labels", () => {
     expect(label).toBe("Research (v2)");
   });
 
+  it("labels builder proposal AGENT nodes by agentRef when agentVersionId is absent", () => {
+    const label = resolveWorkflowCanvasLabel(
+      {
+        key: "n1",
+        type: "AGENT",
+        agentRef: "bpr_report",
+      } as unknown as Parameters<typeof resolveWorkflowCanvasLabel>[0],
+      { agentNameByVersionId: {}, agentVersionNumberByVersionId: {} },
+    );
+    expect(label).toBe("Draft agent (bpr_report)");
+  });
+
   it("uses approval title when present", () => {
     const label = resolveWorkflowCanvasLabel(
       {

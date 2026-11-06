@@ -5,6 +5,7 @@ import { OsvaApiError, OsvaTransportError } from "./errors.js";
 export interface OsvaHttpResponse<T> {
   readonly data: T;
   readonly requestId?: string;
+  readonly status: number;
 }
 
 export interface OsvaHttpClientOptions {
@@ -20,6 +21,10 @@ export interface RequestOptions {
   readonly query?: Readonly<Record<string, string | undefined>>;
   readonly body?: unknown;
   readonly headers?: Readonly<Record<string, string>>;
+  /** Overrides client default (e.g. long-running builder generation). */
+  readonly timeoutMs?: number;
+  /** Return JSON body instead of throwing for these HTTP statuses. */
+  readonly acceptErrorStatuses?: readonly number[];
 }
 
 export interface UploadMultipartOptions {
@@ -71,9 +76,10 @@ export class OsvaHttpClient {
   ): Promise<OsvaHttpResponse<T>> {
     const url = buildUrl(this.baseUrl, options.path, options.query);
     const controller = new AbortController();
+    const deadlineMs = options.timeoutMs ?? this.timeoutMs;
     const timer = setTimeout(() => {
       controller.abort();
-    }, this.timeoutMs);
+    }, deadlineMs);
 
     let response: Response;
     try {
@@ -113,8 +119,9 @@ export class OsvaHttpClient {
     }
 
     const requestId = resolveOsvaRequestId(response.headers, body);
+    const accept = new Set(options.acceptErrorStatuses ?? []);
 
-    if (!response.ok) {
+    if (!response.ok && !accept.has(response.status)) {
       throw new OsvaApiError(
         response.status,
         normalizeErrorBody(body),
@@ -122,7 +129,7 @@ export class OsvaHttpClient {
       );
     }
 
-    return { data: body as T, requestId };
+    return { data: body as T, requestId, status: response.status };
   }
 
   async uploadMultipart<T>(options: UploadMultipartOptions): Promise<T> {

@@ -90,6 +90,11 @@ import { PostgresEvaluationRepository } from "@osva/db";
 import { createMcpClientPool } from "@osva/adapters-mcp-client";
 import { readMcpRuntimePolicyFromEnv } from "./mcp-runtime-config.js";
 import { ProcessEnvSecretResolver } from "@osva/adapters-runtime-http";
+import { ModelGateway } from "@osva/model-gateway";
+import {
+  GenerateBuilderProposalFromNaturalLanguage,
+  GetWorkspaceBuilderCapabilityCatalog,
+} from "@osva/domain/builder";
 import {
   CreateRun,
   IngestWorkflowEvent,
@@ -185,6 +190,26 @@ export function createWebProcess(
     policy: { envApiKeys: modelProviderEnvApiKeys(env) },
   });
   const tools = new PostgresToolRepository(database);
+  const modelGateway = new ModelGateway({
+    modelProfiles,
+    providers: legacyModelProviders,
+    connectionResolver: modelProviderConnectionResolver,
+  });
+  const generateBuilderProposal =
+    new GenerateBuilderProposalFromNaturalLanguage({
+      workspaces,
+      agents,
+      modelProfiles,
+      tools,
+      modelGateway,
+    });
+  const getWorkspaceBuilderCapabilityCatalog =
+    new GetWorkspaceBuilderCapabilityCatalog({
+      workspaces,
+      agents,
+      modelProfiles,
+      tools,
+    });
   const connectors = new PostgresConnectorRepository(database);
   const runs = new PostgresRunRepository(database);
   const scheduleRepository = new PostgresScheduleRepository(database);
@@ -494,6 +519,10 @@ export function createWebProcess(
       knowledge: {
         knowledge: knowledgeApplication,
         retriever: knowledgeRetriever,
+      },
+      builder: {
+        generateBuilderProposal,
+        getWorkspaceBuilderCapabilityCatalog,
       },
       apiKeys: apiKeyApplication,
       humanAuth: humanAuthServices,

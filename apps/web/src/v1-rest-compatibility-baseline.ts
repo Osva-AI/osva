@@ -25,6 +25,7 @@ const MODULE_RESOURCE_FAMILIES: Record<V1HandlerModule, string> = {
   "workflow-http": "workflow",
   "workflow-event-http": "workflow_event",
   "office-http": "office",
+  "builder-http": "builder",
 };
 
 export interface V1RestCompatibilityBaselineEntry {

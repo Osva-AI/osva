@@ -33,6 +33,7 @@ const V1_ROUTE_PREFIXES: readonly {
   { prefix: "/v1/workflows", family: "v1.workflows" },
   { prefix: "/v1/approval-requests", family: "v1.approvals" },
   { prefix: "/v1/office", family: "v1.office" },
+  { prefix: "/v1/builder", family: "v1.builder" },
 ];
 
 export function classifyHttpMethod(method: string): string {

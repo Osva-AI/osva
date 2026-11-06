@@ -15,6 +15,7 @@ import { V1_HTTP_ROUTES as scheduleHttpRoutes } from "./schedule-http.js";
 import { V1_HTTP_ROUTES as workflowHttpRoutes } from "./workflow-http.js";
 import { V1_HTTP_ROUTES as workflowEventHttpRoutes } from "./workflow-event-http.js";
 import { V1_HTTP_ROUTES as officeHttpRoutes } from "./office-http.js";
+import { V1_HTTP_ROUTES as builderHttpRoutes } from "./builder-http.js";
 
 function withModule<const M extends string>(
   module: M,
@@ -45,6 +46,7 @@ export const V1_ROUTE_INVENTORY = [
   ...withModule("workflow-http", workflowHttpRoutes),
   ...withModule("workflow-event-http", workflowEventHttpRoutes),
   ...withModule("office-http", officeHttpRoutes),
+  ...withModule("builder-http", builderHttpRoutes),
 ] as const;
 
 export const V1_HANDLER_MODULES = [
@@ -65,6 +67,7 @@ export const V1_HANDLER_MODULES = [
   "workflow-http",
   "workflow-event-http",
   "office-http",
+  "builder-http",
 ] as const;
 
 export type V1HandlerModule = (typeof V1_HANDLER_MODULES)[number];

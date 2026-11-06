@@ -121,7 +121,9 @@ GitHub Actions remains responsible for the clean full matrix. A local full CI-eq
 
 ## Formatting policy
 
-For every changed supported file:
+### Implementation formatting (changed files)
+
+For every changed supported file during active development:
 
 ```powershell
 pnpm exec prettier --write <files>
@@ -133,6 +135,12 @@ Run formatting before expensive verification. Markdown changes also require:
 ```powershell
 node scripts/release/docs-link-check.mjs
 ```
+
+### Pre-push verification (read-only committed branch)
+
+**`pnpm verify:pre-push`** (optional hook: `node scripts/verification/install-pre-push-hook.mjs enable`) is **not** the same as the steps above. It runs only on **committed** paths since `merge-base(origin/main, HEAD)`, with Prettier **`--check`** (no `--write`), `git diff --check`, and a clean working tree requirement. See [BRANCH_VERIFICATION.md](./BRANCH_VERIFICATION.md).
+
+A passing **changed-file** Prettier check does **not** prove the **full committed branch** would pass pre-push verification if uncommitted edits or older commits contain formatting or whitespace issues.
 
 ## Cache policy
 

@@ -1,4 +1,5 @@
 import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
+import { BuilderProposalOpenAiJsonSchema } from "@osva/domain/builder";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { OpenAIProviderAdapter } from "../src/openai-provider-adapter.js";
@@ -188,6 +189,36 @@ describe("OpenAIProviderAdapter", () => {
     await expect(pending).rejects.toMatchObject({
       code: MODEL_ERROR_CODES.MODEL_CANCELLED,
       retryable: false,
+    });
+  });
+
+  it("maps M20.2 BuilderProposal jsonSchema to Chat Completions response_format with strict json_schema", async () => {
+    const server = await startFakeOpenAIResponsesServer();
+    servers.push(server);
+    const adapter = new OpenAIProviderAdapter({
+      apiKey: "test-key",
+      baseURL: server.origin,
+      maxRetries: 0,
+    });
+
+    await adapter.generateText({
+      model: "gpt-test-snapshot",
+      messages: [{ role: "user", content: "builder-m20-json-schema" }],
+      jsonSchema: BuilderProposalOpenAiJsonSchema,
+    });
+
+    const chatReq = server.requests.find((r) =>
+      r.url.includes("/chat/completions"),
+    );
+    expect(chatReq).toBeDefined();
+    const body = chatReq?.body as Record<string, unknown>;
+    expect(body.response_format).toEqual({
+      type: "json_schema",
+      json_schema: {
+        name: "agent_output",
+        schema: BuilderProposalOpenAiJsonSchema,
+        strict: true,
+      },
     });
   });
 });

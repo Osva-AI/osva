@@ -1,4 +1,5 @@
 import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
+import { BuilderProposalOpenAiJsonSchema } from "@osva/domain/builder";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { GeminiProviderAdapter } from "../src/gemini-provider-adapter.js";
@@ -72,6 +73,29 @@ describe("GeminiProviderAdapter", () => {
       inputTokens: 100,
       outputTokens: 50,
       totalTokens: 150,
+    });
+  });
+
+  it("maps M20.2 BuilderProposal jsonSchema to generationConfig responseSchema + JSON mime type", async () => {
+    const server = await startFakeGeminiGenerateContentServer();
+    servers.push(server);
+    const adapter = new GeminiProviderAdapter({
+      apiKey: "test-key",
+      baseURL: server.origin,
+    });
+
+    await adapter.generateText({
+      model: "gemini-test-snapshot",
+      messages: [{ role: "user", content: "builder-m20-json-schema" }],
+      jsonSchema: BuilderProposalOpenAiJsonSchema,
+    });
+
+    expect(server.requests).toHaveLength(1);
+    expect(server.requests[0]?.body).toMatchObject({
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: BuilderProposalOpenAiJsonSchema,
+      },
     });
   });
 

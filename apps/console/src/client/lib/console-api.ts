@@ -4,6 +4,8 @@ export interface ConsoleApiErrorBody {
   readonly error: string;
   readonly code?: string;
   readonly requestId?: string;
+  readonly message?: string;
+  readonly [key: string]: unknown;
 }
 
 export class ConsoleApiError extends Error {
@@ -33,6 +35,7 @@ function buildHeaders(init?: HeadersInit): Headers {
 export async function consoleFetch<T>(
   path: string,
   init?: RequestInit,
+  options?: { readonly acceptErrorStatuses?: readonly number[] },
 ): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -53,14 +56,22 @@ export async function consoleFetch<T>(
     });
   }
 
-  if (!response.ok) {
+  const accept = new Set(options?.acceptErrorStatuses ?? []);
+  if (!response.ok && !accept.has(response.status)) {
     const parsed =
       typeof body === "object" && body !== null
         ? (body as ConsoleApiErrorBody)
         : { error: "Request failed." };
     const headerRequestId = response.headers.get("x-osva-request-id")?.trim();
+    const message =
+      typeof parsed.error === "string"
+        ? parsed.error
+        : typeof (body as { message?: unknown }).message === "string"
+          ? String((body as { message?: string }).message)
+          : "Request failed.";
     throw new ConsoleApiError(response.status, {
       ...parsed,
+      error: message,
       requestId: parsed.requestId ?? headerRequestId,
     });
   }

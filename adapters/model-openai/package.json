@@ -21,6 +21,7 @@
     "openai": "7.15.0"
   },
   "devDependencies": {
+    "@osva/domain": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

@@ -16,7 +16,19 @@ export function resolveWorkflowCanvasLabel(
   },
 ): string {
   if (node.type === "AGENT") {
-    const versionId = node.agentVersionId.trim();
+    const agentNode = node as WorkflowDefinitionNodeV3 & {
+      readonly agentRef?: unknown;
+      readonly agentVersionId?: unknown;
+    };
+    const proposalRef =
+      typeof agentNode.agentRef === "string" ? agentNode.agentRef.trim() : "";
+    if (proposalRef.length > 0) {
+      return `Draft agent (${proposalRef})`;
+    }
+    const versionId =
+      typeof agentNode.agentVersionId === "string"
+        ? agentNode.agentVersionId.trim()
+        : "";
     if (versionId.length === 0) {
       return "Choose an agent version";
     }

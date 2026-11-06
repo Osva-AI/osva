@@ -15,6 +15,9 @@ import type { ConsoleUpstreamResponse } from "./upstream-response.js";
 
 const UPSTREAM_TIMEOUT_MS = 30_000;
 
+/** Must exceed control-plane builder generation socket timeout (~150s). */
+export const BUILDER_GENERATION_UPSTREAM_TIMEOUT_MS = 160_000;
+
 export class ConsoleUpstreamHttpError extends Error {
   readonly status: number;
   readonly body: Record<string, unknown>;
@@ -69,6 +72,9 @@ export function createHumanSessionUpstream(config: ConsoleConfig) {
         readonly query?: Record<string, string | undefined>;
         readonly body?: unknown;
         readonly requireWorkspace?: boolean;
+        readonly timeoutMs?: number;
+        /** Upstream JSON error bodies to return instead of throwing (e.g. 422). */
+        readonly acceptErrorStatuses?: readonly number[];
       },
     ): Promise<HumanSessionUpstreamJsonResult<T>> {
       return upstreamJson<T>(baseUrl, ctx, input, defaultMutationOrigin);
@@ -103,6 +109,8 @@ async function upstreamJson<T>(
     readonly query?: Record<string, string | undefined>;
     readonly body?: unknown;
     readonly requireWorkspace?: boolean;
+    readonly timeoutMs?: number;
+    readonly acceptErrorStatuses?: readonly number[];
   },
   defaultMutationOrigin: string,
 ): Promise<HumanSessionUpstreamJsonResult<T>> {
@@ -113,10 +121,11 @@ async function upstreamJson<T>(
     input.method,
     defaultMutationOrigin,
   );
+  const timeoutMs = input.timeoutMs ?? UPSTREAM_TIMEOUT_MS;
   const init: RequestInit = {
     method: input.method,
     headers,
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   };
   if (input.body !== undefined) {
     init.body = JSON.stringify(input.body);
@@ -149,7 +158,8 @@ async function upstreamJson<T>(
     });
   }
 
-  if (!response.ok) {
+  const acceptErrors = new Set(input.acceptErrorStatuses ?? []);
+  if (!response.ok && !acceptErrors.has(response.status)) {
     const body =
       typeof parsed === "object" && parsed !== null
         ? (parsed as Record<string, unknown>)

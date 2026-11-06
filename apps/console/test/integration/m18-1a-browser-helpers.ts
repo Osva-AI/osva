@@ -131,20 +131,157 @@ export interface MockRunDetailResponses {
   readonly resumeStatus?: number;
 }
 
+export interface MockNlBuilderCaptures {
+  readonly generateRequests: { readonly url: string; readonly body: unknown }[];
+  readonly validateRequests: { readonly url: string; readonly body: unknown }[];
+}
+
+export interface MockNlBuilderOptions {
+  readonly modelProfileId: string;
+  readonly modelProfileVersionId: string;
+  readonly generateProposal: unknown;
+  readonly validateResponse?: unknown;
+  /**
+   * When set, POSTs to agent/workflow publish or run endpoints abort so tests can assert they never fire.
+   */
+  readonly recordForbiddenPosts?: boolean;
+  readonly forbiddenHits?: { method: string; url: string }[];
+  readonly captures?: MockNlBuilderCaptures;
+}
+
+function isNlBuilderForbiddenPost(pathname: string): boolean {
+  if (pathname === "/api/v1/agents") {
+    return true;
+  }
+  if (/^\/api\/v1\/agents\/[^/]+\/versions$/.test(pathname)) {
+    return true;
+  }
+  if (pathname === "/api/v1/workflows") {
+    return true;
+  }
+  if (/^\/api\/v1\/workflows\/[^/]+\/versions$/.test(pathname)) {
+    return true;
+  }
+  if (pathname === "/api/v1/runs" || pathname.startsWith("/api/v1/runs/")) {
+    return true;
+  }
+  if (
+    pathname === "/api/v1/workflow-runs" ||
+    pathname.startsWith("/api/v1/workflow-runs/")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function installMockConsoleApi(
   page: Page,
   options: {
     readonly workspaces?: readonly MockWorkspace[];
     readonly runDetail?: MockRunDetailResponses;
+    readonly nlBuilder?: MockNlBuilderOptions;
   } = {},
 ): Promise<void> {
   const workspaces = options.workspaces ?? DEFAULT_WORKSPACES;
   const runDetail = options.runDetail;
+  const nlBuilder = options.nlBuilder;
 
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
     const pathname = url.pathname;
     const method = route.request().method();
+
+    if (
+      nlBuilder !== undefined &&
+      nlBuilder.recordForbiddenPosts === true &&
+      nlBuilder.forbiddenHits !== undefined &&
+      method === "POST" &&
+      isNlBuilderForbiddenPost(pathname)
+    ) {
+      nlBuilder.forbiddenHits.push({ method, url: route.request().url() });
+      await route.abort("failed");
+      return;
+    }
+
+    if (nlBuilder !== undefined) {
+      if (pathname === "/api/v1/model-profiles" && method === "GET") {
+        await fulfillJson(route, {
+          modelProfiles: [
+            {
+              id: nlBuilder.modelProfileId,
+              key: "mp-browser",
+              name: "Browser OpenAI",
+            },
+          ],
+        });
+        return;
+      }
+      if (
+        pathname ===
+          `/api/v1/model-profiles/${encodeURIComponent(nlBuilder.modelProfileId)}/versions` &&
+        method === "GET"
+      ) {
+        await fulfillJson(route, {
+          versions: [
+            {
+              id: nlBuilder.modelProfileVersionId,
+              modelProfileId: nlBuilder.modelProfileId,
+              version: 1,
+              provider: "OPENAI",
+              model: "gpt-test",
+            },
+          ],
+        });
+        return;
+      }
+      if (
+        pathname === "/api/v1/builder/proposals/generate" &&
+        method === "POST"
+      ) {
+        const raw = route.request().postData() ?? "{}";
+        let body: unknown;
+        try {
+          body = JSON.parse(raw) as unknown;
+        } catch {
+          body = { _parseError: raw };
+        }
+        nlBuilder.captures?.generateRequests.push({
+          url: route.request().url(),
+          body,
+        });
+        await fulfillJson(route, {
+          ok: true,
+          proposal: nlBuilder.generateProposal,
+          compileIssues: [],
+        });
+        return;
+      }
+      if (
+        pathname === "/api/v1/builder/proposals/validate" &&
+        method === "POST"
+      ) {
+        const raw = route.request().postData() ?? "{}";
+        let body: unknown;
+        try {
+          body = JSON.parse(raw) as unknown;
+        } catch {
+          body = { _parseError: raw };
+        }
+        nlBuilder.captures?.validateRequests.push({
+          url: route.request().url(),
+          body,
+        });
+        await fulfillJson(
+          route,
+          nlBuilder.validateResponse ?? {
+            ok: true,
+            issues: [],
+            previewLogicalWorkflowDigest: "digest-browser-m20-3",
+          },
+        );
+        return;
+      }
+    }
 
     if (runDetail !== undefined) {
       const { runId } = runDetail;
@@ -277,17 +414,26 @@ export async function seedShellStorage(
   page: Page,
   options: {
     readonly workspaceId?: string;
+    /** When false, do not set `selectedWorkspaceId` on each navigation (for tests that switch workspace in-session). */
+    readonly seedWorkspaceId?: boolean;
     readonly theme?: "light" | "dark" | "system";
     readonly sidebarCollapsed?: boolean;
   } = {},
 ): Promise<void> {
   const workspaceId = options.workspaceId ?? "ws-admin";
+  const seedWorkspaceId = options.seedWorkspaceId ?? true;
   const theme = options.theme ?? "light";
   const sidebarCollapsed = options.sidebarCollapsed ?? false;
 
   await page.addInitScript(
-    ({ wsId, themePref, collapsed }) => {
-      sessionStorage.setItem("osva.console.selectedWorkspaceId", wsId);
+    ({ wsId, themePref, collapsed, seedWs }) => {
+      if (seedWs) {
+        sessionStorage.setItem("osva.console.selectedWorkspaceId", wsId);
+      } else if (
+        sessionStorage.getItem("osva.console.selectedWorkspaceId") === null
+      ) {
+        sessionStorage.setItem("osva.console.selectedWorkspaceId", wsId);
+      }
       localStorage.setItem("osva.console.themePreference", themePref);
       if (collapsed) {
         localStorage.setItem("osva.console.sidebarCollapsed", "1");
@@ -299,6 +445,7 @@ export async function seedShellStorage(
       wsId: workspaceId,
       themePref: theme,
       collapsed: sidebarCollapsed,
+      seedWs: seedWorkspaceId,
     },
   );
 }

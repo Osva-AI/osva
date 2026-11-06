@@ -257,6 +257,12 @@ export interface ConsoleOsvaClient {
   listEvaluationCaseResults(
     evaluationRunId: EvaluationRunId,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  generateBuilderProposal(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  validateBuilderProposal(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
 }
 
 export function createConsoleOsvaClient(
@@ -729,6 +735,26 @@ export function createConsoleOsvaClient(
       http.requestWithMeta({
         method: "GET",
         path: `/v1/evaluation-runs/${encodeURIComponent(evaluationRunId)}/case-results`,
+      }),
+    generateBuilderProposal: async (body) => {
+      const out = await http.requestWithMeta({
+        method: "POST",
+        path: "/v1/builder/proposals/generate",
+        body,
+        timeoutMs: 160_000,
+        acceptErrorStatuses: [422],
+      });
+      return {
+        data: out.data,
+        requestId: out.requestId,
+        status: out.status,
+      };
+    },
+    validateBuilderProposal: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/builder/proposals/validate",
+        body,
       }),
   };
 }

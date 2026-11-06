@@ -68,6 +68,10 @@ import {
   handleKnowledgeRequest,
   type KnowledgeHttpServices,
 } from "./knowledge-http.js";
+import {
+  handleBuilderRequest,
+  type BuilderHttpServices,
+} from "./builder-http.js";
 import { handleAuthContextRequest } from "./auth-http.js";
 import {
   handleHumanAuthRequest,
@@ -122,6 +126,7 @@ export interface CreateWebApplicationOptions {
   readonly workflowEvents?: WorkflowEventHttpServices;
   readonly office: OfficeHttpServices;
   readonly knowledge: KnowledgeHttpServices;
+  readonly builder: BuilderHttpServices;
   readonly security: WebSecurityServices;
   readonly humanAuth?: HumanAuthHttpServices;
   readonly apiKeys: ApiKeyApplication;
@@ -195,6 +200,7 @@ async function handleRequest(
                 options.workflowEvents,
                 options.office,
                 options.knowledge,
+                options.builder,
                 options.apiKeys,
                 options.rateLimit,
                 options.humanAuth,
@@ -232,6 +238,7 @@ async function handleRequestWithContext(
   workflowEvents: WorkflowEventHttpServices | undefined,
   office: OfficeHttpServices,
   knowledge: KnowledgeHttpServices,
+  builder: BuilderHttpServices,
   apiKeys: ApiKeyApplication,
   rateLimit: HttpRateLimitContext | undefined,
   humanAuth: HumanAuthHttpServices | undefined,
@@ -435,6 +442,7 @@ async function handleRequestWithContext(
               workflowEvents,
               office,
               knowledge,
+              builder,
               apiKeys,
             ),
         );
@@ -498,6 +506,7 @@ async function handleRequestWithContext(
     workflowEvents,
     office,
     knowledge,
+    builder,
     apiKeys,
   );
 }
@@ -525,6 +534,7 @@ async function dispatchV1ControlPlaneRequest(
   workflowEvents: WorkflowEventHttpServices | undefined,
   office: OfficeHttpServices,
   knowledge: KnowledgeHttpServices,
+  builder: BuilderHttpServices,
   apiKeys: ApiKeyApplication,
 ): Promise<void> {
   const handledAuthContext = await handleAuthContextRequest(
@@ -534,6 +544,17 @@ async function dispatchV1ControlPlaneRequest(
     path,
   );
   if (handledAuthContext) {
+    return;
+  }
+
+  const handledBuilder = await handleBuilderRequest(
+    request,
+    response,
+    method,
+    path,
+    builder,
+  );
+  if (handledBuilder) {
     return;
   }
 

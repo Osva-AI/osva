@@ -222,6 +222,35 @@ function writeChatCompletionResponse(
   }
 
   const userText = extractChatUserText(body);
+  if (userText.includes("builder-m20-json-schema")) {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        id: "chat_m20_schema_probe",
+        object: "chat.completion",
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: {
+              role: "assistant",
+              content: JSON.stringify({
+                schemaVersion: "1",
+                workflowRegistry: { key: "k", name: "n" },
+                agents: [],
+                workflow: { nodes: [], edges: [] },
+                assumptions: [],
+                unresolvedRequirements: [],
+              }),
+            },
+          },
+        ],
+        usage,
+      }),
+    );
+    return;
+  }
+
   let answer =
     scenario === "declarative-tool-flow"
       ? "declarative-after-tool"

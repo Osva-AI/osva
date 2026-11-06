@@ -18,6 +18,7 @@
     "verify:quick": "node scripts/verification/verify.mjs quick",
     "verify:changed": "node scripts/verification/verify.mjs changed",
     "verify:branch": "node scripts/verification/branch-verify.mjs",
+    "verify:pre-push": "node scripts/verification/pre-push-verify.mjs",
     "verify:docker": "node scripts/verification/verify.mjs docker",
     "verify:ci": "node scripts/verification/verify.mjs ci",
     "verify:python": "node scripts/verification/verify.mjs python",

@@ -113,6 +113,40 @@ export async function startFakeGeminiGenerateContentServer(): Promise<FakeGemini
         return;
       }
 
+      if (prompt === "builder-m20-json-schema") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_m20_schema_probe",
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        schemaVersion: "1",
+                        workflowRegistry: { key: "k", name: "n" },
+                        agents: [],
+                        workflow: { nodes: [], edges: [] },
+                        assumptions: [],
+                        unresolvedRequirements: [],
+                      }),
+                    },
+                  ],
+                },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 120,
+              candidatesTokenCount: 15,
+              totalTokenCount: 135,
+            },
+          }),
+        );
+        return;
+      }
+
       if (prompt === "thinking-usage") {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
