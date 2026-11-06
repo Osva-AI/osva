@@ -94,10 +94,10 @@ describe("checkpoint resume (Playwright)", () => {
     const resumeBtn = page.getByTestId("run-detail-resume");
     await resumeBtn.click();
     await expect
-      .poll(
-        async () => (await resumeBtn.textContent()) ?? "",
-        { timeout: 15_000, interval: 100 },
-      )
+      .poll(async () => (await resumeBtn.textContent()) ?? "", {
+        timeout: 15_000,
+        interval: 100,
+      })
       .toMatch(/Scheduling/i);
 
     await page.close();
