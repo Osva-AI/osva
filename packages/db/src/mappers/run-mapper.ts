@@ -35,6 +35,7 @@ export function runToRow(run: Run) {
     evaluationRunId: run.evaluationRunId ?? null,
     evaluationCaseId: run.evaluationCaseId ?? null,
     restrictPersistentMemory: run.restrictPersistentMemory,
+    recoveryMetadata: run.recoveryMetadata ?? null,
     input: run.input,
     idempotencyKey: run.idempotencyKey ?? null,
     createdAt: run.createdAt,
@@ -70,6 +71,7 @@ export function runFromRow(row: RunRow): Run {
     evaluationCaseId:
       (row.evaluationCaseId as EvaluationCaseId | null) ?? undefined,
     restrictPersistentMemory: row.restrictPersistentMemory,
+    recoveryMetadata: row.recoveryMetadata ?? undefined,
   });
 }
 

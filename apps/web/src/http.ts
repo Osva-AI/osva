@@ -51,6 +51,10 @@ import {
 } from "./run-observability-http.js";
 import { handleRunRequest, type RunHttpServices } from "./run-http.js";
 import {
+  handleRunRecoveryRequest,
+  type RunRecoveryHttpServices,
+} from "./run-recovery-http.js";
+import {
   handleScheduleRequest,
   type ScheduleHttpServices,
 } from "./schedule-http.js";
@@ -111,6 +115,7 @@ export interface CreateWebApplicationOptions {
   readonly modelProviderConnections: ModelProviderConnectionApplication;
   readonly tools: ToolApplication;
   readonly runs: RunHttpServices;
+  readonly runRecovery: RunRecoveryHttpServices;
   readonly runObservability: RunObservabilityHttpServices;
   readonly schedules: ScheduleHttpServices;
   readonly workflows: WorkflowApplication;
@@ -183,6 +188,7 @@ async function handleRequest(
                 options.modelProviderConnections,
                 options.tools,
                 options.runs,
+                options.runRecovery,
                 options.runObservability,
                 options.schedules,
                 options.workflows,
@@ -219,6 +225,7 @@ async function handleRequestWithContext(
   modelProviderConnections: ModelProviderConnectionApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
+  runRecovery: RunRecoveryHttpServices,
   runObservability: RunObservabilityHttpServices,
   schedules: ScheduleHttpServices,
   workflows: WorkflowApplication,
@@ -421,6 +428,7 @@ async function handleRequestWithContext(
               modelProviderConnections,
               tools,
               runs,
+              runRecovery,
               runObservability,
               schedules,
               workflows,
@@ -483,6 +491,7 @@ async function handleRequestWithContext(
     modelProviderConnections,
     tools,
     runs,
+    runRecovery,
     runObservability,
     schedules,
     workflows,
@@ -509,6 +518,7 @@ async function dispatchV1ControlPlaneRequest(
   modelProviderConnections: ModelProviderConnectionApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
+  runRecovery: RunRecoveryHttpServices,
   runObservability: RunObservabilityHttpServices,
   schedules: ScheduleHttpServices,
   workflows: WorkflowApplication,
@@ -652,6 +662,17 @@ async function dispatchV1ControlPlaneRequest(
     runObservability,
   );
   if (handledObservability) {
+    return;
+  }
+
+  const handledRunRecovery = await handleRunRecoveryRequest(
+    request,
+    response,
+    method,
+    path,
+    runRecovery,
+  );
+  if (handledRunRecovery) {
     return;
   }
 

@@ -10,6 +10,11 @@ import type {
 } from "./ids.js";
 import type { MemoryNamespaceBinding } from "./memory-gateway.js";
 import type { ToolGrant } from "./tool.js";
+import type {
+  DeclarativeRuntimeCheckpointStateV1,
+  RunCheckpointPort,
+} from "./run-checkpoint.js";
+import type { RunOperationJournalPort } from "./execution-operation-journal.js";
 
 /** Maximum tool grants attached to one execution request envelope. */
 export const EXECUTION_MAX_TOOL_GRANTS = 64;
@@ -43,6 +48,21 @@ export interface ExecutionRequest {
   readonly policyContext: Readonly<Record<string, unknown>>;
   readonly evaluationContext?: ExecutionEvaluationContext;
   readonly restrictPersistentMemory?: boolean;
+  /** Present when declarative checkpointing is enabled for this attempt. */
+  readonly checkpoint?: ExecutionCheckpointBinding;
+  /** Active execution lease identity for durable checkpoint commits. */
+  readonly executionOwnership?: ExecutionOwnershipBinding;
+  readonly operationJournal?: RunOperationJournalPort;
+}
+
+export interface ExecutionOwnershipBinding {
+  readonly owner: string;
+  readonly generation: number;
+}
+
+export interface ExecutionCheckpointBinding {
+  readonly port: RunCheckpointPort;
+  readonly restore?: DeclarativeRuntimeCheckpointStateV1;
 }
 
 export function allowsPersistentMemoryMutation(

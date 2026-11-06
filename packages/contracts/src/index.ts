@@ -296,13 +296,61 @@ export {
 export {
   RUN_ATTEMPT_STATES,
   RUN_STATES,
+  RECOVERABLE_RUN_STATES,
   TERMINAL_RUN_STATES,
 } from "./run-state.js";
 export type {
+  RecoverableRunState,
   RunAttemptState,
   RunState,
   TerminalRunState,
 } from "./run-state.js";
+
+export {
+  CHECKPOINT_CORRUPT_ERROR_CODE,
+  CHECKPOINT_INCOMPATIBLE_ERROR_CODE,
+  DECLARATIVE_CHECKPOINT_STATE_SCHEMA_VERSION,
+  RUN_CHECKPOINT_ENVELOPE_VERSION,
+  RUN_CHECKPOINT_MAX_HISTORY_PER_RUN,
+  RUN_CHECKPOINT_MAX_STATE_BYTES,
+} from "./run-checkpoint.js";
+export type {
+  CommitRunCheckpointCommand,
+  CommitRunCheckpointResult,
+  DeclarativePendingToolCallV1,
+  DeclarativeRuntimeCheckpointStateV1,
+  RunCheckpointBindingIdentity,
+  RunCheckpointCursorV1,
+  RunCheckpointPort,
+  RunCheckpointRecordV1,
+} from "./run-checkpoint.js";
+
+export {
+  DEFAULT_MAX_RECOVERY_ATTEMPTS,
+  RUN_RECOVERY_METADATA_VERSION,
+} from "./run-recovery.js";
+export type { RunRecoveryMetadataV1 } from "./run-recovery.js";
+
+export type {
+  CommitRunOperationResultInput,
+  RecordRunOperationPendingInput,
+  RunOperationJournalPort,
+} from "./execution-operation-journal.js";
+
+export {
+  RECOVERY_BLOCKED_UNCERTAIN_OPERATION_CODE,
+  RUN_OPERATION_IDEMPOTENCY_CLASSES,
+  RUN_OPERATION_JOURNAL_SCHEMA_VERSION,
+  RUN_OPERATION_STATUSES,
+} from "./run-operation-journal.js";
+export { resolveRunOperationJournalFailureDisposition } from "./run-operation-journal-outcome.js";
+export type { RunOperationJournalFailureDisposition } from "./run-operation-journal-outcome.js";
+export { isSideEffectSafeToAutoReplay } from "./run-operation-replay-policy.js";
+export type {
+  RunOperationIdempotencyClass,
+  RunOperationJournalEntryV1,
+  RunOperationStatus,
+} from "./run-operation-journal.js";
 
 export {
   DEFAULT_EXECUTION_HEARTBEAT_INTERVAL_MS,
@@ -484,9 +532,11 @@ export type {
 } from "./knowledge-runtime.js";
 
 export type {
+  ExecutionCheckpointBinding,
   ExecutionError,
   ExecutionEvaluationContext,
   ExecutionFailure,
+  ExecutionOwnershipBinding,
   ExecutionRequest,
   ExecutionResult,
   ExecutionSuccess,

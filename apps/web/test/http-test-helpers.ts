@@ -7,6 +7,10 @@ export function setTestAuthHeaders(testApiKey: TestApiKeyRecord): void {
   defaultAuthHeaders = authorizationHeader(testApiKey.plaintextToken);
 }
 
+export function clearTestAuthHeaders(): void {
+  defaultAuthHeaders = {};
+}
+
 export function authHeadersForKey(
   testApiKey: TestApiKeyRecord,
 ): Record<string, string> {

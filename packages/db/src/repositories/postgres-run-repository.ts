@@ -15,9 +15,13 @@ import {
   assertLegalRunAttemptTransition,
   assertLegalRunTransition,
   isTerminalRunState,
+  RunAttempt,
 } from "@osva/domain";
 import type {
   FailExpiredLeasedAttemptCommand,
+  InterruptExpiredLeasedAttemptCommand,
+  ScheduleRecoveryRunAttemptCommand,
+  UpdateInterruptedRunRecoveryMetadataCommand,
   FinalizeRunStepProps,
   ListRunStepsQuery,
   ListRunStepsResult,
@@ -26,7 +30,6 @@ import type {
   QueuedPendingDelivery,
   RenewExecutionLeaseCommand,
   Run,
-  RunAttempt,
   RunAttemptUsageSummary,
   RunLifecycleTransitionResult,
   RunRepository,
@@ -630,6 +633,175 @@ export class PostgresRunRepository implements RunRepository {
         runAttempt: runAttemptFromRow(attemptRow),
       };
     });
+  }
+
+  async interruptExpiredLeasedAttemptForRecovery(
+    command: InterruptExpiredLeasedAttemptCommand,
+  ): Promise<RunLifecycleTransitionResult | null> {
+    return this.database.db.transaction(async (tx) => {
+      const [attemptRow] = await tx
+        .update(runAttempts)
+        .set({
+          status: "FAILED",
+          completedAt: sql`now()`,
+          error: command.error,
+          output: null,
+          leaseExpiresAt: null,
+          infrastructureMetadata: command.infrastructureMetadata ?? null,
+        })
+        .where(
+          and(
+            eq(runAttempts.id, command.runAttemptId),
+            eq(runAttempts.status, "RUNNING"),
+            eq(runAttempts.executionGeneration, command.generation),
+            isNotNull(runAttempts.executionOwner),
+            lte(runAttempts.leaseExpiresAt, sql`now()`),
+          ),
+        )
+        .returning();
+
+      if (attemptRow === undefined) {
+        return null;
+      }
+
+      const [runRow] = await tx
+        .update(runs)
+        .set({
+          status: "INTERRUPTED",
+          updatedAt: sql`now()`,
+          recoveryMetadata: command.recoveryMetadata,
+        })
+        .where(and(eq(runs.id, attemptRow.runId), eq(runs.status, "RUNNING")))
+        .returning();
+
+      if (runRow === undefined) {
+        throw new LifecycleConflictError(
+          "run",
+          attemptRow.runId as RunId,
+          "RUNNING",
+        );
+      }
+
+      return {
+        run: runFromRow(runRow),
+        runAttempt: runAttemptFromRow(attemptRow),
+      };
+    });
+  }
+
+  async listInterruptedRuns(limit: number): Promise<readonly Run[]> {
+    const rows = await this.database.db
+      .select()
+      .from(runs)
+      .where(eq(runs.status, "INTERRUPTED"))
+      .orderBy(asc(runs.updatedAt), asc(runs.id))
+      .limit(limit);
+
+    return rows.map(runFromRow);
+  }
+
+  async scheduleRecoveryRunAttempt(
+    command: ScheduleRecoveryRunAttemptCommand,
+  ): Promise<RunLifecycleTransitionResult | null> {
+    return this.database.db.transaction(async (tx) => {
+      const [runRow] = await tx
+        .select()
+        .from(runs)
+        .where(
+          and(
+            eq(runs.id, command.runId),
+            eq(runs.workspaceId, command.workspaceId),
+            eq(runs.status, "INTERRUPTED"),
+          ),
+        )
+        .limit(1);
+
+      if (runRow === undefined) {
+        return null;
+      }
+
+      const activeAttempts = await tx
+        .select({ id: runAttempts.id })
+        .from(runAttempts)
+        .where(
+          and(
+            eq(runAttempts.runId, command.runId),
+            inArray(runAttempts.status, ["PENDING", "RUNNING"]),
+          ),
+        )
+        .limit(1);
+
+      if (activeAttempts.length > 0) {
+        return null;
+      }
+
+      const attemptRows = await tx
+        .select()
+        .from(runAttempts)
+        .where(eq(runAttempts.runId, command.runId))
+        .orderBy(desc(runAttempts.sequence))
+        .limit(1);
+
+      const previousAttemptRow = attemptRows[0];
+      if (previousAttemptRow === undefined) {
+        throw new RunNotFoundError(command.runId);
+      }
+
+      const previousAttempt = runAttemptFromRow(previousAttemptRow);
+      const nextAttempt = RunAttempt.createSubsequent(previousAttempt, {
+        id: command.newRunAttemptId,
+        createdAt: command.now,
+      });
+      const currentRun = runFromRow(runRow);
+      const nextRun = currentRun
+        .transitionTo("QUEUED", command.now)
+        .withRecoveryMetadata(command.recoveryMetadata, command.now);
+
+      const [insertedAttempt] = await tx
+        .insert(runAttempts)
+        .values(runAttemptToRow(nextAttempt))
+        .returning();
+
+      const [updatedRun] = await tx
+        .update(runs)
+        .set({
+          status: nextRun.status,
+          updatedAt: command.now,
+          recoveryMetadata: command.recoveryMetadata,
+        })
+        .where(and(eq(runs.id, command.runId), eq(runs.status, "INTERRUPTED")))
+        .returning();
+
+      if (updatedRun === undefined || insertedAttempt === undefined) {
+        return null;
+      }
+
+      return {
+        run: runFromRow(updatedRun),
+        runAttempt: runAttemptFromRow(insertedAttempt),
+      };
+    });
+  }
+
+  async updateInterruptedRunRecoveryMetadata(
+    command: UpdateInterruptedRunRecoveryMetadataCommand,
+  ): Promise<import("@osva/domain").Run | null> {
+    const [row] = await this.database.db
+      .update(runs)
+      .set({
+        recoveryMetadata: command.recoveryMetadata,
+        updatedAt: command.now,
+      })
+      .where(
+        and(
+          eq(runs.id, command.runId),
+          eq(runs.workspaceId, command.workspaceId),
+          eq(runs.status, "INTERRUPTED"),
+        ),
+      )
+      .returning();
+
+    return row === undefined ? null : runFromRow(row);
   }
 
   async listExpiredLeasedRunningAttempts(

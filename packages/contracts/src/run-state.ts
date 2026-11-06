@@ -2,11 +2,17 @@ export const RUN_STATES = [
   "PENDING",
   "QUEUED",
   "RUNNING",
+  "INTERRUPTED",
   "SUCCEEDED",
   "FAILED",
   "TIMED_OUT",
   "CANCELLED",
 ] as const;
+
+/** Non-terminal Run awaiting checkpoint-backed recovery. */
+export const RECOVERABLE_RUN_STATES = ["INTERRUPTED"] as const;
+
+export type RecoverableRunState = (typeof RECOVERABLE_RUN_STATES)[number];
 
 export type RunState = (typeof RUN_STATES)[number];
 

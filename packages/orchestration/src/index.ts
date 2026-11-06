@@ -22,6 +22,13 @@ export {
   type ExecutionRecoveryTickLogger,
 } from "./execution-recovery-tick.js";
 export {
+  RecoverInterruptedRun,
+  type RecoverInterruptedRunCommand,
+  type RecoverInterruptedRunDependencies,
+  type RecoverInterruptedRunResult,
+} from "./recover-interrupted-run.js";
+export { createRunOperationJournalPort } from "./run-operation-journal-port-adapter.js";
+export {
   DispatchScheduleOccurrence,
   type DispatchScheduleOccurrenceCommand,
   type DispatchScheduleOccurrenceDependencies,

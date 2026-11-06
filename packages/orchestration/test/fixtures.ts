@@ -203,6 +203,18 @@ export function wrapRunRepository(
     failExpiredLeasedAttempt:
       overrides.failExpiredLeasedAttempt?.bind(overrides) ??
       inner.failExpiredLeasedAttempt.bind(inner),
+    interruptExpiredLeasedAttemptForRecovery:
+      overrides.interruptExpiredLeasedAttemptForRecovery?.bind(overrides) ??
+      inner.interruptExpiredLeasedAttemptForRecovery.bind(inner),
+    listInterruptedRuns:
+      overrides.listInterruptedRuns?.bind(overrides) ??
+      inner.listInterruptedRuns.bind(inner),
+    scheduleRecoveryRunAttempt:
+      overrides.scheduleRecoveryRunAttempt?.bind(overrides) ??
+      inner.scheduleRecoveryRunAttempt.bind(inner),
+    updateInterruptedRunRecoveryMetadata:
+      overrides.updateInterruptedRunRecoveryMetadata?.bind(overrides) ??
+      inner.updateInterruptedRunRecoveryMetadata.bind(inner),
     listExpiredLeasedRunningAttempts:
       overrides.listExpiredLeasedRunningAttempts?.bind(overrides) ??
       inner.listExpiredLeasedRunningAttempts.bind(inner),

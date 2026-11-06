@@ -9,6 +9,7 @@ export const PERSISTED_RUN_STATES = [
   "PENDING",
   "QUEUED",
   "RUNNING",
+  "INTERRUPTED",
   "SUCCEEDED",
   "FAILED",
   "TIMED_OUT",

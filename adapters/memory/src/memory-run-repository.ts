@@ -485,6 +485,100 @@ export class MemoryRunRepository implements RunRepository {
     return { run: failedRun, runAttempt: failedAttempt };
   }
 
+  async interruptExpiredLeasedAttemptForRecovery(
+    command: import("@osva/domain").InterruptExpiredLeasedAttemptCommand,
+  ): Promise<import("@osva/domain").RunLifecycleTransitionResult | null> {
+    const current = this.attempts.get(command.runAttemptId);
+    if (
+      current === undefined ||
+      current.status !== "RUNNING" ||
+      current.executionGeneration !== command.generation
+    ) {
+      return null;
+    }
+
+    const run = this.runs.get(current.runId);
+    if (run === undefined || run.status !== "RUNNING") {
+      return null;
+    }
+
+    const failedAttempt = current.transitionTo("FAILED", command.now, {
+      error: command.error,
+      infrastructureMetadata: command.infrastructureMetadata,
+    });
+    const interruptedRun = run
+      .transitionTo("INTERRUPTED", command.now)
+      .withRecoveryMetadata(command.recoveryMetadata, command.now);
+    this.attempts.set(failedAttempt.id, failedAttempt);
+    this.runs.set(interruptedRun.id, interruptedRun);
+    return { run: interruptedRun, runAttempt: failedAttempt };
+  }
+
+  async listInterruptedRuns(limit: number): Promise<readonly Run[]> {
+    return [...this.runs.values()]
+      .filter((run) => run.status === "INTERRUPTED")
+      .slice(0, limit);
+  }
+
+  async scheduleRecoveryRunAttempt(
+    command: import("@osva/domain").ScheduleRecoveryRunAttemptCommand,
+  ): Promise<import("@osva/domain").RunLifecycleTransitionResult | null> {
+    const run = this.runs.get(command.runId);
+    if (run === undefined || run.status !== "INTERRUPTED") {
+      return null;
+    }
+
+    const hasActive = [...this.attempts.values()].some(
+      (attempt) =>
+        attempt.runId === command.runId &&
+        (attempt.status === "PENDING" || attempt.status === "RUNNING"),
+    );
+    if (hasActive) {
+      return null;
+    }
+
+    const attempts = [...this.attempts.values()]
+      .filter((attempt) => attempt.runId === command.runId)
+      .sort((left, right) => right.sequence - left.sequence);
+    const previous = attempts[0];
+    if (previous === undefined) {
+      return null;
+    }
+
+    const nextAttempt = RunAttempt.createSubsequent(previous, {
+      id: command.newRunAttemptId,
+      createdAt: command.now,
+    });
+    const nextRun = run
+      .transitionTo("QUEUED", command.now)
+      .withRecoveryMetadata(command.recoveryMetadata, command.now);
+    this.attempts.set(nextAttempt.id, nextAttempt);
+    this.runs.set(nextRun.id, nextRun);
+    return { run: nextRun, runAttempt: nextAttempt };
+  }
+
+  async updateInterruptedRunRecoveryMetadata(command: {
+    readonly workspaceId: import("@osva-ai/contracts").WorkspaceId;
+    readonly runId: import("@osva-ai/contracts").RunId;
+    readonly recoveryMetadata: import("@osva-ai/contracts").RunRecoveryMetadataV1;
+    readonly now: Date;
+  }): Promise<Run | null> {
+    const run = this.runs.get(command.runId);
+    if (
+      run === undefined ||
+      run.workspaceId !== command.workspaceId ||
+      run.status !== "INTERRUPTED"
+    ) {
+      return null;
+    }
+    const next = run.withRecoveryMetadata(
+      command.recoveryMetadata,
+      command.now,
+    );
+    this.runs.set(next.id, next);
+    return next;
+  }
+
   async listExpiredLeasedRunningAttempts(
     limit: number,
   ): Promise<readonly RunAttempt[]> {

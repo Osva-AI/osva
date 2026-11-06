@@ -379,6 +379,38 @@ export {
 } from "./schedule-cron.js";
 
 export {
+  assertCheckpointCompatible,
+  assertCheckpointStateIntegrity,
+  CheckpointValidationError,
+  digestCheckpointPayload,
+  digestRunCheckpointBindings,
+  validateDeclarativeCheckpointState,
+} from "./run-checkpoint-validation.js";
+export {
+  assessRunRecoveryEligibility,
+  buildBlockedRecoveryMetadata,
+  effectiveAutomaticRecoveryEnabled,
+  RECOVERY_ACTIVE_ATTEMPT_CODE,
+  RECOVERY_ATTEMPT_LIMIT_CODE,
+  RECOVERY_NOT_CHECKPOINTED_CODE,
+  type RecoveryEligibilityResult,
+} from "./run-recovery-eligibility.js";
+export {
+  classifyRunOperationIdempotency,
+  isSideEffectSafeToAutoReplay,
+} from "./run-operation-idempotency.js";
+export {
+  buildRunOperationKey,
+  fingerprintToolInput,
+} from "./run-operation-key.js";
+export type {
+  CommitRunOperationResultCommand,
+  MarkRunOperationFailedCommand,
+  MarkRunOperationUncertainCommand,
+  RecordRunOperationPendingCommand,
+  RunOperationJournalRepository,
+} from "./ports/run-operation-journal-repository.js";
+export {
   LEGAL_RUN_TRANSITIONS,
   assertLegalRunTransition,
   isLegalRunTransition,
@@ -456,6 +488,8 @@ export type {
   SetMemoryRecordInput,
   ListRunStepsQuery,
   ListRunStepsResult,
+  ListRunCheckpointsQuery,
+  ListRunCheckpointsResult,
   ListRunsQuery,
   ListRunsResult,
   ModelProfileMetadataUpdate,
@@ -467,8 +501,12 @@ export type {
   QueuedPendingDelivery,
   RenewExecutionLeaseCommand,
   FailExpiredLeasedAttemptCommand,
+  InterruptExpiredLeasedAttemptCommand,
+  ScheduleRecoveryRunAttemptCommand,
+  UpdateInterruptedRunRecoveryMetadataCommand,
   RunListCursor,
   RunStepListCursor,
+  RunCheckpointRepository,
   RunRepository,
   ScheduleListCursor,
   ScheduleOccurrenceListCursor,
@@ -508,6 +546,8 @@ export {
   MAX_MEMORY_RECORD_LIST_LIMIT,
   DEFAULT_ARTIFACT_LIST_LIMIT,
   MAX_ARTIFACT_LIST_LIMIT,
+  DEFAULT_RUN_CHECKPOINT_LIST_LIMIT,
+  MAX_RUN_CHECKPOINT_LIST_LIMIT,
 } from "./ports/index.js";
 
 export {
@@ -539,6 +579,14 @@ export {
   type RunApplication,
   type RunApplicationDependencies,
 } from "./run-application.js";
+
+export {
+  createRunRecoveryApplication,
+  type RunRecoveryApplication,
+  type RunRecoveryApplicationDependencies,
+  type RunRecoveryStatus,
+  type RunCheckpointSummary,
+} from "./run-recovery-application.js";
 
 export {
   GetRunAttemptUsage,

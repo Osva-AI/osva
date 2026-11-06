@@ -274,4 +274,65 @@ describe("PostgreSQL migration acceptance", () => {
 
     await database.close();
   });
+
+  it("upgrades a database at migration 0030 to 0031 without losing INTERRUPTED status constraint", async () => {
+    const stage30Dir = fs.mkdtempSync(path.join(os.tmpdir(), "osva-mig-30-"));
+    materializeMigrationsThroughIndex(stage30Dir, 30);
+
+    const database = createDatabase({
+      connectionString: postgres.connectionString,
+      max: 1,
+    });
+
+    await database.sql`DROP SCHEMA IF EXISTS drizzle CASCADE`;
+    await database.sql`DROP SCHEMA public CASCADE`;
+    await database.sql`CREATE SCHEMA public`;
+
+    await migrateDatabase(database, { migrationsFolder: stage30Dir });
+
+    const runsStatusCheckBefore = await database.sql`
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conname = 'runs_status_check'
+    `;
+    expect(String(runsStatusCheckBefore[0]?.def)).not.toContain("INTERRUPTED");
+
+    const beforeCp = await database.sql`
+      SELECT to_regclass('public.run_checkpoints') AS t
+    `;
+    expect(beforeCp[0]?.t).toBeNull();
+
+    await migrateDatabase(database);
+
+    const runsStatusCheckAfter = await database.sql`
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conname = 'runs_status_check'
+    `;
+    expect(String(runsStatusCheckAfter[0]?.def)).toContain("INTERRUPTED");
+
+    const afterCp = await database.sql`
+      SELECT to_regclass('public.run_checkpoints') AS t
+    `;
+    expect(afterCp[0]?.t).toBe("run_checkpoints");
+    const afterJo = await database.sql`
+      SELECT to_regclass('public.run_operation_journal') AS t
+    `;
+    expect(afterJo[0]?.t).toBe("run_operation_journal");
+
+    const recoveryCol = await database.sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'runs'
+        AND column_name = 'recovery_metadata'
+    `;
+    expect(recoveryCol[0]?.column_name).toBe("recovery_metadata");
+
+    const status = await readMigrationStatus(database.sql);
+    expect(status.status).toBe("current");
+    expect(status.repositoryHead).toBe(repositoryMigrationHead());
+
+    await database.close();
+  });
 });

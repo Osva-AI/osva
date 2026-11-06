@@ -24,7 +24,26 @@ export type {
   ToolRepository,
 } from "./tool-repository.js";
 export type {
+  ListRunCheckpointsQuery,
+  ListRunCheckpointsResult,
+  RunCheckpointRepository,
+} from "./run-checkpoint-repository.js";
+export {
+  DEFAULT_RUN_CHECKPOINT_LIST_LIMIT,
+  MAX_RUN_CHECKPOINT_LIST_LIMIT,
+} from "./run-checkpoint-repository.js";
+export type {
+  CommitRunOperationResultCommand,
+  MarkRunOperationFailedCommand,
+  MarkRunOperationUncertainCommand,
+  RecordRunOperationPendingCommand,
+  RunOperationJournalRepository,
+} from "./run-operation-journal-repository.js";
+export type {
   FailExpiredLeasedAttemptCommand,
+  InterruptExpiredLeasedAttemptCommand,
+  ScheduleRecoveryRunAttemptCommand,
+  UpdateInterruptedRunRecoveryMetadataCommand,
   ListRunStepsQuery,
   ListRunStepsResult,
   ListRunsQuery,

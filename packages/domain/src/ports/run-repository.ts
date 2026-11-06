@@ -4,6 +4,7 @@ import type {
   RunAttemptId,
   RunAttemptState,
   RunId,
+  RunRecoveryMetadataV1,
   RunState,
   RunStepId,
   WorkspaceId,
@@ -95,6 +96,25 @@ export interface FailExpiredLeasedAttemptCommand {
   readonly infrastructureMetadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface InterruptExpiredLeasedAttemptCommand extends FailExpiredLeasedAttemptCommand {
+  readonly recoveryMetadata: RunRecoveryMetadataV1;
+}
+
+export interface ScheduleRecoveryRunAttemptCommand {
+  readonly workspaceId: WorkspaceId;
+  readonly runId: RunId;
+  readonly newRunAttemptId: RunAttemptId;
+  readonly now: Date;
+  readonly recoveryMetadata: RunRecoveryMetadataV1;
+}
+
+export interface UpdateInterruptedRunRecoveryMetadataCommand {
+  readonly workspaceId: WorkspaceId;
+  readonly runId: RunId;
+  readonly recoveryMetadata: RunRecoveryMetadataV1;
+  readonly now: Date;
+}
+
 export interface RunRepository {
   createRunWithInitialAttempt(run: Run, attempt: RunAttempt): Promise<void>;
   saveRun(run: Run): Promise<void>;
@@ -146,6 +166,16 @@ export interface RunRepository {
   failExpiredLeasedAttempt(
     command: FailExpiredLeasedAttemptCommand,
   ): Promise<RunLifecycleTransitionResult | null>;
+  interruptExpiredLeasedAttemptForRecovery(
+    command: InterruptExpiredLeasedAttemptCommand,
+  ): Promise<RunLifecycleTransitionResult | null>;
+  listInterruptedRuns(limit: number): Promise<readonly Run[]>;
+  scheduleRecoveryRunAttempt(
+    command: ScheduleRecoveryRunAttemptCommand,
+  ): Promise<RunLifecycleTransitionResult | null>;
+  updateInterruptedRunRecoveryMetadata(
+    command: UpdateInterruptedRunRecoveryMetadataCommand,
+  ): Promise<Run | null>;
   listExpiredLeasedRunningAttempts(
     limit: number,
   ): Promise<readonly RunAttempt[]>;

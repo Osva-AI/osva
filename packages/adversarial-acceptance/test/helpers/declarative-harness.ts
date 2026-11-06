@@ -87,9 +87,9 @@ export function createDeclarativeAdapter(options: {
   }[];
   readonly resolveToolMetadata?: (input: {
     readonly toolVersionId: import("@osva-ai/contracts").ToolVersionId;
-  }) => Promise<{
-    readonly inputSchema: import("@osva-ai/contracts").JsonSchemaRecord;
-  } | null>;
+  }) => Promise<
+    import("@osva/adapters-runtime-declarative").DeclarativeToolMetadata | null
+  >;
 }) {
   const knowledgeHits = options.knowledgeHits ?? [];
   return new DeclarativeRuntimeAdapter({
@@ -122,6 +122,7 @@ export function createDeclarativeAdapter(options: {
           required: ["value"],
           additionalProperties: false,
         },
+        idempotencyClass: "PURE" as const,
       })),
   });
 }

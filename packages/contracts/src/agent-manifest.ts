@@ -104,6 +104,14 @@ export interface DeclarativeAgentRuntimeConfig {
   readonly maxModelInvocations: number;
   readonly maxToolInvocations: number;
   readonly maxOutputTokens?: number;
+  /**
+   * When true, the declarative executor commits durable checkpoints at safe
+   * model/tool boundaries. Recovery behavior remains opt-in at the workspace/run
+   * layer until automatic resume is configured.
+   */
+  readonly checkpointingEnabled?: boolean;
+  /** When true, eligible lease interruptions may schedule a successor attempt. */
+  readonly automaticRecoveryEnabled?: boolean;
 }
 
 export interface DeclarativeAgentRuntime {

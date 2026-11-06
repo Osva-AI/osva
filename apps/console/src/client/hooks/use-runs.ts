@@ -20,6 +20,39 @@ export interface RunResource {
   readonly evaluationRunId?: string;
   readonly evaluationCaseId?: string;
   readonly restrictPersistentMemory?: boolean;
+  readonly recovery?: {
+    readonly recoveryAttemptCount: number;
+    readonly automaticRecoveryEnabled: boolean;
+    readonly lastRecoveryAt?: string;
+    readonly blocked?: {
+      readonly code: string;
+      readonly message: string;
+      readonly at: string;
+    };
+  };
+}
+
+export interface RunRecoveryStatusResource {
+  readonly runId: string;
+  readonly runStatus: string;
+  readonly eligible: boolean;
+  readonly ineligibleCode?: string;
+  readonly ineligibleMessage?: string;
+  readonly recovery?: RunResource["recovery"];
+  readonly latestCheckpoint?: {
+    readonly id: string;
+    readonly sequence: number;
+    readonly cursorPhase: string;
+    readonly checkpointSequence: number;
+    readonly createdAt: string;
+  };
+  readonly blockedOperations: ReadonlyArray<{
+    readonly operationKey: string;
+    readonly status: string;
+    readonly idempotencyClass: string;
+    readonly bindingName: string;
+    readonly toolVersionId: string;
+  }>;
 }
 
 export interface RunListResource {
@@ -264,6 +297,40 @@ export function useCreateRunMutation() {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["runs", "list"] });
+    },
+  });
+}
+
+export function useRunRecoveryQuery(
+  runId: string | undefined,
+  enabled: boolean,
+) {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: ["runs", workspaceId, runId, "recovery"],
+    enabled: workspaceId !== undefined && runId !== undefined && enabled,
+    queryFn: () =>
+      consoleFetch<RunRecoveryStatusResource>(`/api/v1/runs/${runId}/recovery`),
+  });
+}
+
+export function useResumeRunMutation(runId: string | undefined) {
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
+  return useMutation({
+    mutationFn: () =>
+      consoleFetch<{ runId: string; runAttemptId: string; outcome: string }>(
+        `/api/v1/runs/${runId}/resume`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["runs", workspaceId, runId],
+      });
     },
   });
 }

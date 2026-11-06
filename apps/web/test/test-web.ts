@@ -18,6 +18,8 @@ import {
   MemorySecretResolver,
   MemoryToolRepository,
   MemoryRunRepository,
+  MemoryRunCheckpointRepository,
+  MemoryRunOperationJournalRepository,
   MemoryScheduleRepository,
   MemoryWorkflowRepository,
   MemoryWorkflowRunRepository,
@@ -44,6 +46,7 @@ import {
   createModelProfileApplication,
   createModelProviderConnectionApplication,
   createRunApplication,
+  createRunRecoveryApplication,
   createRunObservabilityApplication,
   createScheduleApplication,
   createToolApplication,
@@ -58,6 +61,7 @@ import {
   IngestWorkflowEvent,
   LaunchAssignment,
   ReconcileAssignment,
+  RecoverInterruptedRun,
 } from "@osva/orchestration";
 
 import { createMcpClientPool } from "@osva/adapters-mcp-client";
@@ -107,6 +111,8 @@ export async function createTestWebApplication(options?: {
   const connectors = new MemoryConnectorRepository();
   const tools = new MemoryToolRepository();
   const runs = new MemoryRunRepository();
+  const runCheckpoints = new MemoryRunCheckpointRepository();
+  const runOperationJournal = new MemoryRunOperationJournalRepository();
   const schedules = new MemoryScheduleRepository();
   const workflowRepository = new MemoryWorkflowRepository();
   const workflowRunRepository = new MemoryWorkflowRunRepository();
@@ -318,6 +324,21 @@ export async function createTestWebApplication(options?: {
       }),
     },
     runs: runServices,
+    runRecovery: {
+      recovery: createRunRecoveryApplication({
+        runs,
+        checkpoints: runCheckpoints,
+        operationJournal: runOperationJournal,
+      }),
+      recoverInterruptedRun: new RecoverInterruptedRun({
+        runs,
+        queue,
+        checkpoints: runCheckpoints,
+        operationJournal: runOperationJournal,
+      }),
+      clock,
+      ids,
+    },
     runObservability: {
       observability: createRunObservabilityApplication({ runs }),
       evaluations: createEvaluationApplication({
@@ -399,6 +420,8 @@ export async function createTestWebApplication(options?: {
     connectors,
     tools,
     runs,
+    runCheckpoints,
+    runOperationJournal,
     schedules,
     workflows: workflowRepository,
     workflowRuns: workflowRunRepository,

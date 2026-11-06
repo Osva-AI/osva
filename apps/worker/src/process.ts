@@ -53,6 +53,8 @@ import {
   PostgresKnowledgeRepository,
   PostgresToolRepository,
   PostgresRunRepository,
+  PostgresRunCheckpointRepository,
+  PostgresRunOperationJournalRepository,
   PostgresArtifactRepository,
   PostgresWorkspaceRepository,
   type Database,
@@ -196,6 +198,11 @@ export function createWorkerProcess(
       const modelProviderConnections =
         new PostgresModelProviderConnectionRepository(database);
       const runsRepository = new PostgresRunRepository(database);
+      const runCheckpointRepository = new PostgresRunCheckpointRepository(
+        database,
+      );
+      const runOperationJournalRepository =
+        new PostgresRunOperationJournalRepository(database);
       const agents = new PostgresAgentRepository(database);
       const connectors = new PostgresConnectorRepository(database);
       const memoryNamespaces = new PostgresMemoryNamespaceRepository(database);
@@ -462,6 +469,8 @@ export function createWorkerProcess(
       const executeRunAttempt = new ExecuteRunAttempt({
         runs: runsRepository,
         agents,
+        checkpoints: runCheckpointRepository,
+        operationJournal: runOperationJournalRepository,
         runtime,
         instrumentation,
         executionOwner: `worker:${hostname()}:${String(process.pid)}:${randomUUID()}`,
@@ -471,6 +480,11 @@ export function createWorkerProcess(
       const recoveryTick = new ExecutionRecoveryTick({
         runs: runsRepository,
         queue,
+        checkpoints: runCheckpointRepository,
+        operationJournal: runOperationJournalRepository,
+        agents,
+        createRunAttemptId: () =>
+          randomUUID() as import("@osva-ai/contracts").RunAttemptId,
         clock,
         expiredBatchLimit: config.recoveryBatchLimit,
         transportBatchLimit: config.transportRepairBatchLimit,

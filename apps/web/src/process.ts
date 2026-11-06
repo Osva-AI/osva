@@ -40,6 +40,8 @@ import {
   PostgresModelProviderConnectionRepository,
   PostgresToolRepository,
   PostgresRunRepository,
+  PostgresRunCheckpointRepository,
+  PostgresRunOperationJournalRepository,
   PostgresScheduleRepository,
   PostgresWorkflowRepository,
   PostgresWorkflowRunRepository,
@@ -72,6 +74,7 @@ import {
   createModelProfileApplication,
   createModelProviderConnectionApplication,
   createRunApplication,
+  createRunRecoveryApplication,
   createRunObservabilityApplication,
   createScheduleApplication,
   createToolApplication,
@@ -92,6 +95,7 @@ import {
   IngestWorkflowEvent,
   LaunchAssignment,
   ReconcileAssignment,
+  RecoverInterruptedRun,
 } from "@osva/orchestration";
 
 import { loadWebConfig, type WebConfig } from "./config.js";
@@ -302,11 +306,21 @@ export function createWebProcess(
 
   const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
   const officeRepository = new PostgresOfficeRepository(database);
+  const runCheckpoints = new PostgresRunCheckpointRepository(database);
+  const runOperationJournal = new PostgresRunOperationJournalRepository(
+    database,
+  );
   const createRun = new CreateRun({
     runs,
     agents,
     queue,
     instrumentation,
+  });
+  const recoverInterruptedRun = new RecoverInterruptedRun({
+    runs,
+    queue,
+    checkpoints: runCheckpoints,
+    operationJournal: runOperationJournal,
   });
   const reconcileAssignment = new ReconcileAssignment({
     office: officeRepository,
@@ -414,6 +428,16 @@ export function createWebProcess(
       runs: {
         runs: createRunApplication({ runs }),
         createRun,
+        clock,
+        ids,
+      },
+      runRecovery: {
+        recovery: createRunRecoveryApplication({
+          runs,
+          checkpoints: runCheckpoints,
+          operationJournal: runOperationJournal,
+        }),
+        recoverInterruptedRun,
         clock,
         ids,
       },

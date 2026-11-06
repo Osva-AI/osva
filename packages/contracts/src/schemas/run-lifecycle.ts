@@ -13,6 +13,7 @@ import {
 } from "./ids.js";
 import { RUN_ATTEMPT_STATES, RUN_STATES } from "../run-state.js";
 import { RUN_ATTEMPT_EXECUTION_STATES } from "../run-lifecycle.js";
+import { RUN_RECOVERY_METADATA_VERSION } from "../run-recovery.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
 import { jsonValueSchema } from "./json-value.js";
 
@@ -47,6 +48,21 @@ export const runResourceSchema = z.strictObject({
   evaluationRunId: evaluationRunIdSchema.optional(),
   evaluationCaseId: evaluationCaseIdSchema.optional(),
   restrictPersistentMemory: z.boolean().optional(),
+  recovery: z
+    .strictObject({
+      version: z.literal(RUN_RECOVERY_METADATA_VERSION),
+      recoveryAttemptCount: z.int().nonnegative(),
+      automaticRecoveryEnabled: z.boolean(),
+      lastRecoveryAt: utcIso8601TimestampSchema.optional(),
+      blocked: z
+        .strictObject({
+          code: z.string().min(1),
+          message: z.string().min(1),
+          at: utcIso8601TimestampSchema,
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 export const runAttemptResourceSchema = z.strictObject({

@@ -5,7 +5,10 @@ import type {
 } from "@osva-ai/contracts";
 import { isInternalToolImplementationId } from "@osva-ai/contracts";
 import type { DeclarativeToolMetadata } from "@osva/adapters-runtime-declarative";
-import type { ToolRepository } from "@osva/domain";
+import {
+  classifyRunOperationIdempotency,
+  type ToolRepository,
+} from "@osva/domain";
 
 const INTERNAL_TOOL_INPUT_SCHEMAS: Readonly<
   Record<InternalToolImplementationId, JsonSchemaRecord>
@@ -40,6 +43,9 @@ export function createDeclarativeToolMetadataResolver(
       return {
         inputSchema: version.mcp.inputSchema,
         description: version.mcp.description,
+        idempotencyClass: classifyRunOperationIdempotency({
+          toolType: "MCP",
+        }),
       };
     }
 
@@ -49,6 +55,10 @@ export function createDeclarativeToolMetadataResolver(
 
     return {
       inputSchema: INTERNAL_TOOL_INPUT_SCHEMAS[version.implementation],
+      idempotencyClass: classifyRunOperationIdempotency({
+        toolType: "INTERNAL",
+        internalImplementationId: version.implementation,
+      }),
     };
   };
 }

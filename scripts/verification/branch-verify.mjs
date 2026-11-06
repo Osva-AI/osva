@@ -28,6 +28,10 @@ const REPORT_DIR = path.join(REPO_ROOT, "artifacts", "verification");
 const REPORT_PATH = path.join(REPORT_DIR, "branch-verification.json");
 const LABEL_WIDTH = 12;
 
+/** Match root `package.json` turbo scripts on Windows (see verify.mjs). */
+const TURBO_WIN_CONCURRENCY =
+  process.platform === "win32" ? ["--concurrency=2"] : [];
+
 /** @typedef {"PASS" | "FAIL" | "NOT RUN" | "SKIP"} CheckStatus */
 
 /**
@@ -282,7 +286,14 @@ async function gitDiffCheck(records) {
  * @param {CheckRecord[]} records
  */
 async function runTurboTask(pnpmSpec, env, stage, turboArgs, task, records) {
-  const args = ["exec", "turbo", "run", task, ...turboArgs];
+  const args = [
+    "exec",
+    "turbo",
+    "run",
+    task,
+    ...TURBO_WIN_CONCURRENCY,
+    ...turboArgs,
+  ];
   const started = Date.now();
   console.log("");
   console.log(`── ${stage} ──`);

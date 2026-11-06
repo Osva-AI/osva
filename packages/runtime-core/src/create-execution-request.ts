@@ -6,6 +6,9 @@ export interface ExecutionRequestSource {
   readonly run: Run;
   readonly runAttempt: RunAttempt;
   readonly agentVersion: AgentVersion;
+  readonly checkpoint?: ExecutionRequest["checkpoint"];
+  readonly executionOwnership?: ExecutionRequest["executionOwnership"];
+  readonly operationJournal?: ExecutionRequest["operationJournal"];
 }
 
 /**
@@ -64,5 +67,8 @@ export function createExecutionRequest(
     restrictPersistentMemory: source.run.restrictPersistentMemory
       ? true
       : undefined,
+    checkpoint: source.checkpoint,
+    executionOwnership: source.executionOwnership,
+    operationJournal: source.operationJournal,
   });
 }

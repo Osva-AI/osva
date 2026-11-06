@@ -13,6 +13,7 @@ import {
 import type {
   KnowledgeIndexId,
   MemoryNamespaceBinding,
+  RunRecoveryMetadataV1,
 } from "@osva-ai/contracts";
 
 import { agentVersions } from "./agent-versions.js";
@@ -50,6 +51,7 @@ export const runs = pgTable(
       .default(false),
     input: jsonb("input").notNull(),
     idempotencyKey: text("idempotency_key"),
+    recoveryMetadata: jsonb("recovery_metadata").$type<RunRecoveryMetadataV1>(),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",

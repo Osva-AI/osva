@@ -407,6 +407,7 @@ describe("M14.4 adversarial acceptance", () => {
             required: ["value"],
             additionalProperties: true,
           },
+          idempotencyClass: "PURE",
         }),
       });
 
