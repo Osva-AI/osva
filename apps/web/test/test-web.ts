@@ -62,6 +62,7 @@ import {
   GetWorkspaceBuilderCapabilityCatalog,
   PrepareBuilderPublication,
   PublishBuilderProposal,
+  RefineBuilderProposalFromNaturalLanguage,
   type BuilderGenerationModelGatewayPort,
 } from "@osva/domain/builder";
 import { MemoryBuilderPublicationRepository } from "./support/memory-builder-publication-repository.js";
@@ -266,6 +267,13 @@ export async function createTestWebApplication(options?: {
       tools,
       modelGateway: builderModelGateway,
     });
+  const refineBuilderProposal = new RefineBuilderProposalFromNaturalLanguage({
+    workspaces,
+    agents,
+    modelProfiles,
+    tools,
+    modelGateway: builderModelGateway,
+  });
   const getWorkspaceBuilderCapabilityCatalog =
     new GetWorkspaceBuilderCapabilityCatalog({
       workspaces,
@@ -453,6 +461,7 @@ export async function createTestWebApplication(options?: {
     },
     builder: {
       generateBuilderProposal,
+      refineBuilderProposal,
       getWorkspaceBuilderCapabilityCatalog,
       prepareBuilderPublication,
       publishBuilderProposal,

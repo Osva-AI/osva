@@ -28,6 +28,8 @@ export const V1_EXECUTE_ROUTE_KEYS = new Set<string>([
   "POST /v1/knowledge/retrieve",
   /** M20.3 — cost-bearing model inference; not publication or execution. */
   "POST /v1/builder/proposals/generate",
+  /** M20.5 — cost-bearing refinement inference; not publication or execution. */
+  "POST /v1/builder/proposals/refine",
 ]);
 
 /** POST routes that remain catalog/read validation only (no side effects). */

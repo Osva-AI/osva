@@ -98,6 +98,7 @@ import {
   GetWorkspaceBuilderCapabilityCatalog,
   PrepareBuilderPublication,
   PublishBuilderProposal,
+  RefineBuilderProposalFromNaturalLanguage,
 } from "@osva/domain/builder";
 import {
   CreateRun,
@@ -207,6 +208,13 @@ export function createWebProcess(
       tools,
       modelGateway,
     });
+  const refineBuilderProposal = new RefineBuilderProposalFromNaturalLanguage({
+    workspaces,
+    agents,
+    modelProfiles,
+    tools,
+    modelGateway,
+  });
   const getWorkspaceBuilderCapabilityCatalog =
     new GetWorkspaceBuilderCapabilityCatalog({
       workspaces,
@@ -550,6 +558,7 @@ export function createWebProcess(
       },
       builder: {
         generateBuilderProposal,
+        refineBuilderProposal,
         getWorkspaceBuilderCapabilityCatalog,
         prepareBuilderPublication,
         publishBuilderProposal,

@@ -260,6 +260,9 @@ export interface ConsoleOsvaClient {
   generateBuilderProposal(
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  refineBuilderProposal(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
   validateBuilderProposal(
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
@@ -749,6 +752,20 @@ export function createConsoleOsvaClient(
       const out = await http.requestWithMeta({
         method: "POST",
         path: "/v1/builder/proposals/generate",
+        body,
+        timeoutMs: 160_000,
+        acceptErrorStatuses: [422],
+      });
+      return {
+        data: out.data,
+        requestId: out.requestId,
+        status: out.status,
+      };
+    },
+    refineBuilderProposal: async (body) => {
+      const out = await http.requestWithMeta({
+        method: "POST",
+        path: "/v1/builder/proposals/refine",
         body,
         timeoutMs: 160_000,
         acceptErrorStatuses: [422],

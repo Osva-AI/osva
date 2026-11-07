@@ -10,10 +10,12 @@ import {
   GetWorkspaceBuilderCapabilityCatalog,
   PrepareBuilderPublication,
   PublishBuilderProposal,
+  RefineBuilderProposalFromNaturalLanguage,
   buildBuilderCatalogIndex,
   compileBuilderProposalPrePublication,
   type BuilderPublicationId,
   type GenerateBuilderProposalResultV1,
+  type RefineBuilderProposalResultV1,
 } from "@osva/domain/builder";
 
 import { requireControlPlaneScope } from "./control-plane-http.js";
@@ -27,6 +29,7 @@ export const BUILDER_GENERATION_REQUEST_TIMEOUT_MS = 150_000;
 
 export interface BuilderHttpServices {
   readonly generateBuilderProposal: GenerateBuilderProposalFromNaturalLanguage;
+  readonly refineBuilderProposal: RefineBuilderProposalFromNaturalLanguage;
   readonly getWorkspaceBuilderCapabilityCatalog: GetWorkspaceBuilderCapabilityCatalog;
   readonly prepareBuilderPublication: PrepareBuilderPublication;
   readonly publishBuilderProposal: PublishBuilderProposal;
@@ -35,6 +38,7 @@ export interface BuilderHttpServices {
 
 type BuilderRoute =
   | "generate"
+  | "refine"
   | "validate"
   | "publicationPrepare"
   | "publicationPublish"
@@ -43,6 +47,9 @@ type BuilderRoute =
 function matchBuilderRoute(path: string): BuilderRoute | undefined {
   if (path === "/v1/builder/proposals/generate") {
     return "generate";
+  }
+  if (path === "/v1/builder/proposals/refine") {
+    return "refine";
   }
   if (path === "/v1/builder/proposals/validate") {
     return "validate";
@@ -65,6 +72,7 @@ function matchBuilderRoute(path: string): BuilderRoute | undefined {
 
 export const V1_HTTP_ROUTES = [
   { method: "POST", path: "/v1/builder/proposals/generate" },
+  { method: "POST", path: "/v1/builder/proposals/refine" },
   { method: "POST", path: "/v1/builder/proposals/validate" },
   { method: "POST", path: "/v1/builder/publications/prepare" },
   { method: "POST", path: "/v1/builder/publications" },
@@ -146,6 +154,83 @@ export async function handleBuilderRequest(
             body.preferences === undefined
               ? undefined
               : (body.preferences as never),
+        });
+
+      sendJson(response, result.ok ? 200 : 422, result as object);
+      return true;
+    }
+
+    if (route === "refine") {
+      if (method !== "POST") {
+        sendJson(response, 405, { status: "method_not_allowed" });
+        return true;
+      }
+
+      const bodyUnknown = await readJsonBody(request, {
+        maxBytes: JSON_BODY_MAX_BYTES,
+      });
+      const body = bodyUnknown as {
+        currentProposal?: unknown;
+        refinementInstruction?: unknown;
+        generationModelProfileVersionId?: unknown;
+        expectedBaseProposalDigest?: unknown;
+        conversationalHistory?: unknown;
+      };
+
+      if (body.currentProposal === undefined) {
+        sendJson(response, 400, {
+          status: "invalid_request",
+          error: "currentProposal is required.",
+        });
+        return true;
+      }
+
+      if (
+        typeof body.refinementInstruction !== "string" ||
+        body.refinementInstruction.trim().length === 0
+      ) {
+        sendJson(response, 400, {
+          status: "invalid_request",
+          error: "refinementInstruction must be a non-empty string.",
+        });
+        return true;
+      }
+
+      if (typeof body.expectedBaseProposalDigest !== "string") {
+        sendJson(response, 400, {
+          status: "invalid_request",
+          error: "expectedBaseProposalDigest must be a string.",
+        });
+        return true;
+      }
+
+      let generationModelProfileVersionId: ModelProfileVersionId | undefined;
+      if (body.generationModelProfileVersionId !== undefined) {
+        if (typeof body.generationModelProfileVersionId !== "string") {
+          sendJson(response, 400, {
+            status: "invalid_request",
+            error:
+              "generationModelProfileVersionId must be a string when provided.",
+          });
+          return true;
+        }
+        generationModelProfileVersionId =
+          body.generationModelProfileVersionId as ModelProfileVersionId;
+      }
+
+      request.setTimeout(BUILDER_GENERATION_REQUEST_TIMEOUT_MS);
+      response.setTimeout(BUILDER_GENERATION_REQUEST_TIMEOUT_MS);
+
+      const result: RefineBuilderProposalResultV1 =
+        await services.refineBuilderProposal.execute({
+          scope,
+          currentProposal: body.currentProposal,
+          refinementInstruction: body.refinementInstruction,
+          generationModelProfileVersionId,
+          expectedBaseProposalDigest: body.expectedBaseProposalDigest,
+          conversationalHistory: Array.isArray(body.conversationalHistory)
+            ? (body.conversationalHistory as string[])
+            : undefined,
         });
 
       sendJson(response, result.ok ? 200 : 422, result as object);

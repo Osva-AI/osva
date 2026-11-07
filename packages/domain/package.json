@@ -12,6 +12,14 @@
       "types": "./dist/builder/index.d.ts",
       "import": "./dist/builder/index.js"
     },
+    "./builder/parse": {
+      "types": "./dist/builder/builder-proposal-schema.d.ts",
+      "import": "./dist/builder/builder-proposal-schema.js"
+    },
+    "./builder/changes": {
+      "types": "./dist/builder/compare-builder-proposal-changes.d.ts",
+      "import": "./dist/builder/compare-builder-proposal-changes.js"
+    },
     "./workflow-definition": {
       "types": "./dist/workflow-definition.d.ts",
       "import": "./dist/workflow-definition.js"

@@ -198,6 +198,19 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/builder/proposals/refine") {
+        const body = await readJsonBody(request);
+        const out = await client.refineBuilderProposal(body);
+        sendJson(
+          response,
+          out.status ?? 200,
+          out.data,
+          upstreamRequestIdHeaders(out.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       if (pathname === "/api/v1/builder/proposals/validate") {
         const body = await readJsonBody(request);
         const out = await client.validateBuilderProposal(body);

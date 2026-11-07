@@ -71,6 +71,7 @@ const STATIC_V1_SEGMENTS = new Set([
   "builder",
   "proposals",
   "generate",
+  "refine",
   "validate",
   "publications",
   "prepare",
