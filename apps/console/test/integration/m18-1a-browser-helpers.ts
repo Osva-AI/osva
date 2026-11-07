@@ -291,10 +291,14 @@ export async function installMockConsoleApi(
           changes: nlBuilder.refineChanges ?? {
             noop: false,
             registryChanges: [],
-            addedAgents: [{ ref: "bpr_fc", kind: "NEW", summary: "Fact check" }],
+            addedAgents: [
+              { ref: "bpr_fc", kind: "NEW", summary: "Fact check" },
+            ],
             removedAgents: [],
             modifiedAgents: [],
-            graphNodeChanges: [{ kind: "added", nodeKey: "n_fc", nodeType: "AGENT" }],
+            graphNodeChanges: [
+              { kind: "added", nodeKey: "n_fc", nodeType: "AGENT" },
+            ],
             graphEdgeChanges: [],
             stringListChanges: [],
           },
