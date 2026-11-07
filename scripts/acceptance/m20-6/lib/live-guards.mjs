@@ -1,23 +1,10 @@
 /**
- * @param {NodeJS.ProcessEnv} env
- * @param {string | undefined} provider
+ * M20.6 live routing was removed in M20.7 — always block legacy live entrypoints.
+ *
+ * @param {NodeJS.ProcessEnv} _env
+ * @param {string | undefined} _provider
  * @returns {string | undefined}
  */
-export function liveBlockedReason(env, provider) {
-  if (env.OSVA_M20_6_LIVE !== "1") {
-    return "OSVA_M20_6_LIVE not set";
-  }
-  if (provider === "openai" || provider === undefined) {
-    const key = env.OPENAI_API_KEY?.trim();
-    if (key === undefined || key.length === 0) {
-      return "OPENAI_API_KEY missing";
-    }
-  }
-  if (provider === "gemini") {
-    const key = env.GOOGLE_GEMINI_API_KEY?.trim();
-    if (key === undefined || key.length === 0) {
-      return "GOOGLE_GEMINI_API_KEY missing";
-    }
-  }
-  return undefined;
+export function liveBlockedReason(_env, _provider) {
+  return "Use M20.7 harness (pnpm acceptance:m20-7:preflight / acceptance:m20-7:live)";
 }

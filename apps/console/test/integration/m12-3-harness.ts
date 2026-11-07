@@ -183,7 +183,7 @@ export async function bootstrapM12_3Workspaces(
   return { workspaceA, workspaceB };
 }
 
-async function bootstrapHumanOwner(database: Database): Promise<void> {
+export async function bootstrapHumanOwner(database: Database): Promise<void> {
   const bootstrap = new IdentityBootstrapApplication({
     organizations: new PostgresOrganizationRepository(database),
     users: new PostgresUserRepository(database),
@@ -203,7 +203,7 @@ async function bootstrapHumanOwner(database: Database): Promise<void> {
   });
 }
 
-async function completeOwnerPassword(
+export async function completeOwnerPassword(
   database: Database,
   webOrigin: string,
 ): Promise<string> {
@@ -237,7 +237,7 @@ async function completeOwnerPassword(
   return cookie;
 }
 
-async function provisionOperator(
+export async function provisionOperator(
   database: Database,
   webOrigin: string,
   ownerCookie: string,

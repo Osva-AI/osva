@@ -23,8 +23,10 @@ import {
 
 export const M20_6_VIEWER_EMAIL = "viewer.m20-6@test.local";
 
+export type ConsoleBffOriginStack = Pick<M12_3Stack, "consoleOrigin">;
+
 export async function consoleJsonWithHeaders(
-  stack: M12_3Stack,
+  stack: ConsoleBffOriginStack,
   path: string,
   headers: Record<string, string>,
   init: { method?: string; body?: unknown } = {},
