@@ -80,7 +80,12 @@
     "acceptance:m16-2d": "node scripts/acceptance/m16-2d/run.mjs",
     "acceptance:m16-2d:test": "node --test scripts/acceptance/m16-2d/test/*.test.mjs",
     "acceptance:m16-4-lifecycle": "node scripts/acceptance/m16-4-lifecycle/run.mjs",
-    "acceptance:m16-registry": "node scripts/acceptance/m16-registry/run.mjs"
+    "acceptance:m16-registry": "node scripts/acceptance/m16-registry/run.mjs",
+    "acceptance:m20-6": "node scripts/acceptance/m20-6/run.mjs",
+    "acceptance:m20-6:smoke": "node scripts/acceptance/m20-6/run.mjs --smoke",
+    "acceptance:m20-6:browser": "node scripts/acceptance/m20-6/run.mjs --with-browser",
+    "acceptance:m20-6:live": "node scripts/acceptance/m20-6/run.mjs --live",
+    "acceptance:m20-6:test": "node --test scripts/acceptance/m20-6/test/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",

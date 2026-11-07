@@ -38,6 +38,7 @@ import {
   buildBuilderGenerationMessages,
 } from "./builder-natural-language-prompt.js";
 import { BuilderProposalOpenAiJsonSchema } from "./builder-proposal-openai-json-schema.js";
+import { mergeBuilderModelUsage } from "./builder-generation-usage.js";
 import { modelProviderSupportsStructuredJsonSchema } from "./builder-provider-structured-output.js";
 import {
   GetWorkspaceBuilderCapabilityCatalog,
@@ -307,6 +308,9 @@ export class GenerateBuilderProposalFromNaturalLanguage {
     }
 
     let attempts = 0;
+    let measuredUsage = undefined as
+      | import("./builder-natural-language-generation-types.js").BuilderGenerationMeasuredUsageV1
+      | undefined;
     let lastFinishReason = undefined as
       import("@osva-ai/contracts").ModelFinishReason | undefined;
 
@@ -355,6 +359,7 @@ export class GenerateBuilderProposalFromNaturalLanguage {
           signal: controller.signal,
         });
         lastFinishReason = result.finishReason;
+        measuredUsage = mergeBuilderModelUsage(measuredUsage, result.usage);
         return {
           ok: true,
           text: result.text,
@@ -388,6 +393,7 @@ export class GenerateBuilderProposalFromNaturalLanguage {
         attempts,
         structured,
         generationId,
+        measuredUsage,
       });
     }
 
@@ -426,6 +432,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
           attempts,
           structured,
           generationId,
+          measuredUsage,
         });
       }
 
@@ -444,6 +451,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
         attempts,
         structured,
         generationId,
+        measuredUsage,
       });
     }
 
@@ -459,6 +467,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
       catalogModelProfileVersions: bounded.included.modelProfileVersions,
       catalogToolVersions: bounded.included.toolVersions,
       catalogTruncated: bounded.truncated,
+      measuredUsage,
     };
 
     const success: BuilderGenerationSuccessV1 = {
@@ -522,6 +531,7 @@ function enrichFailure(
     readonly attempts: number;
     readonly structured: boolean;
     readonly generationId: ModelProfileVersionId;
+    readonly measuredUsage?: import("./builder-natural-language-generation-types.js").BuilderGenerationMeasuredUsageV1;
   },
 ): BuilderGenerationFailureV1 {
   return {
@@ -540,6 +550,7 @@ function enrichFailure(
       catalogModelProfileVersions: ctx.bounded.included.modelProfileVersions,
       catalogToolVersions: ctx.bounded.included.toolVersions,
       catalogTruncated: ctx.bounded.truncated,
+      measuredUsage: ctx.measuredUsage,
     },
   };
 }

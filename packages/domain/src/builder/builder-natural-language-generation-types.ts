@@ -57,6 +57,14 @@ export interface GenerateBuilderProposalRequestV1 {
   readonly preferences?: BuilderGenerationPreferencesV1;
 }
 
+/** Aggregated provider token usage across builder generation/refinement attempts (M20.6). */
+export interface BuilderGenerationMeasuredUsageV1 {
+  readonly inputUnits: number;
+  readonly outputUnits: number;
+  readonly cachedUnits?: number;
+  readonly usageMeasured: boolean;
+}
+
 export interface BuilderGenerationMetadataV1 {
   readonly promptVersion: typeof BUILDER_GENERATION_PROMPT_VERSION;
   readonly generationModelProfileVersionId: ModelProfileVersionId;
@@ -71,6 +79,7 @@ export interface BuilderGenerationMetadataV1 {
   readonly catalogModelProfileVersions: number;
   readonly catalogToolVersions: number;
   readonly catalogTruncated: boolean;
+  readonly measuredUsage?: BuilderGenerationMeasuredUsageV1;
 }
 
 export interface BuilderGenerationSuccessV1 {

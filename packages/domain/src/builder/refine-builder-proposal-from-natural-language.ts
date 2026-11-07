@@ -45,6 +45,7 @@ import {
   type RefineBuilderProposalResultV1,
   type BuilderRefinementErrorCode,
 } from "./builder-refinement-types.js";
+import { mergeBuilderModelUsage } from "./builder-generation-usage.js";
 import { modelProviderSupportsStructuredJsonSchema } from "./builder-provider-structured-output.js";
 import { compareBuilderProposalChanges } from "./compare-builder-proposal-changes.js";
 import {
@@ -345,6 +346,9 @@ export class RefineBuilderProposalFromNaturalLanguage {
     const catalogIndex = buildBuilderCatalogIndex(catalogFull);
 
     let attempts = 0;
+    let measuredUsage = undefined as
+      | import("./builder-natural-language-generation-types.js").BuilderGenerationMeasuredUsageV1
+      | undefined;
     let lastFinishReason = undefined as
       import("@osva-ai/contracts").ModelFinishReason | undefined;
 
@@ -394,6 +398,7 @@ export class RefineBuilderProposalFromNaturalLanguage {
           signal: controller.signal,
         });
         lastFinishReason = result.finishReason;
+        measuredUsage = mergeBuilderModelUsage(measuredUsage, result.usage);
         return {
           ok: true,
           text: result.text,
@@ -428,6 +433,7 @@ export class RefineBuilderProposalFromNaturalLanguage {
         structured,
         generationId,
         baseProposalDigest,
+        measuredUsage,
       });
     }
 
@@ -464,6 +470,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
           structured,
           generationId,
           baseProposalDigest,
+          measuredUsage,
         });
       }
 
@@ -483,6 +490,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
         structured,
         generationId,
         baseProposalDigest,
+        measuredUsage,
       });
     }
 
@@ -506,6 +514,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
       baseProposalDigest,
       candidateProposalDigest,
       noop: changes.noop,
+      measuredUsage,
     };
 
     const success: BuilderRefinementSuccessV1 = {
@@ -581,6 +590,7 @@ function enrichFailure(
     readonly structured: boolean;
     readonly generationId: ModelProfileVersionId;
     readonly baseProposalDigest: string;
+    readonly measuredUsage?: import("./builder-natural-language-generation-types.js").BuilderGenerationMeasuredUsageV1;
   },
 ): BuilderRefinementFailureV1 {
   return {
@@ -604,6 +614,7 @@ function enrichFailure(
       catalogTruncated: ctx.bounded.truncated,
       baseProposalDigest: ctx.baseProposalDigest,
       noop: false,
+      measuredUsage: ctx.measuredUsage,
     },
   };
 }

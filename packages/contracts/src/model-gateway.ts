@@ -133,6 +133,8 @@ export interface GenerateCompletionResult {
   readonly text?: string;
   readonly toolCalls: readonly ModelToolCall[];
   readonly finishReason: ModelFinishReason;
+  /** Present when the provider adapter reported token usage for this completion. */
+  readonly usage?: ModelUsage;
 }
 
 export interface ModelToolDefinition {

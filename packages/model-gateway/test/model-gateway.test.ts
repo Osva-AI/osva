@@ -132,6 +132,63 @@ describe("ModelGateway", () => {
     });
   });
 
+  it("maps optional provider usage onto generateCompletion", async () => {
+    const modelProfiles = new MemoryModelProfileRepository();
+    await seedOpenAIVersion(modelProfiles);
+    const openai: ModelProviderAdapter = {
+      async generateText() {
+        return {
+          text: "ok",
+          finishReason: "stop",
+          usage: {
+            inputTokens: 11,
+            outputTokens: 5,
+            totalTokens: 16,
+            cachedInputTokens: 3,
+          },
+        };
+      },
+    };
+
+    const gateway = new ModelGateway({
+      modelProfiles,
+      providers: { OPENAI: openai },
+    });
+
+    const result = await gateway.generateCompletion({
+      modelProfileVersionId: versionId,
+      messages: [{ role: "user", content: "Hello" }],
+    });
+
+    expect(result.usage).toEqual({
+      inputUnits: 11,
+      outputUnits: 5,
+      cachedUnits: 3,
+    });
+  });
+
+  it("omits usage on generateCompletion when the adapter does not report it", async () => {
+    const modelProfiles = new MemoryModelProfileRepository();
+    await seedOpenAIVersion(modelProfiles);
+    const openai: ModelProviderAdapter = {
+      async generateText() {
+        return { text: "ok", finishReason: "stop" };
+      },
+    };
+
+    const gateway = new ModelGateway({
+      modelProfiles,
+      providers: { OPENAI: openai },
+    });
+
+    const result = await gateway.generateCompletion({
+      modelProfileVersionId: versionId,
+      messages: [{ role: "user", content: "Hello" }],
+    });
+
+    expect(result.usage).toBeUndefined();
+  });
+
   it("returns MODEL_PROVIDER_UNAVAILABLE when OPENAI is not configured", async () => {
     const modelProfiles = new MemoryModelProfileRepository();
     await seedOpenAIVersion(modelProfiles);
