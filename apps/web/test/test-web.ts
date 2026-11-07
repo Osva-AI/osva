@@ -58,9 +58,13 @@ import {
 } from "@osva/domain";
 import {
   GenerateBuilderProposalFromNaturalLanguage,
+  GetBuilderPublicationReceipt,
   GetWorkspaceBuilderCapabilityCatalog,
+  PrepareBuilderPublication,
+  PublishBuilderProposal,
   type BuilderGenerationModelGatewayPort,
 } from "@osva/domain/builder";
+import { MemoryBuilderPublicationRepository } from "./support/memory-builder-publication-repository.js";
 import {
   CreateRun,
   IngestWorkflowEvent,
@@ -269,6 +273,31 @@ export async function createTestWebApplication(options?: {
       modelProfiles,
       tools,
     });
+  const builderPublications = new MemoryBuilderPublicationRepository(
+    agents,
+    workflowRepository,
+  );
+  const prepareBuilderPublication = new PrepareBuilderPublication({
+    getCatalog: getWorkspaceBuilderCapabilityCatalog,
+    agents,
+    workflows: workflowRepository,
+  });
+  const publishBuilderProposal = new PublishBuilderProposal({
+    getCatalog: getWorkspaceBuilderCapabilityCatalog,
+    agents,
+    workflows: workflowRepository,
+    workspaces,
+    modelProfiles,
+    tools,
+    memoryNamespaces,
+    knowledge: knowledgeRepository,
+    publications: builderPublications,
+    clock,
+    ids,
+  });
+  const getBuilderPublicationReceipt = new GetBuilderPublicationReceipt(
+    builderPublications,
+  );
 
   const server = createWebApplication({
     readinessCheck: options?.readinessCheck ?? (async () => true),
@@ -425,6 +454,9 @@ export async function createTestWebApplication(options?: {
     builder: {
       generateBuilderProposal,
       getWorkspaceBuilderCapabilityCatalog,
+      prepareBuilderPublication,
+      publishBuilderProposal,
+      getBuilderPublicationReceipt,
     },
     apiKeys: createApiKeyApplication({
       apiKeys,
@@ -447,8 +479,8 @@ export async function createTestWebApplication(options?: {
     workspaces,
     agents,
     modelProfiles,
-    connectors,
     tools,
+    connectors,
     runs,
     runCheckpoints,
     runOperationJournal,

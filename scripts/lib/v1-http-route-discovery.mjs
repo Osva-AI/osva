@@ -73,6 +73,8 @@ const STATIC_V1_SEGMENTS = new Set([
   "proposals",
   "generate",
   "validate",
+  "publications",
+  "prepare",
 ]);
 
 export function stripV1HttpRoutesExport(source) {

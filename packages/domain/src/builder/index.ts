@@ -72,3 +72,30 @@ export {
   GenerateBuilderProposalFromNaturalLanguage,
   type GenerateBuilderProposalFromNaturalLanguageDependencies,
 } from "./generate-builder-proposal-from-natural-language.js";
+
+export type {
+  BuilderPublicationPlanV1,
+  BuilderPublicationReceiptV1,
+  BuilderPublicationPersistedResultV1,
+  BuilderPublicationId,
+  BuilderPublicationNewAgentSummaryV1,
+  BuilderPublicationReusedAgentSummaryV1,
+} from "./builder-publication-types.js";
+export { BUILDER_PUBLICATION_MODE_CREATE_V1 } from "./builder-publication-types.js";
+export {
+  computeBuilderPublicationPlanDigest,
+  BUILDER_PUBLICATION_PLAN_DIGEST_VERSION,
+} from "./builder-publication-plan-digest.js";
+export { buildBuilderPublicationPlan } from "./builder-publication-preflight.js";
+export {
+  PrepareBuilderPublication,
+  type PrepareBuilderPublicationDependencies,
+  type PrepareBuilderPublicationRequestV1,
+} from "./prepare-builder-publication.js";
+export {
+  PublishBuilderProposal,
+  type PublishBuilderProposalDependencies,
+  type PublishBuilderProposalRequestV1,
+} from "./publish-builder-proposal.js";
+export { GetBuilderPublicationReceipt } from "./get-builder-publication-receipt.js";
+export { buildBuilderPublicationSucceededAuditEvent } from "./builder-publication-audit.js";

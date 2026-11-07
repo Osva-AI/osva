@@ -4,6 +4,11 @@ export type {
   AppendAgentVersionInput,
 } from "./agent-repository.js";
 export type {
+  BuilderPublicationAtomicPersistInput,
+  BuilderPublicationRecordV1,
+  BuilderPublicationRepository,
+} from "./builder-publication-repository.js";
+export type {
   AppendModelProfileVersionInput,
   ModelProfileMetadataUpdate,
   ModelProfileRepository,

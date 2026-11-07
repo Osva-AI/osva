@@ -193,6 +193,12 @@
       "tag": "0031_agent_checkpoint_resume_slice",
       "file": "0031_agent_checkpoint_resume_slice.sql",
       "sha256": "2989c7a9789e11984e2c53f66fe599a0a3d6400d19600f52cbc307064d664a8a"
+    },
+    {
+      "idx": 32,
+      "tag": "0032_builder_publication_slice",
+      "file": "0032_builder_publication_slice.sql",
+      "sha256": "1f1ba0a428d992ade84fd1a2e686bb13485b8d859ccdc19b4bd683c0beed0136"
     }
   ]
 }

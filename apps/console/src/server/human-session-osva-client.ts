@@ -686,6 +686,33 @@ export function createHumanSessionOsvaClient(
           body,
         })
         .then(toDataOnly),
+
+    prepareBuilderPublication: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/builder/publications/prepare",
+          body,
+        })
+        .then(toDataOnly),
+
+    publishBuilderProposal: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/builder/publications",
+          body,
+          acceptErrorStatuses: [409, 422],
+        })
+        .then(toDataOnly),
+
+    getBuilderPublicationReceipt: (publicationId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/builder/publications/${encodeURIComponent(publicationId)}`,
+        })
+        .then(toDataOnly),
   };
 }
 

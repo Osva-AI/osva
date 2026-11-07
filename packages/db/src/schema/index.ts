@@ -52,6 +52,7 @@ export { teams } from "./teams.js";
 export { teamMemberships } from "./team-memberships.js";
 export { goals } from "./goals.js";
 export { assignments } from "./assignments.js";
+export { builderPublications } from "./builder-publications.js";
 export {
   PERSISTED_EVALUATOR_TYPES,
   PERSISTED_CONNECTOR_KINDS,

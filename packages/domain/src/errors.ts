@@ -1131,3 +1131,44 @@ export class KnowledgeChunkConsistencyError extends DomainInvariantError {
     this.ordinal = ordinal;
   }
 }
+
+export class BuilderPublicationNotFoundError extends DomainError {
+  readonly publicationId: string;
+
+  constructor(publicationId: string) {
+    super(`Builder publication '${publicationId}' was not found.`);
+    this.publicationId = publicationId;
+  }
+}
+
+export class BuilderPublicationIdempotencyConflictError extends DomainInvariantError {
+  readonly workspaceId: WorkspaceId;
+  readonly idempotencyKey: string;
+
+  constructor(workspaceId: WorkspaceId, idempotencyKey: string) {
+    super(
+      `Builder publication idempotency key '${idempotencyKey}' conflicts with a prior publication in workspace '${workspaceId}'.`,
+    );
+    this.workspaceId = workspaceId;
+    this.idempotencyKey = idempotencyKey;
+  }
+}
+
+export class BuilderPublicationStalePlanError extends DomainInvariantError {
+  readonly expectedPlanDigest: string;
+  readonly actualPlanDigest: string;
+
+  constructor(expectedPlanDigest: string, actualPlanDigest: string) {
+    super(
+      "Builder publication plan digest does not match the prepared plan. Re-run prepare and confirm again.",
+    );
+    this.expectedPlanDigest = expectedPlanDigest;
+    this.actualPlanDigest = actualPlanDigest;
+  }
+}
+
+export class BuilderPublicationNotPublishableError extends DomainInvariantError {
+  constructor(message = "Builder proposal is not publishable.") {
+    super(message);
+  }
+}

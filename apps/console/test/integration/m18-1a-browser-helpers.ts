@@ -134,6 +134,14 @@ export interface MockRunDetailResponses {
 export interface MockNlBuilderCaptures {
   readonly generateRequests: { readonly url: string; readonly body: unknown }[];
   readonly validateRequests: { readonly url: string; readonly body: unknown }[];
+  readonly prepareRequests?: {
+    readonly url: string;
+    readonly body: unknown;
+  }[];
+  readonly publishRequests?: {
+    readonly url: string;
+    readonly body: unknown;
+  }[];
 }
 
 export interface MockNlBuilderOptions {
@@ -147,6 +155,14 @@ export interface MockNlBuilderOptions {
   readonly recordForbiddenPosts?: boolean;
   readonly forbiddenHits?: { method: string; url: string }[];
   readonly captures?: MockNlBuilderCaptures;
+  readonly publication?: {
+    readonly planDigest: string;
+    readonly workflowId: string;
+    readonly workflowVersionId: string;
+    readonly publicationId: string;
+    /** When true, the first publish POST aborts (simulates lost response). */
+    readonly abortFirstPublish?: boolean;
+  };
 }
 
 function isNlBuilderForbiddenPost(pathname: string): boolean {
@@ -185,6 +201,7 @@ export async function installMockConsoleApi(
   const workspaces = options.workspaces ?? DEFAULT_WORKSPACES;
   const runDetail = options.runDetail;
   const nlBuilder = options.nlBuilder;
+  let publicationPublishAttempts = 0;
 
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
@@ -254,6 +271,119 @@ export async function installMockConsoleApi(
           proposal: nlBuilder.generateProposal,
           compileIssues: [],
         });
+        return;
+      }
+      if (
+        pathname === "/api/v1/builder/publications/prepare" &&
+        method === "POST"
+      ) {
+        const raw = route.request().postData() ?? "{}";
+        let body: unknown = {};
+        try {
+          body = JSON.parse(raw) as unknown;
+        } catch {
+          body = { _parseError: raw };
+        }
+        nlBuilder.captures?.prepareRequests?.push({
+          url: route.request().url(),
+          body,
+        });
+        const pub = nlBuilder.publication;
+        await fulfillJson(
+          route,
+          pub
+            ? {
+                publishable: true,
+                planDigest: pub.planDigest,
+                workflowRegistry:
+                  (body as { proposal?: { workflowRegistry?: unknown } })
+                    .proposal?.workflowRegistry ?? {},
+                newAgents: [],
+                reusedAgents: [],
+                blockingIssues: [],
+                warnings: [],
+                assumptions: [],
+                unresolvedRequirements: [],
+                requiresUnresolvedAcknowledgement: false,
+              }
+            : { publishable: false, blockingIssues: [{ code: "x" }] },
+        );
+        return;
+      }
+      if (pathname === "/api/v1/builder/publications" && method === "POST") {
+        const raw = route.request().postData() ?? "{}";
+        let body: unknown = {};
+        try {
+          body = JSON.parse(raw) as unknown;
+        } catch {
+          body = { _parseError: raw };
+        }
+        nlBuilder.captures?.publishRequests?.push({
+          url: route.request().url(),
+          body,
+        });
+        const pub = nlBuilder.publication;
+        if (pub === undefined) {
+          await fulfillJson(route, { ok: false }, 422);
+          return;
+        }
+        publicationPublishAttempts += 1;
+        if (
+          pub.abortFirstPublish === true &&
+          publicationPublishAttempts === 1
+        ) {
+          await route.abort("failed");
+          return;
+        }
+        const replay = publicationPublishAttempts > 1;
+        await fulfillJson(
+          route,
+          {
+            ok: true,
+            replay,
+            receipt: {
+              id: pub.publicationId,
+              state: "SUCCEEDED",
+              workspaceId: "ws-admin",
+              planDigest: pub.planDigest,
+              workflowId: pub.workflowId,
+              workflowVersionId: pub.workflowVersionId,
+              newAgents: [
+                {
+                  agentId: "ag-browser-1",
+                  agentVersionId: "av-browser-1",
+                  ref: "bpr_a",
+                  agentKey: "browser_agent",
+                },
+              ],
+              reusedAgentVersionIds: [],
+              refResolution: [{ ref: "bpr_a", agentVersionId: "av-browser-1" }],
+              publishedAt: "2099-01-01T00:00:00.000Z",
+            },
+          },
+          replay ? 200 : 201,
+        );
+        return;
+      }
+      if (
+        /^\/api\/v1\/builder\/publications\/[^/]+$/.test(pathname) &&
+        method === "GET"
+      ) {
+        const pub = nlBuilder.publication;
+        await fulfillJson(
+          route,
+          pub
+            ? {
+                ok: true,
+                receipt: {
+                  id: pub.publicationId,
+                  state: "SUCCEEDED",
+                  workflowId: pub.workflowId,
+                  workflowVersionId: pub.workflowVersionId,
+                },
+              }
+            : { ok: false },
+        );
         return;
       }
       if (

@@ -263,6 +263,15 @@ export interface ConsoleOsvaClient {
   validateBuilderProposal(
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  prepareBuilderPublication(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  publishBuilderProposal(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getBuilderPublicationReceipt(
+    publicationId: string,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
 }
 
 export function createConsoleOsvaClient(
@@ -755,6 +764,30 @@ export function createConsoleOsvaClient(
         method: "POST",
         path: "/v1/builder/proposals/validate",
         body,
+      }),
+    prepareBuilderPublication: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/builder/publications/prepare",
+        body,
+      }),
+    publishBuilderProposal: async (body) => {
+      const out = await http.requestWithMeta({
+        method: "POST",
+        path: "/v1/builder/publications",
+        body,
+        acceptErrorStatuses: [409, 422],
+      });
+      return {
+        data: out.data,
+        requestId: out.requestId,
+        status: out.status,
+      };
+    },
+    getBuilderPublicationReceipt: (publicationId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/builder/publications/${encodeURIComponent(publicationId)}`,
       }),
   };
 }

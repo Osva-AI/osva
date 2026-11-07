@@ -69,6 +69,7 @@ export { PostgresMemoryNamespaceRepository } from "./repositories/postgres-memor
 export { PostgresEvaluationSuiteRepository } from "./repositories/postgres-evaluation-suite-repository.js";
 export { PostgresOfficeRepository } from "./repositories/postgres-office-repository.js";
 export { PostgresArtifactRepository } from "./repositories/postgres-artifact-repository.js";
+export { PostgresBuilderPublicationRepository } from "./repositories/postgres-builder-publication-repository.js";
 export { PostgresRunCheckpointRepository } from "./repositories/postgres-run-checkpoint-repository.js";
 export { PostgresRunOperationJournalRepository } from "./repositories/postgres-run-operation-journal-repository.js";
 export { PostgresKnowledgeRepository } from "./repositories/postgres-knowledge-repository.js";

@@ -225,6 +225,13 @@
       "when": 1790400000000,
       "tag": "0031_agent_checkpoint_resume_slice",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790500000000,
+      "tag": "0032_builder_publication_slice",
+      "breakpoints": true
     }
   ]
 }

@@ -387,6 +387,18 @@ Request:
 - Loads the **authorized workspace capability catalog** and runs `compileBuilderProposalPrePublication`. **No** ModelGateway call and **no** database writes.
 - Returns structured compiler issues and preview-oriented metadata on success; invalid JSON or parse failures return **400** `invalid_request`.
 
+#### **`POST /v1/builder/publications/prepare`**
+
+- Read-only publication preflight: permission checks (agent + workflow **WRITE**), catalog load, compiler, registry conflict checks, server-computed `planDigest`. **No** database writes.
+
+#### **`POST /v1/builder/publications`**
+
+- Confirmed publication: requires `confirm: true`, `expectedPlanDigest`, `idempotencyKey`, and proposal body. Atomically creates NEW agents, workflow, receipt, and audit row. **201** on first commit, **200** on idempotent replay. **409** on stale digest or idempotency conflict.
+
+#### **`GET /v1/builder/publications/:publicationId`**
+
+- Returns persisted publication receipt for the workspace (**READ** on workflow resource).
+
 ### Execution lifecycle (not exposed as separate endpoints)
 
 After **POST /v1/evaluation-runs**, the control plane enqueues one child **Run** per case. Progress is observed via run status, **`case-results`**, and **`summary`** on the evaluation run detail. There is no cancel/patch evaluation-run endpoint in V1 HTTP today.

@@ -10,6 +10,8 @@ export interface BuilderNlDraftEnvelopeV1 {
   readonly proposal: unknown | null;
   readonly selectedNodeKey?: string;
   readonly validation?: unknown;
+  readonly publicationIdempotencyKey?: string;
+  readonly publicationReceipt?: unknown;
 }
 
 function storageKey(workspaceId: string): string {

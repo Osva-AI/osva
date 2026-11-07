@@ -327,6 +327,19 @@ function createMockClient(
       data: { ok: true },
       requestId: "req-builder-validate",
     }),
+    prepareBuilderPublication: async () => ({
+      data: { publishable: true, planDigest: "digest" },
+      requestId: "req-builder-prepare",
+    }),
+    publishBuilderProposal: async () => ({
+      data: { ok: true, replay: false, receipt: { state: "SUCCEEDED" } },
+      requestId: "req-builder-publish",
+      status: 201,
+    }),
+    getBuilderPublicationReceipt: async () => ({
+      data: { ok: true, receipt: { state: "SUCCEEDED" } },
+      requestId: "req-builder-receipt",
+    }),
     ...overrides,
   };
 }
