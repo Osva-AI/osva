@@ -319,6 +319,10 @@ function createMockClient(
       data: { items: [] },
       requestId: "req-evaluation-case-results",
     }),
+    refineBuilderProposal: async () => ({
+      data: { ok: false, errorCode: "INVALID_GENERATION_REQUEST" },
+      status: 422,
+    }),
     generateBuilderProposal: async () => ({
       data: { ok: false },
       requestId: "req-builder-generate",
@@ -756,6 +760,59 @@ describe("console server API", () => {
     });
     expect(sameOrigin.status).toBe(201);
     expect(upstreamCalls).toBe(1);
+  });
+
+  it("rejects foreign-origin builder refine mutations without calling upstream", async () => {
+    let refineCalls = 0;
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        refineBuilderProposal: async () => {
+          refineCalls += 1;
+          return { data: { ok: true }, status: 200 };
+        },
+      }),
+    });
+    await new Promise<void>((resolve) => server!.listen(0, resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected server address");
+    }
+    const origin = `http://127.0.0.1:${address.port}`;
+
+    const foreign = await fetch(`${origin}/api/v1/builder/proposals/refine`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "https://evil.example",
+      },
+      body: JSON.stringify({
+        currentProposal: { schemaVersion: "1" },
+        refinementInstruction: "x",
+        expectedBaseProposalDigest: "sha256:x",
+      }),
+    });
+    expect(foreign.status).toBe(403);
+    expect(refineCalls).toBe(0);
+
+    const sameOrigin = await fetch(
+      `${origin}/api/v1/builder/proposals/refine`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin,
+          "sec-fetch-site": "same-origin",
+        },
+        body: JSON.stringify({
+          currentProposal: { schemaVersion: "1" },
+          refinementInstruction: "x",
+          expectedBaseProposalDigest: "sha256:x",
+        }),
+      },
+    );
+    expect(sameOrigin.status).toBe(200);
+    expect(refineCalls).toBe(1);
   });
 
   it("forwards workflow creation and version append POST routes", async () => {

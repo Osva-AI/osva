@@ -142,12 +142,23 @@ export interface MockNlBuilderCaptures {
     readonly url: string;
     readonly body: unknown;
   }[];
+  readonly refineRequests?: {
+    readonly url: string;
+    readonly body: unknown;
+  }[];
 }
 
 export interface MockNlBuilderOptions {
   readonly modelProfileId: string;
   readonly modelProfileVersionId: string;
   readonly generateProposal: unknown;
+  /** When set, returned as `candidateProposal` from refine mock. */
+  readonly refineProposal?: unknown;
+  readonly refineChanges?: unknown;
+  /** When set, overrides `refineProposal` per request body. */
+  readonly refineProposalForRequest?: (
+    body: unknown,
+  ) => unknown | Promise<unknown>;
   readonly validateResponse?: unknown;
   /**
    * When set, POSTs to agent/workflow publish or run endpoints abort so tests can assert they never fire.
@@ -248,6 +259,49 @@ export async function installMockConsoleApi(
               model: "gpt-test",
             },
           ],
+        });
+        return;
+      }
+      if (
+        pathname === "/api/v1/builder/proposals/refine" &&
+        method === "POST"
+      ) {
+        const raw = route.request().postData() ?? "{}";
+        let body: unknown;
+        try {
+          body = JSON.parse(raw) as unknown;
+        } catch {
+          body = { _parseError: raw };
+        }
+        nlBuilder.captures?.refineRequests?.push({
+          url: route.request().url(),
+          body,
+        });
+        const expectedDigest = (body as { expectedBaseProposalDigest?: string })
+          .expectedBaseProposalDigest;
+        const candidate =
+          nlBuilder.refineProposalForRequest !== undefined
+            ? await nlBuilder.refineProposalForRequest(body)
+            : (nlBuilder.refineProposal ?? nlBuilder.generateProposal);
+        await fulfillJson(route, {
+          ok: true,
+          baseProposalDigest: expectedDigest ?? "sha256:base",
+          candidateProposal: candidate,
+          candidateProposalDigest: "sha256:candidate-browser-m20-5",
+          changes: nlBuilder.refineChanges ?? {
+            noop: false,
+            registryChanges: [],
+            addedAgents: [{ ref: "bpr_fc", kind: "NEW", summary: "Fact check" }],
+            removedAgents: [],
+            modifiedAgents: [],
+            graphNodeChanges: [{ kind: "added", nodeKey: "n_fc", nodeType: "AGENT" }],
+            graphEdgeChanges: [],
+            stringListChanges: [],
+          },
+          compileIssues: [],
+          assumptions: [],
+          unresolvedRequirements: [],
+          metadata: { attempts: 1, noop: false },
         });
         return;
       }

@@ -358,6 +358,7 @@ Canonical JSON shapes: domain types and compiler in `packages/domain/src/builder
 | Route pattern | Method | Minimum action |
 | --- | --- | --- |
 | `/v1/builder/proposals/generate` | POST | **EXECUTE** (cost-bearing model inference) |
+| `/v1/builder/proposals/refine` | POST | **EXECUTE** (cost-bearing model inference) |
 | `/v1/builder/proposals/validate` | POST | READ |
 
 #### **`POST /v1/builder/proposals/generate`**
@@ -373,6 +374,23 @@ Request (body fields beyond `userInstruction` are optional; see domain contract)
 
 - Responses use the M20.2 **`GenerateBuilderProposalResultV1`** envelope (`ok: true` with proposal metadata, or `ok: false` with a typed generation failure). Provider-facing failures may surface as **422** with that structured body (not a generic error envelope).
 - Long-running generation uses an extended request/response timeout on the control plane (see `BUILDER_GENERATION_REQUEST_TIMEOUT_MS` in `builder-http.ts`); clients should not apply a shorter default than this path.
+
+#### **`POST /v1/builder/proposals/refine`**
+
+Request:
+
+```json
+{
+  "currentProposal": { /* BuilderProposalV1 */ },
+  "refinementInstruction": "…",
+  "generationModelProfileVersionId": "optional",
+  "expectedBaseProposalDigest": "sha256:…",
+  "conversationalHistory": ["optional bounded UX strings"]
+}
+```
+
+- Applies M20.5 `RefineBuilderProposalFromNaturalLanguage`: validates the current proposal, checks `expectedBaseProposalDigest`, calls ModelGateway for a full candidate proposal, runs the same compiler gates as generation, and returns a deterministic `changes` object (never model-authored).
+- **`STALE_BASE_PROPOSAL_DIGEST`**: **422** when the digest does not match the server-canonical current proposal.
 
 #### **`POST /v1/builder/proposals/validate`**
 

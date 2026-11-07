@@ -75,7 +75,10 @@ const STATIC_V1_SEGMENTS = new Set([
   "builder",
   "proposals",
   "generate",
+  "refine",
   "validate",
+  "publications",
+  "prepare",
 ]);
 
 /** Structural key for an incoming request path (dynamic segments become `*`). */

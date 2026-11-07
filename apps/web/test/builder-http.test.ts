@@ -58,6 +58,35 @@ describe("builder-http", () => {
     expect(response.status).toBe(401);
   });
 
+  it("POST refine returns 422 on stale base digest", async () => {
+    const ctx = await createTestWebApplication();
+    servers.push(ctx.server);
+    await seedModelProfile(ctx);
+    const port = await listenHttpServer(ctx.server, "127.0.0.1", 0);
+    const origin = `http://127.0.0.1:${String(port)}`;
+    const proposal = baseProposal();
+    const response = await fetch(`${origin}/v1/builder/proposals/refine`, {
+      method: "POST",
+      headers: {
+        ...authorizationHeader(ctx.testApiKey.plaintextToken),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        currentProposal: proposal,
+        refinementInstruction: "Add a step.",
+        expectedBaseProposalDigest: "sha256:not-a-real-digest",
+        generationModelProfileVersionId: "mpv-http-pub",
+      }),
+    });
+    expect(response.status).toBe(422);
+    const body = (await response.json()) as {
+      ok: boolean;
+      errorCode?: string;
+    };
+    expect(body.ok).toBe(false);
+    expect(body.errorCode).toBe("STALE_BASE_PROPOSAL_DIGEST");
+  });
+
   it("POST validate returns structured result for minimal invalid body", async () => {
     const ctx = await createTestWebApplication();
     servers.push(ctx.server);

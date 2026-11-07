@@ -678,6 +678,17 @@ export function createHumanSessionOsvaClient(
         })
         .then(toDataOnly),
 
+    refineBuilderProposal: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/builder/proposals/refine",
+          body,
+          timeoutMs: BUILDER_GENERATION_UPSTREAM_TIMEOUT_MS,
+          acceptErrorStatuses: [422],
+        })
+        .then(toDataOnly),
+
     validateBuilderProposal: (body) =>
       upstream
         .requestJson(ctx, {

@@ -3,8 +3,10 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import type { BuilderProposalChangesetV1 } from "@osva/domain/builder/changes";
 import { Link } from "react-router-dom";
 import {
   Background,
@@ -22,8 +24,14 @@ import { consoleFetch } from "../lib/console-api";
 import {
   loadBuilderNlDraft,
   saveBuilderNlDraft,
+  type BuilderNlAcceptedRevisionV1,
   type BuilderNlDraftEnvelopeV1,
 } from "../lib/builder-nl-draft-storage";
+import { digestBuilderDraftProposal } from "../lib/builder-proposal-digest-client";
+import {
+  canAcceptRefinementCandidate,
+  shouldApplyRefinementResponse,
+} from "../lib/builder-nl-refinement-coordination";
 import { builderProposalWorkflowToFlowModel } from "../lib/builder-proposal-graph-adapter";
 import { workflowGraphNodeTypes } from "../components/workflow/workflow-graph-node";
 
@@ -92,14 +100,100 @@ export function WorkflowNlBuilderPage() {
   const [errorMessage, setErrorMessage] = useState<string | undefined>(
     undefined,
   );
+  const [refinementInstruction, setRefinementInstruction] = useState("");
+  const [refineState, setRefineState] = useState<"idle" | "loading" | "error">(
+    "idle",
+  );
+  const [refineAbortController, setRefineAbortController] = useState<
+    AbortController | undefined
+  >(undefined);
+  const [candidateProposal, setCandidateProposal] =
+    useState<BuilderProposalLike | null>(null);
+  const [candidateChanges, setCandidateChanges] = useState<
+    BuilderProposalChangesetV1 | undefined
+  >(undefined);
+  const [candidateCompileIssues, setCandidateCompileIssues] = useState<
+    unknown[]
+  >([]);
+  const [candidateBaseProposalDigest, setCandidateBaseProposalDigest] =
+    useState<string | undefined>(undefined);
+  const [refineErrorMessage, setRefineErrorMessage] = useState<
+    string | undefined
+  >(undefined);
+  const [acceptedRevisions, setAcceptedRevisions] = useState<
+    readonly BuilderNlAcceptedRevisionV1[]
+  >([]);
+  const [conversationalHistory, setConversationalHistory] = useState<
+    readonly string[]
+  >([]);
+  const refineRequestGen = useRef(0);
+  const [proposalDigest, setProposalDigest] = useState<string | undefined>(
+    undefined,
+  );
   /** False until session draft is read for `workspaceId`, so we do not overwrite storage on first paint. */
   const [draftHydrated, setDraftHydrated] = useState(false);
+
+  useEffect(() => {
+    if (proposal === null) {
+      setProposalDigest(undefined);
+      return;
+    }
+    let cancelled = false;
+    void digestBuilderDraftProposal(proposal).then((digest) => {
+      if (!cancelled) {
+        setProposalDigest(digest);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [proposal]);
+
+  const publicationLocksDraft =
+    publicationPhase === "publishing" ||
+    publicationPhase === "unknown" ||
+    publicationPhase === "published";
+
+  const bumpRefineEpochForDraftMutation = useCallback(() => {
+    refineRequestGen.current += 1;
+    refineAbortController?.abort();
+    setRefineState("idle");
+    setRefineAbortController(undefined);
+    setCandidateProposal(null);
+    setCandidateChanges(undefined);
+    setCandidateCompileIssues([]);
+    setCandidateBaseProposalDigest(undefined);
+  }, []);
+
+  const invalidatePublicationPreflight = useCallback(() => {
+    if (publicationPhase === "publishing" || publicationPhase === "unknown") {
+      return;
+    }
+    if (publicationPhase === "published") {
+      return;
+    }
+    setPublicationPlan(null);
+    setPublicationConfirm(false);
+    setPublicationPhase("idle");
+    setPublicationIdempotencyKey(
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `pub-${String(Date.now())}`,
+    );
+    setValidation(undefined);
+  }, [publicationPhase]);
 
   useLayoutEffect(() => {
     if (workspaceId === undefined) {
       setDraftHydrated(false);
       return;
     }
+    refineRequestGen.current += 1;
+    refineAbortController?.abort();
+    setRefineState("idle");
+    setCandidateProposal(null);
+    setCandidateChanges(undefined);
+    setCandidateBaseProposalDigest(undefined);
     const restored = loadBuilderNlDraft(workspaceId);
     if (restored === undefined) {
       setInstruction("");
@@ -128,6 +222,34 @@ export function WorkflowNlBuilderPage() {
         );
         setPublicationPhase("published");
       }
+      if (Array.isArray(restored.acceptedRevisions)) {
+        setAcceptedRevisions(restored.acceptedRevisions);
+      }
+      if (Array.isArray(restored.conversationalHistory)) {
+        setConversationalHistory(restored.conversationalHistory);
+      }
+      if (
+        restored.pendingCandidate !== undefined &&
+        restored.proposal !== null
+      ) {
+        void digestBuilderDraftProposal(restored.proposal).then((digest) => {
+          if (
+            digest !== undefined &&
+            digest === restored.pendingCandidate?.baseProposalDigest
+          ) {
+            setCandidateProposal(
+              restored.pendingCandidate
+                .candidateProposal as BuilderProposalLike,
+            );
+            setCandidateChanges(
+              restored.pendingCandidate.changes as BuilderProposalChangesetV1,
+            );
+            setRefinementInstruction(
+              restored.pendingCandidate.refinementInstruction,
+            );
+          }
+        });
+      }
     }
     setDraftHydrated(true);
   }, [workspaceId]);
@@ -147,6 +269,19 @@ export function WorkflowNlBuilderPage() {
       validation,
       publicationIdempotencyKey,
       publicationReceipt,
+      acceptedRevisions,
+      conversationalHistory,
+      pendingCandidate:
+        candidateProposal !== null &&
+        proposalDigest !== undefined &&
+        refinementInstruction.trim().length > 0
+          ? {
+              candidateProposal,
+              changes: candidateChanges,
+              baseProposalDigest: proposalDigest,
+              refinementInstruction,
+            }
+          : undefined,
     };
     saveBuilderNlDraft(envelope);
   }, [
@@ -159,30 +294,38 @@ export function WorkflowNlBuilderPage() {
     validation,
     publicationIdempotencyKey,
     publicationReceipt,
+    acceptedRevisions,
+    conversationalHistory,
+    candidateProposal,
+    candidateChanges,
+    refinementInstruction,
+    proposalDigest,
   ]);
+
+  const graphSource = candidateProposal !== null ? candidateProposal : proposal;
 
   const flow = useMemo(() => {
     if (
-      proposal === null ||
-      proposal.workflow === undefined ||
-      !Array.isArray(proposal.workflow.nodes) ||
-      !Array.isArray(proposal.workflow.edges)
+      graphSource === null ||
+      graphSource.workflow === undefined ||
+      !Array.isArray(graphSource.workflow.nodes) ||
+      !Array.isArray(graphSource.workflow.edges)
     ) {
       return undefined;
     }
     return builderProposalWorkflowToFlowModel({
       workflow: {
-        nodes: proposal.workflow.nodes as Record<string, unknown>[],
-        edges: proposal.workflow.edges as {
+        nodes: graphSource.workflow.nodes as Record<string, unknown>[],
+        edges: graphSource.workflow.edges as {
           readonly from: string;
           readonly to: string;
         }[],
       },
-      agents: Array.isArray(proposal.agents)
-        ? (proposal.agents as Record<string, unknown>[])
+      agents: Array.isArray(graphSource.agents)
+        ? (graphSource.agents as Record<string, unknown>[])
         : [],
     });
-  }, [proposal]);
+  }, [graphSource]);
 
   const selectedNode = useMemo(() => {
     if (
@@ -197,6 +340,10 @@ export function WorkflowNlBuilderPage() {
 
   const patchRegistryField = useCallback(
     (field: "key" | "name" | "description", value: string) => {
+      if (publicationLocksDraft) {
+        return;
+      }
+      bumpRefineEpochForDraftMutation();
       setProposal((prev) => {
         if (prev === null) {
           return prev;
@@ -206,10 +353,15 @@ export function WorkflowNlBuilderPage() {
           ...(next.workflowRegistry ?? {}),
           [field]: value,
         };
+        invalidatePublicationPreflight();
         return next;
       });
     },
-    [],
+    [
+      bumpRefineEpochForDraftMutation,
+      invalidatePublicationPreflight,
+      publicationLocksDraft,
+    ],
   );
 
   const patchNewAgentField = useCallback(
@@ -218,6 +370,10 @@ export function WorkflowNlBuilderPage() {
       field: "agentName" | "agentKey" | "instructions",
       value: string,
     ) => {
+      if (publicationLocksDraft) {
+        return;
+      }
+      bumpRefineEpochForDraftMutation();
       setProposal((prev) => {
         if (prev === null || !Array.isArray(prev.agents)) {
           return prev;
@@ -230,10 +386,15 @@ export function WorkflowNlBuilderPage() {
         }
         agents[idx] = { ...agents[idx], [field]: value };
         next.agents = agents;
+        invalidatePublicationPreflight();
         return next;
       });
     },
-    [],
+    [
+      bumpRefineEpochForDraftMutation,
+      invalidatePublicationPreflight,
+      publicationLocksDraft,
+    ],
   );
 
   const handleGenerate = async () => {
@@ -271,6 +432,10 @@ export function WorkflowNlBuilderPage() {
         setCompileIssues(
           Array.isArray(out.compileIssues) ? out.compileIssues : [],
         );
+        setCandidateProposal(null);
+        setCandidateChanges(undefined);
+        setAcceptedRevisions([]);
+        setConversationalHistory([]);
       } else {
         setProposal(null);
         setErrorMessage(
@@ -297,6 +462,162 @@ export function WorkflowNlBuilderPage() {
 
   const handleCancelGenerate = () => {
     abortController?.abort();
+  };
+
+  const handleRefine = async () => {
+    if (
+      workspaceId === undefined ||
+      proposal === null ||
+      publicationLocksDraft
+    ) {
+      return;
+    }
+    if (proposalDigest === undefined) {
+      setRefineErrorMessage(
+        "Current draft is not structurally valid. Revalidate before refining.",
+      );
+      return;
+    }
+    refineRequestGen.current += 1;
+    const requestGen = refineRequestGen.current;
+    refineAbortController?.abort();
+    const ac = new AbortController();
+    setRefineAbortController(ac);
+    setRefineState("loading");
+    setRefineErrorMessage(undefined);
+    const snapshotWorkspaceId = workspaceId;
+    const snapshotBaseProposalDigest = proposalDigest;
+    try {
+      const body: Record<string, unknown> = {
+        currentProposal: proposal,
+        refinementInstruction,
+        expectedBaseProposalDigest: proposalDigest,
+        conversationalHistory,
+      };
+      if (generationModelProfileVersionId !== undefined) {
+        body.generationModelProfileVersionId = generationModelProfileVersionId;
+      }
+      const out = await consoleFetch<Record<string, unknown>>(
+        "/api/v1/builder/proposals/refine",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+          signal: ac.signal,
+        },
+        { acceptErrorStatuses: [422] },
+      );
+      if (
+        !shouldApplyRefinementResponse({
+          requestGen,
+          currentRequestGen: refineRequestGen.current,
+          snapshotWorkspaceId,
+          currentWorkspaceId: workspaceId,
+          snapshotBaseProposalDigest,
+          currentBaseProposalDigest: proposalDigest,
+          responseBaseProposalDigest:
+            typeof out.baseProposalDigest === "string"
+              ? out.baseProposalDigest
+              : undefined,
+        })
+      ) {
+        return;
+      }
+      if (out.ok === true && out.candidateProposal !== undefined) {
+        setCandidateProposal(out.candidateProposal as BuilderProposalLike);
+        setCandidateChanges(out.changes as BuilderProposalChangesetV1);
+        setCandidateCompileIssues(
+          Array.isArray(out.compileIssues) ? out.compileIssues : [],
+        );
+        setCandidateBaseProposalDigest(snapshotBaseProposalDigest);
+      } else {
+        setRefineErrorMessage(
+          typeof out.message === "string" ? out.message : "Refinement failed.",
+        );
+      }
+      setRefineState("idle");
+      setRefineAbortController(undefined);
+    } catch (e) {
+      if (requestGen !== refineRequestGen.current) {
+        return;
+      }
+      if (e instanceof Error && e.name === "AbortError") {
+        setRefineState("idle");
+        setRefineAbortController(undefined);
+        return;
+      }
+      setRefineState("error");
+      setRefineErrorMessage(
+        e instanceof Error ? e.message : "Refinement failed.",
+      );
+      setRefineAbortController(undefined);
+    }
+  };
+
+  const handleCancelRefine = () => {
+    refineAbortController?.abort();
+    refineRequestGen.current += 1;
+  };
+
+  const handleAcceptCandidate = () => {
+    if (candidateProposal === null || proposal === null) {
+      return;
+    }
+    if (
+      !canAcceptRefinementCandidate({
+        candidateBaseProposalDigest,
+        currentBaseProposalDigest: proposalDigest,
+      })
+    ) {
+      setRefineErrorMessage(
+        "Draft changed while reviewing the candidate. Discard and refine again.",
+      );
+      return;
+    }
+    if (proposalDigest !== undefined) {
+      setAcceptedRevisions((revs) => [
+        ...revs,
+        {
+          proposalDigest,
+          proposal,
+          refinementInstruction: refinementInstruction.trim(),
+          acceptedAt: new Date().toISOString(),
+        },
+      ]);
+    }
+    const historyEntry = refinementInstruction.trim();
+    if (historyEntry.length > 0) {
+      setConversationalHistory((h) => [...h, historyEntry]);
+    }
+    setProposal(candidateProposal);
+    setCompileIssues(candidateCompileIssues);
+    setCandidateProposal(null);
+    setCandidateChanges(undefined);
+    setCandidateCompileIssues([]);
+    setCandidateBaseProposalDigest(undefined);
+    setRefinementInstruction("");
+    setValidation(undefined);
+    invalidatePublicationPreflight();
+  };
+
+  const handleDiscardCandidate = () => {
+    setCandidateProposal(null);
+    setCandidateChanges(undefined);
+    setCandidateCompileIssues([]);
+    setCandidateBaseProposalDigest(undefined);
+    setRefineErrorMessage(undefined);
+  };
+
+  const handleUndoLastRevision = () => {
+    if (acceptedRevisions.length === 0 || publicationLocksDraft) {
+      return;
+    }
+    bumpRefineEpochForDraftMutation();
+    const last = acceptedRevisions[acceptedRevisions.length - 1]!;
+    setProposal(last.proposal as BuilderProposalLike);
+    setAcceptedRevisions((revs) => revs.slice(0, -1));
+    setValidation(undefined);
+    invalidatePublicationPreflight();
   };
 
   const handlePreparePublication = async () => {
@@ -533,6 +854,107 @@ export function WorkflowNlBuilderPage() {
             </p>
           ) : null}
 
+          {proposal !== null && !publicationLocksDraft ? (
+            <section
+              className="workflow-nl-builder__subsection"
+              aria-label="Conversational refinement"
+              data-testid="nl-refinement-panel"
+            >
+              <h3>Refine draft</h3>
+              <p className="text-muted small">
+                Describe changes to the current proposal. Review the candidate
+                before accepting — your draft is unchanged until you confirm.
+              </p>
+              <label className="form-label" htmlFor="nl-refine-instruction">
+                Refinement instruction
+              </label>
+              <textarea
+                id="nl-refine-instruction"
+                className="input workflow-nl-builder__textarea"
+                rows={4}
+                value={refinementInstruction}
+                onChange={(e) => setRefinementInstruction(e.target.value)}
+                placeholder="e.g. Add a fact-checking agent before the report step…"
+              />
+              <div className="workflow-nl-builder__actions">
+                <button
+                  type="button"
+                  className="button primary"
+                  disabled={
+                    refineState === "loading" ||
+                    refinementInstruction.trim().length === 0 ||
+                    generationModelProfileVersionId === undefined ||
+                    candidateProposal !== null
+                  }
+                  onClick={() => void handleRefine()}
+                >
+                  {refineState === "loading" ? "Refining…" : "Refine draft"}
+                </button>
+                {refineState === "loading" ? (
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={handleCancelRefine}
+                  >
+                    Cancel
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="button"
+                  disabled={acceptedRevisions.length === 0}
+                  onClick={handleUndoLastRevision}
+                >
+                  Undo last accepted change
+                </button>
+              </div>
+              {refineErrorMessage !== undefined ? (
+                <p className="error-text" role="alert">
+                  {refineErrorMessage}
+                </p>
+              ) : null}
+              {candidateProposal !== null && candidateChanges !== undefined ? (
+                <div
+                  className="panel"
+                  style={{ marginTop: 12 }}
+                  data-testid="nl-candidate-review"
+                >
+                  <h4>Proposed changes (review)</h4>
+                  <ChangesSummary changes={candidateChanges} />
+                  <div className="workflow-nl-builder__actions">
+                    <button
+                      type="button"
+                      className="button primary"
+                      onClick={handleAcceptCandidate}
+                    >
+                      Accept changes
+                    </button>
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={handleDiscardCandidate}
+                    >
+                      Discard changes
+                    </button>
+                  </div>
+                  {candidateCompileIssues.length > 0 ? (
+                    <p className="text-muted small">
+                      Candidate has {String(candidateCompileIssues.length)}{" "}
+                      compiler note(s) — review before publishing.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {publicationLocksDraft && proposal !== null ? (
+            <p className="text-muted small" role="status">
+              Refinement and manual edits are disabled while publication is in
+              progress, ambiguous, or after a successful publish.
+            </p>
+          ) : null}
+
           {proposal !== null ? (
             <>
               <h3
@@ -601,6 +1023,9 @@ export function WorkflowNlBuilderPage() {
             Logical topology only — <strong>not executable</strong>. Agent nodes
             use temporary <code>bpr_*</code> references until publication
             (M20.4).
+            {candidateProposal !== null
+              ? " Showing candidate preview — accept or discard to continue editing the base draft."
+              : null}
           </p>
           {flow === undefined ? (
             <EmptyGraph />
@@ -674,6 +1099,7 @@ export function WorkflowNlBuilderPage() {
                 <input
                   id="reg-key"
                   className="input"
+                  disabled={publicationLocksDraft}
                   value={proposal.workflowRegistry?.key ?? ""}
                   onChange={(e) => patchRegistryField("key", e.target.value)}
                 />
@@ -683,6 +1109,7 @@ export function WorkflowNlBuilderPage() {
                 <input
                   id="reg-name"
                   className="input"
+                  disabled={publicationLocksDraft}
                   value={proposal.workflowRegistry?.name ?? ""}
                   onChange={(e) => patchRegistryField("name", e.target.value)}
                 />
@@ -693,6 +1120,7 @@ export function WorkflowNlBuilderPage() {
                   id="reg-desc"
                   className="input"
                   rows={3}
+                  disabled={publicationLocksDraft}
                   value={proposal.workflowRegistry?.description ?? ""}
                   onChange={(e) =>
                     patchRegistryField("description", e.target.value)
@@ -885,6 +1313,54 @@ function PublicationReviewSection(props: {
         </p>
       ) : null}
     </section>
+  );
+}
+
+function ChangesSummary(props: {
+  readonly changes: BuilderProposalChangesetV1;
+}) {
+  const c = props.changes;
+  if (c.noop) {
+    return <p className="text-muted">No structural changes detected.</p>;
+  }
+  return (
+    <ul className="workflow-nl-builder__change-summary">
+      {c.addedAgents.length > 0 ? (
+        <li>
+          Added agents:{" "}
+          {c.addedAgents.map((a: { ref: string }) => (
+            <code key={a.ref}>{a.ref}</code>
+          ))}
+        </li>
+      ) : null}
+      {c.removedAgents.length > 0 ? (
+        <li>
+          Removed agents:{" "}
+          {c.removedAgents.map((a: { ref: string }) => (
+            <code key={a.ref}>{a.ref}</code>
+          ))}
+        </li>
+      ) : null}
+      {c.modifiedAgents.length > 0 ? (
+        <li>
+          Modified agents:{" "}
+          {c.modifiedAgents.map(
+            (a: { ref: string; fields: readonly string[] }) => (
+              <span key={a.ref}>
+                <code>{a.ref}</code> ({a.fields.join(", ")}){" "}
+              </span>
+            ),
+          )}
+        </li>
+      ) : null}
+      {c.graphNodeChanges.length > 0 ? (
+        <li>{String(c.graphNodeChanges.length)} graph node change(s)</li>
+      ) : null}
+      {c.graphEdgeChanges.length > 0 ? (
+        <li>{String(c.graphEdgeChanges.length)} graph edge change(s)</li>
+      ) : null}
+      {c.registryChanges.length > 0 ? <li>Registry field updates</li> : null}
+    </ul>
   );
 }
 

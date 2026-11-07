@@ -28,4 +28,18 @@ describe("inferV1RouteAuthorizationAction", () => {
       HUMAN_WORKSPACE_PERMISSIONS.EXECUTE,
     );
   });
+
+  it("classifies builder refine as EXECUTE", () => {
+    const key = structuralRouteKeyFromPathname(
+      "POST",
+      "/v1/builder/proposals/refine",
+    );
+    expect(inferV1RouteAuthorizationAction("POST", key)).toBe(
+      AUTHORIZATION_ACTIONS.EXECUTE,
+    );
+    const access = lookupV1RouteAccess("POST", "/v1/builder/proposals/refine");
+    expect(access?.requiredHumanPermission).toBe(
+      HUMAN_WORKSPACE_PERMISSIONS.EXECUTE,
+    );
+  });
 });

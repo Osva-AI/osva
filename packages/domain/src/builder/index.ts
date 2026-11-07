@@ -73,6 +73,36 @@ export {
   type GenerateBuilderProposalFromNaturalLanguageDependencies,
 } from "./generate-builder-proposal-from-natural-language.js";
 
+export { computeBuilderProposalDigest } from "./builder-proposal-digest.js";
+export { validateBuilderProposalModelOutputPipeline } from "./builder-proposal-model-output-pipeline.js";
+export {
+  compareBuilderProposalChanges,
+  collectBuilderProposalCatalogResourceIds,
+  type BuilderProposalChangesetV1,
+} from "./compare-builder-proposal-changes.js";
+export type {
+  BuilderRefinementErrorCode,
+  BuilderRefinementFailureV1,
+  BuilderRefinementLimitsV1,
+  BuilderRefinementMetadataV1,
+  BuilderRefinementSuccessV1,
+  RefineBuilderProposalRequestV1,
+  RefineBuilderProposalResultV1,
+} from "./builder-refinement-types.js";
+export {
+  BUILDER_REFINEMENT_PROMPT_VERSION,
+  DEFAULT_BUILDER_REFINEMENT_LIMITS,
+} from "./builder-refinement-types.js";
+export {
+  buildBuilderRefinementMessages,
+  buildBoundedCapabilityCatalogPayloadForRefinement,
+  serializeCurrentProposalForPrompt,
+} from "./builder-refinement-prompt.js";
+export {
+  RefineBuilderProposalFromNaturalLanguage,
+  type RefineBuilderProposalFromNaturalLanguageDependencies,
+} from "./refine-builder-proposal-from-natural-language.js";
+
 export type {
   BuilderPublicationPlanV1,
   BuilderPublicationReceiptV1,
