@@ -202,15 +202,13 @@ describe("GET /v1/auth/context", () => {
         tools: toolsRepo,
         modelGateway: builderGateway,
       });
-    const refineBuilderProposal = new RefineBuilderProposalFromNaturalLanguage(
-      {
-        workspaces,
-        agents: agentsRepo,
-        modelProfiles: modelProfilesRepo,
-        tools: toolsRepo,
-        modelGateway: builderGateway,
-      },
-    );
+    const refineBuilderProposal = new RefineBuilderProposalFromNaturalLanguage({
+      workspaces,
+      agents: agentsRepo,
+      modelProfiles: modelProfilesRepo,
+      tools: toolsRepo,
+      modelGateway: builderGateway,
+    });
     const getWorkspaceBuilderCapabilityCatalog =
       new GetWorkspaceBuilderCapabilityCatalog({
         workspaces,
