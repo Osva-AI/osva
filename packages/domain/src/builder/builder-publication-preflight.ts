@@ -1,5 +1,3 @@
-import type { WorkspaceId } from "@osva-ai/contracts";
-
 import type { AgentRepository } from "../ports/agent-repository.js";
 import type { WorkflowRepository } from "../ports/workflow-repository.js";
 import {
@@ -58,7 +56,7 @@ export async function buildBuilderPublicationPlan(
   );
 
   const registryIssues: BuilderIssueV1[] = [];
-  let proposal = compiled.proposal;
+  const proposal = compiled.proposal;
 
   if (proposal === undefined) {
     const planDigest = computeBuilderPublicationPlanDigest({

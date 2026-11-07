@@ -2,10 +2,8 @@ import type {
   AgentId,
   AgentVersionId,
   SecurityAuditEventId,
-  WorkflowDefinitionV3,
   WorkflowId,
   WorkflowVersionId,
-  WorkspaceId,
 } from "@osva-ai/contracts";
 import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
@@ -50,10 +48,7 @@ import type {
   BuilderPublicationId,
   BuilderPublicationReceiptV1,
 } from "./builder-publication-types.js";
-import type {
-  BuilderProposalAgentRef,
-  BuilderProposalV1,
-} from "./builder-proposal.js";
+import type { BuilderProposalAgentRef } from "./builder-proposal.js";
 import type { GetWorkspaceBuilderCapabilityCatalog } from "./workspace-builder-capability-catalog.js";
 
 const AGENT_RESOURCE = { kind: CONTROL_PLANE_RESOURCE_KINDS.agent };
