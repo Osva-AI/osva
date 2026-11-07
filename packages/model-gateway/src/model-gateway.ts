@@ -72,10 +72,20 @@ export class ModelGateway implements ModelGatewayPort {
         ? outcome.finishReason
         : "other";
 
+    const usage =
+      outcome.usage !== undefined
+        ? {
+            inputUnits: outcome.usage.inputTokens,
+            outputUnits: outcome.usage.outputTokens,
+            cachedUnits: outcome.usage.cachedInputTokens,
+          }
+        : undefined;
+
     return {
       text: outcome.text,
       toolCalls: outcome.toolCalls ?? [],
       finishReason,
+      usage,
     };
   }
 

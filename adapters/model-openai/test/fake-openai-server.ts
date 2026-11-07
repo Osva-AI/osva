@@ -1,5 +1,7 @@
 import http from "node:http";
 
+import { resolveM20_6BuilderFakeProposal } from "./m20-6-builder-scenario-responses.js";
+
 export interface FakeOpenAIResponsesServer {
   readonly origin: string;
   readonly requests: FakeOpenAIRequest[];
@@ -222,6 +224,29 @@ function writeChatCompletionResponse(
   }
 
   const userText = extractChatUserText(body);
+  const m20BuilderProposal = resolveM20_6BuilderFakeProposal(userText);
+  if (m20BuilderProposal !== undefined) {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        id: "chat_m20_6_builder",
+        object: "chat.completion",
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: {
+              role: "assistant",
+              content: JSON.stringify(m20BuilderProposal),
+            },
+          },
+        ],
+        usage,
+      }),
+    );
+    return;
+  }
+
   if (userText.includes("builder-m20-json-schema")) {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(

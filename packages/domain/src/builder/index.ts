@@ -50,6 +50,7 @@ export type {
   BuilderGenerationErrorCode,
   BuilderGenerationFailureV1,
   BuilderGenerationLimitsV1,
+  BuilderGenerationMeasuredUsageV1,
   BuilderGenerationMetadataV1,
   BuilderGenerationModelGatewayPort,
   BuilderGenerationPreferencesV1,

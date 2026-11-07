@@ -111,6 +111,7 @@ export const generateCompletionResultSchema = z.strictObject({
   text: z.string().min(1).optional(),
   toolCalls: z.array(modelToolCallSchema).max(MODEL_MAX_TOOL_CALLS),
   finishReason: z.enum(MODEL_FINISH_REASONS),
+  usage: modelUsageSchema.optional(),
 });
 
 export const generateTextResultSchema = z.strictObject({

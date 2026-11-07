@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "1",
+  "promptVersion": "1",
+  "scenarios": [
+    {
+      "id": "simple",
+      "description": "Single-agent summarization workflow",
+      "marker": "OSVA_M20_6_SCENARIO=simple",
+      "requiredCapabilities": ["modelProfileVersions>=1"],
+      "structural": {
+        "minNewAgents": 1,
+        "maxNewAgents": 1,
+        "requireNodeTypes": ["AGENT"],
+        "forbidNodeTypes": ["PARALLEL", "JOIN"],
+        "maxToolBindings": 0
+      },
+      "intentRubric": ["single_agent", "valid_model_binding"],
+      "publicationEligible": true
+    },
+    {
+      "id": "sequential",
+      "description": "Research → analysis → report",
+      "marker": "OSVA_M20_6_SCENARIO=sequential",
+      "requiredCapabilities": ["modelProfileVersions>=1"],
+      "structural": {
+        "minNewAgents": 3,
+        "requireNodeTypes": ["AGENT"],
+        "minAgentNodes": 3,
+        "requireLinearChain": true
+      },
+      "intentRubric": ["three_stages", "ordered_dependencies"],
+      "publicationEligible": true
+    },
+    {
+      "id": "parallel",
+      "description": "Parallel analysts with JOIN",
+      "marker": "OSVA_M20_6_SCENARIO=parallel",
+      "requiredCapabilities": ["modelProfileVersions>=1"],
+      "structural": {
+        "requireNodeTypes": ["PARALLEL", "JOIN", "AGENT"]
+      },
+      "intentRubric": ["parallel_topology", "join_present"],
+      "publicationEligible": true
+    },
+    {
+      "id": "approval",
+      "description": "Human approval between draft and report",
+      "marker": "OSVA_M20_6_SCENARIO=approval",
+      "requiredCapabilities": ["modelProfileVersions>=1"],
+      "structural": {
+        "requireNodeTypes": ["APPROVAL", "AGENT"]
+      },
+      "intentRubric": ["approval_gate", "not_bypassed"],
+      "publicationEligible": true
+    },
+    {
+      "id": "wait-event",
+      "description": "WAIT for external event (no execution in acceptance)",
+      "marker": "OSVA_M20_6_SCENARIO=wait-event",
+      "requiredCapabilities": ["modelProfileVersions>=1"],
+      "structural": {
+        "requireNodeTypes": ["WAIT", "AGENT"]
+      },
+      "intentRubric": ["wait_semantics", "no_invented_tools"],
+      "publicationEligible": true
+    },
+    {
+      "id": "conversational-refinement",
+      "description": "Generate then multi-turn refinement",
+      "marker": "OSVA_M20_6_SCENARIO=conversational-refinement",
+      "requiredCapabilities": ["modelProfileVersions>=2"],
+      "structural": {
+        "minNewAgents": 3
+      },
+      "refinementTurns": [
+        {
+          "instruction": "Add a fact-checking agent after the report step.",
+          "expectAgentKey": "fact_check"
+        },
+        {
+          "instruction": "Change the research agent model binding to the alternate profile.",
+          "expectModelRef": "bpr_res"
+        },
+        {
+          "instruction": "Increase the analysis agent timeout to 120000 ms.",
+          "expectTimeoutAgentRef": "bpr_ana",
+          "expectTimeoutMs": 120000
+        },
+        {
+          "instruction": "Remove the unnecessary report step.",
+          "forbidNodeKey": "report"
+        }
+      ],
+      "intentRubric": ["refinement_accuracy", "stable_refs"],
+      "publicationEligible": true
+    }
+  ],
+  "safetyCases": [
+    {
+      "id": "unauthorized-generation-mpv",
+      "kind": "negative",
+      "expectsErrorCode": "UNAUTHORIZED_GENERATION_MODEL"
+    },
+    {
+      "id": "stale-base-digest",
+      "kind": "negative",
+      "expectsErrorCode": "STALE_BASE_PROPOSAL_DIGEST"
+    }
+  ]
+}
