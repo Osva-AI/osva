@@ -11,7 +11,10 @@ import {
 } from "@osva/adapters-memory";
 import {
   GenerateBuilderProposalFromNaturalLanguage,
+  GetBuilderPublicationReceipt,
   GetWorkspaceBuilderCapabilityCatalog,
+  PrepareBuilderPublication,
+  PublishBuilderProposal,
   type BuilderGenerationModelGatewayPort,
 } from "@osva/domain/builder";
 import {
@@ -226,6 +229,21 @@ describe("GET /v1/auth/context", () => {
       builder: {
         generateBuilderProposal,
         getWorkspaceBuilderCapabilityCatalog,
+        prepareBuilderPublication: {
+          execute: async () => {
+            throw new Error("not implemented in auth-http test");
+          },
+        } as unknown as PrepareBuilderPublication,
+        publishBuilderProposal: {
+          execute: async () => {
+            throw new Error("not implemented in auth-http test");
+          },
+        } as unknown as PublishBuilderProposal,
+        getBuilderPublicationReceipt: {
+          execute: async () => {
+            throw new Error("not implemented in auth-http test");
+          },
+        } as unknown as GetBuilderPublicationReceipt,
       },
       apiKeys: createApiKeyApplication({
         apiKeys,

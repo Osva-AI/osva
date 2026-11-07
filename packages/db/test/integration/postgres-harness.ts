@@ -47,6 +47,7 @@ const STAGE0_TABLES = [
   "workflow_node_runs",
   "workflow_runs",
   "workflow_versions",
+  "builder_publications",
   "workflows",
   "evaluations",
   "run_steps",

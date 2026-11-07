@@ -111,6 +111,12 @@ describe("PostgreSQL migration acceptance", () => {
     `;
     expect(ownerUniqueIndexes).toEqual([]);
 
+    const builderPublications = await database.sql`
+      SELECT to_regclass('public.builder_publications') AS t
+    `;
+    expect(builderPublications[0]?.t).toBe("builder_publications");
+    expect(status.repositoryHead).toBe("0032_builder_publication_slice");
+
     await database.close();
   });
 
@@ -328,6 +334,51 @@ describe("PostgreSQL migration acceptance", () => {
         AND column_name = 'recovery_metadata'
     `;
     expect(recoveryCol[0]?.column_name).toBe("recovery_metadata");
+
+    const status = await readMigrationStatus(database.sql);
+    expect(status.status).toBe("current");
+    expect(status.repositoryHead).toBe(repositoryMigrationHead());
+
+    await database.close();
+  });
+
+  it("upgrades a database at migration 0031 to 0032 (builder publications)", async () => {
+    const stage31Dir = fs.mkdtempSync(path.join(os.tmpdir(), "osva-mig-31-"));
+    materializeMigrationsThroughIndex(stage31Dir, 31);
+
+    const database = createDatabase({
+      connectionString: postgres.connectionString,
+      max: 1,
+    });
+
+    await database.sql`DROP SCHEMA IF EXISTS drizzle CASCADE`;
+    await database.sql`DROP SCHEMA public CASCADE`;
+    await database.sql`CREATE SCHEMA public`;
+
+    await migrateDatabase(database, { migrationsFolder: stage31Dir });
+
+    const beforeTable = await database.sql`
+      SELECT to_regclass('public.builder_publications') AS t
+    `;
+    expect(beforeTable[0]?.t).toBeNull();
+
+    await migrateDatabase(database);
+
+    const afterTable = await database.sql`
+      SELECT to_regclass('public.builder_publications') AS t
+    `;
+    expect(afterTable[0]?.t).toBe("builder_publications");
+
+    const idempotencyUnique = await database.sql`
+      SELECT indexname
+      FROM pg_indexes
+      WHERE schemaname = 'public'
+        AND tablename = 'builder_publications'
+        AND indexdef ILIKE '%workspace_id%'
+        AND indexdef ILIKE '%idempotency_key%'
+        AND indexdef ILIKE '%unique%'
+    `;
+    expect(idempotencyUnique.length).toBeGreaterThan(0);
 
     const status = await readMigrationStatus(database.sql);
     expect(status.status).toBe("current");

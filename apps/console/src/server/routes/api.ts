@@ -211,6 +211,47 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/builder/publications/prepare") {
+        const body = await readJsonBody(request);
+        const out = await client.prepareBuilderPublication(body);
+        sendJson(
+          response,
+          200,
+          out.data,
+          upstreamRequestIdHeaders(out.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/builder/publications") {
+        const body = await readJsonBody(request);
+        const out = await client.publishBuilderProposal(body);
+        sendJson(
+          response,
+          out.status ?? 201,
+          out.data,
+          upstreamRequestIdHeaders(out.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const publicationReceiptMatch =
+        /^\/api\/v1\/builder\/publications\/([^/]+)$/.exec(pathname);
+      if (publicationReceiptMatch !== null) {
+        const publicationId = publicationReceiptMatch[1]!;
+        const out = await client.getBuilderPublicationReceipt(publicationId);
+        sendJson(
+          response,
+          out.status ?? 200,
+          out.data,
+          upstreamRequestIdHeaders(out.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       if (pathname === "/api/v1/workflows") {
         const body = await readJsonBody(request);
         const created = await client.createWorkflow(body);

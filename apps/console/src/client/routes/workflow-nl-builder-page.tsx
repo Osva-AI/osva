@@ -65,6 +65,30 @@ export function WorkflowNlBuilderPage() {
   const [validateState, setValidateState] = useState<"idle" | "loading">(
     "idle",
   );
+  const [publicationPlan, setPublicationPlan] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [publicationPhase, setPublicationPhase] = useState<
+    | "idle"
+    | "preparing"
+    | "ready"
+    | "publishing"
+    | "published"
+    | "conflict"
+    | "unknown"
+  >("idle");
+  const [publicationConfirm, setPublicationConfirm] = useState(false);
+  const [publicationReceipt, setPublicationReceipt] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [publicationIdempotencyKey, setPublicationIdempotencyKey] = useState(
+    () =>
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `pub-${String(Date.now())}`,
+  );
   const [errorMessage, setErrorMessage] = useState<string | undefined>(
     undefined,
   );
@@ -91,6 +115,19 @@ export function WorkflowNlBuilderPage() {
       setProposal(restored.proposal as BuilderProposalLike | null);
       setSelectedNodeKey(restored.selectedNodeKey);
       setValidation(restored.validation);
+      if (typeof restored.publicationIdempotencyKey === "string") {
+        setPublicationIdempotencyKey(restored.publicationIdempotencyKey);
+      }
+      if (
+        restored.publicationReceipt !== undefined &&
+        restored.publicationReceipt !== null &&
+        typeof restored.publicationReceipt === "object"
+      ) {
+        setPublicationReceipt(
+          restored.publicationReceipt as Record<string, unknown>,
+        );
+        setPublicationPhase("published");
+      }
     }
     setDraftHydrated(true);
   }, [workspaceId]);
@@ -108,6 +145,8 @@ export function WorkflowNlBuilderPage() {
       proposal,
       selectedNodeKey,
       validation,
+      publicationIdempotencyKey,
+      publicationReceipt,
     };
     saveBuilderNlDraft(envelope);
   }, [
@@ -118,6 +157,8 @@ export function WorkflowNlBuilderPage() {
     proposal,
     selectedNodeKey,
     validation,
+    publicationIdempotencyKey,
+    publicationReceipt,
   ]);
 
   const flow = useMemo(() => {
@@ -258,6 +299,73 @@ export function WorkflowNlBuilderPage() {
     abortController?.abort();
   };
 
+  const handlePreparePublication = async () => {
+    if (proposal === null || workspaceId === undefined) {
+      return;
+    }
+    setPublicationPhase("preparing");
+    setPublicationPlan(null);
+    setPublicationConfirm(false);
+    try {
+      const plan = await consoleFetch<Record<string, unknown>>(
+        "/api/v1/builder/publications/prepare",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ proposal }),
+        },
+      );
+      setPublicationPlan(plan);
+      setPublicationPhase(plan.publishable === true ? "ready" : "ready");
+    } catch {
+      setPublicationPhase("idle");
+    }
+  };
+
+  const handlePublish = async () => {
+    if (
+      proposal === null ||
+      workspaceId === undefined ||
+      publicationPlan === null ||
+      typeof publicationPlan.planDigest !== "string"
+    ) {
+      return;
+    }
+    setPublicationPhase("publishing");
+    try {
+      const out = await consoleFetch<{
+        ok?: boolean;
+        replay?: boolean;
+        receipt?: Record<string, unknown>;
+        status?: string;
+        code?: string;
+      }>("/api/v1/builder/publications", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          proposal,
+          expectedPlanDigest: publicationPlan.planDigest,
+          idempotencyKey: publicationIdempotencyKey,
+          acknowledgeUnresolvedRequirements:
+            (proposal.unresolvedRequirements ?? []).length > 0,
+          confirm: true,
+        }),
+      });
+      if (out.receipt !== undefined) {
+        setPublicationReceipt(out.receipt);
+        setPublicationPhase("published");
+        return;
+      }
+      setPublicationPhase("unknown");
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("409")) {
+        setPublicationPhase("conflict");
+        return;
+      }
+      setPublicationPhase("unknown");
+    }
+  };
+
   const handleValidate = async () => {
     if (proposal === null || workspaceId === undefined) {
       return;
@@ -303,8 +411,8 @@ export function WorkflowNlBuilderPage() {
           <h1 className="page-title">Describe with AI</h1>
           <p className="page-subtitle">
             Generate an editable workflow builder proposal from natural
-            language. This creates a <strong>draft</strong> only — nothing is
-            published or executed (publication is a later milestone).
+            language, then review and explicitly publish immutable agents and a
+            workflow version. Publication never runs the workflow.
           </p>
         </div>
         <div
@@ -623,16 +731,160 @@ export function WorkflowNlBuilderPage() {
                 validation={validation}
               />
 
-              <div className="callout callout--info" role="note">
-                <strong>Publication disabled for M20.3.</strong> The next
-                milestone will publish NEW agents and workflow versions from a
-                validated proposal. This UI never calls publish or run APIs.
-              </div>
+              <PublicationReviewSection
+                publicationPhase={publicationPhase}
+                publicationPlan={publicationPlan}
+                publicationConfirm={publicationConfirm}
+                publicationReceipt={publicationReceipt}
+                onPrepare={() => void handlePreparePublication()}
+                onConfirmChange={setPublicationConfirm}
+                onPublish={() => void handlePublish()}
+                blockingIssueCount={
+                  Array.isArray(publicationPlan?.blockingIssues)
+                    ? publicationPlan.blockingIssues.length
+                    : Array.isArray(compileIssues)
+                      ? compileIssues.length
+                      : 0
+                }
+              />
             </>
           )}
         </section>
       </div>
     </div>
+  );
+}
+
+function PublicationReviewSection(props: {
+  readonly publicationPhase:
+    | "idle"
+    | "preparing"
+    | "ready"
+    | "publishing"
+    | "published"
+    | "conflict"
+    | "unknown";
+  readonly publicationPlan: Record<string, unknown> | null;
+  readonly publicationConfirm: boolean;
+  readonly publicationReceipt: Record<string, unknown> | null;
+  readonly blockingIssueCount: number;
+  readonly onPrepare: () => void;
+  readonly onConfirmChange: (checked: boolean) => void;
+  readonly onPublish: () => void;
+}) {
+  const publishable = props.publicationPlan?.publishable === true;
+  const canConfirm =
+    publishable &&
+    props.blockingIssueCount === 0 &&
+    props.publicationPhase !== "publishing";
+
+  return (
+    <section
+      className="workflow-nl-builder__subsection"
+      aria-label="Publication review"
+      data-testid="nl-publication-review"
+    >
+      <h3>Publication review (M20.4)</h3>
+      <p className="text-muted small">
+        Prepare a server-side plan, review immutable changes, then confirm
+        publication. The same idempotency key is reused if you retry after a
+        timeout.
+      </p>
+      <div className="workflow-nl-builder__actions">
+        <button
+          type="button"
+          className="button"
+          disabled={props.publicationPhase === "preparing"}
+          onClick={props.onPrepare}
+        >
+          {props.publicationPhase === "preparing"
+            ? "Preparing review…"
+            : "Review publication"}
+        </button>
+        {props.publicationPhase === "published" &&
+        typeof props.publicationReceipt?.workflowId === "string" ? (
+          <Link
+            className="button primary"
+            to={`/workflows/${props.publicationReceipt.workflowId}`}
+          >
+            Open workflow
+          </Link>
+        ) : null}
+      </div>
+
+      {props.publicationPlan !== null ? (
+        <div className="panel" style={{ marginTop: 12 }}>
+          <p>
+            <strong>Workflow:</strong>{" "}
+            {String(
+              (props.publicationPlan.workflowRegistry as { name?: string })
+                ?.name ?? "",
+            )}{" "}
+            (
+            <code>
+              {String(
+                (props.publicationPlan.workflowRegistry as { key?: string })
+                  ?.key ?? "",
+              )}
+            </code>
+            )
+          </p>
+          <p>
+            <strong>Plan digest:</strong>{" "}
+            <code className="small">
+              {String(props.publicationPlan.planDigest ?? "").slice(0, 48)}…
+            </code>
+          </p>
+          {!publishable ? (
+            <p className="error-text" role="alert">
+              This proposal is not publishable. Fix blocking issues and prepare
+              again.
+            </p>
+          ) : null}
+          <label className="form-label">
+            <input
+              type="checkbox"
+              checked={props.publicationConfirm}
+              disabled={!canConfirm}
+              onChange={(e) => props.onConfirmChange(e.target.checked)}
+            />{" "}
+            I understand these agents and workflow version will be immutable.
+          </label>
+          <button
+            type="button"
+            className="button primary"
+            disabled={!canConfirm || !props.publicationConfirm}
+            onClick={props.onPublish}
+          >
+            {props.publicationPhase === "publishing"
+              ? "Publishing…"
+              : "Publish workflow & agents"}
+          </button>
+        </div>
+      ) : null}
+
+      {props.publicationPhase === "conflict" ? (
+        <p className="error-text" role="alert">
+          Plan conflict or stale digest — edit the draft and run{" "}
+          <strong>Review publication</strong> again.
+        </p>
+      ) : null}
+      {props.publicationPhase === "unknown" ? (
+        <p className="text-muted" role="status">
+          Publication result unknown. Retry publish with the same draft (same
+          idempotency key) or fetch the receipt by publication ID when
+          supported.
+        </p>
+      ) : null}
+      {props.publicationReceipt !== null ? (
+        <p className="text-muted small">
+          Published workflow version{" "}
+          <code>
+            {String(props.publicationReceipt.workflowVersionId ?? "")}
+          </code>
+        </p>
+      ) : null}
+    </section>
   );
 }
 

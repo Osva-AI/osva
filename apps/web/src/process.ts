@@ -52,6 +52,7 @@ import {
   PostgresEvaluationSuiteRepository,
   PostgresMemoryNamespaceRepository,
   PostgresArtifactRepository,
+  PostgresBuilderPublicationRepository,
   PostgresKnowledgeRepository,
   PostgresOfficeRepository,
   PostgresWorkspaceRepository,
@@ -93,7 +94,10 @@ import { ProcessEnvSecretResolver } from "@osva/adapters-runtime-http";
 import { ModelGateway } from "@osva/model-gateway";
 import {
   GenerateBuilderProposalFromNaturalLanguage,
+  GetBuilderPublicationReceipt,
   GetWorkspaceBuilderCapabilityCatalog,
+  PrepareBuilderPublication,
+  PublishBuilderProposal,
 } from "@osva/domain/builder";
 import {
   CreateRun,
@@ -287,6 +291,30 @@ export function createWebProcess(
     ids,
   });
   const knowledgeRepository = new PostgresKnowledgeRepository(database);
+  const builderPublications = new PostgresBuilderPublicationRepository(
+    database,
+  );
+  const prepareBuilderPublication = new PrepareBuilderPublication({
+    getCatalog: getWorkspaceBuilderCapabilityCatalog,
+    agents,
+    workflows: workflowRepository,
+  });
+  const publishBuilderProposal = new PublishBuilderProposal({
+    getCatalog: getWorkspaceBuilderCapabilityCatalog,
+    agents,
+    workflows: workflowRepository,
+    workspaces,
+    modelProfiles,
+    tools,
+    memoryNamespaces,
+    knowledge: knowledgeRepository,
+    publications: builderPublications,
+    clock,
+    ids,
+  });
+  const getBuilderPublicationReceipt = new GetBuilderPublicationReceipt(
+    builderPublications,
+  );
   const vectorStore = new PgVectorStore(database);
   const embeddingDefaults = loadKnowledgeEmbeddingDefaults({
     ...process.env,
@@ -523,6 +551,9 @@ export function createWebProcess(
       builder: {
         generateBuilderProposal,
         getWorkspaceBuilderCapabilityCatalog,
+        prepareBuilderPublication,
+        publishBuilderProposal,
+        getBuilderPublicationReceipt,
       },
       apiKeys: apiKeyApplication,
       humanAuth: humanAuthServices,

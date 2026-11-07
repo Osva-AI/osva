@@ -44,6 +44,8 @@ import {
   WorkflowEventIdempotencyConflictError,
   ArtifactNotFoundError,
   ArtifactIdempotencyConflictError,
+  BuilderPublicationIdempotencyConflictError,
+  BuilderPublicationStalePlanError,
   ArtifactPayloadTooLargeError,
   ArtifactDigestMismatchError,
   ArtifactBlobUnavailableError,
@@ -128,6 +130,24 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
 
   if (error instanceof ArtifactIdempotencyConflictError) {
     sendJson(response, 409, { status: "conflict" });
+    return;
+  }
+
+  if (error instanceof BuilderPublicationIdempotencyConflictError) {
+    sendJson(response, 409, {
+      status: "conflict",
+      code: "idempotency_conflict",
+    });
+    return;
+  }
+
+  if (error instanceof BuilderPublicationStalePlanError) {
+    sendJson(response, 409, {
+      status: "conflict",
+      code: "stale_plan_digest",
+      expectedPlanDigest: error.expectedPlanDigest,
+      actualPlanDigest: error.actualPlanDigest,
+    });
     return;
   }
 
