@@ -755,11 +755,99 @@ function parseStringList(
 }
 
 /**
+ * OpenAI strict json_schema emits `null` for omitted optional fields; coerce to absent
+ * values before structural validation (preserves meaningful nulls such as BRANCH equals).
+ */
+export function normalizeOpenAiStructuredProposalNulls(
+  unknown: unknown,
+): unknown {
+  if (!isPlainObject(unknown)) {
+    return unknown;
+  }
+
+  const registry = unknown.workflowRegistry;
+  let workflowRegistry = registry;
+  if (isPlainObject(registry) && registry.description === null) {
+    workflowRegistry = {
+      key: registry.key,
+      name: registry.name,
+    };
+  }
+
+  const agentsRaw = unknown.agents;
+  let agents = agentsRaw;
+  if (Array.isArray(agentsRaw)) {
+    agents = agentsRaw.map((agent) => {
+      if (!isPlainObject(agent) || agent.kind !== "NEW") {
+        return agent;
+      }
+
+      const execution = agent.execution;
+      if (!isPlainObject(execution)) {
+        return agent;
+      }
+
+      const cleanedExecution = { ...execution };
+      for (const key of [
+        "maxOutputTokens",
+        "checkpointingEnabled",
+        "automaticRecoveryEnabled",
+      ] as const) {
+        if (cleanedExecution[key] === null) {
+          delete cleanedExecution[key];
+        }
+      }
+
+      return { ...agent, execution: cleanedExecution };
+    });
+  }
+
+  const workflow = unknown.workflow;
+  let workflowNormalized = workflow;
+  if (isPlainObject(workflow) && Array.isArray(workflow.nodes)) {
+    const nodes = workflow.nodes.map((node) => {
+      if (!isPlainObject(node)) {
+        return node;
+      }
+
+      if (node.type === "APPROVAL" && node.description === null) {
+        return {
+          key: node.key,
+          type: node.type,
+          title: node.title,
+        };
+      }
+
+      if (node.type === "WAIT" && isPlainObject(node.wait)) {
+        const wait = { ...node.wait };
+        if (wait.timeoutMs === null) {
+          delete wait.timeoutMs;
+        }
+
+        return { ...node, wait };
+      }
+
+      return node;
+    });
+    workflowNormalized = { ...workflow, nodes };
+  }
+
+  return {
+    ...unknown,
+    workflowRegistry,
+    agents,
+    workflow: workflowNormalized,
+  };
+}
+
+/**
  * Parse and validate an internal BuilderProposalV1 document.
  */
 export function parseBuilderProposalV1(
   unknown: unknown,
 ): BuilderProposalParseResult {
+  unknown = normalizeOpenAiStructuredProposalNulls(unknown);
+
   if (!isPlainObject(unknown)) {
     return {
       ok: false,

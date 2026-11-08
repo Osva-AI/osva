@@ -1,4 +1,13 @@
-import type { ModelProfileVersionId, WorkspaceId } from "@osva-ai/contracts";
+import type {
+  ModelProfileId,
+  ModelProfileVersionId,
+  ModelProvider,
+  WorkspaceId,
+} from "@osva-ai/contracts";
+import type {
+  WorkspaceBuilderCapabilityCatalogV1,
+  WorkspaceBuilderModelProfileVersionCatalogEntryV1,
+} from "@osva/domain/builder";
 
 import {
   consoleJsonWithHeaders,
@@ -159,5 +168,96 @@ export async function provisionM20_7LiveModelProfiles(
     executionModelProfileVersionId,
     alternateModelProfileVersionId,
     connectionVersionId,
+  };
+}
+
+type ModelProfileListBody = {
+  readonly modelProfiles: ReadonlyArray<{
+    readonly id: string;
+    readonly workspaceId: WorkspaceId;
+    readonly key: string;
+    readonly name: string;
+  }>;
+};
+
+type ModelProfileVersionListBody = {
+  readonly versions: ReadonlyArray<{
+    readonly id: string;
+    readonly modelProfileId: string;
+    readonly version: number;
+    readonly provider: ModelProvider;
+    readonly model: string;
+  }>;
+};
+
+/**
+ * Verifies workspace-owned model profiles via Console BFF list APIs (no builder-catalog route),
+ * then builds a scoring catalog containing model profile versions only (smoke scenarios use NEW agents).
+ */
+export async function verifyWorkspaceModelProfilesAndBuildScoringCatalog(
+  stack: M20_7Stack,
+  workspaceId: WorkspaceId,
+  requiredVersionIds: readonly ModelProfileVersionId[],
+): Promise<WorkspaceBuilderCapabilityCatalogV1> {
+  const headers = stack.consoleHeaders(workspaceId);
+  const listRes = await consoleJsonWithHeaders(
+    stack,
+    "/api/v1/model-profiles",
+    headers,
+  );
+  if (listRes.status !== 200) {
+    throw new Error(`Model profile list failed: HTTP ${listRes.status}`);
+  }
+
+  const profiles = (listRes.body as ModelProfileListBody).modelProfiles;
+  const modelProfileVersions: WorkspaceBuilderModelProfileVersionCatalogEntryV1[] =
+    [];
+
+  for (const profile of profiles) {
+    if (profile.workspaceId !== workspaceId) {
+      throw new Error(
+        `Model profile ${profile.id} workspace mismatch: expected ${workspaceId}`,
+      );
+    }
+    const versionsRes = await consoleJsonWithHeaders(
+      stack,
+      `/api/v1/model-profiles/${encodeURIComponent(profile.id)}/versions`,
+      headers,
+    );
+    if (versionsRes.status !== 200) {
+      throw new Error(
+        `Model profile versions list failed for ${profile.id}: HTTP ${versionsRes.status}`,
+      );
+    }
+    const versions = (versionsRes.body as ModelProfileVersionListBody).versions;
+    for (const version of versions) {
+      modelProfileVersions.push({
+        modelProfileVersionId: version.id as ModelProfileVersionId,
+        modelProfileId: profile.id as ModelProfileId,
+        modelProfileKey: profile.key,
+        modelProfileName: profile.name,
+        version: version.version,
+        provider: version.provider,
+        model: version.model,
+      });
+    }
+  }
+
+  const available = new Set(
+    modelProfileVersions.map((entry) => entry.modelProfileVersionId),
+  );
+  for (const required of requiredVersionIds) {
+    if (!available.has(required)) {
+      throw new Error(
+        `Required model profile version not in workspace catalog: ${required}`,
+      );
+    }
+  }
+
+  return {
+    workspaceId,
+    agentVersions: [],
+    modelProfileVersions,
+    toolVersions: [],
   };
 }

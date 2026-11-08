@@ -77,6 +77,18 @@ export {
 export { computeBuilderProposalDigest } from "./builder-proposal-digest.js";
 export { validateBuilderProposalModelOutputPipeline } from "./builder-proposal-model-output-pipeline.js";
 export {
+  BUILDER_WORKFLOW_TOPOLOGY_PROMPT_SECTION,
+  buildBuilderCompileFailureRepairHint,
+} from "./builder-workflow-topology-guidance.js";
+export {
+  buildGenerationAttemptDiagnostic,
+  sanitizeCompileIssuesForEvidence,
+  validationStageForErrorCode,
+  type BuilderGenerationAttemptDiagnosticV1,
+  type BuilderGenerationCompileIssueEvidenceV1,
+  type BuilderGenerationValidationStage,
+} from "./builder-generation-attempt-diagnostics.js";
+export {
   compareBuilderProposalChanges,
   collectBuilderProposalCatalogResourceIds,
   type BuilderProposalChangesetV1,

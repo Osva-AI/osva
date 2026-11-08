@@ -24,6 +24,10 @@ import {
   recordProviderInvocation,
 } from "../lib/provenance.mjs";
 import { scoreLiveIntent } from "../lib/intent-scoring.mjs";
+import {
+  deriveOverallStatusFromScenarios,
+  liveAcceptanceShouldExitNonZero,
+} from "../lib/acceptance-status.mjs";
 import { assertLiveReportConsistency } from "../lib/report.mjs";
 import { redactAcceptanceSecrets } from "../../m20-6/lib/redaction.mjs";
 
@@ -182,8 +186,50 @@ test("CI blocks live unless explicit override", () => {
     OPENAI_API_KEY: "sk-test",
     OSVA_M20_7_MAX_COST_USD_MICROS: "1000000",
     OSVA_M20_7_LIVE_EXECUTE: "1",
+    OSVA_M20_7_ALLOW_BILLABLE: "1",
   });
   assert.equal(blocked, "CI_LIVE_BLOCKED");
+});
+
+test("billable execution requires ALLOW_BILLABLE", () => {
+  const blocked = liveExecuteBlockedReason({
+    OSVA_M20_7_LIVE: "1",
+    OSVA_M20_7_ISOLATED: "1",
+    OPENAI_API_KEY: "sk-test",
+    OSVA_M20_7_MAX_COST_USD_MICROS: "1000000",
+    OSVA_M20_7_LIVE_EXECUTE: "1",
+  });
+  assert.equal(blocked, "OSVA_M20_7_ALLOW_BILLABLE not set");
+});
+
+test("overall FAIL propagates from scenario rows", () => {
+  const overall = deriveOverallStatusFromScenarios(
+    [{ status: "PASS" }, { status: "FAIL" }],
+    { liveProviderCalls: true, allScenariosExecuted: true },
+  );
+  assert.equal(overall, "FAIL");
+  assert.equal(
+    liveAcceptanceShouldExitNonZero(overall, {
+      liveExecuteAttempted: true,
+      allScenariosExecuted: true,
+    }),
+    true,
+  );
+});
+
+test("preflight incomplete scenarios remain NOT_RUN without fail exit", () => {
+  const overall = deriveOverallStatusFromScenarios([], {
+    liveProviderCalls: false,
+    allScenariosExecuted: false,
+  });
+  assert.equal(overall, "NOT_RUN");
+  assert.equal(
+    liveAcceptanceShouldExitNonZero(overall, {
+      liveExecuteAttempted: false,
+      allScenariosExecuted: false,
+    }),
+    false,
+  );
 });
 
 test("intent scoring does not auto-pass compilation-only", () => {

@@ -8,6 +8,8 @@ import type {
   BuilderGenerationFailureV1,
 } from "./builder-natural-language-generation-types.js";
 import type { BuilderProposalV1 } from "./builder-proposal.js";
+import { buildBuilderProposalParseRepairHint } from "./builder-json-pointer-guidance.js";
+import { buildBuilderCompileFailureRepairHint } from "./builder-workflow-topology-guidance.js";
 import { parseBuilderProposalV1 } from "./builder-proposal-schema.js";
 import type { BoundedCapabilityCatalogResult } from "./builder-natural-language-prompt.js";
 
@@ -97,9 +99,7 @@ export function validateBuilderProposalModelOutputPipeline(
     return {
       kind: "hard_fail",
       canRepair: true,
-      repairHint: `- BuilderProposalV1 parse errors:\n${proposalParse.messages
-        .map((m) => `  - ${m}`)
-        .join("\n")}`,
+      repairHint: buildBuilderProposalParseRepairHint(proposalParse.messages),
       failure: asFailure(
         "INVALID_BUILDER_PROPOSAL",
         "Proposal failed structural validation.",
@@ -149,9 +149,7 @@ export function validateBuilderProposalModelOutputPipeline(
     return {
       kind: "hard_fail",
       canRepair: true,
-      repairHint: `- Pre-publication compilation failed:\n${compiled.issues
-        .map((i) => `  - ${i.code}: ${i.message}`)
-        .join("\n")}`,
+      repairHint: buildBuilderCompileFailureRepairHint(compiled.issues),
       failure: asFailure(
         code,
         "Proposal did not pass workspace catalog and compiler checks.",

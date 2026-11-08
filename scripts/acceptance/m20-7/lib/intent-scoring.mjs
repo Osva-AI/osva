@@ -79,6 +79,9 @@ export function scoreLiveIntent(proposal, manifestScenario) {
       case "no_invented_tools":
       case "stable_refs":
       case "valid_model_binding":
+      case "feedback_summarization_objective":
+      case "fact_check_after_summarizer":
+      case "no_approval_or_wait":
         break;
       default:
         break;

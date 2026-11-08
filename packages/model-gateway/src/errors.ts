@@ -6,6 +6,12 @@ export interface ModelGatewayErrorOptions {
   readonly provider?: string;
   readonly providerStatusCode?: number;
   readonly providerRequestId?: string;
+  /** Sanitized provider error category (for example OpenAI `error.type`). */
+  readonly providerErrorType?: string;
+  /** Sanitized provider error code when exposed by the API. */
+  readonly providerErrorCode?: string;
+  /** Sanitized provider parameter identifier when exposed by the API. */
+  readonly providerErrorParam?: string;
   readonly retryAfterMs?: number;
 }
 
@@ -15,6 +21,9 @@ export class ModelGatewayError extends Error {
   readonly provider: string | undefined;
   readonly providerStatusCode: number | undefined;
   readonly providerRequestId: string | undefined;
+  readonly providerErrorType: string | undefined;
+  readonly providerErrorCode: string | undefined;
+  readonly providerErrorParam: string | undefined;
   readonly retryAfterMs: number | undefined;
 
   constructor(
@@ -29,6 +38,9 @@ export class ModelGatewayError extends Error {
     this.provider = options?.provider;
     this.providerStatusCode = options?.providerStatusCode;
     this.providerRequestId = options?.providerRequestId;
+    this.providerErrorType = options?.providerErrorType;
+    this.providerErrorCode = options?.providerErrorCode;
+    this.providerErrorParam = options?.providerErrorParam;
     this.retryAfterMs = options?.retryAfterMs;
   }
 }

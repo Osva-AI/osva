@@ -3,7 +3,7 @@
  * Unknown models require explicit operator pricing or block when cost cap is set.
  */
 
-export const MODEL_PRICING_VERSION = "m20-7.1-2026-11-08";
+export const MODEL_PRICING_VERSION = "m20-7.2-2026-11-08";
 export const MODEL_PRICING_RATE_SOURCE =
   "operator-declared-conservative-defaults";
 

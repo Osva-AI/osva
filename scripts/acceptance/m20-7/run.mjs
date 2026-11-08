@@ -10,6 +10,7 @@ import {
   evaluateLivePreflight,
   liveExecuteBlockedReason,
 } from "./lib/live-guards.mjs";
+import { liveAcceptanceShouldExitNonZero } from "./lib/acceptance-status.mjs";
 import {
   assertLiveReportConsistency,
   writeAcceptanceArtifacts,
@@ -76,6 +77,7 @@ function printHelp() {
 Live billable execution requires:
   OSVA_M20_7_LIVE=1
   OSVA_M20_7_LIVE_EXECUTE=1
+  OSVA_M20_7_ALLOW_BILLABLE=1
   OSVA_M20_7_ISOLATED=1
   OSVA_M20_7_MAX_COST_USD_MICROS=<positive micro-USD cap>
   Provider API key in env (never commit)
@@ -266,7 +268,12 @@ async function main() {
       allScenariosExecuted: false,
       notes: blocked,
     });
-    process.exit(blocked === "OSVA_M20_7_LIVE_EXECUTE not set" ? 0 : 2);
+    process.exit(
+      blocked === "OSVA_M20_7_LIVE_EXECUTE not set" ||
+        blocked === "OSVA_M20_7_ALLOW_BILLABLE not set"
+        ? 0
+        : 2,
+    );
   }
 
   const { config: budget } = loadAndValidateBudgetFromEnv(env, {
@@ -335,6 +342,7 @@ async function main() {
     pricingVersion: MODEL_PRICING_VERSION,
     pricingRateSource: MODEL_PRICING_RATE_SOURCE,
     scenarios: integrationEvidence?.results ?? [],
+    generationFailure: integrationEvidence?.generationFailure,
     scenarioCount: integrationEvidence?.scenarioCount ?? 0,
     allScenariosExecuted: integrationEvidence?.allScenariosExecuted === true,
     overallStatus: integrationEvidence?.overallStatus ?? "ERROR",
@@ -355,6 +363,17 @@ async function main() {
   ) {
     console.error(
       "Live run claimed success without verified provider provenance.",
+    );
+    process.exit(1);
+  }
+  if (
+    liveAcceptanceShouldExitNonZero(String(payload.overallStatus ?? ""), {
+      liveExecuteAttempted: payload.liveExecuteAttempted === true,
+      allScenariosExecuted: payload.allScenariosExecuted === true,
+    })
+  ) {
+    console.error(
+      `Live acceptance did not pass (overallStatus=${String(payload.overallStatus)}).`,
     );
     process.exit(1);
   }

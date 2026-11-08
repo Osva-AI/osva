@@ -165,3 +165,12 @@ See [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY
 - ✅ M19.6 Integration hardening and acceptance — osva PR **#94** + **#96** → **`cb46caf`**; live **`m17-114`** **38/38**; M13.7.5 browser **6/6** + helpers **4/4**
 
 **M19 acceptance vs distribution:** Milestone **complete (scoped)**. Eleven-package npm wave, live registry acceptance, and browser suite executed per [`M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY.md). Combined integration-profile Turbo on documentation-only branches is **not** equivalent evidence and was **not** re-run for final closeout.
+
+## M20 — Builder product acceptance (in flight)
+
+Branch **`feat/m20-7-live-builder-acceptance`** (M20.7.1 + M20.7.2 + pending M20.7.3 before combined PR).
+
+- ✅ M20.6 Deterministic builder acceptance — fake OpenAI matrix; [`../operations/M20_6_ACCEPTANCE_SUMMARY.md`](../operations/M20_6_ACCEPTANCE_SUMMARY.md)
+- ✅ M20.7.1 Live-ready builder stack (official endpoints, provenance, budgets) — `e054544`
+- ✅ M20.7.2 OpenAI live smoke (natural-language, 2 scenarios) — [`../operations/M20_7_2_CLOSEOUT_SUMMARY.md`](../operations/M20_7_2_CLOSEOUT_SUMMARY.md)
+- ⏳ M20.7.3 Gemini live smoke — **not run**

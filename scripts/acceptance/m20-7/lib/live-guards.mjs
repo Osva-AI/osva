@@ -100,6 +100,9 @@ export function liveExecuteBlockedReason(env, options = {}) {
   if (env.OSVA_M20_7_LIVE_EXECUTE !== "1") {
     return "OSVA_M20_7_LIVE_EXECUTE not set";
   }
+  if (env.OSVA_M20_7_ALLOW_BILLABLE !== "1") {
+    return "OSVA_M20_7_ALLOW_BILLABLE not set";
+  }
   return undefined;
 }
 

@@ -160,10 +160,86 @@ export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIRespon
   };
 }
 
+function writeChatCompletionChatError(
+  userText: string,
+  res: http.ServerResponse,
+): boolean {
+  const scenarios: Record<
+    string,
+    { status: number; type: string; code?: string; param?: string }
+  > = {
+    "openai-error-400": {
+      status: 400,
+      type: "invalid_request_error",
+      code: "invalid_json_schema",
+      param: "response_format",
+    },
+    "openai-error-400-unsupported-parameter": {
+      status: 400,
+      type: "invalid_request_error",
+      code: "unsupported_parameter",
+      param: "max_tokens",
+    },
+    "openai-error-401": {
+      status: 401,
+      type: "invalid_request_error",
+      code: "invalid_api_key",
+    },
+    "openai-error-403": {
+      status: 403,
+      type: "permission_error",
+      code: "insufficient_quota",
+    },
+    "openai-error-429": {
+      status: 429,
+      type: "rate_limit_error",
+      code: "rate_limit_exceeded",
+    },
+    "openai-error-500": {
+      status: 500,
+      type: "server_error",
+      code: "internal_error",
+    },
+  };
+
+  const ordered = Object.entries(scenarios).sort(
+    (a, b) => b[0].length - a[0].length,
+  );
+  for (const [marker, scenario] of ordered) {
+    if (!userText.includes(marker)) {
+      continue;
+    }
+
+    res.writeHead(scenario.status, {
+      "content-type": "application/json",
+      "x-request-id": "req_fake_openai_error",
+      ...(scenario.status === 429 ? { "retry-after": "2" } : {}),
+    });
+    res.end(
+      JSON.stringify({
+        error: {
+          message: "synthetic provider error",
+          type: scenario.type,
+          code: scenario.code,
+          param: scenario.param,
+        },
+      }),
+    );
+    return true;
+  }
+
+  return false;
+}
+
 function writeChatCompletionResponse(
   body: unknown,
   res: http.ServerResponse,
 ): void {
+  const userText = extractChatUserText(body);
+  if (writeChatCompletionChatError(userText, res)) {
+    return;
+  }
+
   const record =
     body !== null && typeof body === "object"
       ? (body as Record<string, unknown>)
@@ -223,7 +299,6 @@ function writeChatCompletionResponse(
     return;
   }
 
-  const userText = extractChatUserText(body);
   const m20BuilderProposal = resolveM20_6BuilderFakeProposal(userText);
   if (m20BuilderProposal !== undefined) {
     res.writeHead(200, { "content-type": "application/json" });

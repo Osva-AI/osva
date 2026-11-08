@@ -1,6 +1,6 @@
 # M20.7 Live builder validation
 
-Milestone **M20.7.1** corrects M20.6 “live” gaps: the legacy `OSVA_M20_6_LIVE=1` path still started `startM12_3HumanConsoleStack()` with `ModelProviderConnectionVersions` pointed at `stack.fakeOpenAI.origin`, skipped the deterministic matrix, and set `liveProviderCalls` from configuration instead of verified adapter provenance.
+Milestone **M20.7.1** corrects M20.6 “live” gaps; **M20.7.2** adds natural-language live smoke scenarios and quality evaluation (operator-executed). the legacy `OSVA_M20_6_LIVE=1` path still started `startM12_3HumanConsoleStack()` with `ModelProviderConnectionVersions` pointed at `stack.fakeOpenAI.origin`, skipped the deterministic matrix, and set `liveProviderCalls` from configuration instead of verified adapter provenance.
 
 ## Architecture
 
@@ -38,7 +38,9 @@ pnpm acceptance:m20-7:live -- --provider=openai --smoke
 
 ## Budgets and pricing
 
-Hard caps load from `OSVA_M20_7_*` env vars (`scripts/acceptance/m20-7/lib/budgets.mjs`). Live mode requires `OSVA_M20_7_MAX_COST_USD_MICROS`. Pre-request reservation uses conservative per-model pricing (`lib/pricing.mjs`, version `m20-7.1-2026-11-08`). Unknown models block when a USD cap is required.
+Hard caps load from `OSVA_M20_7_*` env vars (`scripts/acceptance/m20-7/lib/budgets.mjs`). Live mode requires `OSVA_M20_7_MAX_COST_USD_MICROS`. Pre-request reservation uses conservative per-model pricing (`lib/pricing.mjs`, version `m20-7.2-2026-11-08`). Unknown models block when a USD cap is required.
+
+Live smoke manifest (NL prompts, no fixture markers): `scripts/acceptance/m20-7/scenarios/live-smoke-manifest.json`. Integration scoring: `apps/console/test/integration/m20-7-live-eval.ts`.
 
 ## Evidence
 
@@ -56,4 +58,10 @@ Deterministic structural scoring remains in M20.6 integration tests. Live intent
 
 ## Status
 
-**Real OpenAI/Gemini validation: NOT_RUN** in M20.7.1 implementation verification (no billable calls).
+| Slice | Status |
+| --- | --- |
+| M20.7.1 live-ready guards | **Complete** (committed `e054544`) |
+| M20.7.2 OpenAI live smoke | **Complete (scoped)** — operator PASS 2026-11-08; [`../operations/M20_7_2_CLOSEOUT_SUMMARY.md`](../operations/M20_7_2_CLOSEOUT_SUMMARY.md) |
+| M20.7.3 Gemini live smoke | **NOT_RUN** |
+
+One successful OpenAI smoke does not certify builder quality across models or prompts.
