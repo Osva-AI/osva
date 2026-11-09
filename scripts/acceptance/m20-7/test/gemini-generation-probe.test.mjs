@@ -37,8 +37,14 @@ describe("gemini-builder-generation-probe guards", () => {
   });
 
   it("execute exit code is nonzero for provider HTTP errors", () => {
-    assert.equal(geminiGenerationProbeExecuteExitCode("PROVIDER_HTTP_ERROR"), 1);
-    assert.equal(geminiGenerationProbeExecuteExitCode("BUILDER_GENERATION_PASS"), 0);
+    assert.equal(
+      geminiGenerationProbeExecuteExitCode("PROVIDER_HTTP_ERROR"),
+      1,
+    );
+    assert.equal(
+      geminiGenerationProbeExecuteExitCode("BUILDER_GENERATION_PASS"),
+      0,
+    );
   });
 
   it("probe CLI documents entrypoint", () => {
