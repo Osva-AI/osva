@@ -1,8 +1,8 @@
 # M20.7.2 closeout — OpenAI live builder acceptance
 
-Branch: **`feat/m20-7-live-builder-acceptance`**  
-Evidence commit (integration run): **`e054544fe94db2230711550e6c1838bc063e1bb5`**  
-Harness: **`m20-7.2`**  
+Branch: **`feat/m20-7-live-builder-acceptance`**
+Evidence commit (integration run): **`e054544fe94db2230711550e6c1838bc063e1bb5`**
+Harness: **`m20-7.2`**
 Operator live smoke: **2026-11-08T19:59:02.351Z** (`runId` `409b2647-ee13-4464-b831-fa3ed6229274`)
 
 Cross-reference: [`M20_7_ACCEPTANCE_SUMMARY.md`](M20_7_ACCEPTANCE_SUMMARY.md) · implementation spec [`../implementation/M20-7-LIVE-BUILDER-VALIDATION.md`](../implementation/M20-7-LIVE-BUILDER-VALIDATION.md)

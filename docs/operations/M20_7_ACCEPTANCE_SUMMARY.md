@@ -1,6 +1,6 @@
 # M20.7 acceptance summary
 
-**Branch:** `feat/m20-7-live-builder-acceptance`  
+**Branch:** `feat/m20-7-live-builder-acceptance`
 **Harness:** `m20-7.2` (M20.7.1 guards + M20.7.2 live smoke scenarios)
 **Baseline:** `origin/main` (M20.6 merged)
 

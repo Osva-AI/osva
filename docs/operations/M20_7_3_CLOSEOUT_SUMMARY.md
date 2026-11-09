@@ -1,7 +1,7 @@
 # M20.7.3 closeout — Gemini live builder acceptance
 
-Branch: **`feat/m20-7-live-builder-acceptance`**  
-Operator live smoke: **2026-11-09T11:46:06.919Z** (`runId` `5eb70b36-0dfc-416d-8c17-f3804843f266`)  
+Branch: **`feat/m20-7-live-builder-acceptance`**
+Operator live smoke: **2026-11-09T11:46:06.919Z** (`runId` `5eb70b36-0dfc-416d-8c17-f3804843f266`)
 Harness: **`m20-7.2`**
 
 Cross-reference: [`M20_7_ACCEPTANCE_SUMMARY.md`](M20_7_ACCEPTANCE_SUMMARY.md) · [`M20_7_2_CLOSEOUT_SUMMARY.md`](M20_7_2_CLOSEOUT_SUMMARY.md)
