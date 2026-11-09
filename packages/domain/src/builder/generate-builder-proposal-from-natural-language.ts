@@ -1,13 +1,8 @@
 import type {
   GenerateCompletionRequest,
-  ModelErrorCode,
   ModelProfileVersionId,
 } from "@osva-ai/contracts";
-import {
-  AUTHORIZATION_ACTIONS,
-  MODEL_ERROR_CODES,
-  isModelErrorCode,
-} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import {
   controlPlaneWorkspaceId,
@@ -20,6 +15,10 @@ import { WorkspaceNotFoundError } from "../errors.js";
 import type { ModelProfileVersion } from "../model-profile-version.js";
 
 import { buildBuilderCatalogIndex } from "./builder-compiler.js";
+import {
+  buildGenerationAttemptDiagnostic,
+  type BuilderGenerationAttemptDiagnosticV1,
+} from "./builder-generation-attempt-diagnostics.js";
 import { validateBuilderProposalModelOutputPipeline } from "./builder-proposal-model-output-pipeline.js";
 import {
   BUILDER_GENERATION_PROMPT_VERSION,
@@ -39,6 +38,10 @@ import {
 } from "./builder-natural-language-prompt.js";
 import { BuilderProposalOpenAiJsonSchema } from "./builder-proposal-openai-json-schema.js";
 import { mergeBuilderModelUsage } from "./builder-generation-usage.js";
+import {
+  mapModelGatewayErrorToBuilderFailure,
+  readModelGatewayErrorLike,
+} from "./builder-model-gateway-diagnostics.js";
 import { modelProviderSupportsStructuredJsonSchema } from "./builder-provider-structured-output.js";
 import {
   GetWorkspaceBuilderCapabilityCatalog,
@@ -308,6 +311,7 @@ export class GenerateBuilderProposalFromNaturalLanguage {
     }
 
     let attempts = 0;
+    const attemptDiagnostics: BuilderGenerationAttemptDiagnosticV1[] = [];
     let measuredUsage = undefined as
       | import("./builder-natural-language-generation-types.js").BuilderGenerationMeasuredUsageV1
       | undefined;
@@ -374,8 +378,9 @@ export class GenerateBuilderProposalFromNaturalLanguage {
           );
         }
 
-        if (isLikeModelGatewayError(error)) {
-          return mapModelGatewayError(error);
+        const gatewayError = readModelGatewayErrorLike(error);
+        if (gatewayError !== undefined) {
+          return mapModelGatewayErrorToBuilderFailure(gatewayError);
         }
 
         throw error;
@@ -384,8 +389,38 @@ export class GenerateBuilderProposalFromNaturalLanguage {
       }
     };
 
+    const recordPipelineOutcome = (
+      providerAttempt: number,
+      afterRepair: boolean,
+      repairAttempted: boolean,
+      pipeline: ReturnType<typeof validateBuilderProposalModelOutputPipeline>,
+      finishReason?: import("@osva-ai/contracts").ModelFinishReason,
+    ): void => {
+      if (pipeline.kind === "hard_fail") {
+        attemptDiagnostics.push(
+          buildGenerationAttemptDiagnostic({
+            providerAttempt,
+            afterRepair,
+            repairAttempted,
+            failure: pipeline.failure,
+            modelFinishReason: finishReason,
+            measuredUsage,
+          }),
+        );
+      }
+    };
+
     const first = await runCompletion(messagesBase);
     if (!("ok" in first) || first.ok !== true) {
+      attemptDiagnostics.push(
+        buildGenerationAttemptDiagnostic({
+          providerAttempt: attempts,
+          afterRepair: false,
+          repairAttempted: false,
+          failure: first as BuilderGenerationFailureV1,
+          measuredUsage,
+        }),
+      );
       return enrichFailure(first as BuilderGenerationFailureV1, {
         genVersion,
         bounded,
@@ -394,6 +429,7 @@ export class GenerateBuilderProposalFromNaturalLanguage {
         structured,
         generationId,
         measuredUsage,
+        attemptDiagnostics,
       });
     }
 
@@ -402,6 +438,7 @@ export class GenerateBuilderProposalFromNaturalLanguage {
       catalogIndex,
       bounded.promptVisible,
     );
+    recordPipelineOutcome(1, false, false, pipeline, first.finishReason);
 
     if (
       pipeline.kind === "hard_fail" &&
@@ -425,6 +462,15 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
 
       const second = await runCompletion(repairMessages);
       if (!("ok" in second) || second.ok !== true) {
+        attemptDiagnostics.push(
+          buildGenerationAttemptDiagnostic({
+            providerAttempt: attempts,
+            afterRepair: true,
+            repairAttempted: true,
+            failure: second as BuilderGenerationFailureV1,
+            measuredUsage,
+          }),
+        );
         return enrichFailure(second as BuilderGenerationFailureV1, {
           genVersion,
           bounded,
@@ -433,6 +479,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
           structured,
           generationId,
           measuredUsage,
+          attemptDiagnostics,
         });
       }
 
@@ -441,6 +488,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
         catalogIndex,
         bounded.promptVisible,
       );
+      recordPipelineOutcome(2, true, true, pipeline, second.finishReason);
     }
 
     if (pipeline.kind !== "success") {
@@ -452,6 +500,7 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
         structured,
         generationId,
         measuredUsage,
+        attemptDiagnostics,
       });
     }
 
@@ -485,43 +534,6 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
   }
 }
 
-function isLikeModelGatewayError(
-  error: unknown,
-): error is { readonly code: ModelErrorCode; readonly message: string } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof (error as { code?: unknown }).code === "string" &&
-    isModelErrorCode((error as { code: string }).code) &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
-  );
-}
-
-function mapModelGatewayError(error: {
-  readonly code: ModelErrorCode;
-  readonly message: string;
-}): BuilderGenerationFailureV1 {
-  const code = error.code;
-  if (code === MODEL_ERROR_CODES.MODEL_REQUEST_TIMEOUT) {
-    return asFailure("PROVIDER_TIMEOUT", error.message);
-  }
-
-  if (
-    code === MODEL_ERROR_CODES.MODEL_PROVIDER_UNAVAILABLE ||
-    code === MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR
-  ) {
-    return asFailure("PROVIDER_UNAVAILABLE", error.message);
-  }
-
-  if (code === MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE) {
-    return asFailure("INVALID_JSON_OUTPUT", error.message);
-  }
-
-  return asFailure("PROVIDER_ERROR", error.message);
-}
-
 function enrichFailure(
   failure: BuilderGenerationFailureV1,
   ctx: {
@@ -532,6 +544,7 @@ function enrichFailure(
     readonly structured: boolean;
     readonly generationId: ModelProfileVersionId;
     readonly measuredUsage?: import("./builder-natural-language-generation-types.js").BuilderGenerationMeasuredUsageV1;
+    readonly attemptDiagnostics?: readonly BuilderGenerationAttemptDiagnosticV1[];
   },
 ): BuilderGenerationFailureV1 {
   return {
@@ -551,6 +564,10 @@ function enrichFailure(
       catalogToolVersions: ctx.bounded.included.toolVersions,
       catalogTruncated: ctx.bounded.truncated,
       measuredUsage: ctx.measuredUsage,
+      ...(ctx.attemptDiagnostics !== undefined &&
+      ctx.attemptDiagnostics.length > 0
+        ? { attemptDiagnostics: ctx.attemptDiagnostics }
+        : {}),
     },
   };
 }

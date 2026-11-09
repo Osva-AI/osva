@@ -1,6 +1,9 @@
 import { AnthropicProviderAdapter } from "@osva/adapters-model-anthropic";
 import { GeminiProviderAdapter } from "@osva/adapters-model-gemini";
-import { OpenAIProviderAdapter } from "@osva/adapters-model-openai";
+import {
+  OPENAI_CONNECTION_RESOLVED_MAX_RETRIES,
+  OpenAIProviderAdapter,
+} from "@osva/adapters-model-openai";
 import type {
   ModelProfileId,
   ModelProvider,
@@ -165,10 +168,13 @@ export class ModelProviderConnectionResolver {
 
     switch (connection.provider) {
       case "OPENAI":
+        // Connection-bound OpenAI adapters disable SDK retries platform-wide so
+        // one ModelGateway.generateText maps to one billable HTTP attempt (see Anthropic).
         return new OpenAIProviderAdapter({
           apiKey,
           baseURL: endpoint?.baseUrl,
           fetch: fetchImpl,
+          maxRetries: OPENAI_CONNECTION_RESOLVED_MAX_RETRIES,
           timeout: CONNECTION_GENERATE_TIMEOUT_MS,
         });
       case "ANTHROPIC":

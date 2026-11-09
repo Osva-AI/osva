@@ -46,7 +46,7 @@ import {
 // Re-export scenario ids from fake provider fixtures for digest import path
 import { listM20_6ScenarioIds as listScenarioIdsFromFake } from "../../../../adapters/model-openai/test/m20-6-builder-scenario-responses.js";
 
-const LIVE =
+const LEGACY_LIVE =
   process.env.OSVA_M20_6_LIVE === "1" || process.env.OSVA_M20_6_LIVE === "true";
 const SMOKE =
   process.env.OSVA_M20_6_SMOKE === "1" ||
@@ -69,8 +69,8 @@ function writeEvidence(
     path.join(ARTIFACT_DIR, "acceptance-results.json"),
     JSON.stringify(
       {
-        mode: LIVE ? "live" : "deterministic",
-        liveProviderCalls: LIVE,
+        mode: "deterministic",
+        liveProviderCalls: false,
         results,
         ...extra,
       },
@@ -127,9 +127,10 @@ describe("M20.6 builder product acceptance (real stack)", () => {
   }
 
   it("deterministic matrix: generate → validate → publish (no workflow execution)", async () => {
-    if (LIVE) {
-      writeEvidence({ note: "Skipped deterministic matrix in live mode" }, []);
-      return;
+    if (LEGACY_LIVE) {
+      throw new Error(
+        "OSVA_M20_6_LIVE is deprecated — use M20.7 acceptance harness",
+      );
     }
 
     const stack = await openStack();

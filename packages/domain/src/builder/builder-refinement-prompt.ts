@@ -1,6 +1,8 @@
 import type { ModelConversationMessage } from "@osva-ai/contracts";
 
 import type { BuilderProposalV1 } from "./builder-proposal.js";
+import { BUILDER_JSON_POINTER_PROMPT_SECTION } from "./builder-json-pointer-guidance.js";
+import { BUILDER_WORKFLOW_TOPOLOGY_PROMPT_SECTION } from "./builder-workflow-topology-guidance.js";
 import { BUILDER_REFINEMENT_PROMPT_VERSION } from "./builder-refinement-types.js";
 import {
   buildBoundedCapabilityCatalogPayload,
@@ -123,7 +125,9 @@ Output rules:
 - Preserve unchanged NEW agent refs (bpr_*). Preserve existing workflow node keys where unchanged.
 - Preserve unaffected instructions, bindings, and EXISTING AgentVersion references.
 - Add new bpr_* refs only for genuinely new proposed agents. Remove orphan nodes/edges when removing agents.
-- Keep graph topology valid (DAG, supported node types: AGENT, BRANCH, PARALLEL, JOIN, APPROVAL, WAIT).
+- Keep graph topology valid (supported node types: AGENT, BRANCH, PARALLEL, JOIN, APPROVAL, WAIT).
+${BUILDER_JSON_POINTER_PROMPT_SECTION}
+${BUILDER_WORKFLOW_TOPOLOGY_PROMPT_SECTION}
 - EXISTING AgentVersion is immutable — never rewrite it; create a NEW proposed agent or list unresolvedRequirements when the user asks to edit a published agent in place.
 - Reference models and tools ONLY by ids present in the capability catalog JSON.
 

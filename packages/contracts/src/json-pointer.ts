@@ -4,6 +4,14 @@
  * Used by Workflow Definition V2 BRANCH selectors. Missing paths are a
  * non-match, not an exception.
  */
+
+/**
+ * RE2 pattern aligned with {@link isValidJsonPointer} for provider json_schema.
+ * Empty string selects the document root; non-empty pointers must start with "/".
+ */
+export const RFC6901_JSON_POINTER_PATTERN =
+  "^(?:$|/(?:[^/~]|~[01])*(?:/(?:[^/~]|~[01])*)*)$";
+
 export function isValidJsonPointer(pointer: string): boolean {
   if (pointer === "") {
     return true;

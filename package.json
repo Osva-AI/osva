@@ -85,7 +85,13 @@
     "acceptance:m20-6:smoke": "node scripts/acceptance/m20-6/run.mjs --smoke",
     "acceptance:m20-6:browser": "node scripts/acceptance/m20-6/run.mjs --with-browser",
     "acceptance:m20-6:live": "node scripts/acceptance/m20-6/run.mjs --live",
-    "acceptance:m20-6:test": "node --test scripts/acceptance/m20-6/test/*.test.mjs"
+    "acceptance:m20-6:test": "node --test scripts/acceptance/m20-6/test/*.test.mjs",
+    "acceptance:m20-7": "node scripts/acceptance/m20-7/run.mjs",
+    "acceptance:m20-7:regression": "node scripts/acceptance/m20-7/run.mjs --regression",
+    "acceptance:m20-7:preflight": "node scripts/acceptance/m20-7/run.mjs --preflight",
+    "acceptance:m20-7:live": "node scripts/acceptance/m20-7/run.mjs --live",
+    "acceptance:m20-7:gemini-probe": "node scripts/acceptance/m20-7/gemini-builder-generation-probe.mjs",
+    "acceptance:m20-7:test": "node --test scripts/acceptance/m20-7/test/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",

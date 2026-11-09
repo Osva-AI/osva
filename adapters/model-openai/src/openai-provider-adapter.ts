@@ -5,6 +5,7 @@ import type {
 import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
+  type ModelGatewayErrorOptions,
   type ModelProviderAdapter,
   type NormalizedModelUsage,
   type ProviderGenerateTextResult,
@@ -16,12 +17,20 @@ import type {
   ResponseUsage,
 } from "openai/resources/responses/responses";
 
+export const OPENAI_PROVIDER = "openai" as const;
+
 /**
  * Official OpenAI Node SDK default maxRetries is 2. Those retries stay inside
  * one generateText call and must not become OSVA RunAttempts. OSVA does not
  * add a provider retry policy or fallback.
  */
 export const OPENAI_SDK_MAX_RETRIES = 2;
+
+/**
+ * Connection-resolved adapters disable hidden SDK retries so one gateway call
+ * maps to one observable provider HTTP attempt (budget accounting).
+ */
+export const OPENAI_CONNECTION_RESOLVED_MAX_RETRIES = 0;
 
 export interface OpenAIProviderAdapterOptions {
   readonly apiKey: string;
@@ -320,6 +329,10 @@ function mapOpenAIError(error: unknown): ModelGatewayError {
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR,
       "The model provider rejected the request credentials.",
+      {
+        ...openAiErrorMetadata(error),
+        retryable: false,
+      },
     );
   }
 
@@ -327,6 +340,44 @@ function mapOpenAIError(error: unknown): ModelGatewayError {
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_RATE_LIMITED,
       "The model provider rate-limited the request.",
+      {
+        ...openAiErrorMetadata(error),
+        retryable: true,
+        retryAfterMs: parseRetryAfterMs(error.headers),
+      },
+    );
+  }
+
+  if (error instanceof OpenAI.PermissionDeniedError) {
+    return new ModelGatewayError(
+      MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR,
+      "The model provider denied permission for the request.",
+      {
+        ...openAiErrorMetadata(error),
+        retryable: false,
+      },
+    );
+  }
+
+  if (error instanceof OpenAI.NotFoundError) {
+    return new ModelGatewayError(
+      MODEL_ERROR_CODES.MODEL_NOT_FOUND,
+      "The configured model was not found at the provider.",
+      {
+        ...openAiErrorMetadata(error),
+        retryable: false,
+      },
+    );
+  }
+
+  if (error instanceof OpenAI.BadRequestError) {
+    return new ModelGatewayError(
+      MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,
+      "The model provider rejected the request.",
+      {
+        ...openAiErrorMetadata(error),
+        retryable: false,
+      },
     );
   }
 
@@ -334,7 +385,7 @@ function mapOpenAIError(error: unknown): ModelGatewayError {
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_CANCELLED,
       "The model provider request was cancelled.",
-      { provider: "openai", retryable: false },
+      { provider: OPENAI_PROVIDER, retryable: false },
     );
   }
 
@@ -342,7 +393,18 @@ function mapOpenAIError(error: unknown): ModelGatewayError {
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_REQUEST_TIMEOUT,
       "The model provider request timed out.",
-      { provider: "openai", retryable: true },
+      { provider: OPENAI_PROVIDER, retryable: true },
+    );
+  }
+
+  if (error instanceof OpenAI.InternalServerError) {
+    return new ModelGatewayError(
+      MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+      "The model provider is temporarily unavailable.",
+      {
+        ...openAiErrorMetadata(error),
+        retryable: true,
+      },
     );
   }
 
@@ -350,6 +412,7 @@ function mapOpenAIError(error: unknown): ModelGatewayError {
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
       "The model provider request failed.",
+      { provider: OPENAI_PROVIDER, retryable: true },
     );
   }
 
@@ -357,11 +420,111 @@ function mapOpenAIError(error: unknown): ModelGatewayError {
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
       "The model provider returned an error.",
+      {
+        ...openAiErrorMetadata(error),
+        retryable: error.status >= 500,
+      },
     );
   }
 
   return new ModelGatewayError(
     MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
     "The model provider request failed.",
+    { provider: OPENAI_PROVIDER, retryable: false },
   );
+}
+
+type OpenAiApiError = InstanceType<typeof OpenAI.APIError>;
+
+function openAiErrorMetadata(
+  error: OpenAiApiError,
+): Pick<
+  ModelGatewayErrorOptions,
+  | "provider"
+  | "providerStatusCode"
+  | "providerRequestId"
+  | "providerErrorType"
+  | "providerErrorCode"
+  | "providerErrorParam"
+> {
+  const body = parseOpenAiErrorBody(error);
+  const requestId = sanitizeProviderToken(
+    error.headers?.get("x-request-id") ?? undefined,
+  );
+
+  return {
+    provider: OPENAI_PROVIDER,
+    providerStatusCode: error.status,
+    providerRequestId: requestId,
+    providerErrorType: body.type,
+    providerErrorCode: body.code,
+    providerErrorParam: body.param,
+  };
+}
+
+function parseOpenAiErrorBody(error: OpenAiApiError): {
+  readonly type: string | undefined;
+  readonly code: string | undefined;
+  readonly param: string | undefined;
+} {
+  const raw = error.error;
+  if (raw === null || typeof raw !== "object") {
+    return { type: undefined, code: undefined, param: undefined };
+  }
+
+  const record = raw as Record<string, unknown>;
+  const nested =
+    record.error !== null && typeof record.error === "object"
+      ? (record.error as Record<string, unknown>)
+      : record;
+
+  return {
+    type: sanitizeProviderToken(readStringField(nested, "type")),
+    code: sanitizeProviderToken(readStringField(nested, "code")),
+    param: sanitizeProviderToken(readStringField(nested, "param")),
+  };
+}
+
+function readStringField(
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = record[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function parseRetryAfterMs(headers: Headers | undefined): number | undefined {
+  const raw = headers?.get("retry-after")?.trim();
+  if (raw === undefined || raw.length === 0) {
+    return undefined;
+  }
+
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.round(seconds * 1000);
+  }
+
+  const when = Date.parse(raw);
+  if (Number.isNaN(when)) {
+    return undefined;
+  }
+
+  return Math.max(0, when - Date.now());
+}
+
+function sanitizeProviderToken(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > 128) {
+    return undefined;
+  }
+
+  if (!/^[A-Za-z0-9_.:-]+$/.test(trimmed)) {
+    return undefined;
+  }
+
+  return trimmed;
 }

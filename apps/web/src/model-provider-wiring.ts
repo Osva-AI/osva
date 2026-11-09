@@ -55,7 +55,9 @@ export function composeLegacyModelProviders(
   }
 
   const geminiApiKey =
-    overrides.gemini?.apiKey ?? env.GOOGLE_GEMINI_API_KEY?.trim();
+    overrides.gemini?.apiKey ??
+    env.GOOGLE_GEMINI_API_KEY?.trim() ??
+    env.GEMINI_API_KEY?.trim();
   if (geminiApiKey !== undefined && geminiApiKey.length > 0) {
     providers.GOOGLE_GEMINI = new GeminiProviderAdapter({
       apiKey: geminiApiKey,
@@ -74,6 +76,7 @@ export function modelProviderEnvApiKeys(
   return {
     OPENAI: env.OPENAI_API_KEY?.trim(),
     ANTHROPIC: env.ANTHROPIC_API_KEY?.trim(),
-    GOOGLE_GEMINI: env.GOOGLE_GEMINI_API_KEY?.trim(),
+    GOOGLE_GEMINI:
+      env.GOOGLE_GEMINI_API_KEY?.trim() ?? env.GEMINI_API_KEY?.trim(),
   };
 }

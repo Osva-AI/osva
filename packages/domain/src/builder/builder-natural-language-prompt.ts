@@ -6,6 +6,8 @@ import type {
 } from "@osva-ai/contracts";
 
 import { BUILDER_GENERATION_PROMPT_VERSION } from "./builder-natural-language-generation-types.js";
+import { BUILDER_JSON_POINTER_PROMPT_SECTION } from "./builder-json-pointer-guidance.js";
+import { BUILDER_WORKFLOW_TOPOLOGY_PROMPT_SECTION } from "./builder-workflow-topology-guidance.js";
 import type {
   WorkspaceBuilderAgentVersionCatalogEntryV1,
   WorkspaceBuilderCapabilityCatalogV1,
@@ -209,7 +211,8 @@ Output rules:
 - Do not invent immutable AgentVersionId values. For NEW agents use stable temporary refs matching ^bpr_[A-Za-z0-9_-]{1,128}$.
 - Reference models and tools ONLY by ids present in the capability catalog JSON.
 - Use only workflow node types: AGENT, BRANCH, PARALLEL, JOIN, APPROVAL, WAIT.
-- The workflow must be a directed acyclic graph with supported OSVA V3 semantics.
+${BUILDER_JSON_POINTER_PROMPT_SECTION}
+${BUILDER_WORKFLOW_TOPOLOGY_PROMPT_SECTION}
 - NEW agents must use runtime-ready declarative fields; never include secrets, credentials, or connector transport configuration.
 - If the user requests unavailable capabilities, list them in unresolvedRequirements and still produce the closest valid skeleton.
 

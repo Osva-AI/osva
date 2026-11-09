@@ -821,7 +821,11 @@ export type {
 
 export { isValidUtcIso8601Instant } from "./schemas/utc-instant.js";
 
-export { isValidJsonPointer, resolveJsonPointer } from "./json-pointer.js";
+export {
+  isValidJsonPointer,
+  resolveJsonPointer,
+  RFC6901_JSON_POINTER_PATTERN,
+} from "./json-pointer.js";
 export type { JsonPointerResolution } from "./json-pointer.js";
 
 export {

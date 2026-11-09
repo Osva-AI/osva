@@ -192,6 +192,119 @@ describe("OpenAIProviderAdapter", () => {
     });
   });
 
+  it("maps chat completion provider HTTP errors with status and sanitized metadata", async () => {
+    const server = await startFakeOpenAIResponsesServer();
+    servers.push(server);
+    const adapter = new OpenAIProviderAdapter({
+      apiKey: "test-key",
+      baseURL: server.origin,
+      maxRetries: 0,
+    });
+
+    const request = {
+      model: "gpt-4o-mini",
+      messages: [{ role: "user" as const, content: "openai-error-400" }],
+      jsonSchema: BuilderProposalOpenAiJsonSchema,
+    };
+
+    await expect(adapter.generateText(request)).rejects.toMatchObject({
+      code: MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,
+      providerStatusCode: 400,
+      provider: "openai",
+      providerErrorType: "invalid_request_error",
+      providerErrorCode: "invalid_json_schema",
+      providerErrorParam: "response_format",
+      providerRequestId: "req_fake_openai_error",
+      retryable: false,
+    });
+
+    await expect(
+      adapter.generateText({
+        ...request,
+        messages: [
+          { role: "user", content: "openai-error-400-unsupported-parameter" },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,
+      providerStatusCode: 400,
+      providerErrorCode: "unsupported_parameter",
+      providerErrorParam: "max_tokens",
+    });
+
+    await expect(
+      adapter.generateText({
+        ...request,
+        messages: [{ role: "user", content: "openai-error-401" }],
+      }),
+    ).rejects.toMatchObject({
+      code: MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR,
+      providerStatusCode: 401,
+    });
+
+    await expect(
+      adapter.generateText({
+        ...request,
+        messages: [{ role: "user", content: "openai-error-403" }],
+      }),
+    ).rejects.toMatchObject({
+      code: MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR,
+      providerStatusCode: 403,
+    });
+
+    await expect(
+      adapter.generateText({
+        ...request,
+        messages: [{ role: "user", content: "openai-error-429" }],
+      }),
+    ).rejects.toMatchObject({
+      code: MODEL_ERROR_CODES.MODEL_RATE_LIMITED,
+      providerStatusCode: 429,
+      retryable: true,
+      retryAfterMs: 2000,
+    });
+
+    await expect(
+      adapter.generateText({
+        ...request,
+        messages: [{ role: "user", content: "openai-error-500" }],
+      }),
+    ).rejects.toMatchObject({
+      code: MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+      providerStatusCode: 500,
+      retryable: true,
+    });
+
+    expect(
+      server.requests.filter((r) => r.url.includes("/chat/completions")),
+    ).toHaveLength(6);
+  });
+
+  it("does not perform hidden SDK retries when maxRetries is 0", async () => {
+    const server = await startFakeOpenAIResponsesServer();
+    servers.push(server);
+    const adapter = new OpenAIProviderAdapter({
+      apiKey: "test-key",
+      baseURL: server.origin,
+      maxRetries: 0,
+    });
+
+    await expect(
+      adapter.generateText({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: "openai-error-500" }],
+        jsonSchema: BuilderProposalOpenAiJsonSchema,
+      }),
+    ).rejects.toMatchObject({
+      code: MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+    });
+
+    const chatCalls = server.requests.filter((r) =>
+      r.url.includes("/chat/completions"),
+    );
+    expect(chatCalls).toHaveLength(1);
+  });
+
   it("maps M20.2 BuilderProposal jsonSchema to Chat Completions response_format with strict json_schema", async () => {
     const server = await startFakeOpenAIResponsesServer();
     servers.push(server);
@@ -201,11 +314,13 @@ describe("OpenAIProviderAdapter", () => {
       maxRetries: 0,
     });
 
-    await adapter.generateText({
-      model: "gpt-test-snapshot",
+    const result = await adapter.generateText({
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: "builder-m20-json-schema" }],
       jsonSchema: BuilderProposalOpenAiJsonSchema,
     });
+
+    expect(result.providerRequestId).toBe("chat_m20_schema_probe");
 
     const chatReq = server.requests.find((r) =>
       r.url.includes("/chat/completions"),

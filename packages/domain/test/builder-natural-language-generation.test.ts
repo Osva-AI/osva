@@ -515,6 +515,47 @@ describe("M20.2 builder NL generation", () => {
     if (!r.ok) expect(r.errorCode).toBe("INVALID_BUILDER_PROPOSAL");
   });
 
+  it("provider invalid request preserves sanitized providerDiagnostic on failure", async () => {
+    const { deps, genMpv } = await seedWorkspace();
+    const gateway = fakeGateway(async () => {
+      throw Object.assign(
+        new Error("The model provider rejected the request."),
+        {
+          code: MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,
+          provider: "openai",
+          providerStatusCode: 400,
+          providerErrorType: "invalid_request_error",
+          providerErrorCode: "invalid_json_schema",
+          providerErrorParam: "response_format",
+          providerRequestId: "req_diag",
+          retryable: false,
+        },
+      );
+    });
+    const svc = new GenerateBuilderProposalFromNaturalLanguage({
+      ...deps,
+      modelGateway: gateway,
+    });
+    const r = await svc.execute({
+      scope: fakeControlPlaneScope(ws),
+      userInstruction: "x",
+      generationModelProfileVersionId: genMpv.id,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.errorCode).toBe("PROVIDER_ERROR");
+      expect(r.providerDiagnostic).toMatchObject({
+        providerHttpStatus: 400,
+        providerErrorCode: "invalid_json_schema",
+        providerErrorParam: "response_format",
+        providerRequestId: "req_diag",
+        providerHttpResponseObserved: true,
+      });
+      expect(r.metadata?.attempts).toBe(1);
+      expect(r.metadata?.measuredUsage).toBeUndefined();
+    }
+  });
+
   it("provider timeout maps to PROVIDER_TIMEOUT", async () => {
     const { deps, genMpv } = await seedWorkspace();
     const gateway = fakeGateway(async () => {
@@ -719,7 +760,24 @@ describe("M20.2 builder NL generation", () => {
       generationModelProfileVersionId: genMpv.id,
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.errorCode).toBe("INVALID_COMPILED_PROPOSAL");
+    if (!r.ok) {
+      expect(r.errorCode).toBe("INVALID_COMPILED_PROPOSAL");
+      expect(
+        r.compileIssues?.some((i) => i.code === "INVALID_GRAPH_TOPOLOGY"),
+      ).toBe(true);
+      expect(r.metadata).toBeDefined();
+      const metadata = r.metadata!;
+      expect(metadata.attemptDiagnostics?.[0]).toMatchObject({
+        providerAttempt: 1,
+        afterRepair: false,
+        repairAttempted: false,
+        validationStage: "pre_publication_compile",
+        errorCode: "INVALID_COMPILED_PROPOSAL",
+      });
+      expect(metadata.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
+        "INVALID_GRAPH_TOPOLOGY",
+      );
+    }
   });
 
   it("invalid NEW agent execution bounds → INVALID_BUILDER_PROPOSAL", async () => {
@@ -992,6 +1050,187 @@ describe("M20.2 builder NL generation", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.errorCode).toBe("CATALOG_PROMPT_VISIBILITY_VIOLATION");
+    }
+  });
+});
+
+describe("M20.7.2 builder generation failure evidence", () => {
+  it("invalid agent manifest retains INVALID_COMPILED_AGENT_MANIFEST evidence", async () => {
+    const { deps, genMpv, mpvId } = await seedWorkspace();
+    const baseAgent = minimalNewAgent("bpr_a");
+    const proposal: BuilderProposalV1 = {
+      schemaVersion: "1",
+      workflowRegistry: { key: "wf", name: "WF" },
+      agents: [
+        {
+          ...baseAgent,
+          model: { bindingName: "default", modelProfileVersionId: mpvId },
+          tools: [],
+          execution: {
+            ...baseAgent.execution,
+            maxToolInvocations: 1,
+          },
+        },
+      ],
+      workflow: {
+        nodes: [{ key: "n1", type: "AGENT", agentRef: "bpr_a" }],
+        edges: [],
+      },
+      assumptions: [],
+      unresolvedRequirements: [],
+    };
+    const gateway = fakeGateway(async () => jsonResult(proposal));
+    const svc = new GenerateBuilderProposalFromNaturalLanguage({
+      ...deps,
+      modelGateway: gateway,
+    });
+    const r = await svc.execute({
+      scope: fakeControlPlaneScope(ws),
+      userInstruction: "manifest",
+      generationModelProfileVersionId: genMpv.id,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.metadata).toBeDefined();
+      expect(
+        r.metadata?.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code,
+      ).toBe("INVALID_COMPILED_AGENT_MANIFEST");
+    }
+  });
+
+  it("duplicate tool binding fails parse with bounded attempt diagnostics", async () => {
+    const { deps, genMpv, mpvId, toolVersionId } = await seedWorkspace();
+    const baseAgent = minimalNewAgent("bpr_a");
+    const proposal: BuilderProposalV1 = {
+      schemaVersion: "1",
+      workflowRegistry: { key: "wf", name: "WF" },
+      agents: [
+        {
+          ...baseAgent,
+          model: { bindingName: "default", modelProfileVersionId: mpvId },
+          tools: [
+            { bindingName: "t1", toolVersionId },
+            { bindingName: "t1", toolVersionId },
+          ],
+        },
+      ],
+      workflow: {
+        nodes: [{ key: "n1", type: "AGENT", agentRef: "bpr_a" }],
+        edges: [],
+      },
+      assumptions: [],
+      unresolvedRequirements: [],
+    };
+    const gateway = fakeGateway(async () => jsonResult(proposal));
+    const svc = new GenerateBuilderProposalFromNaturalLanguage({
+      ...deps,
+      modelGateway: gateway,
+    });
+    const r = await svc.execute({
+      scope: fakeControlPlaneScope(ws),
+      userInstruction: "tools",
+      generationModelProfileVersionId: genMpv.id,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.errorCode).toBe("INVALID_BUILDER_PROPOSAL");
+      expect(r.metadata).toBeDefined();
+      const metadata = r.metadata!;
+      expect(metadata.attemptDiagnostics?.[0]).toMatchObject({
+        validationStage: "proposal_parse",
+        errorCode: "INVALID_BUILDER_PROPOSAL",
+        repairAttempted: false,
+      });
+    }
+  });
+
+  it("repair: compile fails on both attempts with separate diagnostics", async () => {
+    const { deps, genMpv, mpvId } = await seedWorkspace();
+    const badGraph = (): BuilderProposalV1 => ({
+      schemaVersion: "1",
+      workflowRegistry: { key: "wf", name: "WF" },
+      agents: [
+        {
+          ...minimalNewAgent("bpr_a"),
+          model: { bindingName: "default", modelProfileVersionId: mpvId },
+        },
+        {
+          ...minimalNewAgent("bpr_b"),
+          model: { bindingName: "default", modelProfileVersionId: mpvId },
+        },
+      ],
+      workflow: {
+        nodes: [
+          { key: "a", type: "AGENT", agentRef: "bpr_a" },
+          { key: "b", type: "AGENT", agentRef: "bpr_b" },
+        ],
+        edges: [],
+      },
+      assumptions: [],
+      unresolvedRequirements: [],
+    });
+    const gateway = fakeGateway(async () => jsonResult(badGraph()));
+    const svc = new GenerateBuilderProposalFromNaturalLanguage({
+      ...deps,
+      modelGateway: gateway,
+      limits: { maxProviderInvocations: 2 },
+    });
+    const r = await svc.execute({
+      scope: fakeControlPlaneScope(ws),
+      userInstruction: "disconnected",
+      generationModelProfileVersionId: genMpv.id,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.metadata).toBeDefined();
+      const metadata = r.metadata!;
+      expect(metadata.attempts).toBe(2);
+      const diagnostics = metadata.attemptDiagnostics ?? [];
+      expect(diagnostics).toHaveLength(2);
+      expect(diagnostics[0]).toMatchObject({
+        providerAttempt: 1,
+        afterRepair: false,
+        repairAttempted: false,
+      });
+      expect(diagnostics[1]).toMatchObject({
+        providerAttempt: 2,
+        afterRepair: true,
+        repairAttempted: true,
+      });
+      expect(diagnostics[1]?.compileIssues?.[0]?.code).toBe(
+        "INVALID_GRAPH_TOPOLOGY",
+      );
+    }
+  });
+
+  it("repair: invalid JSON then valid proposal succeeds", async () => {
+    const { deps, genMpv } = await seedWorkspace();
+    let calls = 0;
+    const gateway = fakeGateway(async () => {
+      calls += 1;
+      if (calls === 1) {
+        return { text: "not json", toolCalls: [], finishReason: "stop" };
+      }
+      return jsonResult(baseProposal());
+    });
+    const svc = new GenerateBuilderProposalFromNaturalLanguage({
+      ...deps,
+      modelGateway: gateway,
+      limits: { maxProviderInvocations: 2 },
+    });
+    const r = await svc.execute({
+      scope: fakeControlPlaneScope(ws),
+      userInstruction: "x",
+      generationModelProfileVersionId: genMpv.id,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.metadata.attempts).toBe(2);
+    }
+    if (!r.ok) {
+      expect(r.metadata).toBeDefined();
+      const diagnostics = r.metadata?.attemptDiagnostics ?? [];
+      expect(diagnostics[0]?.errorCode).toBe("INVALID_JSON_OUTPUT");
     }
   });
 });

@@ -7,6 +7,7 @@ import type { BuilderProposalV1 } from "./builder-proposal.js";
 import type {
   BuilderGenerationErrorCode,
   BuilderGenerationMetadataV1,
+  BuilderGenerationProviderDiagnosticV1,
 } from "./builder-natural-language-generation-types.js";
 import type { BuilderProposalChangesetV1 } from "./compare-builder-proposal-changes.js";
 
@@ -14,7 +15,7 @@ import type { BuilderProposalChangesetV1 } from "./compare-builder-proposal-chan
  * Version of the deterministic refinement system envelope (M20.5).
  * Bump when refinement instructions change materially.
  */
-export const BUILDER_REFINEMENT_PROMPT_VERSION = "1" as const;
+export const BUILDER_REFINEMENT_PROMPT_VERSION = "3" as const;
 
 export type BuilderRefinementErrorCode =
   | BuilderGenerationErrorCode
@@ -67,6 +68,7 @@ export interface BuilderRefinementFailureV1 {
   readonly baseProposalDigest?: string;
   readonly compileIssues?: readonly BuilderIssueV1[];
   readonly detailMessages?: readonly string[];
+  readonly providerDiagnostic?: BuilderGenerationProviderDiagnosticV1;
   readonly metadata?: Partial<BuilderRefinementMetadataV1>;
 }
 

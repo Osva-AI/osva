@@ -26,6 +26,12 @@ export interface M20_6ScenarioResult {
   readonly inputUnits?: number;
   readonly outputUnits?: number;
   readonly errorCode?: string;
+  readonly httpStatus?: number;
+  readonly builderErrorCode?: string;
+  readonly builderMessage?: string;
+  readonly builderDetailMessages?: readonly string[];
+  readonly providerDiagnostic?: import("./m20-7-live-eval.js").M20_7SanitizedBuilderProviderDiagnostic;
+  readonly providerDiagnosticUnavailableReason?: string;
 }
 
 export function scoreProposalTopology(

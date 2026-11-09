@@ -134,18 +134,24 @@ async function main() {
     OSVA_M20_6_MAX_TOTAL_DURATION_MS: String(budget.maxTotalDurationMs),
   };
 
-  let liveProviderCalls = false;
   let blockedPrerequisite;
 
   if (options.mode === "live") {
     blockedPrerequisite = liveBlockedReason(process.env, options.provider);
-    if (blockedPrerequisite !== undefined) {
-      console.warn(`LIVE_PROVIDER_NOT_RUN: ${blockedPrerequisite}`);
-    } else {
-      env.OSVA_M20_6_LIVE = "1";
-      env.OSVA_M20_6_LIVE_PROVIDER = options.provider ?? "openai";
-      liveProviderCalls = true;
-    }
+    console.warn(`LIVE_PROVIDER_NOT_RUN: ${blockedPrerequisite}`);
+    const forward = spawnSync(
+      process.execPath,
+      [
+        "scripts/acceptance/m20-7/run.mjs",
+        "--preflight",
+        ...(options.provider
+          ? [`--provider=${options.provider}`]
+          : ["--provider=openai"]),
+        ...(options.smoke ? ["--smoke"] : []),
+      ],
+      { cwd: REPO_ROOT, stdio: "inherit", env: process.env },
+    );
+    process.exit(forward.status ?? 2);
   }
 
   const vitestArgs = [
@@ -159,8 +165,7 @@ async function main() {
     "test/integration/m20-6-builder-acceptance.integration.test.ts",
   ];
 
-  const integration =
-    blockedPrerequisite !== undefined ? { status: 0 } : run(vitestArgs, env);
+  const integration = run(vitestArgs, env);
 
   let browserStatus = 0;
   if (options.withBrowser && blockedPrerequisite === undefined) {
@@ -213,10 +218,7 @@ async function main() {
     sourceCommit: gitCommit(),
     executionTimestamp: new Date().toISOString(),
     mode: options.mode,
-    liveProviderCalls:
-      integrationEvidence?.liveProviderCalls === true
-        ? true
-        : liveProviderCalls,
+    liveProviderCalls: integrationEvidence?.liveProviderCalls === true,
     liveProvider: options.provider,
     blockedPrerequisite,
     budget,

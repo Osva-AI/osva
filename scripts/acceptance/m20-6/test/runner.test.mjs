@@ -37,18 +37,13 @@ test("structural scoring detects missing APPROVAL", () => {
   assert.equal(result.score, 1);
 });
 
-test("live mode requires explicit OSVA_M20_6_LIVE and provider key", () => {
-  assert.equal(liveBlockedReason({}, "openai"), "OSVA_M20_6_LIVE not set");
-  assert.equal(
-    liveBlockedReason({ OSVA_M20_6_LIVE: "1" }, "openai"),
-    "OPENAI_API_KEY missing",
-  );
-  assert.equal(
+test("legacy M20.6 live mode redirects to M20.7", () => {
+  assert.match(
     liveBlockedReason(
       { OSVA_M20_6_LIVE: "1", OPENAI_API_KEY: "sk-test" },
       "openai",
     ),
-    undefined,
+    /M20\.7/,
   );
 });
 

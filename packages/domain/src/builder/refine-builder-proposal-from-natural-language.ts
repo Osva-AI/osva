@@ -1,13 +1,8 @@
 import type {
   GenerateCompletionRequest,
-  ModelErrorCode,
   ModelProfileVersionId,
 } from "@osva-ai/contracts";
-import {
-  AUTHORIZATION_ACTIONS,
-  MODEL_ERROR_CODES,
-  isModelErrorCode,
-} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
 import {
   controlPlaneWorkspaceId,
@@ -46,6 +41,10 @@ import {
   type BuilderRefinementErrorCode,
 } from "./builder-refinement-types.js";
 import { mergeBuilderModelUsage } from "./builder-generation-usage.js";
+import {
+  mapModelGatewayErrorToBuilderFailure,
+  readModelGatewayErrorLike,
+} from "./builder-model-gateway-diagnostics.js";
 import { modelProviderSupportsStructuredJsonSchema } from "./builder-provider-structured-output.js";
 import { compareBuilderProposalChanges } from "./compare-builder-proposal-changes.js";
 import {
@@ -413,8 +412,12 @@ export class RefineBuilderProposalFromNaturalLanguage {
           );
         }
 
-        if (isLikeModelGatewayError(error)) {
-          return mapModelGatewayError(error, baseProposalDigest);
+        const gatewayError = readModelGatewayErrorLike(error);
+        if (gatewayError !== undefined) {
+          return {
+            ...mapModelGatewayErrorToBuilderFailure(gatewayError),
+            baseProposalDigest,
+          };
         }
 
         throw error;
@@ -533,44 +536,6 @@ Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "
 
     return success;
   }
-}
-
-function isLikeModelGatewayError(
-  error: unknown,
-): error is { readonly code: ModelErrorCode; readonly message: string } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof (error as { code?: unknown }).code === "string" &&
-    isModelErrorCode((error as { code: string }).code) &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
-  );
-}
-
-function mapModelGatewayError(
-  error: { readonly code: ModelErrorCode; readonly message: string },
-  baseProposalDigest: string,
-): BuilderRefinementFailureV1 {
-  const code = error.code;
-  if (code === MODEL_ERROR_CODES.MODEL_REQUEST_TIMEOUT) {
-    return asFailure("PROVIDER_TIMEOUT", error.message, { baseProposalDigest });
-  }
-  if (
-    code === MODEL_ERROR_CODES.MODEL_PROVIDER_UNAVAILABLE ||
-    code === MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR
-  ) {
-    return asFailure("PROVIDER_UNAVAILABLE", error.message, {
-      baseProposalDigest,
-    });
-  }
-  if (code === MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE) {
-    return asFailure("INVALID_JSON_OUTPUT", error.message, {
-      baseProposalDigest,
-    });
-  }
-  return asFailure("PROVIDER_ERROR", error.message, { baseProposalDigest });
 }
 
 function enrichFailure(

@@ -6,6 +6,9 @@ import type {
   ModelProvider,
 } from "@osva-ai/contracts";
 
+import type { BuilderGenerationAttemptDiagnosticV1 } from "./builder-generation-attempt-diagnostics.js";
+import type { BuilderGenerationProviderDiagnosticV1 } from "./builder-model-gateway-diagnostics.js";
+
 import type { ControlPlaneScope } from "../control-plane.js";
 
 import type { BuilderIssueV1 } from "./builder-issue.js";
@@ -15,7 +18,7 @@ import type { BuilderProposalV1 } from "./builder-proposal.js";
  * Version of the deterministic system + user envelope for NL builder generation (M20.2).
  * Bump when generation instructions change materially.
  */
-export const BUILDER_GENERATION_PROMPT_VERSION = "1" as const;
+export const BUILDER_GENERATION_PROMPT_VERSION = "3" as const;
 
 /** High-level failure categories for NL generation (distinct from {@link BuilderIssueV1} compiler codes). */
 export type BuilderGenerationErrorCode =
@@ -80,6 +83,7 @@ export interface BuilderGenerationMetadataV1 {
   readonly catalogToolVersions: number;
   readonly catalogTruncated: boolean;
   readonly measuredUsage?: BuilderGenerationMeasuredUsageV1;
+  readonly attemptDiagnostics?: readonly BuilderGenerationAttemptDiagnosticV1[];
 }
 
 export interface BuilderGenerationSuccessV1 {
@@ -99,8 +103,12 @@ export interface BuilderGenerationFailureV1 {
   readonly compileIssues?: readonly BuilderIssueV1[];
   /** Safe, compact parse/validation messages — not raw provider payloads. */
   readonly detailMessages?: readonly string[];
+  /** Sanitized model-provider taxonomy (no prompts, bodies, or credentials). */
+  readonly providerDiagnostic?: BuilderGenerationProviderDiagnosticV1;
   readonly metadata?: Partial<BuilderGenerationMetadataV1>;
 }
+
+export type { BuilderGenerationProviderDiagnosticV1 } from "./builder-model-gateway-diagnostics.js";
 
 export type GenerateBuilderProposalResultV1 =
   BuilderGenerationSuccessV1 | BuilderGenerationFailureV1;

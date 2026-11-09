@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1",
+  "harnessVersion": "m20-7.2",
+  "description": "Operator live smoke — natural language only (no OSVA_M20_6_SCENARIO markers).",
+  "operations": [
+    {
+      "id": "workflow-generation",
+      "kind": "generate",
+      "userInstruction": "Create a workflow that summarizes weekly product feedback. The agent should identify recurring themes, highlight critical issues, and produce actionable recommendations. Do not use external tools.",
+      "structural": {
+        "minNewAgents": 1,
+        "maxNewAgents": 2,
+        "requireNodeTypes": ["AGENT"],
+        "forbidNodeTypes": ["APPROVAL", "WAIT", "PARALLEL", "JOIN"],
+        "maxToolBindings": 0,
+        "maxAgentNodes": 3
+      },
+      "intentRubric": [
+        "single_agent",
+        "no_invented_tools",
+        "valid_model_binding",
+        "feedback_summarization_objective"
+      ],
+      "forbiddenInstructionMarkers": ["OSVA_M20_6_SCENARIO"]
+    },
+    {
+      "id": "conversational-refinement",
+      "kind": "refine",
+      "dependsOnProposalFrom": "workflow-generation",
+      "refinementInstruction": "Add a fact-checking agent after the summarizer to review the recommendations. Preserve the original summarizer's instructions.",
+      "structural": {
+        "minNewAgents": 2,
+        "requireNodeTypes": ["AGENT"],
+        "maxToolBindings": 0
+      },
+      "intentRubric": [
+        "refinement_accuracy",
+        "ordered_dependencies",
+        "stable_refs",
+        "no_invented_tools",
+        "fact_check_after_summarizer"
+      ],
+      "refinementExpectations": {
+        "minAddedAgents": 1,
+        "preserveSummarizerInstructions": true,
+        "requireFactCheckSemantics": true
+      }
+    }
+  ]
+}
