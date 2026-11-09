@@ -115,6 +115,9 @@ export async function startM20_7HumanConsoleStack(options: {
   const consoleOrigin = loopbackOrigin(consolePort);
   const webOrigin = loopbackOrigin(webPort);
 
+  const liveProvider = (process.env.OSVA_M20_7_LIVE_PROVIDER ?? "openai")
+    .trim()
+    .toLowerCase();
   const openAiKey =
     options.profile === "live-ready"
       ? process.env.OPENAI_API_KEY?.trim()
@@ -124,15 +127,31 @@ export async function startM20_7HumanConsoleStack(options: {
       ? (process.env.GOOGLE_GEMINI_API_KEY?.trim() ??
         process.env.GEMINI_API_KEY?.trim())
       : undefined;
+  const geminiOnlyLiveReady =
+    options.profile === "live-ready" &&
+    liveProvider === "gemini" &&
+    geminiKey !== undefined &&
+    geminiKey.length > 0;
 
   if (options.profile === "live-ready") {
-    if (openAiKey === undefined || openAiKey.length === 0) {
-      throw new Error("OPENAI_API_KEY required for live-ready stack.");
-    }
-    if (openAiKey === SENTINEL_CREDENTIAL) {
-      throw new Error("SENTINEL_OPENAI_KEY_IN_LIVE_MODE");
+    if (geminiOnlyLiveReady) {
+      // Legacy env OpenAI adapter is omitted; M20.7 Gemini smoke uses connection-bound Gemini only.
+    } else {
+      if (openAiKey === undefined || openAiKey.length === 0) {
+        throw new Error("OPENAI_API_KEY required for live-ready stack.");
+      }
+      if (openAiKey === SENTINEL_CREDENTIAL) {
+        throw new Error("SENTINEL_OPENAI_KEY_IN_LIVE_MODE");
+      }
     }
   }
+
+  const providerKeyEnv = {
+    ...(geminiKey !== undefined ? { GOOGLE_GEMINI_API_KEY: geminiKey } : {}),
+    ...(geminiOnlyLiveReady
+      ? {}
+      : { OPENAI_API_KEY: openAiKey ?? SENTINEL_CREDENTIAL }),
+  };
 
   const web = createWebProcess({
     OSVA_DATABASE_URL: options.databaseUrl,
@@ -147,8 +166,7 @@ export async function startM20_7HumanConsoleStack(options: {
     OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
     OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE: "100000",
     OSVA_RATE_LIMIT_AUTH_PER_MINUTE: "100000",
-    OPENAI_API_KEY: openAiKey ?? SENTINEL_CREDENTIAL,
-    ...(geminiKey !== undefined ? { GOOGLE_GEMINI_API_KEY: geminiKey } : {}),
+    ...providerKeyEnv,
   });
 
   const worker = createWorkerProcess(
@@ -157,8 +175,7 @@ export async function startM20_7HumanConsoleStack(options: {
       OSVA_VALKEY_URL: options.valkeyUrl,
       OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
       OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
-      OPENAI_API_KEY: openAiKey ?? SENTINEL_CREDENTIAL,
-      ...(geminiKey !== undefined ? { GOOGLE_GEMINI_API_KEY: geminiKey } : {}),
+      ...providerKeyEnv,
     },
     (connectionString) => createDatabase({ connectionString, max: 5 }),
     options.workerDependencies,

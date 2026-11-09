@@ -3,9 +3,9 @@
  * Unknown models require explicit operator pricing or block when cost cap is set.
  */
 
-export const MODEL_PRICING_VERSION = "m20-7.2-2026-11-08";
+export const MODEL_PRICING_VERSION = "m20-7.3-2026-11-09";
 export const MODEL_PRICING_RATE_SOURCE =
-  "operator-declared-conservative-defaults";
+  "google-gemini-3.6-flash-introductory-paid-nov-2026";
 
 /**
  * @typedef {Object} ModelPricingRow
@@ -17,7 +17,7 @@ export const MODEL_PRICING_RATE_SOURCE =
 export const DECLARED_MODEL_PRICING = Object.freeze({
   "gpt-4o-mini": { inputUsdPer1M: 150_000, outputUsdPer1M: 600_000 },
   "gpt-4o": { inputUsdPer1M: 2_500_000, outputUsdPer1M: 10_000_000 },
-  "gemini-2.0-flash": { inputUsdPer1M: 100_000, outputUsdPer1M: 400_000 },
+  "gemini-3.6-flash": { inputUsdPer1M: 750_000, outputUsdPer1M: 3_750_000 },
   "gemini-2.5-flash": { inputUsdPer1M: 150_000, outputUsdPer1M: 600_000 },
 });
 
@@ -42,9 +42,21 @@ export function worstCaseAttemptCostMicroUsd(modelId, bounds) {
   if (row === undefined) {
     return { estimatedMicroUsd: undefined, reason: "UNKNOWN_MODEL_PRICING" };
   }
+  if (
+    typeof bounds !== "object" ||
+    bounds === null ||
+    !Number.isFinite(bounds.maxInputTokens) ||
+    !Number.isFinite(bounds.maxOutputTokens) ||
+    bounds.maxInputTokens < 0 ||
+    bounds.maxOutputTokens < 0
+  ) {
+    return { estimatedMicroUsd: undefined, reason: "INVALID_TOKEN_BOUNDS" };
+  }
   const inputMicro = (bounds.maxInputTokens / 1_000_000) * row.inputUsdPer1M;
   const outputMicro = (bounds.maxOutputTokens / 1_000_000) * row.outputUsdPer1M;
-  return {
-    estimatedMicroUsd: Math.ceil(inputMicro + outputMicro),
-  };
+  const estimatedMicroUsd = Math.ceil(inputMicro + outputMicro);
+  if (!Number.isFinite(estimatedMicroUsd)) {
+    return { estimatedMicroUsd: undefined, reason: "INVALID_COST_ESTIMATE" };
+  }
+  return { estimatedMicroUsd };
 }

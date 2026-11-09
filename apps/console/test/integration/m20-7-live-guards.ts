@@ -3,6 +3,11 @@
  * Keeps billable authorization checks independent of ambient terminal env flags.
  */
 
+import {
+  M20_7_DEFAULT_GEMINI_MODEL,
+  geminiModelLivePreflightError,
+} from "./m20-7-gemini-model-lifecycle.js";
+
 export type M20_7LiveGuardEnv = Record<string, string | undefined>;
 
 const CI_MARKERS = [
@@ -60,10 +65,16 @@ export function evaluateLivePreflight(
 
   const modelId =
     env.OSVA_M20_7_GENERATION_MODEL?.trim() ??
-    (provider === "openai" ? "gpt-4o-mini" : "gemini-2.0-flash");
+    (provider === "openai" ? "gpt-4o-mini" : M20_7_DEFAULT_GEMINI_MODEL);
 
   if (modelId.length === 0) {
     return { ok: false, reason: "GENERATION_MODEL missing" };
+  }
+  if (provider === "gemini") {
+    const retired = geminiModelLivePreflightError(modelId);
+    if (retired !== undefined) {
+      return { ok: false, reason: retired };
+    }
   }
   if (/^gpt-m20-6-/.test(modelId)) {
     return { ok: false, reason: "FIXTURE_MODEL_ID_IN_LIVE_MODE" };

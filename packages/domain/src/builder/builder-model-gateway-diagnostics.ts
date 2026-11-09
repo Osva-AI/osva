@@ -22,13 +22,24 @@ export interface BuilderGenerationProviderDiagnosticV1 {
   readonly retryable?: boolean;
   /** True when the adapter observed an HTTP status from the provider. */
   readonly providerHttpResponseObserved: boolean;
+  /** Bounded transport-layer category when no parsed provider error body exists. */
+  readonly providerTransportErrorCategory?: string;
 }
 
 const ALLOWED_PROVIDER_TOKENS: Readonly<Record<string, ModelProvider>> = {
   openai: "OPENAI",
   anthropic: "ANTHROPIC",
   google_gemini: "GOOGLE_GEMINI",
+  "google-gemini": "GOOGLE_GEMINI",
 };
+
+const ALLOWED_TRANSPORT_ERROR_CATEGORIES = new Set([
+  "request_construction",
+  "request_serialization",
+  "connection_failed",
+  "response_body_read_failed",
+  "response_body_parse_failed",
+]);
 
 const SAFE_TOKEN = /^[A-Za-z0-9_.:-]{1,128}$/;
 
@@ -42,6 +53,7 @@ export interface ModelGatewayErrorLike {
   readonly providerErrorParam?: string;
   readonly providerRequestId?: string;
   readonly retryable?: boolean;
+  readonly providerTransportErrorCategory?: string;
 }
 
 export function readModelGatewayErrorLike(
@@ -87,6 +99,10 @@ export function readModelGatewayErrorLike(
         : undefined,
     retryable:
       typeof record.retryable === "boolean" ? record.retryable : undefined,
+    providerTransportErrorCategory:
+      typeof record.providerTransportErrorCategory === "string"
+        ? record.providerTransportErrorCategory
+        : undefined,
   };
 }
 
@@ -111,6 +127,21 @@ function sanitizeProvider(
   }
 
   return ALLOWED_PROVIDER_TOKENS[value.trim().toLowerCase()];
+}
+
+function sanitizeTransportErrorCategory(
+  value: string | undefined,
+): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!ALLOWED_TRANSPORT_ERROR_CATEGORIES.has(trimmed)) {
+    return undefined;
+  }
+
+  return trimmed;
 }
 
 function sanitizeHttpStatus(value: number | undefined): number | undefined {
@@ -140,6 +171,9 @@ export function sanitizeBuilderProviderDiagnostic(
     providerRequestId: sanitizeToken(error.providerRequestId),
     retryable: error.retryable,
     providerHttpResponseObserved: providerHttpStatus !== undefined,
+    providerTransportErrorCategory: sanitizeTransportErrorCategory(
+      error.providerTransportErrorCategory,
+    ),
   };
 }
 

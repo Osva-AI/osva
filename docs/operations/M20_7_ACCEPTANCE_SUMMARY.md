@@ -11,8 +11,9 @@
 | **M20.7.2 harness readiness** | **COMPLETE (scoped)** — see [`M20_7_2_CLOSEOUT_SUMMARY.md`](M20_7_2_CLOSEOUT_SUMMARY.md) |
 | **M20.7.1 guards** | **PASS** (committed `e054544`) |
 | **Live OpenAI smoke** | **PASS** (2026-11-08; harness `m20-7.2`; 2/2 scenarios; provenance verified) |
-| **Live Gemini smoke** | **NOT_RUN** (M20.7.3) |
-| **Product readiness** | **NO-GO for broad live claims** — one OpenAI smoke only; Gemini and wider matrix pending |
+| **M20.7.3 harness + Gemini** | **COMPLETE (scoped)** — [`M20_7_3_CLOSEOUT_SUMMARY.md`](M20_7_3_CLOSEOUT_SUMMARY.md) |
+| **Live Gemini smoke** | **PASS** (2026-11-09; 2/2 scenarios; `gemini-3.6-flash`; provenance verified) |
+| **Product readiness** | **NO-GO for broad live claims** — two provider smokes only; wider matrix deferred |
 
 ### Phase 1 audit (M20.7.1 baseline)
 
@@ -70,6 +71,30 @@ Evidence commit: `e054544fe94db2230711550e6c1838bc063e1bb5` · run id `409b2647-
 | Measured tokens (in / out) | 3976 / 668 |
 | Estimated spend (`gpt-4o-mini`, conservative rates) | **~998 micro-USD** (~$0.001) vs **$0.50 cap** |
 | Publication / workflow runs | **not exercised** (run count unchanged) |
+
+## Operator live smoke (Gemini — recorded 2026-11-09)
+
+Evidence `sourceCommit` in artifact: **`ac6efeaf`** (HEAD at flush time). **PASS was produced with uncommitted M20.7.3 code** — see [`M20_7_3_CLOSEOUT_SUMMARY.md`](M20_7_3_CLOSEOUT_SUMMARY.md) §Revision provenance. Run id `5eb70b36-0dfc-416d-8c17-f3804843f266`.
+
+| Check | Result |
+|-------|--------|
+| `overallStatus` | **PASS** |
+| Scenarios | `workflow-generation` **PASS**, `conversational-refinement` **PASS** |
+| `actualProviderCallsObserved` | **2** |
+| Model | `gemini-3.6-flash` |
+| Measured tokens (in / out) | 2582 / 2603 (scenario totals) |
+| Estimated spend (harness rates) | **~11699 micro-USD** (~$0.012) vs **$0.25 cap** |
+| Latency (ms) | 16633 / 47302 |
+| CLI exit | **0** |
+
+Gemini probe (optional): `pnpm acceptance:m20-7:gemini-probe` → `gemini-generation-probe.json`.
+
+```powershell
+$env:OSVA_M20_7_LIVE_PROVIDER = "gemini"
+$env:GOOGLE_GEMINI_API_KEY = "<from-secret-store>"
+$env:OSVA_M20_7_MAX_COST_USD_MICROS = "250000"
+pnpm acceptance:m20-7:live -- --provider=gemini --smoke
+```
 
 ## Commands (CI-safe — run before operator smoke)
 

@@ -5,6 +5,7 @@ import type {
 import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
+  type ModelGatewayErrorOptions,
   type ModelFinishReason,
   type ModelProviderAdapter,
   type NormalizedModelUsage,
@@ -12,6 +13,9 @@ import {
   type ResolvedProviderGenerateTextRequest,
   splitSystemAndConversationMessages,
 } from "@osva/model-gateway";
+
+import { normalizeGeminiProviderBaseUrl } from "./gemini-api-base-url.js";
+import { projectJsonSchemaForGeminiResponseJsonSchema } from "./gemini-response-json-schema-projection.js";
 
 export const GEMINI_PROVIDER = "google-gemini" as const;
 
@@ -33,9 +37,8 @@ export class GeminiProviderAdapter implements ModelProviderAdapter {
 
   constructor(options: GeminiProviderAdapterOptions) {
     this.apiKey = options.apiKey;
-    this.baseURL = (options.baseURL ?? DEFAULT_GEMINI_BASE_URL).replace(
-      /\/$/,
-      "",
+    this.baseURL = normalizeGeminiProviderBaseUrl(
+      options.baseURL ?? DEFAULT_GEMINI_BASE_URL,
     );
     this.fetchImpl = options.fetch ?? fetch;
     this.timeout = options.timeout;
@@ -44,8 +47,37 @@ export class GeminiProviderAdapter implements ModelProviderAdapter {
   async generateText(
     request: ResolvedProviderGenerateTextRequest,
   ): Promise<ProviderGenerateTextResult> {
-    const body = toGeminiGenerateContentBody(request);
+    let body: GeminiGenerateContentBody;
+    try {
+      body = toGeminiGenerateContentBody(request);
+    } catch {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+        "The model provider request failed.",
+        {
+          provider: GEMINI_PROVIDER,
+          providerTransportErrorCategory: "request_construction",
+          retryable: false,
+        },
+      );
+    }
+
     const url = `${this.baseURL}/models/${encodeURIComponent(request.model)}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+
+    let requestBody: string;
+    try {
+      requestBody = JSON.stringify(body);
+    } catch {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+        "The model provider request failed.",
+        {
+          provider: GEMINI_PROVIDER,
+          providerTransportErrorCategory: "request_serialization",
+          retryable: false,
+        },
+      );
+    }
 
     try {
       const { response } = await fetchWithSignal(
@@ -56,17 +88,12 @@ export class GeminiProviderAdapter implements ModelProviderAdapter {
           headers: {
             "content-type": "application/json",
           },
-          body: JSON.stringify(body),
+          body: requestBody,
         },
         request.signal,
         this.timeout,
       );
-      const payload = (await response.json()) as GeminiGenerateContentResponse;
-
-      if (!response.ok) {
-        throw mapGeminiHttpError(response.status, payload);
-      }
-
+      const payload = await parseGeminiGenerateContentResponse(response);
       return normalizeGeminiResponse(payload);
     } catch (error) {
       if (error instanceof ModelGatewayError) {
@@ -92,7 +119,12 @@ export class GeminiProviderAdapter implements ModelProviderAdapter {
       throw new ModelGatewayError(
         MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
         "The model provider request failed.",
-        { provider: GEMINI_PROVIDER, retryable: true },
+        {
+          provider: GEMINI_PROVIDER,
+          providerTransportErrorCategory:
+            classifyGeminiTransportErrorCategory(error),
+          retryable: true,
+        },
       );
     }
   }
@@ -115,7 +147,10 @@ interface GeminiGenerateContentBody {
   generationConfig?: {
     maxOutputTokens?: number;
     responseMimeType?: string;
+    /** OpenAPI subset only — do not use for full JSON Schema (Builder proposal). */
     responseSchema?: unknown;
+    /** Full JSON Schema for structured outputs (mutually exclusive with responseSchema). */
+    responseJsonSchema?: unknown;
   };
 }
 
@@ -188,7 +223,9 @@ function toGeminiGenerateContentBody(
       ...(request.jsonSchema !== undefined
         ? {
             responseMimeType: "application/json",
-            responseSchema: request.jsonSchema,
+            responseJsonSchema: projectJsonSchemaForGeminiResponseJsonSchema(
+              request.jsonSchema,
+            ),
           }
         : {}),
     };
@@ -377,6 +414,90 @@ function normalizeGeminiFinishReason(finishReason: string | undefined): {
   }
 }
 
+function geminiHttpErrorMetadata(
+  status: number,
+  payload: GeminiGenerateContentResponse,
+): Pick<
+  ModelGatewayErrorOptions,
+  "provider" | "providerStatusCode" | "providerErrorType"
+> {
+  const statusName = payload.error?.status;
+  return {
+    provider: GEMINI_PROVIDER,
+    providerStatusCode: status,
+    ...(typeof statusName === "string" &&
+    statusName.length > 0 &&
+    statusName.length <= 128
+      ? { providerErrorType: statusName }
+      : {}),
+  };
+}
+
+async function parseGeminiGenerateContentResponse(
+  response: Response,
+): Promise<GeminiGenerateContentResponse> {
+  const status = response.status;
+  let rawText: string;
+  try {
+    rawText = await response.text();
+  } catch {
+    throw new ModelGatewayError(
+      MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+      "The model provider request failed.",
+      {
+        ...geminiHttpErrorMetadata(status, {}),
+        providerTransportErrorCategory: "response_body_read_failed",
+        retryable: true,
+      },
+    );
+  }
+
+  let payload: GeminiGenerateContentResponse = {};
+  if (rawText.trim().length > 0) {
+    try {
+      payload = JSON.parse(rawText) as GeminiGenerateContentResponse;
+    } catch {
+      if (!response.ok) {
+        throw mapGeminiHttpError(status, {});
+      }
+
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned an invalid response.",
+        {
+          ...geminiHttpErrorMetadata(status, {}),
+          providerTransportErrorCategory: "response_body_parse_failed",
+          retryable: false,
+        },
+      );
+    }
+  }
+
+  if (!response.ok) {
+    throw mapGeminiHttpError(status, payload);
+  }
+
+  return payload;
+}
+
+function classifyGeminiTransportErrorCategory(error: unknown): string {
+  if (error instanceof Error) {
+    const combined = `${error.name} ${error.message}`.toLowerCase();
+    if (
+      combined.includes("econnrefused") ||
+      combined.includes("enotfound") ||
+      combined.includes("network") ||
+      combined.includes("certificate") ||
+      combined.includes("tls") ||
+      combined.includes("fetch failed")
+    ) {
+      return "connection_failed";
+    }
+  }
+
+  return "connection_failed";
+}
+
 function mapGeminiHttpError(
   status: number,
   payload: GeminiGenerateContentResponse,
@@ -384,6 +505,7 @@ function mapGeminiHttpError(
   const message =
     payload.error?.message ?? "The model provider returned an error.";
   const statusName = payload.error?.status;
+  const meta = geminiHttpErrorMetadata(status, payload);
 
   if (status === 400) {
     if (statusName === "INVALID_ARGUMENT") {
@@ -391,8 +513,7 @@ function mapGeminiHttpError(
         MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,
         "The model provider rejected the request.",
         {
-          provider: GEMINI_PROVIDER,
-          providerStatusCode: status,
+          ...meta,
           retryable: false,
         },
       );
@@ -402,8 +523,7 @@ function mapGeminiHttpError(
       MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,
       message,
       {
-        provider: GEMINI_PROVIDER,
-        providerStatusCode: status,
+        ...meta,
         retryable: false,
       },
     );
@@ -414,8 +534,7 @@ function mapGeminiHttpError(
       MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR,
       "The model provider rejected the request credentials.",
       {
-        provider: GEMINI_PROVIDER,
-        providerStatusCode: status,
+        ...meta,
         retryable: false,
       },
     );
@@ -426,8 +545,7 @@ function mapGeminiHttpError(
       MODEL_ERROR_CODES.MODEL_NOT_FOUND,
       "The configured model was not found at the provider.",
       {
-        provider: GEMINI_PROVIDER,
-        providerStatusCode: status,
+        ...meta,
         retryable: false,
       },
     );
@@ -445,8 +563,7 @@ function mapGeminiHttpError(
         ? "The model provider quota is exhausted."
         : "The model provider rate-limited the request.",
       {
-        provider: GEMINI_PROVIDER,
-        providerStatusCode: status,
+        ...meta,
         retryable: !quotaExhausted,
       },
     );
@@ -461,8 +578,7 @@ function mapGeminiHttpError(
       MODEL_ERROR_CODES.MODEL_CONTENT_BLOCKED,
       "The model provider blocked the request or response.",
       {
-        provider: GEMINI_PROVIDER,
-        providerStatusCode: status,
+        ...meta,
         retryable: false,
       },
     );
@@ -473,8 +589,7 @@ function mapGeminiHttpError(
       MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
       "The model provider is temporarily unavailable.",
       {
-        provider: GEMINI_PROVIDER,
-        providerStatusCode: status,
+        ...meta,
         retryable: true,
       },
     );
@@ -484,8 +599,7 @@ function mapGeminiHttpError(
     MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
     message,
     {
-      provider: GEMINI_PROVIDER,
-      providerStatusCode: status,
+      ...meta,
       retryable: status >= 500,
     },
   );

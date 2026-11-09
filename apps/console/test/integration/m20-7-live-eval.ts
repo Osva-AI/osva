@@ -24,13 +24,13 @@ const LIVE_MODEL_PRICING: Readonly<
 > = {
   "gpt-4o-mini": { inputUsdPer1M: 150_000, outputUsdPer1M: 600_000 },
   "gpt-4o": { inputUsdPer1M: 2_500_000, outputUsdPer1M: 10_000_000 },
-  "gemini-2.0-flash": { inputUsdPer1M: 100_000, outputUsdPer1M: 400_000 },
+  "gemini-3.6-flash": { inputUsdPer1M: 750_000, outputUsdPer1M: 3_750_000 },
   "gemini-2.5-flash": { inputUsdPer1M: 150_000, outputUsdPer1M: 600_000 },
 };
 
 export const M20_7_OFFICIAL_ENDPOINTS = {
   OPENAI: "https://api.openai.com/v1",
-  GOOGLE_GEMINI: "https://generativelanguage.googleapis.com",
+  GOOGLE_GEMINI: "https://generativelanguage.googleapis.com/v1beta",
 } as const;
 
 export interface M20_7LiveProvenanceState {
@@ -61,6 +61,7 @@ export interface M20_7SanitizedBuilderProviderDiagnostic {
   readonly providerRequestId?: string;
   readonly retryable?: boolean;
   readonly providerHttpResponseObserved: boolean;
+  readonly providerTransportErrorCategory?: string;
 }
 
 export interface M20_7SanitizedBuilderGenerationFailure {
@@ -100,6 +101,7 @@ export interface LiveBuilderGenerationResponseShape {
     readonly providerRequestId?: string;
     readonly retryable?: boolean;
     readonly providerHttpResponseObserved?: boolean;
+    readonly providerTransportErrorCategory?: string;
   };
   readonly metadata?: {
     readonly attempts?: number;
@@ -216,6 +218,9 @@ function sanitizeProviderDiagnosticFromBody(
     providerHttpResponseObserved:
       raw.providerHttpResponseObserved === true ||
       providerHttpStatus !== undefined,
+    providerTransportErrorCategory: sanitizeProviderDiagnosticField(
+      raw.providerTransportErrorCategory,
+    ),
   };
 }
 

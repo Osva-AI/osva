@@ -38,6 +38,44 @@ describe("builder model gateway diagnostics", () => {
     ).toBeUndefined();
   });
 
+  it("preserves Gemini HTTP and transport fields through builder failure mapping", () => {
+    const failure = mapModelGatewayErrorToBuilderFailure({
+      code: MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+      message: "transport",
+      provider: "google-gemini",
+      providerTransportErrorCategory: "connection_failed",
+    });
+    expect(failure.providerDiagnostic).toMatchObject({
+      provider: "GOOGLE_GEMINI",
+      providerTransportErrorCategory: "connection_failed",
+      providerHttpResponseObserved: false,
+    });
+
+    const httpFailure = mapModelGatewayErrorToBuilderFailure({
+      code: MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,
+      message: "rejected",
+      provider: "google-gemini",
+      providerStatusCode: 400,
+      providerErrorType: "INVALID_ARGUMENT",
+    });
+    expect(httpFailure.providerDiagnostic).toMatchObject({
+      providerHttpStatus: 400,
+      providerErrorType: "INVALID_ARGUMENT",
+      providerHttpResponseObserved: true,
+    });
+  });
+
+  it("maps google-gemini provider token to GOOGLE_GEMINI", () => {
+    const diag = sanitizeBuilderProviderDiagnostic({
+      code: MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+      message: "x",
+      provider: "google-gemini",
+      providerTransportErrorCategory: "connection_failed",
+    });
+    expect(diag.provider).toBe("GOOGLE_GEMINI");
+    expect(diag.providerTransportErrorCategory).toBe("connection_failed");
+  });
+
   it("maps MODEL_INVALID_REQUEST to PROVIDER_ERROR with diagnostics, not raw message", () => {
     const failure = mapModelGatewayErrorToBuilderFailure({
       code: MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,

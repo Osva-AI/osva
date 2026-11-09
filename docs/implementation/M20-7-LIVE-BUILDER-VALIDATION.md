@@ -62,6 +62,8 @@ Deterministic structural scoring remains in M20.6 integration tests. Live intent
 | --- | --- |
 | M20.7.1 live-ready guards | **Complete** (committed `e054544`) |
 | M20.7.2 OpenAI live smoke | **Complete (scoped)** — operator PASS 2026-11-08; [`../operations/M20_7_2_CLOSEOUT_SUMMARY.md`](../operations/M20_7_2_CLOSEOUT_SUMMARY.md) |
-| M20.7.3 Gemini live smoke | **NOT_RUN** |
+| M20.7.3 Gemini live smoke | **Complete (scoped)** — operator PASS 2026-11-09; [`../operations/M20_7_3_CLOSEOUT_SUMMARY.md`](../operations/M20_7_3_CLOSEOUT_SUMMARY.md) |
 
-One successful OpenAI smoke does not certify builder quality across models or prompts.
+Gemini isolated generation probe: `pnpm acceptance:m20-7:gemini-probe` (see closeout §9).
+
+One successful smoke per provider does not certify builder quality across models or prompts.

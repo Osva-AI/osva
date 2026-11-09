@@ -14,6 +14,10 @@ import {
   liveExecuteBlockedReason,
 } from "../lib/live-guards.mjs";
 import {
+  M20_7_DEFAULT_GEMINI_MODEL,
+  geminiModelLivePreflightError,
+} from "../lib/gemini-model-lifecycle.mjs";
+import {
   classifyProviderDestination,
   isForbiddenFakeOrigin,
   liveEndpointRejectedReason,
@@ -161,6 +165,43 @@ test("routing blocks fake origin in live", () => {
     }),
     "FAKE_PROVIDER_ENDPOINT_IN_LIVE_MODE",
   );
+});
+
+test("retired gemini-2.0-flash blocked at preflight", () => {
+  assert.equal(
+    geminiModelLivePreflightError("gemini-2.0-flash"),
+    "RETIRED_GEMINI_MODEL:gemini-2.0-flash",
+  );
+  const r = evaluateLivePreflight(
+    {
+      OSVA_M20_7_LIVE: "1",
+      OSVA_M20_7_ISOLATED: "1",
+      GOOGLE_GEMINI_API_KEY: "test-gemini",
+      OSVA_M20_7_MAX_COST_USD_MICROS: "1000000",
+      OSVA_M20_7_GENERATION_MODEL: "gemini-2.0-flash",
+    },
+    { provider: "gemini" },
+  );
+  assert.equal(r.ok, false);
+  if (!r.ok) {
+    assert.match(r.reason, /RETIRED_GEMINI_MODEL/);
+  }
+});
+
+test("default gemini model accepted at preflight", () => {
+  const r = evaluateLivePreflight(
+    {
+      OSVA_M20_7_LIVE: "1",
+      OSVA_M20_7_ISOLATED: "1",
+      GOOGLE_GEMINI_API_KEY: "test-gemini",
+      OSVA_M20_7_MAX_COST_USD_MICROS: "1000000",
+    },
+    { provider: "gemini" },
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.modelId, M20_7_DEFAULT_GEMINI_MODEL);
+  }
 });
 
 test("fixture model ids rejected in preflight", () => {

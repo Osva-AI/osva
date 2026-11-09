@@ -5,7 +5,7 @@
 /** @type {Readonly<Record<string, string>>} */
 export const OFFICIAL_PROVIDER_BASE_URLS = Object.freeze({
   openai: "https://api.openai.com/v1",
-  gemini: "https://generativelanguage.googleapis.com",
+  gemini: "https://generativelanguage.googleapis.com/v1beta",
 });
 
 /**

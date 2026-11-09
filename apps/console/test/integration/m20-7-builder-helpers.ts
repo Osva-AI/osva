@@ -14,9 +14,10 @@ import {
   type M20_6ModelProfileBundle,
 } from "./m20-6-builder-helpers.js";
 import type { M20_7Stack } from "./m20-7-live-harness.js";
+import { M20_7_DEFAULT_GEMINI_MODEL } from "./m20-7-gemini-model-lifecycle.js";
 
 const OPENAI_OFFICIAL = "https://api.openai.com/v1";
-const GEMINI_OFFICIAL = "https://generativelanguage.googleapis.com";
+const GEMINI_OFFICIAL = "https://generativelanguage.googleapis.com/v1beta";
 
 export interface M20_7LiveModelConfig {
   readonly provider: "OPENAI" | "GOOGLE_GEMINI";
@@ -33,11 +34,14 @@ export function resolveM20_7LiveModelConfig(): M20_7LiveModelConfig {
     return {
       provider: "GOOGLE_GEMINI",
       generationModel:
-        process.env.OSVA_M20_7_GENERATION_MODEL?.trim() ?? "gemini-2.0-flash",
+        process.env.OSVA_M20_7_GENERATION_MODEL?.trim() ??
+        M20_7_DEFAULT_GEMINI_MODEL,
       executionModel:
-        process.env.OSVA_M20_7_EXECUTION_MODEL?.trim() ?? "gemini-2.0-flash",
+        process.env.OSVA_M20_7_EXECUTION_MODEL?.trim() ??
+        M20_7_DEFAULT_GEMINI_MODEL,
       alternateModel:
-        process.env.OSVA_M20_7_ALTERNATE_MODEL?.trim() ?? "gemini-2.0-flash",
+        process.env.OSVA_M20_7_ALTERNATE_MODEL?.trim() ??
+        M20_7_DEFAULT_GEMINI_MODEL,
     };
   }
   return {

@@ -12,6 +12,8 @@ export interface ModelGatewayErrorOptions {
   readonly providerErrorCode?: string;
   /** Sanitized provider parameter identifier when exposed by the API. */
   readonly providerErrorParam?: string;
+  /** Bounded category when the failure occurred before or during transport parsing. */
+  readonly providerTransportErrorCategory?: string;
   readonly retryAfterMs?: number;
 }
 
@@ -24,6 +26,7 @@ export class ModelGatewayError extends Error {
   readonly providerErrorType: string | undefined;
   readonly providerErrorCode: string | undefined;
   readonly providerErrorParam: string | undefined;
+  readonly providerTransportErrorCategory: string | undefined;
   readonly retryAfterMs: number | undefined;
 
   constructor(
@@ -41,6 +44,8 @@ export class ModelGatewayError extends Error {
     this.providerErrorType = options?.providerErrorType;
     this.providerErrorCode = options?.providerErrorCode;
     this.providerErrorParam = options?.providerErrorParam;
+    this.providerTransportErrorCategory =
+      options?.providerTransportErrorCategory;
     this.retryAfterMs = options?.retryAfterMs;
   }
 }

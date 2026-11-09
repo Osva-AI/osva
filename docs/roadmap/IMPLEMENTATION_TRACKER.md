@@ -168,9 +168,9 @@ See [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY
 
 ## M20 — Builder product acceptance (in flight)
 
-Branch **`feat/m20-7-live-builder-acceptance`** (M20.7.1 + M20.7.2 + pending M20.7.3 before combined PR).
+Branch **`feat/m20-7-live-builder-acceptance`** (M20.7.1 + M20.7.2 + M20.7.3 — ready for combined PR after push).
 
 - ✅ M20.6 Deterministic builder acceptance — fake OpenAI matrix; [`../operations/M20_6_ACCEPTANCE_SUMMARY.md`](../operations/M20_6_ACCEPTANCE_SUMMARY.md)
 - ✅ M20.7.1 Live-ready builder stack (official endpoints, provenance, budgets) — `e054544`
 - ✅ M20.7.2 OpenAI live smoke (natural-language, 2 scenarios) — [`../operations/M20_7_2_CLOSEOUT_SUMMARY.md`](../operations/M20_7_2_CLOSEOUT_SUMMARY.md)
-- ⏳ M20.7.3 Gemini live smoke — **not run**
+- ✅ M20.7.3 Gemini live smoke (natural-language, 2 scenarios) — [`../operations/M20_7_3_CLOSEOUT_SUMMARY.md`](../operations/M20_7_3_CLOSEOUT_SUMMARY.md)
