@@ -364,7 +364,8 @@ describe("builder topology repair via mocked gateway", () => {
     expect(r.ok).toBe(true);
     expect(calls).toBe(2);
     if (!r.ok) {
-      expect(r.metadata.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
+      expect(r.metadata).toBeDefined();
+      expect(r.metadata?.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
         "INVALID_GRAPH_TOPOLOGY",
       );
     }
@@ -449,7 +450,7 @@ describe("builder topology repair via mocked gateway", () => {
           text: JSON.stringify(body),
           toolCalls: [],
           finishReason: "stop",
-        };
+        } satisfies GenerateCompletionResult;
       }),
     };
 
@@ -469,12 +470,14 @@ describe("builder topology repair via mocked gateway", () => {
     });
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.metadata.attempts).toBe(2);
-      expect(r.metadata.attemptDiagnostics).toHaveLength(2);
-      expect(r.metadata.attemptDiagnostics?.[1]?.errorCode).toBe(
+      expect(r.metadata).toBeDefined();
+      const metadata = r.metadata!;
+      expect(metadata.attempts).toBe(2);
+      expect(metadata.attemptDiagnostics).toHaveLength(2);
+      expect(metadata.attemptDiagnostics?.[1]?.errorCode).toBe(
         "INVALID_COMPILED_PROPOSAL",
       );
-      expect(r.metadata.attemptDiagnostics?.[1]?.compileIssues?.[0]?.code).toBe(
+      expect(metadata.attemptDiagnostics?.[1]?.compileIssues?.[0]?.code).toBe(
         "INVALID_GRAPH_TOPOLOGY",
       );
     }

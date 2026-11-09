@@ -162,6 +162,10 @@ describe("BRANCH JSON Pointer validation", () => {
     expect(parsed.proposal.agents).toHaveLength(1);
     expect(parsed.proposal.agents[0]?.kind).toBe("NEW");
     expect(parsed.proposal.agents[0]?.ref).toBe("bpr_a");
-    expect(parsed.proposal.workflow.nodes[0]?.selector).toBe("/status");
+    const branch = parsed.proposal.workflow.nodes[0];
+    expect(branch?.type).toBe("BRANCH");
+    if (branch?.type === "BRANCH") {
+      expect(branch.selector).toBe("/status");
+    }
   });
 });

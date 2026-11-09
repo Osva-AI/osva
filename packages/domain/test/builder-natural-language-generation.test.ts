@@ -765,14 +765,16 @@ describe("M20.2 builder NL generation", () => {
       expect(
         r.compileIssues?.some((i) => i.code === "INVALID_GRAPH_TOPOLOGY"),
       ).toBe(true);
-      expect(r.metadata.attemptDiagnostics?.[0]).toMatchObject({
+      expect(r.metadata).toBeDefined();
+      const metadata = r.metadata!;
+      expect(metadata.attemptDiagnostics?.[0]).toMatchObject({
         providerAttempt: 1,
         afterRepair: false,
         repairAttempted: false,
         validationStage: "pre_publication_compile",
         errorCode: "INVALID_COMPILED_PROPOSAL",
       });
-      expect(r.metadata.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
+      expect(metadata.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
         "INVALID_GRAPH_TOPOLOGY",
       );
     }
@@ -1089,7 +1091,8 @@ describe("M20.7.2 builder generation failure evidence", () => {
     });
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.metadata.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
+      expect(r.metadata).toBeDefined();
+      expect(r.metadata?.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
         "INVALID_COMPILED_AGENT_MANIFEST",
       );
     }
@@ -1131,7 +1134,9 @@ describe("M20.7.2 builder generation failure evidence", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.errorCode).toBe("INVALID_BUILDER_PROPOSAL");
-      expect(r.metadata.attemptDiagnostics?.[0]).toMatchObject({
+      expect(r.metadata).toBeDefined();
+      const metadata = r.metadata!;
+      expect(metadata.attemptDiagnostics?.[0]).toMatchObject({
         validationStage: "proposal_parse",
         errorCode: "INVALID_BUILDER_PROPOSAL",
         repairAttempted: false,
@@ -1177,8 +1182,10 @@ describe("M20.7.2 builder generation failure evidence", () => {
     });
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.metadata.attempts).toBe(2);
-      const diagnostics = r.metadata.attemptDiagnostics ?? [];
+      expect(r.metadata).toBeDefined();
+      const metadata = r.metadata!;
+      expect(metadata.attempts).toBe(2);
+      const diagnostics = metadata.attemptDiagnostics ?? [];
       expect(diagnostics).toHaveLength(2);
       expect(diagnostics[0]).toMatchObject({
         providerAttempt: 1,
@@ -1221,7 +1228,8 @@ describe("M20.7.2 builder generation failure evidence", () => {
       expect(r.metadata.attempts).toBe(2);
     }
     if (!r.ok) {
-      const diagnostics = r.metadata.attemptDiagnostics ?? [];
+      expect(r.metadata).toBeDefined();
+      const diagnostics = r.metadata?.attemptDiagnostics ?? [];
       expect(diagnostics[0]?.errorCode).toBe("INVALID_JSON_OUTPUT");
     }
   });
