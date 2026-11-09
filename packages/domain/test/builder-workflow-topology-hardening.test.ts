@@ -365,9 +365,9 @@ describe("builder topology repair via mocked gateway", () => {
     expect(calls).toBe(2);
     if (!r.ok) {
       expect(r.metadata).toBeDefined();
-      expect(r.metadata?.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
-        "INVALID_GRAPH_TOPOLOGY",
-      );
+      expect(
+        r.metadata?.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code,
+      ).toBe("INVALID_GRAPH_TOPOLOGY");
     }
   });
 

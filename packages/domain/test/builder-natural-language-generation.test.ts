@@ -1092,9 +1092,9 @@ describe("M20.7.2 builder generation failure evidence", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.metadata).toBeDefined();
-      expect(r.metadata?.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code).toBe(
-        "INVALID_COMPILED_AGENT_MANIFEST",
-      );
+      expect(
+        r.metadata?.attemptDiagnostics?.[0]?.compileIssues?.[0]?.code,
+      ).toBe("INVALID_COMPILED_AGENT_MANIFEST");
     }
   });
 
