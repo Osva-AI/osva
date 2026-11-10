@@ -138,6 +138,7 @@ export function buildBuilderRefinementMessages(
   currentProposalJson: string,
   refinementInstruction: string,
   conversationalHistory?: readonly string[],
+  options?: { readonly structuredOutputNote?: string },
 ): readonly ModelConversationMessage[] {
   const historyBlock =
     conversationalHistory !== undefined && conversationalHistory.length > 0
@@ -146,8 +147,14 @@ ${conversationalHistory.map((h, i) => `${String(i + 1)}. ${h}`).join("\n")}
 === END_CONVERSATIONAL_HISTORY ===`
       : undefined;
 
+  const note = options?.structuredOutputNote?.trim();
+  const system =
+    note !== undefined && note.length > 0
+      ? `${REFINEMENT_SYSTEM_INSTRUCTIONS}\n\n${note}`
+      : REFINEMENT_SYSTEM_INSTRUCTIONS;
+
   const segments: ModelConversationMessage[] = [
-    { role: "system", content: REFINEMENT_SYSTEM_INSTRUCTIONS },
+    { role: "system", content: system },
     {
       role: "user",
       content: `=== CAPABILITY_CATALOG_JSON ===
@@ -177,7 +184,7 @@ ${refinementInstruction}
 }
 
 export function serializeCurrentProposalForPrompt(
-  proposal: BuilderProposalV1,
+  proposal: BuilderProposalV1 | Record<string, unknown>,
   maxUtf16Units: number,
 ): { ok: true; json: string } | { ok: false; message: string } {
   const json = `${JSON.stringify(proposal)}\n`;

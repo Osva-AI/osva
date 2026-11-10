@@ -14,13 +14,15 @@ import {
   type M20_6ModelProfileBundle,
 } from "./m20-6-builder-helpers.js";
 import type { M20_7Stack } from "./m20-7-live-harness.js";
+import { M20_7_DEFAULT_ANTHROPIC_MODEL } from "./m20-7-anthropic-model-lifecycle.js";
 import { M20_7_DEFAULT_GEMINI_MODEL } from "./m20-7-gemini-model-lifecycle.js";
 
 const OPENAI_OFFICIAL = "https://api.openai.com/v1";
 const GEMINI_OFFICIAL = "https://generativelanguage.googleapis.com/v1beta";
+const ANTHROPIC_OFFICIAL = "https://api.anthropic.com";
 
 export interface M20_7LiveModelConfig {
-  readonly provider: "OPENAI" | "GOOGLE_GEMINI";
+  readonly provider: "OPENAI" | "GOOGLE_GEMINI" | "ANTHROPIC";
   readonly generationModel: string;
   readonly executionModel: string;
   readonly alternateModel?: string;
@@ -42,6 +44,20 @@ export function resolveM20_7LiveModelConfig(): M20_7LiveModelConfig {
       alternateModel:
         process.env.OSVA_M20_7_ALTERNATE_MODEL?.trim() ??
         M20_7_DEFAULT_GEMINI_MODEL,
+    };
+  }
+  if (providerEnv === "anthropic") {
+    return {
+      provider: "ANTHROPIC",
+      generationModel:
+        process.env.OSVA_M20_7_GENERATION_MODEL?.trim() ??
+        M20_7_DEFAULT_ANTHROPIC_MODEL,
+      executionModel:
+        process.env.OSVA_M20_7_EXECUTION_MODEL?.trim() ??
+        M20_7_DEFAULT_ANTHROPIC_MODEL,
+      alternateModel:
+        process.env.OSVA_M20_7_ALTERNATE_MODEL?.trim() ??
+        M20_7_DEFAULT_ANTHROPIC_MODEL,
     };
   }
   return {
@@ -88,9 +104,13 @@ export async function provisionM20_7LiveModelProfiles(
     init: { method?: string; body?: unknown } = {},
   ) => consoleJsonWithHeaders(stack, path, headers, init);
 
-  const providerKey = config.provider === "OPENAI" ? "OPENAI" : "GOOGLE_GEMINI";
+  const providerKey = config.provider;
   const officialBase =
-    config.provider === "OPENAI" ? OPENAI_OFFICIAL : GEMINI_OFFICIAL;
+    config.provider === "OPENAI"
+      ? OPENAI_OFFICIAL
+      : config.provider === "GOOGLE_GEMINI"
+        ? GEMINI_OFFICIAL
+        : ANTHROPIC_OFFICIAL;
   assertLiveEndpointAllowed(stack, officialBase);
 
   const connection = await request("/api/v1/model-provider-connections", {
@@ -106,17 +126,30 @@ export async function provisionM20_7LiveModelProfiles(
   }
   const connectionId = (connection.body as { id: string }).id;
 
+  const anthropicWorkspaceId =
+    config.provider === "ANTHROPIC"
+      ? process.env.ANTHROPIC_WORKSPACE_ID?.trim()
+      : undefined;
+
   const version = await request(
     `/api/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions`,
     {
       method: "POST",
       body: {
-        endpoint: { baseUrl: officialBase },
+        endpoint: {
+          baseUrl: officialBase,
+          ...(anthropicWorkspaceId !== undefined &&
+          anthropicWorkspaceId.length > 0
+            ? { anthropicWorkspaceId }
+            : {}),
+        },
         credentialRef: {
           key:
             config.provider === "OPENAI"
               ? "OPENAI_API_KEY"
-              : "GOOGLE_GEMINI_API_KEY",
+              : config.provider === "GOOGLE_GEMINI"
+                ? "GOOGLE_GEMINI_API_KEY"
+                : "ANTHROPIC_API_KEY",
         },
       },
     },

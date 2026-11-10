@@ -100,7 +100,10 @@ import {
   PublishBuilderProposal,
   RefineBuilderProposalFromNaturalLanguage,
 } from "@osva/domain/builder";
-import { builderGenerationLimitsFromEnv } from "./builder-generation-limits-from-env.js";
+import {
+  builderGenerationLimitsFromEnv,
+  builderRefinementLimitsFromEnv,
+} from "./builder-generation-limits-from-env.js";
 import {
   CreateRun,
   IngestWorkflowEvent,
@@ -216,6 +219,7 @@ export function createWebProcess(
     modelProfiles,
     tools,
     modelGateway,
+    limits: builderRefinementLimitsFromEnv(env),
   });
   const getWorkspaceBuilderCapabilityCatalog =
     new GetWorkspaceBuilderCapabilityCatalog({

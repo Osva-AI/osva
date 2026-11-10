@@ -45,12 +45,18 @@ export function composeLegacyModelProviders(
   const anthropicApiKey =
     overrides.anthropic?.apiKey ?? env.ANTHROPIC_API_KEY?.trim();
   if (anthropicApiKey !== undefined && anthropicApiKey.length > 0) {
+    const anthropicWorkspaceId =
+      overrides.anthropic?.anthropicWorkspaceId ??
+      env.ANTHROPIC_WORKSPACE_ID?.trim();
     providers.ANTHROPIC = new AnthropicProviderAdapter({
       apiKey: anthropicApiKey,
       baseURL: overrides.anthropic?.baseURL,
       fetch: overrides.anthropic?.fetch,
       maxRetries: overrides.anthropic?.maxRetries,
       timeout: overrides.anthropic?.timeout,
+      ...(anthropicWorkspaceId !== undefined && anthropicWorkspaceId.length > 0
+        ? { anthropicWorkspaceId }
+        : {}),
     });
   }
 

@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  anthropicGenerationProbeBaseEnv,
+  anthropicProbeWorstCaseCostBlockedReason,
+  estimateAnthropicProbeWorstCaseMicroUsd,
+} from "../lib/anthropic-generation-probe.mjs";
+import {
   estimateGeminiProbeWorstCaseMicroUsd,
   geminiGenerationProbeBaseEnv,
   geminiProbeWorstCaseCostBlockedReason,
@@ -94,5 +99,28 @@ describe("M20.7.3 Gemini probe pricing", () => {
       OSVA_M20_7_MAX_COST_USD_MICROS: "250000",
     });
     assert.equal(geminiProbeWorstCaseCostBlockedReason(env), undefined);
+  });
+});
+
+describe("M20.7.4 Anthropic probe pricing", () => {
+  it("estimates 36864 micro-USD for claude-sonnet-5-5 at 8192/2048 tokens", () => {
+    const worst = worstCaseAttemptCostMicroUsd("claude-sonnet-5-5", {
+      maxInputTokens: 8192,
+      maxOutputTokens: 2048,
+    });
+    assert.equal(worst.estimatedMicroUsd, 36864);
+    assert.equal(worst.reason, undefined);
+  });
+
+  it("probe cost gate passes under default anthropic probe cap", () => {
+    const env = anthropicGenerationProbeBaseEnv({
+      ANTHROPIC_API_KEY: "k",
+      OSVA_M20_7_MAX_COST_USD_MICROS: "500000",
+    });
+    assert.equal(anthropicProbeWorstCaseCostBlockedReason(env), undefined);
+    assert.equal(
+      estimateAnthropicProbeWorstCaseMicroUsd(env).estimatedMicroUsd,
+      36864,
+    );
   });
 });

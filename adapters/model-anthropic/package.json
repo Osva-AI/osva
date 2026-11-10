@@ -21,6 +21,7 @@
     "@osva/model-gateway": "workspace:*"
   },
   "devDependencies": {
+    "@osva/domain": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

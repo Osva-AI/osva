@@ -24,6 +24,9 @@ export interface BuilderGenerationProviderDiagnosticV1 {
   readonly providerHttpResponseObserved: boolean;
   /** Bounded transport-layer category when no parsed provider error body exists. */
   readonly providerTransportErrorCategory?: string;
+  /** Present only when OSVA_ANTHROPIC_PROVIDER_ERROR_DIAGNOSTICS is enabled locally. */
+  readonly providerErrorReasonFingerprint?: string;
+  readonly providerErrorReasonTokens?: readonly string[];
 }
 
 const ALLOWED_PROVIDER_TOKENS: Readonly<Record<string, ModelProvider>> = {
@@ -54,6 +57,8 @@ export interface ModelGatewayErrorLike {
   readonly providerRequestId?: string;
   readonly retryable?: boolean;
   readonly providerTransportErrorCategory?: string;
+  readonly providerErrorReasonFingerprint?: string;
+  readonly providerErrorReasonTokens?: readonly string[];
 }
 
 export function readModelGatewayErrorLike(
@@ -103,6 +108,15 @@ export function readModelGatewayErrorLike(
       typeof record.providerTransportErrorCategory === "string"
         ? record.providerTransportErrorCategory
         : undefined,
+    providerErrorReasonFingerprint:
+      typeof record.providerErrorReasonFingerprint === "string"
+        ? record.providerErrorReasonFingerprint
+        : undefined,
+    providerErrorReasonTokens: Array.isArray(record.providerErrorReasonTokens)
+      ? record.providerErrorReasonTokens.filter(
+          (item): item is string => typeof item === "string",
+        )
+      : undefined,
   };
 }
 
@@ -174,6 +188,15 @@ export function sanitizeBuilderProviderDiagnostic(
     providerTransportErrorCategory: sanitizeTransportErrorCategory(
       error.providerTransportErrorCategory,
     ),
+    providerErrorReasonFingerprint: sanitizeToken(
+      error.providerErrorReasonFingerprint,
+    ),
+    providerErrorReasonTokens:
+      error.providerErrorReasonTokens === undefined
+        ? undefined
+        : error.providerErrorReasonTokens
+            .map((token) => sanitizeToken(token))
+            .filter((token): token is string => token !== undefined),
   };
 }
 

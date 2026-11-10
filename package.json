@@ -91,6 +91,10 @@
     "acceptance:m20-7:preflight": "node scripts/acceptance/m20-7/run.mjs --preflight",
     "acceptance:m20-7:live": "node scripts/acceptance/m20-7/run.mjs --live",
     "acceptance:m20-7:gemini-probe": "node scripts/acceptance/m20-7/gemini-builder-generation-probe.mjs",
+    "acceptance:m20-7:anthropic-probe": "node scripts/acceptance/m20-7/anthropic-builder-generation-probe.mjs",
+    "acceptance:m20-7:anthropic-refinement-probe": "node scripts/acceptance/m20-7/anthropic-builder-refinement-probe.mjs",
+    "acceptance:m20-7:anthropic-count-tokens": "node scripts/acceptance/m20-7/anthropic-builder-count-tokens-probe.mjs",
+    "acceptance:m20-7:anthropic-raw-messages": "node scripts/acceptance/m20-7/anthropic-builder-raw-messages-probe.mjs",
     "acceptance:m20-7:test": "node --test scripts/acceptance/m20-7/test/*.test.mjs"
   },
   "devDependencies": {

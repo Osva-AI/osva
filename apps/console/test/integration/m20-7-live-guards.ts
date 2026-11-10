@@ -4,6 +4,10 @@
  */
 
 import {
+  M20_7_DEFAULT_ANTHROPIC_MODEL,
+  anthropicModelLivePreflightError,
+} from "./m20-7-anthropic-model-lifecycle.js";
+import {
   M20_7_DEFAULT_GEMINI_MODEL,
   geminiModelLivePreflightError,
 } from "./m20-7-gemini-model-lifecycle.js";
@@ -43,7 +47,11 @@ export function evaluateLivePreflight(
     .trim()
     .toLowerCase();
 
-  if (provider !== "openai" && provider !== "gemini") {
+  if (
+    provider !== "openai" &&
+    provider !== "gemini" &&
+    provider !== "anthropic"
+  ) {
     return { ok: false, reason: `UNKNOWN_PROVIDER:${provider}` };
   }
 
@@ -62,16 +70,32 @@ export function evaluateLivePreflight(
       return { ok: false, reason: "GOOGLE_GEMINI_API_KEY missing" };
     }
   }
+  if (provider === "anthropic") {
+    const key = env.ANTHROPIC_API_KEY?.trim();
+    if (key === undefined || key.length === 0) {
+      return { ok: false, reason: "ANTHROPIC_API_KEY missing" };
+    }
+  }
 
-  const modelId =
-    env.OSVA_M20_7_GENERATION_MODEL?.trim() ??
-    (provider === "openai" ? "gpt-4o-mini" : M20_7_DEFAULT_GEMINI_MODEL);
+  const defaultModel =
+    provider === "openai"
+      ? "gpt-4o-mini"
+      : provider === "gemini"
+        ? M20_7_DEFAULT_GEMINI_MODEL
+        : M20_7_DEFAULT_ANTHROPIC_MODEL;
+  const modelId = env.OSVA_M20_7_GENERATION_MODEL?.trim() ?? defaultModel;
 
   if (modelId.length === 0) {
     return { ok: false, reason: "GENERATION_MODEL missing" };
   }
   if (provider === "gemini") {
     const retired = geminiModelLivePreflightError(modelId);
+    if (retired !== undefined) {
+      return { ok: false, reason: retired };
+    }
+  }
+  if (provider === "anthropic") {
+    const retired = anthropicModelLivePreflightError(modelId);
     if (retired !== undefined) {
       return { ok: false, reason: retired };
     }

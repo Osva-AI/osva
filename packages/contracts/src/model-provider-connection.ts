@@ -1,10 +1,23 @@
 import type { ModelProvider } from "./model-gateway.js";
 import type { SecretReference } from "./secret-reference.js";
 
+/** Anthropic Console workspace id (`wrkspc_…`) for identity-linked / multi-workspace API keys. */
+export const ANTHROPIC_PROVIDER_WORKSPACE_ID_PATTERN =
+  /^wrkspc_[A-Za-z0-9]{1,128}$/;
+
+export function isAnthropicProviderWorkspaceId(value: string): boolean {
+  return ANTHROPIC_PROVIDER_WORKSPACE_ID_PATTERN.test(value.trim());
+}
+
 /** Immutable endpoint configuration for a provider connection version. */
 export interface ModelProviderConnectionEndpoint {
   readonly baseUrl: string;
   readonly allowPrivateNetworks?: boolean;
+  /**
+   * Anthropic provider workspace for keys that are not scoped to one workspace.
+   * Bound to the connection version; never inferred from OSVA workspace id.
+   */
+  readonly anthropicWorkspaceId?: string;
 }
 
 /** Stored configuration for an immutable connection version (internal). */
@@ -43,6 +56,7 @@ export interface PublicModelProviderCredentialV1 {
 export interface PublicModelProviderConnectionEndpointV1 {
   readonly baseUrl: string;
   readonly allowPrivateNetworks?: boolean;
+  readonly anthropicWorkspaceId?: string;
 }
 
 export function mapModelProviderConnectionVersionToPublicConfig(input: {
@@ -62,6 +76,11 @@ export function mapModelProviderConnectionVersionToPublicConfig(input: {
               ? {}
               : {
                   allowPrivateNetworks: input.endpoint.allowPrivateNetworks,
+                }),
+            ...(input.endpoint.anthropicWorkspaceId === undefined
+              ? {}
+              : {
+                  anthropicWorkspaceId: input.endpoint.anthropicWorkspaceId,
                 }),
           },
         }),

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { builderIssue } from "@osva/domain/builder";
 
 import {
+  probeArtifactBuilderErrorCode,
   recordLiveProvenanceFromGenerationHttp,
   sanitizeBuilderGenerationFailure,
   type LiveBuilderGenerationResponseShape,
@@ -37,6 +38,9 @@ describe("m20-7-live-eval provider diagnostics", () => {
     const sanitized = sanitizeBuilderGenerationFailure(422, parsed);
     expect(sanitized.httpStatus).toBe(422);
     expect(sanitized.builderErrorCode).toBe("PROVIDER_ERROR");
+    expect(probeArtifactBuilderErrorCode(parsed, sanitized)).toBe(
+      "PROVIDER_ERROR",
+    );
     expect(sanitized.providerDiagnostic).toMatchObject({
       modelGatewayErrorCode: "MODEL_INVALID_REQUEST",
       providerHttpStatus: 400,
@@ -70,6 +74,19 @@ describe("m20-7-live-eval provider diagnostics", () => {
     expect(provenance.lastBuilderGenerationFailure?.providerDiagnostic).toEqual(
       failure?.providerDiagnostic,
     );
+  });
+
+  it("omits builderErrorCode on successful probe bodies", () => {
+    const parsed: LiveBuilderGenerationResponseShape = {
+      ok: true,
+      metadata: {
+        attempts: 1,
+        measuredUsage: { usageMeasured: true, inputUnits: 10, outputUnits: 4 },
+      },
+    };
+    const sanitized = sanitizeBuilderGenerationFailure(200, parsed);
+    expect(sanitized.builderErrorCode).toBe("UNKNOWN_BUILDER_FAILURE");
+    expect(probeArtifactBuilderErrorCode(parsed, sanitized)).toBeUndefined();
   });
 
   it("preserves sanitized compileIssues and attemptDiagnostics into acceptance failure evidence", () => {

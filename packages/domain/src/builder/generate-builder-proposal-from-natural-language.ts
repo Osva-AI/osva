@@ -36,13 +36,16 @@ import {
   buildBoundedCapabilityCatalogPayload,
   buildBuilderGenerationMessages,
 } from "./builder-natural-language-prompt.js";
-import { BuilderProposalOpenAiJsonSchema } from "./builder-proposal-openai-json-schema.js";
+import { ANTHROPIC_RECORDS_PROMPT_SECTION } from "./builder-proposal-anthropic-json-schema.js";
 import { mergeBuilderModelUsage } from "./builder-generation-usage.js";
 import {
   mapModelGatewayErrorToBuilderFailure,
   readModelGatewayErrorLike,
 } from "./builder-model-gateway-diagnostics.js";
-import { modelProviderSupportsStructuredJsonSchema } from "./builder-provider-structured-output.js";
+import {
+  jsonSchemaForBuilderProvider,
+  modelProviderSupportsStructuredJsonSchema,
+} from "./builder-provider-structured-output.js";
 import {
   GetWorkspaceBuilderCapabilityCatalog,
   type WorkspaceBuilderCapabilityCatalogDependencies,
@@ -215,7 +218,7 @@ export class GenerateBuilderProposalFromNaturalLanguage {
     if (!structured) {
       return asFailure(
         "UNSUPPORTED_STRUCTURED_OUTPUT",
-        "The selected generation model provider does not support JSON schema constrained output for this flow; choose an OpenAI or Gemini generation profile.",
+        "The selected generation model provider does not support JSON schema constrained output for this flow; choose an OpenAI, Gemini, or Anthropic generation profile.",
         {
           metadata: {
             promptVersion: BUILDER_GENERATION_PROMPT_VERSION,
@@ -297,6 +300,9 @@ export class GenerateBuilderProposalFromNaturalLanguage {
     const messagesBase = buildBuilderGenerationMessages(
       bounded.catalogJson,
       combinedInstruction,
+      genVersion.provider === "ANTHROPIC"
+        ? { structuredOutputNote: ANTHROPIC_RECORDS_PROMPT_SECTION }
+        : undefined,
     );
 
     const totalPromptUtf16 =
@@ -356,7 +362,7 @@ export class GenerateBuilderProposalFromNaturalLanguage {
           modelProfileVersionId: generationId,
           messages,
           maxOutputTokens: this.limits.maxOutputTokensPerAttempt,
-          jsonSchema: BuilderProposalOpenAiJsonSchema,
+          jsonSchema: jsonSchemaForBuilderProvider(genVersion.provider),
         };
 
         const result = await this.deps.modelGateway.generateCompletion(req, {
@@ -455,7 +461,11 @@ export class GenerateBuilderProposalFromNaturalLanguage {
           role: "user",
           content: `=== VALIDATION_FAILURE ===
 ${pipeline.repairHint}
-Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "1".
+Return ONLY the corrected JSON object${
+            genVersion.provider === "ANTHROPIC"
+              ? ' with encoding "anthropic_records_v1"'
+              : ' for BuilderProposalV1 with schemaVersion "1"'
+          }.
 === END_VALIDATION_FAILURE ===`,
         },
       ];

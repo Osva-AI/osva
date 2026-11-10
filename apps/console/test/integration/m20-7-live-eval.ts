@@ -26,11 +26,13 @@ const LIVE_MODEL_PRICING: Readonly<
   "gpt-4o": { inputUsdPer1M: 2_500_000, outputUsdPer1M: 10_000_000 },
   "gemini-3.6-flash": { inputUsdPer1M: 750_000, outputUsdPer1M: 3_750_000 },
   "gemini-2.5-flash": { inputUsdPer1M: 150_000, outputUsdPer1M: 600_000 },
+  "claude-sonnet-5-5": { inputUsdPer1M: 2_000_000, outputUsdPer1M: 10_000_000 },
 };
 
 export const M20_7_OFFICIAL_ENDPOINTS = {
   OPENAI: "https://api.openai.com/v1",
   GOOGLE_GEMINI: "https://generativelanguage.googleapis.com/v1beta",
+  ANTHROPIC: "https://api.anthropic.com",
 } as const;
 
 export interface M20_7LiveProvenanceState {
@@ -267,6 +269,22 @@ export function sanitizeBuilderGenerationFailure(
       parsed.metadata?.attemptDiagnostics,
     ),
   };
+}
+
+/**
+ * Probe JSON artifacts must not invent UNKNOWN_BUILDER_FAILURE on success.
+ * `sanitizeBuilderGenerationFailure` always fills `builderErrorCode`
+ * (including when a 200/ok body has no `errorCode`). Success omits the field.
+ */
+export function probeArtifactBuilderErrorCode(
+  parsed: LiveBuilderGenerationResponseShape | undefined,
+  failure?: M20_7SanitizedBuilderGenerationFailure,
+): string | undefined {
+  if (parsed?.ok === true) {
+    return undefined;
+  }
+  const code = failure?.builderErrorCode ?? parsed?.errorCode;
+  return typeof code === "string" && code.length > 0 ? code : undefined;
 }
 
 function sanitizeAttemptDiagnosticsFromBody(
@@ -527,7 +545,8 @@ export function recordLiveProvenanceFromMetadata(
   state.connectionVersionId = input.connectionVersionId;
   state.verifiedDestinationCategory =
     normalized === M20_7_OFFICIAL_ENDPOINTS.OPENAI.replace(/\/+$/, "") ||
-    normalized === M20_7_OFFICIAL_ENDPOINTS.GOOGLE_GEMINI.replace(/\/+$/, "")
+    normalized === M20_7_OFFICIAL_ENDPOINTS.GOOGLE_GEMINI.replace(/\/+$/, "") ||
+    normalized === M20_7_OFFICIAL_ENDPOINTS.ANTHROPIC.replace(/\/+$/, "")
       ? "OFFICIAL"
       : "CUSTOM_PUBLIC";
 
@@ -973,9 +992,13 @@ export function deriveScenarioStatus(
 }
 
 export function officialEndpointForProvider(
-  provider: "OPENAI" | "GOOGLE_GEMINI",
+  provider: "OPENAI" | "GOOGLE_GEMINI" | "ANTHROPIC",
 ): string {
-  return provider === "OPENAI"
-    ? M20_7_OFFICIAL_ENDPOINTS.OPENAI
-    : M20_7_OFFICIAL_ENDPOINTS.GOOGLE_GEMINI;
+  if (provider === "OPENAI") {
+    return M20_7_OFFICIAL_ENDPOINTS.OPENAI;
+  }
+  if (provider === "GOOGLE_GEMINI") {
+    return M20_7_OFFICIAL_ENDPOINTS.GOOGLE_GEMINI;
+  }
+  return M20_7_OFFICIAL_ENDPOINTS.ANTHROPIC;
 }

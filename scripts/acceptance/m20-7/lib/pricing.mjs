@@ -3,9 +3,9 @@
  * Unknown models require explicit operator pricing or block when cost cap is set.
  */
 
-export const MODEL_PRICING_VERSION = "m20-7.3-2026-11-09";
+export const MODEL_PRICING_VERSION = "m20-7.4-2026-11-09";
 export const MODEL_PRICING_RATE_SOURCE =
-  "google-gemini-3.6-flash-introductory-paid-nov-2026";
+  "anthropic-claude-sonnet-5-5-standard-api-nov-2026";
 
 /**
  * @typedef {Object} ModelPricingRow
@@ -19,6 +19,7 @@ export const DECLARED_MODEL_PRICING = Object.freeze({
   "gpt-4o": { inputUsdPer1M: 2_500_000, outputUsdPer1M: 10_000_000 },
   "gemini-3.6-flash": { inputUsdPer1M: 750_000, outputUsdPer1M: 3_750_000 },
   "gemini-2.5-flash": { inputUsdPer1M: 150_000, outputUsdPer1M: 600_000 },
+  "claude-sonnet-5-5": { inputUsdPer1M: 2_000_000, outputUsdPer1M: 10_000_000 },
 });
 
 /**

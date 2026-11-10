@@ -1,19 +1,23 @@
 # M20.7 acceptance summary
 
-**Branch:** `feat/m20-7-live-builder-acceptance`
-**Harness:** `m20-7.2` (M20.7.1 guards + M20.7.2 live smoke scenarios)
-**Baseline:** `origin/main` (M20.6 merged)
+**Branch:** `feat/m20-7-4-claude-builder-acceptance` (M20.7.4) · prior combined line `feat/m20-7-live-builder-acceptance` (M20.7.1–M20.7.3, HEAD `3f634df`)
+**Harness:** `m20-7.4` Anthropic probes · `m20-7.2` OpenAI/Gemini smoke
+**Baseline:** `origin/main` (M20.6 merged; M20.7.1–M20.7.3 at `3f634df`)
 
-## M20.7.2 engineering acceptance
+## Engineering acceptance
 
 | Verdict | Value |
 |---------|--------|
-| **M20.7.2 harness readiness** | **COMPLETE (scoped)** — see [`M20_7_2_CLOSEOUT_SUMMARY.md`](M20_7_2_CLOSEOUT_SUMMARY.md) |
 | **M20.7.1 guards** | **PASS** (committed `e054544`) |
+| **M20.7.2 harness + OpenAI** | **COMPLETE (scoped)** — [`M20_7_2_CLOSEOUT_SUMMARY.md`](M20_7_2_CLOSEOUT_SUMMARY.md) |
 | **Live OpenAI smoke** | **PASS** (2026-11-08; harness `m20-7.2`; 2/2 scenarios; provenance verified) |
 | **M20.7.3 harness + Gemini** | **COMPLETE (scoped)** — [`M20_7_3_CLOSEOUT_SUMMARY.md`](M20_7_3_CLOSEOUT_SUMMARY.md) |
 | **Live Gemini smoke** | **PASS** (2026-11-09; 2/2 scenarios; `gemini-3.6-flash`; provenance verified) |
-| **Product readiness** | **NO-GO for broad live claims** — two provider smokes only; wider matrix deferred |
+| **M20.7.4 Anthropic probes** | **FUNCTIONAL_ACCEPTANCE_COMPLETE (scoped)** — [`M20_7_4_CLOSEOUT_SUMMARY.md`](M20_7_4_CLOSEOUT_SUMMARY.md) |
+| **Live Anthropic generation** | **PASS** (`BUILDER_GENERATION_PASS`; `claude-sonnet-5-5`; 1 invocation; no repair) |
+| **Live Anthropic refinement** | **PASS** (`BUILDER_REFINEMENT_PASS`; rubric 2/2; canonical+compiler PASS) |
+| **RELEASE_VERIFICATION_COMPLETE** | **no** — clean CI deferred |
+| **Product readiness** | **NO-GO for broad live claims** — three provider smokes/probes only; wider matrix deferred |
 
 ### Phase 1 audit (M20.7.1 baseline)
 
@@ -95,6 +99,31 @@ $env:GOOGLE_GEMINI_API_KEY = "<from-secret-store>"
 $env:OSVA_M20_7_MAX_COST_USD_MICROS = "250000"
 pnpm acceptance:m20-7:live -- --provider=gemini --smoke
 ```
+
+## Operator live probes (Anthropic — recorded 2026-11-10)
+
+Evidence `sourceCommit` in artifacts: **`3f634df6c2d97dca3533c2e17fdebf07b9d40bbc`** (HEAD). **PASS was produced with uncommitted M20.7.4 code** — see [`M20_7_4_CLOSEOUT_SUMMARY.md`](M20_7_4_CLOSEOUT_SUMMARY.md). Do not treat `sourceCommit` as the complete tested implementation.
+
+| Check | Generation | Refinement |
+| --- | --- | --- |
+| Artifact | `anthropic-generation-probe.json` | `anthropic-refinement-probe.json` |
+| `outcome` | **BUILDER_GENERATION_PASS** | **BUILDER_REFINEMENT_PASS** |
+| Model | `claude-sonnet-5-5` | `claude-sonnet-5-5` |
+| Encoding | (SDK `outputConfigJsonSchema`) | `anthropic_records_v1` |
+| Provider attempts | **1** | **1** |
+| Repair | **false** | **false** |
+| HTTP | **200** | **200** |
+| Measured tokens (in / out) | 3344 / 941 | 3957 / 613 |
+| Latency (ms) | 7660 | 5074 |
+| Rubric | n/a | **2/2** |
+| Canonical / compiler | n/a in artifact | **PASS / PASS** |
+| CLI exit (operator) | **0** | **0** |
+
+Preserved artifacts still contain `builderErrorCode: UNKNOWN_BUILDER_FAILURE` on PASS (sanitizer copied onto success). Closeout code omits that field on future success artifacts; live JSON was not rewritten.
+
+Estimated combined spend (harness rates): **~30142 micro-USD** (~$0.030) vs **$0.25** cap. Publication / workflow runs were not part of the probe HTTP contract; the refinement integration execute path asserts run count unchanged.
+
+Anthropic probes (human only; not rerun during closeout): `pnpm acceptance:m20-7:anthropic-probe -- --execute` and `pnpm acceptance:m20-7:anthropic-refinement-probe -- --execute`. See [`../implementation/M20-7-LIVE-BUILDER-VALIDATION.md`](../implementation/M20-7-LIVE-BUILDER-VALIDATION.md).
 
 ## Commands (CI-safe — run before operator smoke)
 
