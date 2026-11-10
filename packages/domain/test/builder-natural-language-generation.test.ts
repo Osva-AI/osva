@@ -63,8 +63,8 @@ describe("M20.2 builder NL generation", () => {
     expect(one.ok).toBe(true);
   });
 
-  it("modelProviderSupportsStructuredJsonSchema is false for Anthropic", () => {
-    expect(modelProviderSupportsStructuredJsonSchema("ANTHROPIC")).toBe(false);
+  it("modelProviderSupportsStructuredJsonSchema for builder providers", () => {
+    expect(modelProviderSupportsStructuredJsonSchema("ANTHROPIC")).toBe(true);
     expect(modelProviderSupportsStructuredJsonSchema("OPENAI")).toBe(true);
     expect(modelProviderSupportsStructuredJsonSchema("GOOGLE_GEMINI")).toBe(
       true,
@@ -577,42 +577,33 @@ describe("M20.2 builder NL generation", () => {
     if (!r.ok) expect(r.errorCode).toBe("PROVIDER_TIMEOUT");
   });
 
-  it("Anthropic generation profile → UNSUPPORTED_STRUCTURED_OUTPUT", async () => {
-    const workspace = Workspace.create({ id: ws, name: "W", createdAt: NOW });
-    const modelProfiles = new MapModelProfileRepository();
-    const mp = ModelProfile.create({
-      id: "mp-a" as ModelProfileId,
-      workspaceId: ws,
-      key: "mp",
-      name: "MP",
-      createdAt: NOW,
-    });
-    await modelProfiles.saveModelProfile(mp);
-    const genMpv = ModelProfileVersion.create({
-      id: "mpv-a" as ModelProfileVersionId,
-      modelProfileId: mp.id,
-      version: 1,
+  it("Anthropic generation profile uses provider_json_schema mode", async () => {
+    const { deps, genMpv } = await seedWorkspace();
+    const anthropicGen = ModelProfileVersion.create({
+      id: "mpv-anthropic-gen" as ModelProfileVersionId,
+      modelProfileId: genMpv.modelProfileId,
+      version: 3,
       provider: "ANTHROPIC",
-      model: "claude",
+      model: "claude-sonnet-5-5",
       createdAt: NOW,
     });
-    await modelProfiles.saveModelProfileVersion(genMpv);
+    await deps.modelProfiles.saveModelProfileVersion(anthropicGen);
 
     const gateway = fakeGateway(async () => jsonResult(baseProposal()));
     const svc = new GenerateBuilderProposalFromNaturalLanguage({
-      workspaces: new MapWorkspaceRepository(workspace),
-      agents: new MapAgentRepository(),
-      modelProfiles,
-      tools: new MapToolRepository(),
+      ...deps,
       modelGateway: gateway,
     });
     const r = await svc.execute({
       scope: fakeControlPlaneScope(ws),
-      userInstruction: "x",
-      generationModelProfileVersionId: genMpv.id,
+      userInstruction: "Create a one-agent workflow.",
+      generationModelProfileVersionId: anthropicGen.id,
     });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.errorCode).toBe("UNSUPPORTED_STRUCTURED_OUTPUT");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.metadata.structuredOutputMode).toBe("provider_json_schema");
+      expect(r.metadata.generationProvider).toBe("ANTHROPIC");
+    }
   });
 
   it("repair blocked when provider budget is one attempt", async () => {

@@ -9,6 +9,7 @@ import {
 import { modelProviderSchema } from "./model-gateway.js";
 import { secretReferenceSchema } from "./secret-reference.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
+import { ANTHROPIC_PROVIDER_WORKSPACE_ID_PATTERN } from "../model-provider-connection.js";
 import { isAllowedRemoteRuntimeEndpoint } from "../remote-runtime.js";
 
 export const modelProviderConnectionEndpointSchema = z.strictObject({
@@ -17,6 +18,17 @@ export const modelProviderConnectionEndpointSchema = z.strictObject({
       "endpoint.baseUrl must be a valid http(s) URL without credentials.",
   }),
   allowPrivateNetworks: z.boolean().optional(),
+  anthropicWorkspaceId: z
+    .string()
+    .min(1)
+    .refine(
+      (value) => ANTHROPIC_PROVIDER_WORKSPACE_ID_PATTERN.test(value.trim()),
+      {
+        message:
+          "endpoint.anthropicWorkspaceId must be a valid Anthropic workspace id (wrkspc_…).",
+      },
+    )
+    .optional(),
 });
 
 export const createModelProviderConnectionRequestSchema = z.strictObject({

@@ -67,7 +67,16 @@ export { buildBuilderGenerationMessages } from "./builder-natural-language-promp
 export { extractSingleJsonObject } from "./builder-generation-json-extract.js";
 export { validateProposalResourcePromptVisibility } from "./builder-generation-prompt-visibility.js";
 export { BuilderProposalOpenAiJsonSchema } from "./builder-proposal-openai-json-schema.js";
-export { modelProviderSupportsStructuredJsonSchema } from "./builder-provider-structured-output.js";
+export { BuilderProposalAnthropicRecordsJsonSchema } from "./builder-proposal-anthropic-json-schema.js";
+export {
+  ANTHROPIC_RECORDS_ENCODING,
+  decodeBuilderProposalProviderOutput,
+  encodeBuilderProposalAsAnthropicRecords,
+} from "./builder-proposal-anthropic-records.js";
+export {
+  jsonSchemaForBuilderProvider,
+  modelProviderSupportsStructuredJsonSchema,
+} from "./builder-provider-structured-output.js";
 
 export {
   GenerateBuilderProposalFromNaturalLanguage,

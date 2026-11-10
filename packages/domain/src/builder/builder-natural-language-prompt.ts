@@ -226,9 +226,15 @@ Execution vs generation: catalog entries describe models/tools for proposed agen
 export function buildBuilderGenerationMessages(
   catalogJson: string,
   userInstruction: string,
+  options?: { readonly structuredOutputNote?: string },
 ): readonly ModelConversationMessage[] {
+  const note = options?.structuredOutputNote?.trim();
+  const system =
+    note !== undefined && note.length > 0
+      ? `${SYSTEM_INSTRUCTIONS}\n\n${note}`
+      : SYSTEM_INSTRUCTIONS;
   return [
-    { role: "system", content: SYSTEM_INSTRUCTIONS },
+    { role: "system", content: system },
     {
       role: "user",
       content: `=== CAPABILITY_CATALOG_JSON ===

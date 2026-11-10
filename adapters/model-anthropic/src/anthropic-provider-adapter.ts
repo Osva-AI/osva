@@ -1,7 +1,4 @@
-import type {
-  ModelConversationMessage,
-  ModelToolCall,
-} from "@osva-ai/contracts";
+import type { ModelToolCall } from "@osva-ai/contracts";
 import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
@@ -10,15 +7,17 @@ import {
   type NormalizedModelUsage,
   type ProviderGenerateTextResult,
   type ResolvedProviderGenerateTextRequest,
-  splitSystemAndConversationMessages,
 } from "@osva/model-gateway";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   Message,
-  MessageCreateParamsNonStreaming,
-  MessageParam,
   Usage,
 } from "@anthropic-ai/sdk/resources/messages/messages";
+
+import { buildAnthropicMessagesCreateBody } from "./anthropic-messages-create-body.js";
+import { anthropicErrorMetadata } from "./anthropic-provider-error-metadata.js";
+import { emitAnthropicOperatorHttpDiagnostic } from "./anthropic-operator-http-diagnostic.js";
+import { isAnthropicProviderErrorDiagnosticsEnabled } from "./anthropic-provider-error-fingerprint.js";
 
 export const ANTHROPIC_PROVIDER = "anthropic" as const;
 
@@ -28,31 +27,45 @@ export const ANTHROPIC_PROVIDER = "anthropic" as const;
  */
 export const ANTHROPIC_SDK_MAX_RETRIES = 0;
 
+/** Structured outputs (`output_config`) require a current Messages API version. */
+export const ANTHROPIC_MESSAGES_API_VERSION = "2026-10-21" as const;
+
 export interface AnthropicProviderAdapterOptions {
   readonly apiKey: string;
   readonly baseURL?: string;
   readonly fetch?: typeof fetch;
   readonly maxRetries?: number;
   readonly timeout?: number;
+  /** Anthropic Console workspace id for multi-workspace / identity-linked keys. */
+  readonly anthropicWorkspaceId?: string;
 }
 
 export class AnthropicProviderAdapter implements ModelProviderAdapter {
   private readonly client: Anthropic;
 
   constructor(options: AnthropicProviderAdapterOptions) {
+    const workspaceId = options.anthropicWorkspaceId?.trim();
+    const defaultHeaders: Record<string, string> = {
+      "anthropic-version": ANTHROPIC_MESSAGES_API_VERSION,
+    };
+    if (workspaceId !== undefined && workspaceId.length > 0) {
+      defaultHeaders["anthropic-workspace-id"] = workspaceId;
+    }
+
     this.client = new Anthropic({
       apiKey: options.apiKey,
       baseURL: options.baseURL,
       fetch: options.fetch,
       maxRetries: options.maxRetries ?? ANTHROPIC_SDK_MAX_RETRIES,
       timeout: options.timeout,
+      defaultHeaders,
     });
   }
 
   async generateText(
     request: ResolvedProviderGenerateTextRequest,
   ): Promise<ProviderGenerateTextResult> {
-    const params = toAnthropicCreateParams(request);
+    const params = buildAnthropicMessagesCreateBody(request);
 
     try {
       const response = await this.client.messages.create(params, {
@@ -63,59 +76,6 @@ export class AnthropicProviderAdapter implements ModelProviderAdapter {
       throw mapAnthropicError(error);
     }
   }
-}
-
-function toAnthropicCreateParams(
-  request: ResolvedProviderGenerateTextRequest,
-): MessageCreateParamsNonStreaming {
-  const { systemContent, conversation } = splitSystemAndConversationMessages(
-    request.messages,
-  );
-  const params: MessageCreateParamsNonStreaming = {
-    model: request.model,
-    max_tokens: request.maxOutputTokens ?? 1024,
-    messages: conversation.map(toAnthropicMessage),
-  };
-
-  if (systemContent.length > 0) {
-    params.system = systemContent;
-  }
-
-  if (
-    request.toolDefinitions !== undefined &&
-    request.toolDefinitions.length > 0
-  ) {
-    params.tools = request.toolDefinitions.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      input_schema: {
-        type: "object",
-        ...tool.inputSchema,
-      },
-    }));
-  }
-
-  return params;
-}
-
-function toAnthropicMessage(message: ModelConversationMessage): MessageParam {
-  if (message.role === "tool") {
-    return {
-      role: "user",
-      content: [
-        {
-          type: "tool_result",
-          tool_use_id: message.toolCallId,
-          content: message.content,
-        },
-      ],
-    };
-  }
-
-  return {
-    role: message.role === "assistant" ? "assistant" : "user",
-    content: message.content,
-  };
 }
 
 function normalizeAnthropicResponse(
@@ -195,10 +155,10 @@ function normalizeUsage(
   }
 
   const inputTokens = usage.input_tokens;
+  // `output_tokens` is the inclusive billed total (thinking is a breakdown only).
   const outputTokens = usage.output_tokens;
-  const totalTokens = inputTokens + outputTokens;
-
   const cachedInputTokens = usage.cache_read_input_tokens ?? 0;
+  const totalTokens = inputTokens + outputTokens;
 
   return {
     inputTokens,
@@ -243,8 +203,7 @@ function mapAnthropicError(error: unknown): ModelGatewayError {
       MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR,
       "The model provider rejected the request credentials.",
       {
-        provider: ANTHROPIC_PROVIDER,
-        providerStatusCode: error.status,
+        ...anthropicErrorMetadata(error),
         retryable: false,
       },
     );
@@ -255,8 +214,7 @@ function mapAnthropicError(error: unknown): ModelGatewayError {
       MODEL_ERROR_CODES.MODEL_AUTHENTICATION_ERROR,
       "The model provider denied permission for the request.",
       {
-        provider: ANTHROPIC_PROVIDER,
-        providerStatusCode: error.status,
+        ...anthropicErrorMetadata(error),
         retryable: false,
       },
     );
@@ -267,8 +225,7 @@ function mapAnthropicError(error: unknown): ModelGatewayError {
       MODEL_ERROR_CODES.MODEL_RATE_LIMITED,
       "The model provider rate-limited the request.",
       {
-        provider: ANTHROPIC_PROVIDER,
-        providerStatusCode: error.status,
+        ...anthropicErrorMetadata(error),
         retryable: true,
         retryAfterMs: parseRetryAfterMs(error.headers),
       },
@@ -280,20 +237,25 @@ function mapAnthropicError(error: unknown): ModelGatewayError {
       MODEL_ERROR_CODES.MODEL_NOT_FOUND,
       "The configured model was not found at the provider.",
       {
-        provider: ANTHROPIC_PROVIDER,
-        providerStatusCode: error.status,
+        ...anthropicErrorMetadata(error),
         retryable: false,
       },
     );
   }
 
   if (error instanceof Anthropic.BadRequestError) {
+    const metadata = anthropicErrorMetadata(error);
+    if (isAnthropicProviderErrorDiagnosticsEnabled()) {
+      emitAnthropicOperatorHttpDiagnostic(
+        (line) => process.stderr.write(line),
+        metadata,
+      );
+    }
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_INVALID_REQUEST,
       "The model provider rejected the request.",
       {
-        provider: ANTHROPIC_PROVIDER,
-        providerStatusCode: error.status,
+        ...metadata,
         retryable: false,
       },
     );
@@ -320,8 +282,7 @@ function mapAnthropicError(error: unknown): ModelGatewayError {
       MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
       "The model provider is temporarily unavailable.",
       {
-        provider: ANTHROPIC_PROVIDER,
-        providerStatusCode: error.status,
+        ...anthropicErrorMetadata(error),
         retryable: true,
       },
     );
@@ -341,8 +302,7 @@ function mapAnthropicError(error: unknown): ModelGatewayError {
         MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
         "The model provider is overloaded.",
         {
-          provider: ANTHROPIC_PROVIDER,
-          providerStatusCode: error.status,
+          ...anthropicErrorMetadata(error),
           retryable: true,
         },
       );
@@ -352,8 +312,7 @@ function mapAnthropicError(error: unknown): ModelGatewayError {
       MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
       "The model provider returned an error.",
       {
-        provider: ANTHROPIC_PROVIDER,
-        providerStatusCode: error.status,
+        ...anthropicErrorMetadata(error),
         retryable: error.status >= 500,
       },
     );

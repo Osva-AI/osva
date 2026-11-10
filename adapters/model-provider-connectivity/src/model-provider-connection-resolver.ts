@@ -183,6 +183,7 @@ export class ModelProviderConnectionResolver {
           baseURL: endpoint?.baseUrl,
           fetch: fetchImpl,
           timeout: CONNECTION_GENERATE_TIMEOUT_MS,
+          anthropicWorkspaceId: endpoint?.anthropicWorkspaceId,
         });
       case "GOOGLE_GEMINI":
         return new GeminiProviderAdapter({

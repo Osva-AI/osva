@@ -251,6 +251,15 @@ export class AppendModelProviderConnectionVersion {
       );
     }
 
+    if (
+      command.endpoint?.anthropicWorkspaceId !== undefined &&
+      connection.provider !== "ANTHROPIC"
+    ) {
+      throw new ModelProviderConnectionBindingError(
+        "anthropicWorkspaceId is only valid for Anthropic provider connections.",
+      );
+    }
+
     return this.deps.connections.appendConnectionVersion({
       id: this.deps.ids.createId() as ModelProviderConnectionVersionId,
       connectionId: command.connectionId,

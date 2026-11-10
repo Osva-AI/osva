@@ -10,6 +10,7 @@ import type {
 import type { BuilderProposalV1 } from "./builder-proposal.js";
 import { buildBuilderProposalParseRepairHint } from "./builder-json-pointer-guidance.js";
 import { buildBuilderCompileFailureRepairHint } from "./builder-workflow-topology-guidance.js";
+import { decodeBuilderProposalProviderOutput } from "./builder-proposal-anthropic-records.js";
 import { parseBuilderProposalV1 } from "./builder-proposal-schema.js";
 import type { BoundedCapabilityCatalogResult } from "./builder-natural-language-prompt.js";
 
@@ -94,7 +95,21 @@ export function validateBuilderProposalModelOutputPipeline(
     };
   }
 
-  const proposalParse = parseBuilderProposalV1(parsedUnknown);
+  const decoded = decodeBuilderProposalProviderOutput(parsedUnknown);
+  if (!decoded.ok) {
+    return {
+      kind: "hard_fail",
+      canRepair: true,
+      repairHint: `- Provider output could not be mapped to BuilderProposalV1.\n- ${decoded.messages.join("\n- ")}`,
+      failure: asFailure(
+        "INVALID_BUILDER_PROPOSAL",
+        "Provider output failed records-to-canonical transformation.",
+        { detailMessages: [...decoded.messages] },
+      ),
+    };
+  }
+
+  const proposalParse = parseBuilderProposalV1(decoded.proposal);
   if (!proposalParse.ok) {
     return {
       kind: "hard_fail",

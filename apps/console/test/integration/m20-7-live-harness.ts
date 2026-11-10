@@ -127,15 +127,26 @@ export async function startM20_7HumanConsoleStack(options: {
       ? (process.env.GOOGLE_GEMINI_API_KEY?.trim() ??
         process.env.GEMINI_API_KEY?.trim())
       : undefined;
+  const anthropicKey =
+    options.profile === "live-ready"
+      ? process.env.ANTHROPIC_API_KEY?.trim()
+      : undefined;
   const geminiOnlyLiveReady =
     options.profile === "live-ready" &&
     liveProvider === "gemini" &&
     geminiKey !== undefined &&
     geminiKey.length > 0;
+  const anthropicOnlyLiveReady =
+    options.profile === "live-ready" &&
+    liveProvider === "anthropic" &&
+    anthropicKey !== undefined &&
+    anthropicKey.length > 0;
+  const connectionBoundProviderLiveReady =
+    geminiOnlyLiveReady || anthropicOnlyLiveReady;
 
   if (options.profile === "live-ready") {
-    if (geminiOnlyLiveReady) {
-      // Legacy env OpenAI adapter is omitted; M20.7 Gemini smoke uses connection-bound Gemini only.
+    if (connectionBoundProviderLiveReady) {
+      // Legacy env OpenAI adapter is omitted; live smoke uses connection-bound provider only.
     } else {
       if (openAiKey === undefined || openAiKey.length === 0) {
         throw new Error("OPENAI_API_KEY required for live-ready stack.");
@@ -144,11 +155,17 @@ export async function startM20_7HumanConsoleStack(options: {
         throw new Error("SENTINEL_OPENAI_KEY_IN_LIVE_MODE");
       }
     }
+    if (liveProvider === "anthropic" && !anthropicOnlyLiveReady) {
+      throw new Error(
+        "ANTHROPIC_API_KEY required for Anthropic live-ready stack.",
+      );
+    }
   }
 
   const providerKeyEnv = {
     ...(geminiKey !== undefined ? { GOOGLE_GEMINI_API_KEY: geminiKey } : {}),
-    ...(geminiOnlyLiveReady
+    ...(anthropicKey !== undefined ? { ANTHROPIC_API_KEY: anthropicKey } : {}),
+    ...(connectionBoundProviderLiveReady
       ? {}
       : { OPENAI_API_KEY: openAiKey ?? SENTINEL_CREDENTIAL }),
   };

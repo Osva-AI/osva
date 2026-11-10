@@ -4,7 +4,10 @@ import type {
   ModelProviderConnectionVersionId,
   SecretReference,
 } from "@osva-ai/contracts";
-import { isAllowedRemoteRuntimeEndpoint } from "@osva-ai/contracts";
+import {
+  isAllowedRemoteRuntimeEndpoint,
+  isAnthropicProviderWorkspaceId,
+} from "@osva-ai/contracts";
 
 import { DomainInvariantError } from "./errors.js";
 import {
@@ -93,11 +96,25 @@ function validateEndpoint(
     );
   }
 
+  const anthropicWorkspaceId =
+    endpoint.anthropicWorkspaceId === undefined
+      ? undefined
+      : endpoint.anthropicWorkspaceId.trim();
+  if (
+    anthropicWorkspaceId !== undefined &&
+    !isAnthropicProviderWorkspaceId(anthropicWorkspaceId)
+  ) {
+    throw new DomainInvariantError(
+      "ModelProviderConnectionVersion.endpoint.anthropicWorkspaceId is invalid.",
+    );
+  }
+
   return deepFreeze({
     baseUrl,
     ...(endpoint.allowPrivateNetworks === undefined
       ? {}
       : { allowPrivateNetworks: endpoint.allowPrivateNetworks }),
+    ...(anthropicWorkspaceId === undefined ? {} : { anthropicWorkspaceId }),
   });
 }
 

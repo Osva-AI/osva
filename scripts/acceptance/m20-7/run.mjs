@@ -71,8 +71,8 @@ function printHelp() {
   console.log(`Usage:
   pnpm acceptance:m20-7                     # M20.6 deterministic matrix (CI-safe)
   pnpm acceptance:m20-7:regression          # M20.7 routing/guard regression (no providers)
-  pnpm acceptance:m20-7:preflight -- --provider=openai|gemini
-  pnpm acceptance:m20-7:live -- --provider=openai|gemini [--smoke] [--publish]
+  pnpm acceptance:m20-7:preflight -- --provider=openai|gemini|anthropic
+  pnpm acceptance:m20-7:live -- --provider=openai|gemini|anthropic [--smoke] [--publish]
 
 Live billable execution requires:
   OSVA_M20_7_LIVE=1

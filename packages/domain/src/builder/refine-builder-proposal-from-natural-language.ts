@@ -22,7 +22,8 @@ import {
 } from "./builder-natural-language-generation-types.js";
 import { computeBuilderProposalDigest } from "./builder-proposal-digest.js";
 import { validateBuilderProposalModelOutputPipeline } from "./builder-proposal-model-output-pipeline.js";
-import { BuilderProposalOpenAiJsonSchema } from "./builder-proposal-openai-json-schema.js";
+import { encodeBuilderProposalAsAnthropicRecords } from "./builder-proposal-anthropic-records.js";
+import { ANTHROPIC_RECORDS_PROMPT_SECTION } from "./builder-proposal-anthropic-json-schema.js";
 import { parseBuilderProposalV1 } from "./builder-proposal-schema.js";
 import {
   buildBoundedCapabilityCatalogPayloadForRefinement,
@@ -45,7 +46,10 @@ import {
   mapModelGatewayErrorToBuilderFailure,
   readModelGatewayErrorLike,
 } from "./builder-model-gateway-diagnostics.js";
-import { modelProviderSupportsStructuredJsonSchema } from "./builder-provider-structured-output.js";
+import {
+  jsonSchemaForBuilderProvider,
+  modelProviderSupportsStructuredJsonSchema,
+} from "./builder-provider-structured-output.js";
 import { compareBuilderProposalChanges } from "./compare-builder-proposal-changes.js";
 import {
   GetWorkspaceBuilderCapabilityCatalog,
@@ -323,11 +327,30 @@ export class RefineBuilderProposalFromNaturalLanguage {
 
     const bounded = boundedOrError;
 
+    let currentProposalJson = serializedBase.json;
+    if (genVersion.provider === "ANTHROPIC") {
+      const recordsSerialized = serializeCurrentProposalForPrompt(
+        encodeBuilderProposalAsAnthropicRecords(baseProposal),
+        this.limits.maxCurrentProposalSerializedUtf16Units,
+      );
+      if (!recordsSerialized.ok) {
+        return asFailure(
+          "CURRENT_PROPOSAL_TOO_LARGE",
+          recordsSerialized.message,
+          { baseProposalDigest },
+        );
+      }
+      currentProposalJson = recordsSerialized.json;
+    }
+
     const messagesBase = buildBuilderRefinementMessages(
       bounded.catalogJson,
-      serializedBase.json,
+      currentProposalJson,
       request.refinementInstruction,
       history,
+      genVersion.provider === "ANTHROPIC"
+        ? { structuredOutputNote: ANTHROPIC_RECORDS_PROMPT_SECTION }
+        : undefined,
     );
 
     const totalPromptUtf16 = messagesBase.reduce(
@@ -390,7 +413,7 @@ export class RefineBuilderProposalFromNaturalLanguage {
           modelProfileVersionId: generationId,
           messages,
           maxOutputTokens: this.limits.maxOutputTokensPerAttempt,
-          jsonSchema: BuilderProposalOpenAiJsonSchema,
+          jsonSchema: jsonSchemaForBuilderProvider(genVersion.provider),
         };
 
         const result = await this.deps.modelGateway.generateCompletion(req, {
@@ -458,7 +481,11 @@ export class RefineBuilderProposalFromNaturalLanguage {
           role: "user",
           content: `=== VALIDATION_FAILURE ===
 ${pipeline.repairHint}
-Return ONLY the corrected JSON object for BuilderProposalV1 with schemaVersion "1".
+Return ONLY the corrected JSON object${
+            genVersion.provider === "ANTHROPIC"
+              ? ' with encoding "anthropic_records_v1"'
+              : ' for BuilderProposalV1 with schemaVersion "1"'
+          }.
 === END_VALIDATION_FAILURE ===`,
         },
       ];

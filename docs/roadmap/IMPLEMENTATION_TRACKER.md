@@ -168,9 +168,10 @@ See [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY
 
 ## M20 — Builder product acceptance (in flight)
 
-Branch **`feat/m20-7-live-builder-acceptance`** (M20.7.1 + M20.7.2 + M20.7.3 — ready for combined PR after push).
+M20.7.1–M20.7.3 landed on **`3f634df`**. M20.7.4 work is on **`feat/m20-7-4-claude-builder-acceptance`** (uncommitted at closeout). Combined reviewable PR and **`pnpm verify:ci:clean`** remain human-managed.
 
 - ✅ M20.6 Deterministic builder acceptance — fake OpenAI matrix; [`../operations/M20_6_ACCEPTANCE_SUMMARY.md`](../operations/M20_6_ACCEPTANCE_SUMMARY.md)
 - ✅ M20.7.1 Live-ready builder stack (official endpoints, provenance, budgets) — `e054544`
 - ✅ M20.7.2 OpenAI live smoke (natural-language, 2 scenarios) — [`../operations/M20_7_2_CLOSEOUT_SUMMARY.md`](../operations/M20_7_2_CLOSEOUT_SUMMARY.md)
 - ✅ M20.7.3 Gemini live smoke (natural-language, 2 scenarios) — [`../operations/M20_7_3_CLOSEOUT_SUMMARY.md`](../operations/M20_7_3_CLOSEOUT_SUMMARY.md)
+- ✅ M20.7.4 Anthropic live probes — **FUNCTIONAL_ACCEPTANCE_COMPLETE (scoped)**; **not** RELEASE_VERIFICATION_COMPLETE — [`../operations/M20_7_4_CLOSEOUT_SUMMARY.md`](../operations/M20_7_4_CLOSEOUT_SUMMARY.md)

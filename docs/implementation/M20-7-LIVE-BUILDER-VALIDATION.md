@@ -63,7 +63,48 @@ Deterministic structural scoring remains in M20.6 integration tests. Live intent
 | M20.7.1 live-ready guards | **Complete** (committed `e054544`) |
 | M20.7.2 OpenAI live smoke | **Complete (scoped)** — operator PASS 2026-11-08; [`../operations/M20_7_2_CLOSEOUT_SUMMARY.md`](../operations/M20_7_2_CLOSEOUT_SUMMARY.md) |
 | M20.7.3 Gemini live smoke | **Complete (scoped)** — operator PASS 2026-11-09; [`../operations/M20_7_3_CLOSEOUT_SUMMARY.md`](../operations/M20_7_3_CLOSEOUT_SUMMARY.md) |
+| M20.7.4 Anthropic probes | **FUNCTIONAL_ACCEPTANCE_COMPLETE (scoped)** — not RELEASE_VERIFICATION_COMPLETE; [`../operations/M20_7_4_CLOSEOUT_SUMMARY.md`](../operations/M20_7_4_CLOSEOUT_SUMMARY.md) |
 
 Gemini isolated generation probe: `pnpm acceptance:m20-7:gemini-probe` (see closeout §9).
+
+Anthropic isolated generation probe (SDK path): `pnpm acceptance:m20-7:anthropic-probe`.
+
+Anthropic isolated conversational refinement probe (canonical fixture baseline, one refine call, no generation rerun):
+
+```powershell
+# Dry-run (zero provider I/O)
+pnpm acceptance:m20-7:anthropic-refinement-probe
+
+# Operator billable execute — one POST /v1/builder/proposals/refine, no retries/repair
+$env:OSVA_M20_7_LIVE = "1"
+$env:OSVA_M20_7_ISOLATED = "1"
+$env:OSVA_M20_7_LIVE_EXECUTE = "1"
+$env:OSVA_M20_7_ALLOW_BILLABLE = "1"
+$env:OSVA_M20_7_MAX_COST_USD_MICROS = "250000"
+$env:ANTHROPIC_API_KEY = "<from-secret-store>"
+pnpm acceptance:m20-7:anthropic-refinement-probe -- --execute
+```
+
+Model is `claude-sonnet-5-5`. Worst-case estimate is 36864 micro-USD (8192 input / 2048 output tokens). A JSON HTTP 200 is not a pass: the probe scores APPROVAL-before-final-AGENT insertion, identity preservation, catalog/compiler validation, and `maxProviderInvocations=1`. Artifact: `artifacts/m20-7/anthropic-refinement-probe.json` (does not overwrite the generation probe artifact). `sourceCommit` does not identify uncommitted M20.7.4 working-tree changes.
+
+Anthropic raw Messages diagnostic (SDK bypass, full Builder schema, default dry-run):
+
+```powershell
+# Dry-run (zero provider I/O)
+pnpm acceptance:m20-7:anthropic-raw-messages
+
+# Operator billable execute — one POST /v1/messages, no retries
+$env:OSVA_M20_7_LIVE = "1"
+$env:OSVA_M20_7_ISOLATED = "1"
+$env:OSVA_M20_7_LIVE_EXECUTE = "1"
+$env:OSVA_M20_7_ALLOW_BILLABLE = "1"
+$env:OSVA_M20_7_MAX_COST_USD_MICROS = "250000"
+$env:ANTHROPIC_API_KEY = "<from-secret-store>"
+$env:ANTHROPIC_WORKSPACE_ID = "<wrkspc_... if identity-linked>"
+$env:OSVA_M20_7_ANTHROPIC_SHOW_PROVIDER_ERROR_TEXT = "1"
+pnpm acceptance:m20-7:anthropic-raw-messages -- --execute
+```
+
+HTTP 200 on the raw path means Anthropic accepted the **flat records** Builder IR (`anthropic_records_v1`) over raw `fetch`; it does **not** prove Builder proposal validation. HTTP 400 classified codes go to stdout; raw `error.message` is local stderr only after the display opt-in and safety checks. Canonical `parseBuilderProposalV1` / compiler validation still run after decode. Canonical and typed-array compact envelopes were rejected with `compiled_grammar_too_large`.
 
 One successful smoke per provider does not certify builder quality across models or prompts.

@@ -97,8 +97,10 @@ export type {
 } from "./model-provider-connection-registry.js";
 
 export {
+  ANTHROPIC_PROVIDER_WORKSPACE_ID_PATTERN,
   MODEL_PROVIDER_CONNECTION_TEST_STATUSES,
   connectionProviderSupportsCustomEndpoint,
+  isAnthropicProviderWorkspaceId,
   isModelProviderConnectionTestStatus,
   mapModelProviderConnectionVersionToPublicConfig,
 } from "./model-provider-connection.js";

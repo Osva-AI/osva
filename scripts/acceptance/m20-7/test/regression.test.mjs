@@ -13,6 +13,7 @@ import {
   isCiEnvironment,
   liveExecuteBlockedReason,
 } from "../lib/live-guards.mjs";
+import { M20_7_DEFAULT_ANTHROPIC_MODEL } from "../lib/anthropic-model-lifecycle.mjs";
 import {
   M20_7_DEFAULT_GEMINI_MODEL,
   geminiModelLivePreflightError,
@@ -202,6 +203,45 @@ test("default gemini model accepted at preflight", () => {
   if (r.ok) {
     assert.equal(r.modelId, M20_7_DEFAULT_GEMINI_MODEL);
   }
+});
+
+test("default anthropic model accepted at preflight", () => {
+  const r = evaluateLivePreflight(
+    {
+      OSVA_M20_7_LIVE: "1",
+      OSVA_M20_7_ISOLATED: "1",
+      ANTHROPIC_API_KEY: "test-anthropic",
+      OSVA_M20_7_MAX_COST_USD_MICROS: "1000000",
+    },
+    { provider: "anthropic" },
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.modelId, M20_7_DEFAULT_ANTHROPIC_MODEL);
+    assert.equal(r.provider, "anthropic");
+  }
+});
+
+test("anthropic preflight without API key is blocked", () => {
+  const r = evaluateLivePreflight(
+    {
+      OSVA_M20_7_LIVE: "1",
+      OSVA_M20_7_ISOLATED: "1",
+      OSVA_M20_7_MAX_COST_USD_MICROS: "1000000",
+    },
+    { provider: "anthropic" },
+  );
+  assert.equal(r.ok, false);
+  if (!r.ok) {
+    assert.equal(r.reason, "ANTHROPIC_API_KEY missing");
+  }
+});
+
+test("classify official anthropic destination", () => {
+  assert.equal(
+    classifyProviderDestination("https://api.anthropic.com"),
+    "OFFICIAL",
+  );
 });
 
 test("fixture model ids rejected in preflight", () => {

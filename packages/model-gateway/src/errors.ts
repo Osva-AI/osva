@@ -12,7 +12,14 @@ export interface ModelGatewayErrorOptions {
   readonly providerErrorCode?: string;
   /** Sanitized provider parameter identifier when exposed by the API. */
   readonly providerErrorParam?: string;
-  /** Bounded category when the failure occurred before or during transport parsing. */
+  /**
+   * Opt-in SHA-256 fingerprint (first 16 hex chars) of normalized provider text.
+   * Set only when OSVA_ANTHROPIC_PROVIDER_ERROR_DIAGNOSTICS is enabled.
+   */
+  readonly providerErrorReasonFingerprint?: string;
+  /** Allowlisted reason tokens extracted from provider text (diagnostics mode). */
+  readonly providerErrorReasonTokens?: readonly string[];
+  /** Bounded transport-layer category when the failure occurred before or during transport parsing. */
   readonly providerTransportErrorCategory?: string;
   readonly retryAfterMs?: number;
 }
@@ -26,6 +33,8 @@ export class ModelGatewayError extends Error {
   readonly providerErrorType: string | undefined;
   readonly providerErrorCode: string | undefined;
   readonly providerErrorParam: string | undefined;
+  readonly providerErrorReasonFingerprint: string | undefined;
+  readonly providerErrorReasonTokens: readonly string[] | undefined;
   readonly providerTransportErrorCategory: string | undefined;
   readonly retryAfterMs: number | undefined;
 
@@ -44,6 +53,9 @@ export class ModelGatewayError extends Error {
     this.providerErrorType = options?.providerErrorType;
     this.providerErrorCode = options?.providerErrorCode;
     this.providerErrorParam = options?.providerErrorParam;
+    this.providerErrorReasonFingerprint =
+      options?.providerErrorReasonFingerprint;
+    this.providerErrorReasonTokens = options?.providerErrorReasonTokens;
     this.providerTransportErrorCategory =
       options?.providerTransportErrorCategory;
     this.retryAfterMs = options?.retryAfterMs;

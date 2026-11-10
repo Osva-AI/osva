@@ -111,6 +111,30 @@ describe("M20.7.3 Gemini generation probe", () => {
     ).toBe("TRANSPORT_ERROR");
   });
 
+  it("omits builderErrorCode on successful generation", () => {
+    const artifact = buildGeminiGenerationProbeArtifact({
+      mode: "execute",
+      modelId: M20_7_DEFAULT_GEMINI_MODEL,
+      httpStatus: 200,
+      maxProviderInvocations: 1,
+      invocationAttempted: true,
+      parsed: {
+        ok: true,
+        metadata: {
+          attempts: 1,
+          measuredUsage: {
+            usageMeasured: true,
+            inputUnits: 100,
+            outputUnits: 50,
+          },
+        },
+      },
+    });
+    expect(artifact.outcome).toBe("BUILDER_GENERATION_PASS");
+    expect(artifact.builderErrorCode).toBeUndefined();
+    expect(JSON.stringify(artifact)).not.toContain("UNKNOWN_BUILDER_FAILURE");
+  });
+
   it("distinguishes builder pass from provider-only acceptance", () => {
     expect(
       classifyGeminiGenerationProbeOutcome({

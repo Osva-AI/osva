@@ -4,6 +4,7 @@ import type { BuilderGenerationAttemptDiagnosticV1 } from "@osva/domain/builder"
 
 import {
   parseLiveBuilderGenerationBody,
+  probeArtifactBuilderErrorCode,
   sanitizeBuilderGenerationFailure,
   type LiveBuilderGenerationResponseShape,
   type M20_7SanitizedBuilderGenerationFailure,
@@ -226,7 +227,7 @@ export function buildGeminiGenerationProbeArtifact(input: {
     repairAttempted,
     latencyMs: input.latencyMs,
     httpStatus: input.httpStatus,
-    builderErrorCode: failure?.builderErrorCode ?? input.parsed?.errorCode,
+    builderErrorCode: probeArtifactBuilderErrorCode(input.parsed, failure),
     providerDiagnostic: failure?.providerDiagnostic,
     providerResponseAccepted: providerAccepted,
     builderGenerationPass: builderPass,

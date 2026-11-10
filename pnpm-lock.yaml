@@ -494,6 +494,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/model-gateway
     devDependencies:
+      '@osva/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.4

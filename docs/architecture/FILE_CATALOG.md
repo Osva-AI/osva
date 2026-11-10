@@ -54,6 +54,8 @@ Architecturally significant files only (~50). Use as canonical precedents when i
 | `adapters/runtime-http/src/capability-server.ts` | HTTP capability endpoints | worker process | capability-bridge | Token-scoped per execution |
 | `adapters/model-openai/src/openai-provider-adapter.ts` | OpenAI provider | ModelGateway | OpenAI SDK | Adapter boundary |
 | `adapters/model-anthropic/src/anthropic-provider-adapter.ts` | Anthropic provider | ModelGateway | Anthropic SDK | Adapter boundary |
+| `adapters/model-anthropic/src/anthropic-messages-create-body.ts` | Canonical Messages create body | Anthropic adapter + operator raw diagnostic | projected json_schema | Shared SDK/raw request shape |
+| `packages/domain/src/builder/builder-proposal-anthropic-records.ts` | Anthropic flat-record Builder IR | generation/refinement pipeline | canonical BuilderProposalV1 | Fail-closed decode; no silent defaults |
 | `adapters/model-gemini/src/gemini-provider-adapter.ts` | Gemini provider | ModelGateway | Google SDK | Adapter boundary |
 | `adapters/mcp-client/src/index.ts` | MCP client pool factory | web (discovery), worker (execute) | MCP transports | Per ConnectorVersion reuse |
 | `packages/db/src/database.ts` | DB connection factory | all apps | drizzle | — |
