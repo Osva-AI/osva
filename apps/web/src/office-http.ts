@@ -31,14 +31,15 @@ import {
   updateRoleRequestSchema,
   updateTeamRequestSchema,
 } from "@osva-ai/contracts/schemas";
-import type {
-  Assignment,
-  Goal,
-  OfficeApplication,
-  OfficeWorker,
-  Role,
-  Team,
-  TeamMembership,
+import {
+  CONTROL_PLANE_RESOURCE_KINDS,
+  type Assignment,
+  type Goal,
+  type OfficeApplication,
+  type OfficeWorker,
+  type Role,
+  type Team,
+  type TeamMembership,
 } from "@osva/domain";
 import type {
   LaunchAssignment,
@@ -46,6 +47,7 @@ import type {
 } from "@osva/orchestration";
 
 import {
+  authorizeControlPlaneExecute,
   requireControlPlaneScope,
   requireControlPlaneWorkspaceId,
 } from "./control-plane-http.js";
@@ -465,8 +467,10 @@ async function dispatchOfficeRoute(
 
   if (route.kind === "assignment") {
     if (method === "GET") {
+      await services.office.getAssignment.execute(scope, route.assignmentId);
       const assignment = await services.reconcileAssignment.execute({
         assignmentId: route.assignmentId,
+        workspaceId: requireControlPlaneWorkspaceId(),
         now: services.clock.now(),
       });
       sendJson(response, 200, toAssignmentResource(assignment));
@@ -510,8 +514,10 @@ async function dispatchOfficeRoute(
       return;
     }
 
+    authorizeControlPlaneExecute(scope, CONTROL_PLANE_RESOURCE_KINDS.office);
     const launched = await services.launchAssignment.execute({
       assignmentId: route.assignmentId,
+      workspaceId: requireControlPlaneWorkspaceId(),
       runId: services.ids.createId() as RunId,
       runAttemptId: services.ids.createId() as RunAttemptId,
       workflowRunId: services.ids.createId() as WorkflowRunId,

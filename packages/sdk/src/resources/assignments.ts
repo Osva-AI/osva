@@ -20,21 +20,21 @@ export class AssignmentsResource {
   list(): Promise<AssignmentListResource> {
     return this.client.request({
       method: "GET",
-      path: "/v1/assignments",
+      path: "/v1/office/assignments",
     });
   }
 
   get(assignmentId: AssignmentId): Promise<AssignmentResource> {
     return this.client.request({
       method: "GET",
-      path: `/v1/assignments/${encodeURIComponent(assignmentId)}`,
+      path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}`,
     });
   }
 
   create(input: CreateAssignmentRequest): Promise<AssignmentResource> {
     return this.client.request({
       method: "POST",
-      path: "/v1/assignments",
+      path: "/v1/office/assignments",
       body: input,
     });
   }
@@ -45,7 +45,7 @@ export class AssignmentsResource {
   ): Promise<AssignmentResource> {
     return this.client.request({
       method: "PATCH",
-      path: `/v1/assignments/${encodeURIComponent(assignmentId)}`,
+      path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}`,
       body: input,
     });
   }
@@ -53,14 +53,14 @@ export class AssignmentsResource {
   launch(assignmentId: AssignmentId): Promise<AssignmentResource> {
     return this.client.request({
       method: "POST",
-      path: `/v1/assignments/${encodeURIComponent(assignmentId)}/launch`,
+      path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}/launch`,
     });
   }
 
   cancel(assignmentId: AssignmentId): Promise<AssignmentResource> {
     return this.client.request({
       method: "POST",
-      path: `/v1/assignments/${encodeURIComponent(assignmentId)}/cancel`,
+      path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}/cancel`,
     });
   }
 }

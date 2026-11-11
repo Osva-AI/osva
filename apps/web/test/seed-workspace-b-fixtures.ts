@@ -14,6 +14,7 @@ import type {
   MemoryNamespaceId,
   ModelProfileId,
   ModelProfileVersionId,
+  AssignmentId,
   OfficeWorkerId,
   RunAttemptId,
   RunId,
@@ -44,6 +45,7 @@ import {
   MemoryNamespace,
   ModelProfile,
   ModelProfileVersion,
+  Assignment,
   OfficeWorker,
   Run,
   RunAttempt,
@@ -90,6 +92,7 @@ export interface WorkspaceBFixtures {
   readonly scheduleId: ScheduleId;
   readonly officeWorkerId: OfficeWorkerId;
   readonly teamId: TeamId;
+  readonly assignmentId: AssignmentId;
 }
 
 const MANIFEST = {
@@ -401,6 +404,20 @@ export async function seedWorkspaceBFixtures(
     }),
   );
 
+  const assignmentId = "assignment-b" as AssignmentId;
+  await ctx.office.saveAssignment(
+    Assignment.create({
+      id: assignmentId,
+      workspaceId: WS_B,
+      officeWorkerId,
+      title: "Assignment B",
+      targetType: "AGENT_VERSION",
+      targetVersionId: agentVersionId,
+      input: { prompt: "b" },
+      now: TEST_NOW,
+    }),
+  );
+
   return {
     agentId,
     agentVersionId,
@@ -427,5 +444,6 @@ export async function seedWorkspaceBFixtures(
     scheduleId,
     officeWorkerId,
     teamId,
+    assignmentId,
   };
 }

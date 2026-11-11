@@ -26,21 +26,21 @@ export class TeamsResource {
   list(): Promise<TeamListResource> {
     return this.client.request({
       method: "GET",
-      path: "/v1/teams",
+      path: "/v1/office/teams",
     });
   }
 
   get(teamId: TeamId): Promise<TeamResource> {
     return this.client.request({
       method: "GET",
-      path: `/v1/teams/${encodeURIComponent(teamId)}`,
+      path: `/v1/office/teams/${encodeURIComponent(teamId)}`,
     });
   }
 
   create(input: CreateTeamRequest): Promise<TeamResource> {
     return this.client.request({
       method: "POST",
-      path: "/v1/teams",
+      path: "/v1/office/teams",
       body: input,
     });
   }
@@ -48,7 +48,7 @@ export class TeamsResource {
   update(teamId: TeamId, input: UpdateTeamRequest): Promise<TeamResource> {
     return this.client.request({
       method: "PATCH",
-      path: `/v1/teams/${encodeURIComponent(teamId)}`,
+      path: `/v1/office/teams/${encodeURIComponent(teamId)}`,
       body: input,
     });
   }
@@ -56,7 +56,7 @@ export class TeamsResource {
   listMemberships(teamId: TeamId): Promise<TeamMembershipListResource> {
     return this.client.request({
       method: "GET",
-      path: `/v1/teams/${encodeURIComponent(teamId)}/memberships`,
+      path: `/v1/office/teams/${encodeURIComponent(teamId)}/memberships`,
     });
   }
 
@@ -66,7 +66,7 @@ export class TeamsResource {
   ): Promise<TeamMembershipListResource["items"][number]> {
     return this.client.request({
       method: "POST",
-      path: `/v1/teams/${encodeURIComponent(teamId)}/memberships`,
+      path: `/v1/office/teams/${encodeURIComponent(teamId)}/memberships`,
       body: input,
     });
   }

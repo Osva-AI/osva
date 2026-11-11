@@ -16,7 +16,10 @@ import {
   EvaluationSuiteNotFoundError,
   EvaluationSuiteVersionNotFoundError,
   MemoryNamespaceNotFoundError,
+  AssignmentNotFoundError,
+  GoalNotFoundError,
   OfficeWorkerNotFoundError,
+  RoleNotFoundError,
   TeamNotFoundError,
   InvalidRunAttemptStateError,
   InvalidRunAttemptTransitionError,
@@ -210,7 +213,10 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof EvaluationSuiteVersionNotFoundError ||
     error instanceof EvaluationRunNotFoundError ||
     error instanceof MemoryNamespaceNotFoundError ||
+    error instanceof AssignmentNotFoundError ||
+    error instanceof GoalNotFoundError ||
     error instanceof OfficeWorkerNotFoundError ||
+    error instanceof RoleNotFoundError ||
     error instanceof TeamNotFoundError ||
     error instanceof ScheduleNotFoundError ||
     error instanceof WorkflowNotFoundError ||

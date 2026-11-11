@@ -24,21 +24,21 @@ export class OfficeWorkersResource {
   list(): Promise<OfficeWorkerListResource> {
     return this.client.request({
       method: "GET",
-      path: "/v1/office-workers",
+      path: "/v1/office/workers",
     });
   }
 
   get(officeWorkerId: OfficeWorkerId): Promise<OfficeWorkerResource> {
     return this.client.request({
       method: "GET",
-      path: `/v1/office-workers/${encodeURIComponent(officeWorkerId)}`,
+      path: `/v1/office/workers/${encodeURIComponent(officeWorkerId)}`,
     });
   }
 
   create(input: CreateOfficeWorkerRequest): Promise<OfficeWorkerResource> {
     return this.client.request({
       method: "POST",
-      path: "/v1/office-workers",
+      path: "/v1/office/workers",
       body: input,
     });
   }
@@ -49,7 +49,7 @@ export class OfficeWorkersResource {
   ): Promise<OfficeWorkerResource> {
     return this.client.request({
       method: "PATCH",
-      path: `/v1/office-workers/${encodeURIComponent(officeWorkerId)}`,
+      path: `/v1/office/workers/${encodeURIComponent(officeWorkerId)}`,
       body: input,
     });
   }

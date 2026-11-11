@@ -497,6 +497,47 @@ describe("REST two-workspace security matrix", () => {
         }),
       );
     });
+
+    it("isolates assignment get, launch, and cancel", async () => {
+      const harness = await createTwoWorkspaceHarness(servers);
+      const b = await seedWorkspaceBFixtures(harness.ctx);
+
+      expectNotFound(
+        await fetchV1(
+          `${harness.origin}/v1/office/assignments/${b.assignmentId}`,
+          { headers: harness.authA },
+        ),
+      );
+
+      const launchDenied = await fetchV1(
+        `${harness.origin}/v1/office/assignments/${b.assignmentId}/launch`,
+        { method: "POST", headers: harness.authA },
+      );
+      expect(launchDenied.status).toBe(404);
+
+      const cancelDenied = await fetchV1(
+        `${harness.origin}/v1/office/assignments/${b.assignmentId}/cancel`,
+        { method: "POST", headers: harness.authA },
+      );
+      expect(cancelDenied.status).toBe(404);
+
+      const listA = await fetchV1(`${harness.origin}/v1/office/assignments`, {
+        headers: harness.authA,
+      });
+      expect(listA.status).toBe(200);
+      expect(
+        (listA.body as { items: { id: string }[] }).items.some(
+          (item) => item.id === b.assignmentId,
+        ),
+      ).toBe(false);
+
+      const readB = await fetchV1(
+        `${harness.origin}/v1/office/assignments/${b.assignmentId}`,
+        { headers: harness.authB },
+      );
+      expect(readB.status).toBe(200);
+      expect((readB.body as { id: string }).id).toBe(b.assignmentId);
+    });
   });
 
   describe("role denial in workspace", () => {

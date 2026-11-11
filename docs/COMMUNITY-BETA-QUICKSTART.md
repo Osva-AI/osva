@@ -303,14 +303,14 @@ Requires `apps/scheduler` running. PostgreSQL owns schedule state; BullMQ is not
 Basic organizational layer (Stage 2.9B):
 
 ```text
-POST /v1/office-workers        # links to Agent identity (OfficeWorker ≠ Agent)
-POST /v1/roles                 # organizational metadata only (Role ≠ RBAC)
-POST /v1/teams
-POST /v1/teams/:id/memberships
-POST /v1/goals
-POST /v1/assignments           # freezes explicit AgentVersion or WorkflowVersion
-POST /v1/assignments/:id/launch
-GET  /v1/assignments/:id       # reconciles status from linked Run/WorkflowRun
+POST /v1/office/workers        # links to Agent identity (OfficeWorker ≠ Agent)
+POST /v1/office/roles          # organizational metadata only (Role ≠ RBAC)
+POST /v1/office/teams
+POST /v1/office/teams/:id/memberships
+POST /v1/office/goals
+POST /v1/office/assignments      # freezes explicit AgentVersion or WorkflowVersion
+POST /v1/office/assignments/:id/launch
+GET  /v1/office/assignments/:id  # authorizes, then reconciles from linked Run/WorkflowRun
 ```
 
 Teams group workers; they do **not** execute. Assignments launch through existing `CreateRun` / workflow execution — no Assignment queue or worker.

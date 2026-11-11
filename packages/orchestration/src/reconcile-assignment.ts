@@ -1,4 +1,4 @@
-import type { AssignmentId } from "@osva-ai/contracts";
+import type { AssignmentId, WorkspaceId } from "@osva-ai/contracts";
 import {
   AssignmentNotFoundError,
   isTerminalAssignmentState,
@@ -11,6 +11,7 @@ import {
 
 export interface ReconcileAssignmentCommand {
   readonly assignmentId: AssignmentId;
+  readonly workspaceId: WorkspaceId;
   readonly now: Date;
 }
 
@@ -24,7 +25,8 @@ export class ReconcileAssignment {
   constructor(private readonly deps: ReconcileAssignmentDependencies) {}
 
   async execute(command: ReconcileAssignmentCommand): Promise<Assignment> {
-    const assignment = await this.deps.office.findAssignmentById(
+    const assignment = await this.deps.office.findAssignmentByWorkspaceAndId(
+      command.workspaceId,
       command.assignmentId,
     );
     if (assignment === null) {

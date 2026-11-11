@@ -18,6 +18,7 @@ import {
   Agent,
   AgentVersion,
   Assignment,
+  AssignmentNotFoundError,
   OfficeWorker,
   Workspace,
 } from "@osva/domain";
@@ -106,6 +107,7 @@ describe("LaunchAssignment", () => {
 
     const first = await launchAssignment.execute({
       assignmentId: assignment.id,
+      workspaceId,
       runId: "run-1" as RunId,
       runAttemptId: "run-attempt-1" as RunAttemptId,
       workflowRunId: "workflow-run-1" as WorkflowRunId,
@@ -114,6 +116,7 @@ describe("LaunchAssignment", () => {
 
     const second = await launchAssignment.execute({
       assignmentId: assignment.id,
+      workspaceId,
       runId: "run-2" as RunId,
       runAttemptId: "run-attempt-2" as RunAttemptId,
       workflowRunId: "workflow-run-2" as WorkflowRunId,
@@ -127,5 +130,94 @@ describe("LaunchAssignment", () => {
     expect(
       listedRuns.runs.filter((run) => run.id === first.runId),
     ).toHaveLength(1);
+  });
+
+  it("rejects launch when workspace does not own the assignment", async () => {
+    const workspaces = new MemoryWorkspaceRepository();
+    const agents = new MemoryAgentRepository();
+    const office = new MemoryOfficeRepository();
+    const runs = new MemoryRunRepository();
+    const workflows = new MemoryWorkflowRepository();
+    const workflowRuns = new MemoryWorkflowRunRepository();
+    const queue = new MemoryJobQueue();
+
+    const otherWorkspace = "ws-other" as typeof workspaceId;
+    await workspaces.save(
+      Workspace.create({
+        id: otherWorkspace,
+        name: "Other",
+        createdAt: NOW,
+      }),
+    );
+    await workspaces.save(
+      Workspace.create({ id: workspaceId, name: "Workspace", createdAt: NOW }),
+    );
+    await agents.saveAgent(
+      Agent.create({
+        id: agentId,
+        workspaceId,
+        key: "agent",
+        name: "Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      AgentVersion.create({
+        id: agentVersionId,
+        agentId,
+        version: 1,
+        manifest: createManifest(),
+        createdAt: NOW,
+      }),
+    );
+
+    const worker = OfficeWorker.create({
+      id: "office-worker-1" as OfficeWorkerId,
+      workspaceId,
+      key: "worker",
+      name: "Worker",
+      agentId,
+      now: NOW,
+    });
+    await office.saveOfficeWorker(worker);
+
+    const assignment = Assignment.create({
+      id: "assignment-1" as AssignmentId,
+      workspaceId,
+      officeWorkerId: worker.id,
+      title: "Task",
+      targetType: "AGENT_VERSION",
+      targetVersionId: agentVersionId,
+      input: {},
+      now: NOW,
+    });
+    await office.saveAssignment(assignment);
+
+    const createRun = new CreateRun({ runs, agents, queue });
+    const reconcileAssignment = new ReconcileAssignment({
+      office,
+      runs,
+      workflowRuns,
+    });
+    const launchAssignment = new LaunchAssignment({
+      office,
+      agents,
+      workflows,
+      workflowRuns,
+      runs,
+      createRun,
+      reconcileAssignment,
+    });
+
+    await expect(
+      launchAssignment.execute({
+        assignmentId: assignment.id,
+        workspaceId: otherWorkspace,
+        runId: "run-1" as RunId,
+        runAttemptId: "run-attempt-1" as RunAttemptId,
+        workflowRunId: "workflow-run-1" as WorkflowRunId,
+        now: NOW,
+      }),
+    ).rejects.toBeInstanceOf(AssignmentNotFoundError);
   });
 });
