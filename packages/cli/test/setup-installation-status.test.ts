@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyAdministratorBootstrapPhase,
+  deriveInstallationLifecycleState,
   parseInstallationStatusJson,
 } from "../src/setup/installation-status.js";
 
@@ -72,6 +73,40 @@ describe("installation status classification", () => {
         unlinkedWorkspaceIds: [],
       }),
     ).toBe("administrator_ready");
+  });
+
+  it("derives lifecycle from durable installation status", () => {
+    expect(
+      deriveInstallationLifecycleState({
+        hasInstallationMarker: false,
+        infrastructureReady: false,
+        status: {
+          schemaVersion: 1,
+          workspaceCount: 0,
+          apiKeyCount: 0,
+          organizationCount: 0,
+          humanUserCount: 0,
+          pendingSetupUserCount: 0,
+          unlinkedWorkspaceIds: [],
+        },
+      }),
+    ).toBe("platform_not_installed");
+
+    expect(
+      deriveInstallationLifecycleState({
+        hasInstallationMarker: true,
+        infrastructureReady: true,
+        status: {
+          schemaVersion: 1,
+          workspaceCount: 0,
+          apiKeyCount: 0,
+          organizationCount: 0,
+          humanUserCount: 0,
+          pendingSetupUserCount: 0,
+          unlinkedWorkspaceIds: [],
+        },
+      }),
+    ).toBe("workspace_bootstrap_pending");
   });
 
   it("parses installation status JSON from compose run stdout", () => {

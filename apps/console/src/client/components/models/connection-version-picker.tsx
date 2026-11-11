@@ -5,7 +5,8 @@ import {
   useModelProviderConnectionVersionsQuery,
   useModelProviderConnectionsListQuery,
 } from "../../hooks/use-models";
-import { consoleFetch } from "../../lib/console-api";
+import { workspaceScopedFetch } from "../../lib/console-api";
+import { useWorkspaceQueryScope } from "../../hooks/use-workspace-query-scope";
 import { summarizeConnectionVersionOption } from "../../lib/model-resource-presentation";
 
 export function ConnectionVersionPicker(props: {
@@ -14,6 +15,7 @@ export function ConnectionVersionPicker(props: {
   readonly onChange: (connectionVersionId: string) => void;
 }) {
   const connectionsQuery = useModelProviderConnectionsListQuery();
+  const workspaceId = useWorkspaceQueryScope();
   const [connectionId, setConnectionId] = useState("");
   const versionsQuery = useModelProviderConnectionVersionsQuery(
     connectionId.length > 0 ? connectionId : undefined,
@@ -33,15 +35,16 @@ export function ConnectionVersionPicker(props: {
     if (props.value.length === 0 || connectionId.length > 0) {
       return;
     }
-    if (connections.length === 0) {
+    if (connections.length === 0 || workspaceId === undefined) {
       return;
     }
     let cancelled = false;
     void (async () => {
       for (const connection of connections) {
-        const payload = await consoleFetch<{
+        const payload = await workspaceScopedFetch<{
           versions: Array<{ id: string }>;
         }>(
+          workspaceId,
           `/api/v1/model-provider-connections/${encodeURIComponent(connection.id)}/versions`,
         );
         if (cancelled) {

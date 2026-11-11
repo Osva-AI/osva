@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { consoleFetch } from "../lib/console-api";
+import { workspaceScopedFetch } from "../lib/console-api";
+import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 import { resolveAgentBindingsFromCatalog } from "../lib/workflow-builder-agent-bindings";
 import type { WorkflowBuilderDraft } from "../lib/workflow-builder-draft";
 import { listAgentNodesInDraft } from "../lib/workflow-builder-graph";
@@ -17,6 +18,7 @@ export function useAgentBindingResolution(
   draft: WorkflowBuilderDraft,
 ): AgentBindingResolution {
   const agentsQuery = useAgentsListQuery();
+  const workspaceId = useWorkspaceQueryScope();
   const [agentIdByNodeKey, setAgentIdByNodeKey] = useState<
     Record<string, string>
   >({});
@@ -47,7 +49,7 @@ export function useAgentBindingResolution(
       return;
     }
 
-    if (agentsQuery.data === undefined) {
+    if (agentsQuery.data === undefined || workspaceId === undefined) {
       return;
     }
 
@@ -61,7 +63,8 @@ export function useAgentBindingResolution(
       }> = [];
 
       for (const agent of agentsQuery.data.agents) {
-        const versions = await consoleFetch<AgentVersionListResource>(
+        const versions = await workspaceScopedFetch<AgentVersionListResource>(
+          workspaceId,
           `/api/v1/agents/${encodeURIComponent(agent.id)}/versions`,
         );
         catalog.push({

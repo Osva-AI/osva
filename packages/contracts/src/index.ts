@@ -242,6 +242,14 @@ export type {
   TransferWorkspaceOwnershipRequestV1,
 } from "./human-membership-api.js";
 export {
+  createOrganizationWorkspaceRequestSchema,
+  renameWorkspaceRequestSchema,
+} from "./human-workspace-api.js";
+export type {
+  CreateOrganizationWorkspaceRequestV1,
+  RenameWorkspaceRequestV1,
+} from "./human-workspace-api.js";
+export {
   V1_ROUTE_ACCESS_CLASSES,
   authorizationActionToHumanPermission,
   isHumanPermittedControlPlaneAccessClass,

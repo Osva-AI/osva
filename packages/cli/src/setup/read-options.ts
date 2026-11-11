@@ -17,6 +17,9 @@ export interface SetupOptions {
   readonly adminName: string;
   readonly organizationName: string;
   readonly workspaceName: string;
+  /** Legacy acceptance: emit bootstrap ADMIN machine key from workspace bootstrap job. */
+  readonly createBootstrapAdminApiKey: boolean;
+  readonly autoPorts: boolean;
 }
 
 export function readSetupOptions(
@@ -86,6 +89,11 @@ export function readSetupOptions(
       flags["workspace-name"],
       env.OSVA_BOOTSTRAP_WORKSPACE_NAME,
     ) ?? "Default Workspace";
+  const createBootstrapAdminApiKey =
+    flags["bootstrap-admin-api-key"] === true ||
+    env.OSVA_BOOTSTRAP_CREATE_MACHINE_ADMIN_API_KEY?.trim() === "1";
+  const autoPorts =
+    flags["auto-ports"] === true || env.OSVA_SETUP_AUTO_PORTS?.trim() === "1";
   return {
     webPort,
     mcpPort,
@@ -99,6 +107,8 @@ export function readSetupOptions(
     adminName,
     organizationName,
     workspaceName,
+    createBootstrapAdminApiKey,
+    autoPorts,
   };
 }
 

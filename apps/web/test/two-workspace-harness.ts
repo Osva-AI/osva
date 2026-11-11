@@ -24,8 +24,12 @@ export interface TwoWorkspaceHarness {
 
 export async function createTwoWorkspaceHarness(
   servers: import("node:http").Server[],
+  options?: Omit<Parameters<typeof createTestWebApplication>[0], "workspaceId">,
 ): Promise<TwoWorkspaceHarness> {
-  const ctx = await createTestWebApplication({ workspaceId: WS_A });
+  const ctx = await createTestWebApplication({
+    workspaceId: WS_A,
+    ...options,
+  });
   const { Workspace } = await import("@osva/domain");
   await ctx.workspaces.save(
     Workspace.create({

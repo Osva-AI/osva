@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import { workspaceScopedFetch } from "../lib/console-api";
+import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface ModelProfileListItem {
   readonly id: string;
@@ -17,17 +18,22 @@ export interface ModelProfileVersionListItem {
 }
 
 export function useModelProfilesWithVersionsQuery() {
+  const workspaceId = useWorkspaceQueryScope();
   return useQuery({
-    queryKey: ["modelProfiles", "withVersions"],
+    queryKey: ["modelProfiles", workspaceId, "withVersions"],
+    enabled: workspaceId !== undefined,
     queryFn: async () => {
-      const list = await consoleFetch<{
+      const list = await workspaceScopedFetch<{
         modelProfiles: ModelProfileListItem[];
-      }>("/api/v1/model-profiles");
+      }>(workspaceId, "/api/v1/model-profiles");
       const withVersions = await Promise.all(
         list.modelProfiles.map(async (p) => {
-          const versions = await consoleFetch<{
+          const versions = await workspaceScopedFetch<{
             versions: ModelProfileVersionListItem[];
-          }>(`/api/v1/model-profiles/${encodeURIComponent(p.id)}/versions`);
+          }>(
+            workspaceId,
+            `/api/v1/model-profiles/${encodeURIComponent(p.id)}/versions`,
+          );
           return { profile: p, versions: versions.versions };
         }),
       );

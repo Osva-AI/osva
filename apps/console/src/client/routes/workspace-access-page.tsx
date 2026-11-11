@@ -7,7 +7,11 @@ import {
 } from "@osva-ai/contracts";
 
 import { useAuth, useWorkspaceAccess } from "../context/auth-context";
-import { consoleFetch, ConsoleApiError } from "../lib/console-api";
+import {
+  ConsoleApiError,
+  workspaceMutationFetch,
+  workspaceScopedFetch,
+} from "../lib/console-api";
 import {
   roleCanManageMembers,
   roleCanTransferOwnership,
@@ -47,7 +51,8 @@ export function WorkspaceAccessPage() {
     queryKey: ["auth", "memberships", access?.workspaceId],
     enabled: access !== undefined && roleCanManageMembers(access.role),
     queryFn: async () => {
-      const body = await consoleFetch<{ memberships: MembershipRow[] }>(
+      const body = await workspaceScopedFetch<{ memberships: MembershipRow[] }>(
+        access!.workspaceId,
         `/api/v1/auth/workspaces/${access!.workspaceId}/memberships`,
       );
       return body.memberships;
@@ -81,15 +86,20 @@ export function WorkspaceAccessPage() {
     event.preventDefault();
     setError(undefined);
     setSetupToken(undefined);
+    const pinnedWorkspaceId = access!.workspaceId;
     try {
-      const created = await consoleFetch<{
+      const created = await workspaceMutationFetch<{
         setupToken: string;
         user: { userId: string };
-      }>(`/api/v1/auth/workspaces/${access!.workspaceId}/members/users`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, displayName, role }),
-      });
+      }>(
+        `/api/v1/auth/workspaces/${pinnedWorkspaceId}/members/users`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, displayName, role }),
+        },
+        { workspaceId: pinnedWorkspaceId },
+      );
       setSetupToken(created.setupToken);
       setEmail("");
       setDisplayName("");
@@ -111,14 +121,16 @@ export function WorkspaceAccessPage() {
       return;
     }
     setRowErrors((current) => ({ ...current, [membership.id]: "" }));
+    const pinnedWorkspaceId = access!.workspaceId;
     try {
-      await consoleFetch(
-        `/api/v1/auth/workspaces/${access!.workspaceId}/memberships/${membership.id}`,
+      await workspaceMutationFetch(
+        `/api/v1/auth/workspaces/${pinnedWorkspaceId}/memberships/${membership.id}`,
         {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ role: nextRole }),
         },
+        { workspaceId: pinnedWorkspaceId },
       );
       await invalidateMemberships();
     } catch (changeError) {
@@ -139,10 +151,12 @@ export function WorkspaceAccessPage() {
     const membership = pendingRemove;
     setRemovePending(true);
     setRowErrors((current) => ({ ...current, [membership.id]: "" }));
+    const pinnedWorkspaceId = access!.workspaceId;
     try {
-      await consoleFetch(
-        `/api/v1/auth/workspaces/${access!.workspaceId}/memberships/${membership.id}`,
+      await workspaceMutationFetch(
+        `/api/v1/auth/workspaces/${pinnedWorkspaceId}/memberships/${membership.id}`,
         { method: "DELETE" },
+        { workspaceId: pinnedWorkspaceId },
       );
       await invalidateMemberships();
       setPendingRemove(undefined);
@@ -168,10 +182,12 @@ export function WorkspaceAccessPage() {
       return;
     }
     setRowErrors((current) => ({ ...current, [membership.id]: "" }));
+    const pinnedWorkspaceId = access!.workspaceId;
     try {
-      await consoleFetch(
-        `/api/v1/auth/workspaces/${access!.workspaceId}/memberships/${membership.id}/grant-owner`,
+      await workspaceMutationFetch(
+        `/api/v1/auth/workspaces/${pinnedWorkspaceId}/memberships/${membership.id}/grant-owner`,
         { method: "POST" },
+        { workspaceId: pinnedWorkspaceId },
       );
       await invalidateMemberships();
     } catch (grantError) {
@@ -198,14 +214,16 @@ export function WorkspaceAccessPage() {
       return;
     }
     setError(undefined);
+    const pinnedWorkspaceId = access!.workspaceId;
     try {
-      await consoleFetch(
-        `/api/v1/auth/workspaces/${access!.workspaceId}/ownership/transfer`,
+      await workspaceMutationFetch(
+        `/api/v1/auth/workspaces/${pinnedWorkspaceId}/ownership/transfer`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ toUserId: transferTargetUserId }),
         },
+        { workspaceId: pinnedWorkspaceId },
       );
       setTransferTargetUserId("");
       await invalidateMemberships();

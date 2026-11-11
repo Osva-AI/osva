@@ -33,6 +33,7 @@ export interface WorkspaceMembershipSummary {
   readonly workspaceId: string;
   readonly name: string;
   readonly role: string;
+  readonly organizationId?: string;
 }
 
 interface AuthContextValue {
@@ -121,6 +122,12 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     (workspaceId: string) => {
       setSelectedWorkspaceId(workspaceId);
       window.dispatchEvent(new Event("osva-workspace-selected"));
+      void queryClient.cancelQueries({
+        predicate: (query) => query.queryKey[0] !== "auth",
+      });
+      void queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "auth",
+      });
       void queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] !== "auth",
       });
@@ -222,6 +229,15 @@ export function handleConsoleAuthError(
     return "select-workspace";
   }
   if (error.status === 403) {
+    const code =
+      typeof error.body.code === "string" ? error.body.code : undefined;
+    if (
+      code === "workspace_access_denied" ||
+      code === "workspace_membership_required"
+    ) {
+      clearSelectedWorkspaceId();
+      return "select-workspace";
+    }
     return "forbidden";
   }
   return "none";

@@ -27,6 +27,7 @@ class MemoryLifecycle implements IdentityLifecycleRepository {
 
   async registerUser(): Promise<void> {}
   async createOrganizationWithOwner(): Promise<void> {}
+  async createWorkspaceWithOwner(): Promise<void> {}
   async assignWorkspaceOwnerMembership(): Promise<void> {}
   async createWorkspaceMembership(
     input: CreateWorkspaceMembershipInput,

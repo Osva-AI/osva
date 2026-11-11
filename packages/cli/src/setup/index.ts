@@ -1,6 +1,12 @@
 import { writeStdout } from "../stdout.js";
 import { formatSetupHuman, formatSetupJson } from "./format.js";
 import { readSetupOptions } from "./read-options.js";
+import {
+  explicitPublishPortMessage,
+  mergePersistedInstallationPorts,
+  readExplicitPublishPortFlags,
+  resolveAutoPublishPorts,
+} from "./resolve-publish-ports.js";
 import { runSetupProvision } from "./run-provision.js";
 import {
   runSetupPipeline,
@@ -46,10 +52,22 @@ export async function runSetupCommand(
   processEnv: NodeJS.ProcessEnv = process.env,
   deps: SetupCommandDependencies = {},
 ): Promise<number> {
-  const options = readSetupOptions(flags, processEnv, deps.platform);
+  const explicit = readExplicitPublishPortFlags(flags, processEnv);
+  let options = readSetupOptions(flags, processEnv, deps.platform);
+  options = await mergePersistedInstallationPorts(options, explicit);
+  const autoResolved = await resolveAutoPublishPorts({
+    options,
+    explicit,
+    probe: deps.probeLoopbackPort,
+    autoPorts: options.autoPorts,
+    spawn: deps.spawn,
+  });
+  options = autoResolved.options;
   const preflight = await runSetupPipeline(options, {
     ...deps,
     cwdForDisk: options.installDir,
+    explicitPublishPorts: explicit,
+    portRenumberMessage: explicitPublishPortMessage(autoResolved.selection),
   });
   const json = flags.json === true;
 
@@ -68,6 +86,8 @@ export async function runSetupCommand(
   const provision = await runSetupProvision(options, {
     spawn: deps.spawn,
     processEnv,
+    explicitPublishPorts: explicit,
+    probeLoopbackPort: deps.probeLoopbackPort,
   });
   const report = mergeSetupReport({
     preflight,

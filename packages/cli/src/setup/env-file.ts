@@ -224,9 +224,12 @@ export function buildInstallEnvValues(input: {
   readonly remoteHttpDevProfile: boolean;
   readonly existing?: Map<string, string>;
   readonly generateSecret: () => string;
+  /** When true, rewrite auth URLs and trusted origins from the chosen publish ports. */
+  readonly refreshPublishedOrigins?: boolean;
 }): InstallEnvValues {
   const webOrigin = `http://127.0.0.1:${String(input.webPort)}`;
   const consoleOrigin = `http://127.0.0.1:${String(input.consolePort)}`;
+  const refreshOrigins = input.refreshPublishedOrigins === true;
   const existing = input.existing;
   const postgresPassword =
     existing?.get("POSTGRES_PASSWORD")?.trim() || input.generateSecret();
@@ -263,13 +266,16 @@ export function buildInstallEnvValues(input: {
     OSVA_PUBLISH_WEB_PORT: String(input.webPort),
     OSVA_PUBLISH_MCP_PORT: String(input.mcpPort),
     OSVA_PUBLISH_CONSOLE_PORT: String(input.consolePort),
-    OSVA_AUTH_BASE_URL:
-      existing?.get("OSVA_AUTH_BASE_URL")?.trim() || webOrigin,
-    OSVA_AUTH_TRUSTED_ORIGINS: mergeInstallTrustedOrigins(
-      existing?.get("OSVA_AUTH_TRUSTED_ORIGINS"),
-      webOrigin,
-      consoleOrigin,
-    ),
+    OSVA_AUTH_BASE_URL: refreshOrigins
+      ? webOrigin
+      : existing?.get("OSVA_AUTH_BASE_URL")?.trim() || webOrigin,
+    OSVA_AUTH_TRUSTED_ORIGINS: refreshOrigins
+      ? mergeInstallTrustedOrigins(undefined, webOrigin, consoleOrigin)
+      : mergeInstallTrustedOrigins(
+          existing?.get("OSVA_AUTH_TRUSTED_ORIGINS"),
+          webOrigin,
+          consoleOrigin,
+        ),
     OSVA_VALKEY_URL:
       existing?.get("OSVA_VALKEY_URL")?.trim() || "redis://valkey:6379",
     OSVA_RUNTIME_CAPABILITY_SECRET: remoteHttpDevProfile

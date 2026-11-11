@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { TextField } from "../ui/field";
 import { SectionPanel } from "../ui/section-panel";
 import { useCreateKnowledgeSourceMutation } from "../../hooks/use-knowledge-memory";
-import { consoleFetch } from "../../lib/console-api";
+import { workspaceScopedFetch } from "../../lib/console-api";
 import { formatArtifactPickerLabel } from "../../lib/knowledge-resource-presentation";
 import { useWorkspaceQueryScope } from "../../hooks/use-workspace-query-scope";
 
@@ -22,9 +22,9 @@ export function KnowledgeCreateSourceForm() {
     queryKey: ["artifacts", workspaceId, "list"],
     enabled: workspaceId !== undefined,
     queryFn: () =>
-      consoleFetch<{
+      workspaceScopedFetch<{
         items: Array<{ id: string; name: string; mediaType: string }>;
-      }>("/api/v1/artifacts?limit=50"),
+      }>(workspaceId, "/api/v1/artifacts?limit=50"),
   });
 
   const [step, setStep] = useState<CreateStep>("artifact");

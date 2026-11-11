@@ -53,3 +53,7 @@ export function roleCanTransferOwnership(role: string): boolean {
     HUMAN_WORKSPACE_PERMISSIONS.TRANSFER_OWNERSHIP,
   );
 }
+
+export function roleCanManageApiKeys(role: string): boolean {
+  return rolePermitsAuthorizationAction(role, AUTHORIZATION_ACTIONS.ADMIN);
+}

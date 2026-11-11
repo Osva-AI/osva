@@ -109,6 +109,7 @@ export type {
   AssignWorkspaceOwnerMembershipInput,
   ChangeWorkspaceMembershipRoleInput,
   CreateOrganizationWithOwnerInput,
+  CreateWorkspaceWithOwnerInput,
   CreateWorkspaceMembershipInput,
   RegisterUserInput,
   RemoveWorkspaceMembershipInput,

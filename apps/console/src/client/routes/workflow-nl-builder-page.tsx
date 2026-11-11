@@ -20,7 +20,7 @@ import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import { useModelProfilesWithVersionsQuery } from "../hooks/use-model-profiles";
-import { consoleFetch } from "../lib/console-api";
+import { workspaceMutationFetch } from "../lib/console-api";
 import {
   loadBuilderNlDraft,
   saveBuilderNlDraft,
@@ -415,7 +415,7 @@ export function WorkflowNlBuilderPage() {
       if (generationModelProfileVersionId !== undefined) {
         body.generationModelProfileVersionId = generationModelProfileVersionId;
       }
-      const out = await consoleFetch<Record<string, unknown>>(
+      const out = await workspaceMutationFetch<Record<string, unknown>>(
         "/api/v1/builder/proposals/generate",
         {
           method: "POST",
@@ -497,7 +497,7 @@ export function WorkflowNlBuilderPage() {
       if (generationModelProfileVersionId !== undefined) {
         body.generationModelProfileVersionId = generationModelProfileVersionId;
       }
-      const out = await consoleFetch<Record<string, unknown>>(
+      const out = await workspaceMutationFetch<Record<string, unknown>>(
         "/api/v1/builder/proposals/refine",
         {
           method: "POST",
@@ -628,7 +628,7 @@ export function WorkflowNlBuilderPage() {
     setPublicationPlan(null);
     setPublicationConfirm(false);
     try {
-      const plan = await consoleFetch<Record<string, unknown>>(
+      const plan = await workspaceMutationFetch<Record<string, unknown>>(
         "/api/v1/builder/publications/prepare",
         {
           method: "POST",
@@ -654,7 +654,7 @@ export function WorkflowNlBuilderPage() {
     }
     setPublicationPhase("publishing");
     try {
-      const out = await consoleFetch<{
+      const out = await workspaceMutationFetch<{
         ok?: boolean;
         replay?: boolean;
         receipt?: Record<string, unknown>;
@@ -693,7 +693,7 @@ export function WorkflowNlBuilderPage() {
     }
     setValidateState("loading");
     try {
-      const out = await consoleFetch<unknown>(
+      const out = await workspaceMutationFetch<unknown>(
         "/api/v1/builder/proposals/validate",
         {
           method: "POST",

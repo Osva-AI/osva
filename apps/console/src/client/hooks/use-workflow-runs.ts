@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import {
+  workspaceScopedFetch,
+  workspaceMutationFetch,
+} from "../lib/console-api";
 import { ACTIVE_RUN_POLL_MS } from "../lib/query-client";
 import { isWorkflowRunLive } from "../lib/statuses";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
@@ -97,7 +100,8 @@ export function useWorkflowRunsListQuery(filters: ListWorkflowRunsFilters) {
   return useQuery({
     queryKey: ["workflow-runs", workspaceId, "list", filters],
     enabled: workspaceId !== undefined,
-    queryFn: () => consoleFetch<WorkflowRunListResource>(path),
+    queryFn: () =>
+      workspaceScopedFetch<WorkflowRunListResource>(workspaceId, path),
   });
 }
 
@@ -115,7 +119,8 @@ export function useWorkflowRunQuery(workflowRunId: string | undefined) {
     queryKey: ["workflow-runs", workspaceId, workflowRunId],
     enabled: workspaceId !== undefined && workflowRunId !== undefined,
     queryFn: () =>
-      consoleFetch<WorkflowRunResource>(
+      workspaceScopedFetch<WorkflowRunResource>(
+        workspaceId,
         `/api/v1/workflow-runs/${workflowRunId}`,
       ),
     refetchInterval: (query) =>
@@ -130,9 +135,10 @@ export interface CreateWorkflowRunInput {
 
 export function useCreateWorkflowRunMutation() {
   const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: CreateWorkflowRunInput) =>
-      consoleFetch<WorkflowRunResource>("/api/v1/workflow-runs", {
+      workspaceMutationFetch<WorkflowRunResource>("/api/v1/workflow-runs", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -141,8 +147,11 @@ export function useCreateWorkflowRunMutation() {
         }),
       }),
     onSuccess: async () => {
+      if (workspaceId === undefined) {
+        return;
+      }
       await queryClient.invalidateQueries({
-        queryKey: ["workflow-runs", "list"],
+        queryKey: ["workflow-runs", workspaceId, "list"],
       });
     },
   });
@@ -150,13 +159,14 @@ export function useCreateWorkflowRunMutation() {
 
 export function useApprovalDecisionMutation(workflowRunId: string) {
   const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: async (input: {
       readonly approvalRequestId: string;
       readonly decision: "APPROVED" | "REJECTED";
       readonly comment?: string;
     }) =>
-      consoleFetch<ApprovalRequestResource>(
+      workspaceMutationFetch<ApprovalRequestResource>(
         `/api/v1/approval-requests/${encodeURIComponent(input.approvalRequestId)}/decision`,
         {
           method: "POST",
@@ -170,11 +180,14 @@ export function useApprovalDecisionMutation(workflowRunId: string) {
         },
       ),
     onSuccess: async () => {
+      if (workspaceId === undefined) {
+        return;
+      }
       await queryClient.invalidateQueries({
-        queryKey: ["workflow-runs", workflowRunId],
+        queryKey: ["workflow-runs", workspaceId, workflowRunId],
       });
       await queryClient.invalidateQueries({
-        queryKey: ["workflow-runs", "list"],
+        queryKey: ["workflow-runs", workspaceId, "list"],
       });
     },
   });
@@ -182,16 +195,20 @@ export function useApprovalDecisionMutation(workflowRunId: string) {
 
 export function useIngestWorkflowEventMutation(workflowRunId: string) {
   const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: IngestWorkflowEventInput) =>
-      consoleFetch<unknown>("/api/v1/workflow-events", {
+      workspaceMutationFetch<unknown>("/api/v1/workflow-events", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(input),
       }),
     onSuccess: async () => {
+      if (workspaceId === undefined) {
+        return;
+      }
       await queryClient.invalidateQueries({
-        queryKey: ["workflow-runs", workflowRunId],
+        queryKey: ["workflow-runs", workspaceId, workflowRunId],
       });
     },
   });

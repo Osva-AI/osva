@@ -173,6 +173,12 @@ export async function runSetupOnboarding(input: {
     );
     checks.push(
       skipCheck(
+        "administrator_setup_recovery",
+        "If the setup token was lost or expired, run `docker compose --profile bootstrap run --rm identity-recover` from the install directory (requires OSVA_AUTH_SECRET and database access).",
+      ),
+    );
+    checks.push(
+      skipCheck(
         "installation_complete",
         "Installation is not complete until administrator password setup and sign-in succeed.",
       ),
@@ -197,7 +203,7 @@ export async function runSetupOnboarding(input: {
     return { checks, consoleUrl, setupTokenForOperator, administratorPhase };
   }
 
-  if (status.apiKeyCount === 0) {
+  if (status.workspaceCount === 0) {
     try {
       await runWorkspaceBootstrapJob(
         input.execCtx,
@@ -438,6 +444,9 @@ async function runWorkspaceBootstrapJob(
     "-T",
     "-e",
     `OSVA_BOOTSTRAP_WORKSPACE_NAME=${options.workspaceName}`,
+    ...(options.createBootstrapAdminApiKey
+      ? []
+      : ["-e", "OSVA_BOOTSTRAP_SKIP_ADMIN_API_KEY=1"]),
     "bootstrap",
   ];
   const result = runComposeCommand(ctx, args, {

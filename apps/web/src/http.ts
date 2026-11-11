@@ -92,6 +92,7 @@ import {
 } from "./security-request-context.js";
 import { sendV1Error } from "./v1-api-error.js";
 import { authorizeHumanControlPlaneRequest } from "./v1-control-plane-access.js";
+import { assertTrustedOrigin } from "./human-auth-csrf.js";
 import {
   consumeHttpRateLimit,
   type HttpRateLimitContext,
@@ -396,6 +397,19 @@ async function handleRequestWithContext(
 
     if (isHumanSessionRequestPrincipal(principal)) {
       if (humanAuth === undefined) {
+        sendV1Error(
+          response,
+          403,
+          PUBLIC_API_ERROR_CODES.PERMISSION_DENIED,
+          resolveRequestId(),
+        );
+        return;
+      }
+      if (
+        method !== "GET" &&
+        method !== "HEAD" &&
+        !assertTrustedOrigin(request, humanAuth.trustedOrigins)
+      ) {
         sendV1Error(
           response,
           403,

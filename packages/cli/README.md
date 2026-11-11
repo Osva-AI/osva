@@ -26,7 +26,7 @@ From a git checkout, build then invoke `dist/bin/osva.js` or link the package lo
 
 ## Self-hosted installation (`osva setup`)
 
-Materializes a local Compose project (registry-pinned `OSVA_IMAGE` in the bundled template), starts PostgreSQL/Valkey, migrates on first install, starts platform services and Console, and bootstraps the initial workspace plus human administrator when needed.
+Materializes a local Compose project (registry-pinned `OSVA_IMAGE` in the bundled template), starts PostgreSQL/Valkey, migrates on first install, starts platform services and Console, creates the initial workspace, and bootstraps the human administrator when needed. Machine API keys are **not** created during default interactive setup; use Console **Settings → API Keys** after sign-in, or pass `--bootstrap-admin-api-key` for legacy automation.
 
 ```bash
 osva setup --admin-email you@example.com
@@ -40,7 +40,7 @@ osva setup --remote-http-dev --admin-email you@example.com
 
 This opt-in profile generates runtime capability secrets, publishes the capability bridge on loopback (default port `8787`), and enables documented private-network exceptions for worker → host agent and MCP discovery. See [`docs/engineering/REMOTE_HTTP_LOCAL_AGENT_SETUP.md`](../../docs/engineering/REMOTE_HTTP_LOCAL_AGENT_SETUP.md).
 
-Use `--yes` to reconcile an existing installation directory. Console is published on loopback (default `http://127.0.0.1:4174`). Complete password setup at `/setup`, then sign in.
+Use `--yes` to reconcile an existing installation directory when explicit ports are already owned by **this** installation (Compose publisher metadata or verified Docker container port bindings). Setup rejects occupied ports owned by another OSVA install, a foreign application, or unknown ownership unless auto-port selection applies. Use `--auto-ports` (or `OSVA_SETUP_AUTO_PORTS=1`) during non-interactive installs to pick free loopback ports when defaults are occupied. Console is published on loopback (default `http://127.0.0.1:4174`). Complete password setup at `/setup`, then sign in. After sign-in, create or rename workspaces from **Settings → Workspace**; the Console pins API requests to the workspace active when an action starts.
 
 **Published image note:** GHCR tags shipped before M16.2 Console packaging require a matching OCI rebuild; development acceptance builds a local image (`osva/local-m16-2d:dev`). Test-only overrides: `OSVA_SETUP_LOCAL_IMAGE`, `OSVA_SETUP_SKIP_IMAGE_PULL`, and acceptance capture flags documented in [`scripts/acceptance/m16-2d/README.md`](../../scripts/acceptance/m16-2d/README.md).
 

@@ -46,4 +46,13 @@ export class Workspace {
       organizationId,
     });
   }
+
+  withName(name: string): Workspace {
+    return Workspace.create({
+      id: this.id,
+      name,
+      createdAt: this.createdAt,
+      organizationId: this.organizationId,
+    });
+  }
 }

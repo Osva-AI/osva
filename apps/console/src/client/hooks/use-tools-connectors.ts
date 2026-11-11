@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import {
+  workspaceScopedFetch,
+  workspaceMutationFetch,
+} from "../lib/console-api";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface ToolResource {
@@ -86,7 +89,11 @@ export function useToolsListQuery() {
   return useQuery({
     queryKey: ["tools", workspaceId, "list"],
     enabled: workspaceId !== undefined,
-    queryFn: () => consoleFetch<{ tools: ToolResource[] }>("/api/v1/tools"),
+    queryFn: () =>
+      workspaceScopedFetch<{ tools: ToolResource[] }>(
+        workspaceId,
+        "/api/v1/tools",
+      ),
   });
 }
 
@@ -96,7 +103,8 @@ export function useToolQuery(toolId: string | undefined) {
     queryKey: ["tools", workspaceId, toolId, "detail"],
     enabled: workspaceId !== undefined && toolId !== undefined,
     queryFn: () =>
-      consoleFetch<ToolResource>(
+      workspaceScopedFetch<ToolResource>(
+        workspaceId,
         `/api/v1/tools/${encodeURIComponent(toolId ?? "")}`,
       ),
   });
@@ -108,7 +116,8 @@ export function useToolVersionsQuery(toolId: string | undefined) {
     queryKey: ["tools", workspaceId, toolId, "versions"],
     enabled: workspaceId !== undefined && toolId !== undefined,
     queryFn: () =>
-      consoleFetch<{ versions: ToolVersionResource[] }>(
+      workspaceScopedFetch<{ versions: ToolVersionResource[] }>(
+        workspaceId,
         `/api/v1/tools/${encodeURIComponent(toolId ?? "")}/versions`,
       ),
   });
@@ -120,7 +129,10 @@ export function useConnectorsListQuery() {
     queryKey: ["connectors", workspaceId, "list"],
     enabled: workspaceId !== undefined,
     queryFn: () =>
-      consoleFetch<{ connectors: ConnectorResource[] }>("/api/v1/connectors"),
+      workspaceScopedFetch<{ connectors: ConnectorResource[] }>(
+        workspaceId,
+        "/api/v1/connectors",
+      ),
   });
 }
 
@@ -130,7 +142,8 @@ export function useConnectorQuery(connectorId: string | undefined) {
     queryKey: ["connectors", workspaceId, connectorId, "detail"],
     enabled: workspaceId !== undefined && connectorId !== undefined,
     queryFn: () =>
-      consoleFetch<ConnectorResource>(
+      workspaceScopedFetch<ConnectorResource>(
+        workspaceId,
         `/api/v1/connectors/${encodeURIComponent(connectorId ?? "")}`,
       ),
   });
@@ -142,7 +155,8 @@ export function useConnectorVersionsQuery(connectorId: string | undefined) {
     queryKey: ["connectors", workspaceId, connectorId, "versions"],
     enabled: workspaceId !== undefined && connectorId !== undefined,
     queryFn: () =>
-      consoleFetch<{ versions: ConnectorVersionResource[] }>(
+      workspaceScopedFetch<{ versions: ConnectorVersionResource[] }>(
+        workspaceId,
         `/api/v1/connectors/${encodeURIComponent(connectorId ?? "")}/versions`,
       ),
   });
@@ -157,11 +171,15 @@ export function useCreateConnectorMutation() {
       readonly name: string;
       readonly description?: string;
     }) =>
-      consoleFetch<ConnectorResource>("/api/v1/connectors", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      }),
+      workspaceScopedFetch<ConnectorResource>(
+        workspaceId,
+        "/api/v1/connectors",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["connectors", workspaceId],
@@ -178,7 +196,8 @@ export function useUpdateConnectorMutation(connectorId: string) {
       readonly name: string;
       readonly description?: string;
     }) =>
-      consoleFetch<ConnectorResource>(
+      workspaceScopedFetch<ConnectorResource>(
+        workspaceId,
         `/api/v1/connectors/${encodeURIComponent(connectorId)}`,
         {
           method: "PATCH",
@@ -213,7 +232,8 @@ export function useAppendConnectorVersionMutation(connectorId: string) {
             readonly valueSecret: { readonly key: string };
           };
     }) =>
-      consoleFetch<ConnectorVersionResource>(
+      workspaceScopedFetch<ConnectorVersionResource>(
+        workspaceId,
         `/api/v1/connectors/${encodeURIComponent(connectorId)}/versions`,
         {
           method: "POST",
@@ -235,7 +255,7 @@ export function useDiscoverConnectorToolsMutation(
 ) {
   return useMutation({
     mutationFn: () =>
-      consoleFetch<{
+      workspaceMutationFetch<{
         connectorVersionId: string;
         tools: DiscoveredMcpTool[];
       }>(
@@ -257,7 +277,7 @@ export function useImportMcpToolsMutation() {
         readonly toolName: string;
       }>;
     }) =>
-      consoleFetch<{
+      workspaceMutationFetch<{
         imported: ReadonlyArray<{
           readonly toolId: string;
           readonly toolVersionId: string;
@@ -286,9 +306,12 @@ export function useToolsCatalogQuery() {
       const tools = toolsQuery.data?.tools ?? [];
       const entries = await Promise.all(
         tools.map(async (tool) => {
-          const versions = await consoleFetch<{
+          const versions = await workspaceScopedFetch<{
             versions: ToolVersionResource[];
-          }>(`/api/v1/tools/${encodeURIComponent(tool.id)}/versions`);
+          }>(
+            workspaceId,
+            `/api/v1/tools/${encodeURIComponent(tool.id)}/versions`,
+          );
           return { tool, versions: versions.versions };
         }),
       );

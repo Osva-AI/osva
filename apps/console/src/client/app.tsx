@@ -46,6 +46,7 @@ import { ExamplesPage } from "./routes/examples-page";
 import { ActivityPage } from "./routes/activity-page";
 import { OverviewPage } from "./routes/overview-page";
 import { SettingsPage } from "./routes/settings-page";
+import { ApiKeysPage } from "./routes/api-keys-page";
 import { KnowledgePage } from "./routes/knowledge-page";
 import { KnowledgeSourcePage } from "./routes/knowledge-source-page";
 import { MemoryPage } from "./routes/memory-page";
@@ -92,6 +93,7 @@ export function App() {
                   <Route path="/overview" element={<OverviewPage />} />
                   <Route path="/activity" element={<ActivityPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/settings/api-keys" element={<ApiKeysPage />} />
                   <Route path="/examples" element={<ExamplesPage />} />
                   <Route
                     path="/examples/:exampleId"

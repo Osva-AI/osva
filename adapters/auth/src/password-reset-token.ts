@@ -1,11 +1,25 @@
 import type { UserId } from "@osva-ai/contracts";
-import { eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 
 import type { Database } from "@osva/db";
 import { authVerifications } from "@osva/db";
 
 export function passwordResetVerificationIdentifier(token: string): string {
   return `reset-password:${token}`;
+}
+
+export async function revokeOutstandingPasswordResetTokensForUser(
+  database: Database,
+  userId: UserId,
+): Promise<void> {
+  await database.db
+    .delete(authVerifications)
+    .where(
+      and(
+        eq(authVerifications.value, userId),
+        like(authVerifications.identifier, "reset-password:%"),
+      ),
+    );
 }
 
 export async function resolveUserIdForPasswordResetToken(

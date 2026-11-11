@@ -36,6 +36,9 @@ export async function bootstrapIntegrationAuth(
   const boot = await apiKeyApplication.bootstrapInstallation.execute({
     workspaceId,
   });
+  if (boot.plaintextToken === undefined) {
+    throw new Error("Bootstrap did not return a plaintext API key token.");
+  }
   integrationAuth.token = boot.plaintextToken;
 }
 

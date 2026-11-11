@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import { consoleFetch, workspaceScopedFetch } from "../lib/console-api";
 import type { HumanSession } from "../context/auth-context";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
@@ -18,12 +18,12 @@ export function useAuthContextQuery() {
     enabled: workspaceId !== undefined,
     queryFn: async (): Promise<AuthContext> => {
       const session = await consoleFetch<HumanSession>("/api/v1/auth/session");
-      const workspaces = await consoleFetch<{
+      const workspaces = await workspaceScopedFetch<{
         workspaces: Array<{
           readonly workspaceId: string;
           readonly role: string;
         }>;
-      }>("/api/v1/auth/workspaces");
+      }>(workspaceId, "/api/v1/auth/workspaces");
       const membership = workspaces.workspaces.find(
         (workspace) => workspace.workspaceId === workspaceId,
       );

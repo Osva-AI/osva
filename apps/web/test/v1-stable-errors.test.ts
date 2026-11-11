@@ -5,6 +5,7 @@ import { sendHttpError } from "../src/http-errors.js";
 import { InvalidJsonBodyError, RequestBodyTooLargeError } from "../src/json.js";
 import {
   AuthenticationRequiredError,
+  InvalidHumanCredentialsError,
   PermissionDeniedError,
   WorkspaceNotFoundError,
   StdioConnectorsDisabledError,
@@ -43,6 +44,11 @@ describe("stable v1 error envelope", () => {
     const cases: Array<{ error: unknown; status: number; code?: string }> = [
       {
         error: new AuthenticationRequiredError(),
+        status: 401,
+        code: PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
+      },
+      {
+        error: new InvalidHumanCredentialsError(),
         status: 401,
         code: PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
       },

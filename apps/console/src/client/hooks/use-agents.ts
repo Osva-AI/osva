@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import {
+  workspaceMutationFetch,
+  workspaceScopedFetch,
+} from "../lib/console-api";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface AgentResource {
@@ -72,7 +75,8 @@ export function useAgentsListQuery() {
   return useQuery({
     queryKey: ["agents", workspaceId, "list"],
     enabled: workspaceId !== undefined,
-    queryFn: () => consoleFetch<AgentListResource>("/api/v1/agents"),
+    queryFn: () =>
+      workspaceScopedFetch<AgentListResource>(workspaceId, "/api/v1/agents"),
   });
 }
 
@@ -83,7 +87,8 @@ export function useAgentQuery(agentId: string | undefined) {
     enabled:
       workspaceId !== undefined && agentId !== undefined && agentId.length > 0,
     queryFn: () =>
-      consoleFetch<AgentResource>(
+      workspaceScopedFetch<AgentResource>(
+        workspaceId,
         `/api/v1/agents/${encodeURIComponent(agentId!)}`,
       ),
   });
@@ -96,7 +101,8 @@ export function useAgentVersionsQuery(agentId: string | undefined) {
     enabled:
       workspaceId !== undefined && agentId !== undefined && agentId.length > 0,
     queryFn: () =>
-      consoleFetch<AgentVersionListResource>(
+      workspaceScopedFetch<AgentVersionListResource>(
+        workspaceId,
         `/api/v1/agents/${encodeURIComponent(agentId!)}/versions`,
       ),
   });
@@ -116,7 +122,8 @@ export function useAgentVersionQuery(
       agentVersionId !== undefined &&
       agentVersionId.length > 0,
     queryFn: () =>
-      consoleFetch<AgentVersionResource>(
+      workspaceScopedFetch<AgentVersionResource>(
+        workspaceId,
         `/api/v1/agents/${encodeURIComponent(agentId!)}/versions/${encodeURIComponent(agentVersionId!)}`,
       ),
   });
@@ -128,13 +135,17 @@ export function useAgentVersionCatalogQuery(enabled = true) {
     queryKey: ["agents", workspaceId, "version-catalog"],
     enabled: enabled && workspaceId !== undefined,
     queryFn: async (): Promise<AgentVersionCatalogResource> => {
-      const listed = await consoleFetch<AgentListResource>("/api/v1/agents");
+      const listed = await workspaceScopedFetch<AgentListResource>(
+        workspaceId,
+        "/api/v1/agents",
+      );
       const entries: Array<{
         readonly agentId: string;
         readonly versions: readonly AgentVersionResource[];
       }> = [];
       for (const agent of listed.agents) {
-        const versions = await consoleFetch<AgentVersionListResource>(
+        const versions = await workspaceScopedFetch<AgentVersionListResource>(
+          workspaceId,
           `/api/v1/agents/${encodeURIComponent(agent.id)}/versions`,
         );
         entries.push({
@@ -154,9 +165,10 @@ export interface CreateAgentInput {
 
 export function useCreateAgentMutation() {
   const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: CreateAgentInput) =>
-      consoleFetch<AgentResource>("/api/v1/agents", {
+      workspaceMutationFetch<AgentResource>("/api/v1/agents", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -165,7 +177,12 @@ export function useCreateAgentMutation() {
         }),
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["agents", "list"] });
+      if (workspaceId === undefined) {
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: ["agents", workspaceId, "list"],
+      });
     },
   });
 }
@@ -177,9 +194,10 @@ export interface CreateAgentVersionInput {
 
 export function useCreateAgentVersionMutation() {
   const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: CreateAgentVersionInput) =>
-      consoleFetch<AgentVersionResource>(
+      workspaceMutationFetch<AgentVersionResource>(
         `/api/v1/agents/${encodeURIComponent(input.agentId)}/versions`,
         {
           method: "POST",
@@ -188,11 +206,14 @@ export function useCreateAgentVersionMutation() {
         },
       ),
     onSuccess: async (_created, input) => {
+      if (workspaceId === undefined) {
+        return;
+      }
       await queryClient.invalidateQueries({
-        queryKey: ["agents", input.agentId, "versions"],
+        queryKey: ["agents", workspaceId, input.agentId, "versions"],
       });
       await queryClient.invalidateQueries({
-        queryKey: ["agents", "version-catalog"],
+        queryKey: ["agents", workspaceId, "version-catalog"],
       });
     },
   });

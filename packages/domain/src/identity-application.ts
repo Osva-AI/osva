@@ -26,6 +26,7 @@ import { OrganizationMembership } from "./organization-membership.js";
 import { SecurityAuditEvent } from "./security-audit-event.js";
 import { PermissionDeniedError } from "./security-errors.js";
 import { User } from "./user.js";
+import { Workspace } from "./workspace.js";
 import { WorkspaceMembership } from "./workspace-membership.js";
 import {
   requireWorkspaceOwnerActor,
@@ -116,6 +117,18 @@ export interface ScopedChangeWorkspaceMembershipRoleCommand {
   readonly actorUserId: UserId;
 }
 
+export interface CreateOrganizationWorkspaceCommand {
+  readonly organizationId: OrganizationId;
+  readonly name: string;
+  readonly actorUserId: UserId;
+}
+
+export interface RenameWorkspaceCommand {
+  readonly workspaceId: WorkspaceId;
+  readonly name: string;
+  readonly actorUserId: UserId;
+}
+
 export class IdentityApplication {
   constructor(private readonly deps: IdentityApplicationDependencies) {}
 
@@ -140,6 +153,72 @@ export class IdentityApplication {
     });
 
     return user;
+  }
+
+  async createOrganizationWorkspace(
+    command: CreateOrganizationWorkspaceCommand,
+  ): Promise<Workspace> {
+    await this.assertOrganizationOwner(
+      command.organizationId,
+      command.actorUserId,
+    );
+
+    const now = this.deps.clock.now();
+    const workspace = Workspace.create({
+      id: this.deps.ids.createId() as WorkspaceId,
+      name: command.name,
+      createdAt: now,
+      organizationId: command.organizationId,
+    });
+    const membership = WorkspaceMembership.create({
+      id: this.deps.ids.createId() as WorkspaceMembershipId,
+      workspaceId: workspace.id,
+      userId: command.actorUserId,
+      role: HUMAN_WORKSPACE_ROLES.OWNER,
+      createdAt: now,
+    });
+
+    await this.deps.lifecycle.createWorkspaceWithOwner({
+      workspace,
+      membership,
+      auditEvent: SecurityAuditEvent.create({
+        id: this.deps.ids.createId() as SecurityAuditEventId,
+        eventType: SECURITY_AUDIT_EVENT_TYPES.WORKSPACE_MEMBERSHIP_CREATED,
+        occurredAt: now,
+        workspaceId: workspace.id,
+        actorUserId: command.actorUserId,
+        details: {
+          organizationId: command.organizationId,
+          source: "workspace_create",
+        },
+      }),
+    });
+
+    return workspace;
+  }
+
+  async renameWorkspace(command: RenameWorkspaceCommand): Promise<Workspace> {
+    const existing = await this.deps.workspaces.findById(command.workspaceId);
+    if (existing === null) {
+      throw new WorkspaceNotFoundError(command.workspaceId);
+    }
+
+    const actorMembership =
+      await this.deps.workspaceMemberships.findByWorkspaceAndUser(
+        command.workspaceId,
+        command.actorUserId,
+      );
+    if (
+      actorMembership === null ||
+      (actorMembership.role !== HUMAN_WORKSPACE_ROLES.OWNER &&
+        actorMembership.role !== HUMAN_WORKSPACE_ROLES.ADMIN)
+    ) {
+      throw new PermissionDeniedError();
+    }
+
+    const renamed = existing.withName(command.name);
+    await this.deps.workspaces.save(renamed);
+    return renamed;
   }
 
   async createOrganization(
@@ -569,6 +648,26 @@ export class IdentityApplication {
       role: HUMAN_WORKSPACE_ROLES.OWNER,
       actorUserId: command.actorUserId,
     });
+  }
+
+  private async assertOrganizationOwner(
+    organizationId: OrganizationId,
+    actorUserId: UserId,
+  ): Promise<void> {
+    if (this.deps.organizationMemberships === undefined) {
+      throw new PermissionDeniedError();
+    }
+    const membership =
+      await this.deps.organizationMemberships.findByOrganizationAndUser(
+        organizationId,
+        actorUserId,
+      );
+    if (
+      membership === null ||
+      membership.role !== ORGANIZATION_MEMBERSHIP_ROLES.OWNER
+    ) {
+      throw new PermissionDeniedError();
+    }
   }
 
   private async assertUserEligibleForWorkspace(
