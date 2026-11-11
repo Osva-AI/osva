@@ -344,6 +344,16 @@ function createMockClient(
       data: { ok: true, receipt: { state: "SUCCEEDED" } },
       requestId: "req-builder-receipt",
     }),
+    listApiKeys: async () => ({
+      data: { items: [] },
+      requestId: "req-api-keys-list",
+    }),
+    createApiKey: async () => {
+      throw new Error("not implemented");
+    },
+    revokeApiKey: async () => {
+      throw new Error("not implemented");
+    },
     ...overrides,
   };
 }

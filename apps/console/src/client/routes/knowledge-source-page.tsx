@@ -15,7 +15,8 @@ import {
   useKnowledgeSourceQuery,
   useRetryKnowledgeIndexMutation,
 } from "../hooks/use-knowledge-memory";
-import { consoleFetch } from "../lib/console-api";
+import { workspaceScopedFetch } from "../lib/console-api";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 import { describeKnowledgeWriteRoleRequirement } from "../lib/knowledge-resource-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
@@ -30,12 +31,14 @@ export function KnowledgeSourcePage() {
   const indexesQuery = useKnowledgeIndexesQuery(sourceId);
   const createIndexMutation = useCreateKnowledgeIndexMutation(sourceId ?? "");
   const retryMutation = useRetryKnowledgeIndexMutation();
+  const workspaceId = useWorkspaceQueryScope();
 
   const artifactQuery = useQuery({
-    queryKey: ["artifacts", sourceQuery.data?.artifactId],
+    queryKey: ["artifacts", workspaceId, "by-id", sourceQuery.data?.artifactId],
     enabled: sourceQuery.data?.artifactId !== undefined,
     queryFn: () =>
-      consoleFetch<{ id: string; name: string; mediaType: string }>(
+      workspaceScopedFetch<{ id: string; name: string; mediaType: string }>(
+        workspaceId,
         `/api/v1/artifacts/${encodeURIComponent(sourceQuery.data?.artifactId ?? "")}`,
       ),
   });

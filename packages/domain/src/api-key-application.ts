@@ -96,12 +96,17 @@ export interface BootstrapInstallationCommand {
   readonly workspaceName?: string;
   readonly workspaceId?: WorkspaceId;
   readonly apiKeyName?: string;
+  /**
+   * When false, only the initial workspace row is created (human-first setup).
+   * Defaults to true (legacy bootstrap ADMIN machine key).
+   */
+  readonly createMachineAdminApiKey?: boolean;
 }
 
 export interface BootstrapInstallationResult {
   readonly workspace: Workspace;
-  readonly apiKey: ApiKey;
-  readonly plaintextToken: string;
+  readonly apiKey?: ApiKey;
+  readonly plaintextToken?: string;
 }
 
 export class BootstrapInstallation {
@@ -155,6 +160,10 @@ export class BootstrapInstallation {
       createdAt: now,
     });
     await this.deps.workspaces.save(workspace);
+
+    if (command.createMachineAdminApiKey === false) {
+      return { workspace };
+    }
 
     const createApiKey = new CreateApiKey(this.deps);
     const created = await createApiKey.execute({

@@ -14,6 +14,19 @@ import {
 } from "./probe-spawn.js";
 import { readInstallEnvFile, type InstallEnvKey } from "./env-file.js";
 import type { SetupOptions } from "./read-options.js";
+import { prerequisiteCatalogCheck } from "./prerequisites.js";
+import { registryImagePreflightCheck } from "./prerequisite-registry.js";
+import {
+  dockerInstallRemediation,
+  nodeInstallRemediation,
+} from "./prerequisite-remediation.js";
+import { readPreflightComposeContext } from "./compose-preflight-context.js";
+import { assessLoopbackPortOwnership } from "./port-ownership.js";
+import {
+  PUBLISH_SERVICE_ENV_KEYS,
+  type PublishServiceKey,
+} from "./publish-port-keys.js";
+import type { ExplicitPublishPortFlags } from "./resolve-publish-ports.js";
 
 export const DEFAULT_SETUP_SUBPROCESS_TIMEOUT_MS = 5_000;
 
@@ -35,11 +48,14 @@ export type LoopbackPortProbeFn = (
 
 export interface SetupProbeDependencies {
   readonly spawn?: ProbeSpawnFn;
+  readonly fetch?: typeof fetch;
   readonly probeLoopbackPort?: LoopbackPortProbeFn;
   readonly subprocessTimeoutMs?: number;
   readonly platform?: NodeJS.Platform;
   readonly arch?: string;
   readonly cwdForDisk?: string;
+  readonly explicitPublishPorts?: ExplicitPublishPortFlags;
+  readonly portRenumberMessage?: string;
 }
 
 export async function runSetupPipeline(
@@ -53,9 +69,18 @@ export async function runSetupPipeline(
   const arch = deps.arch ?? process.arch;
   const checks: DoctorCheck[] = [];
 
+  checks.push(prerequisiteCatalogCheck());
   checks.push(checkHostPlatform(platform));
   checks.push(checkHostArchitecture(arch));
-  checks.push(checkNodeRuntime());
+  const nodeCheck = checkNodeRuntime();
+  if (nodeCheck.status === "FAIL") {
+    checks.push({
+      ...nodeCheck,
+      remediation: nodeInstallRemediation(platform),
+    });
+  } else {
+    checks.push(nodeCheck);
+  }
   checks.push(
     passCheck(
       "cli_version",
@@ -63,7 +88,7 @@ export async function runSetupPipeline(
     ),
   );
 
-  const dockerCli = checkDockerCli(spawn, timeoutMs);
+  const dockerCli = checkDockerCli(spawn, timeoutMs, platform);
   checks.push(dockerCli);
 
   if (dockerCli.status !== "PASS") {
@@ -82,48 +107,69 @@ export async function runSetupPipeline(
   } else {
     checks.push(checkDockerEngine(spawn, timeoutMs));
     checks.push(checkDockerCompose(spawn, timeoutMs));
+    checks.push(await registryImagePreflightCheck(deps.fetch ?? fetch));
   }
 
   const probeLoopbackPort =
     deps.probeLoopbackPort ?? probeLoopbackPortAvailability;
-  const portReconciliation = {
-    authorizeExisting: options.authorizeExisting,
-    installDir: options.installDir,
-  };
-  checks.push(
-    await checkPublishPort(
-      "publish_web_port",
-      options.webPort,
-      probeLoopbackPort,
-      { ...portReconciliation, envKey: "OSVA_PUBLISH_WEB_PORT" },
-    ),
-  );
-  checks.push(
-    await checkPublishPort(
-      "publish_mcp_port",
-      options.mcpPort,
-      probeLoopbackPort,
-      { ...portReconciliation, envKey: "OSVA_PUBLISH_MCP_PORT" },
-    ),
-  );
-  checks.push(
-    await checkPublishPort(
-      "publish_console_port",
-      options.consolePort,
-      probeLoopbackPort,
-      { ...portReconciliation, envKey: "OSVA_PUBLISH_CONSOLE_PORT" },
-    ),
-  );
+  const execCtx = await readPreflightComposeContext(options);
+  const portChecks: {
+    readonly id: string;
+    readonly service: PublishServiceKey;
+    readonly port: number;
+    readonly envKey: InstallEnvKey;
+  }[] = [
+    {
+      id: "publish_web_port",
+      service: "web",
+      port: options.webPort,
+      envKey: PUBLISH_SERVICE_ENV_KEYS.web,
+    },
+    {
+      id: "publish_mcp_port",
+      service: "mcp",
+      port: options.mcpPort,
+      envKey: PUBLISH_SERVICE_ENV_KEYS.mcp,
+    },
+    {
+      id: "publish_console_port",
+      service: "console",
+      port: options.consolePort,
+      envKey: PUBLISH_SERVICE_ENV_KEYS.console,
+    },
+  ];
   if (options.remoteHttpDev) {
+    portChecks.push({
+      id: "publish_runtime_capability_port",
+      service: "runtime",
+      port: options.runtimeCapabilityPort,
+      envKey: PUBLISH_SERVICE_ENV_KEYS.runtime,
+    });
+  }
+  for (const portCheck of portChecks) {
     checks.push(
       await checkPublishPort(
-        "publish_runtime_capability_port",
-        options.runtimeCapabilityPort,
+        portCheck.id,
+        portCheck.port,
+        portCheck.service,
         probeLoopbackPort,
         {
-          ...portReconciliation,
-          envKey: "OSVA_PUBLISH_RUNTIME_CAPABILITY_PORT",
+          authorizeExisting: options.authorizeExisting,
+          installDir: options.installDir,
+          envKey: portCheck.envKey,
+          execCtx,
+          spawn,
+          autoPorts: options.autoPorts,
+          explicit: deps.explicitPublishPorts?.[portCheck.service] === true,
         },
+      ),
+    );
+  }
+  if (deps.portRenumberMessage !== undefined) {
+    checks.push(
+      passCheck(
+        "publish_port_selection",
+        `Selected alternate loopback ports: ${deps.portRenumberMessage}.`,
       ),
     );
   }
@@ -150,10 +196,21 @@ function checkHostPlatform(platform: NodeJS.Platform): DoctorCheck {
 }
 
 function checkHostArchitecture(arch: string): DoctorCheck {
+  const normalized = arch.toLowerCase();
+  if (normalized === "arm64" || normalized === "aarch64") {
+    return passCheck(
+      "host_architecture",
+      `Host CPU architecture is ${arch}. Confirm published OSVA_IMAGE supports arm64 (or use amd64 via Rosetta/QEMU where applicable).`,
+    );
+  }
   return passCheck("host_architecture", `Host CPU architecture is ${arch}.`);
 }
 
-function checkDockerCli(spawn: ProbeSpawnFn, timeoutMs: number): DoctorCheck {
+function checkDockerCli(
+  spawn: ProbeSpawnFn,
+  timeoutMs: number,
+  platform: NodeJS.Platform,
+): DoctorCheck {
   const result = spawn("docker", ["--version"], timeoutMs);
   const timedOut = mapDockerProbeTimeout(result, "docker_cli");
   if (timedOut !== undefined) {
@@ -163,14 +220,14 @@ function checkDockerCli(spawn: ProbeSpawnFn, timeoutMs: number): DoctorCheck {
     return failCheck(
       "docker_cli",
       "Docker CLI was not found on PATH.",
-      "Install Docker Desktop or Docker Engine and ensure `docker` is on PATH.",
+      dockerInstallRemediation(platform),
     );
   }
   if (result.status !== 0) {
     return failCheck(
       "docker_cli",
       redactSecrets(trimProbeMessage(result, "Docker CLI `--version` failed.")),
-      "Reinstall Docker or fix your Docker installation.",
+      dockerInstallRemediation(platform),
     );
   }
   const versionLine = redactSecrets(
@@ -265,11 +322,16 @@ function checkDockerCompose(
 async function checkPublishPort(
   id: string,
   port: number,
+  service: PublishServiceKey,
   probe: LoopbackPortProbeFn,
   reconciliation?: {
     readonly authorizeExisting: boolean;
     readonly installDir: string;
     readonly envKey: InstallEnvKey;
+    readonly execCtx?: import("./compose-exec.js").ComposeExecContext;
+    readonly spawn?: ProbeSpawnFn;
+    readonly autoPorts: boolean;
+    readonly explicit: boolean;
   },
 ): Promise<DoctorCheck> {
   const probeResult = await probe(port);
@@ -280,7 +342,24 @@ async function checkPublishPort(
     );
   }
   if (probeResult.kind === "in_use") {
+    const ownership = await assessLoopbackPortOwnership({
+      port,
+      installDir: reconciliation?.installDir ?? process.cwd(),
+      service,
+      probeInUse: true,
+      expectedProjectName: reconciliation?.execCtx?.projectName,
+      execCtx: reconciliation?.execCtx,
+      spawn: reconciliation?.spawn,
+    });
+    if (ownership.ownership === "this_installation") {
+      return passCheck(
+        id,
+        ownership.detail ??
+          `Loopback (127.0.0.1) port ${String(port)} is in use by this installation.`,
+      );
+    }
     if (
+      ownership.ownership === "unknown" &&
       reconciliation?.authorizeExisting === true &&
       (await installEnvPublishPortMatches(
         reconciliation.installDir,
@@ -288,15 +367,40 @@ async function checkPublishPort(
         port,
       ))
     ) {
+      return warnCheck(
+        id,
+        ownership.detail ??
+          `Port ${String(port)} matches .env but Compose publisher was not verified.`,
+        "Start services with `osva setup --yes` or inspect `docker compose ps` before changing ports.",
+      );
+    }
+    if (ownership.ownership === "other_osva_installation") {
+      return failCheck(
+        id,
+        ownership.detail ??
+          `Loopback port ${String(port)} belongs to another OSVA Compose project.`,
+        "Choose different ports, use another --install-dir, or stop the other installation.",
+      );
+    }
+    if (reconciliation?.explicit === true) {
+      return failCheck(
+        id,
+        `Explicit loopback port ${String(port)} is not available (${ownership.ownership}).`,
+        ownership.detail ??
+          "Free the port or choose a different --web-port / --mcp-port / --console-port value.",
+      );
+    }
+    if (reconciliation?.autoPorts === true) {
       return passCheck(
         id,
-        `Loopback (127.0.0.1) port ${String(port)} is in use by this installation (expected during --yes reconciliation).`,
+        `Loopback port ${String(port)} is occupied; automatic port selection will choose an alternate before provisioning.`,
       );
     }
     return failCheck(
       id,
-      `Loopback (127.0.0.1) port ${String(port)} is already in use.`,
-      `Stop the process using port ${String(port)} or choose another port via --web-port / --mcp-port or OSVA_PUBLISH_* env vars.`,
+      ownership.detail ??
+        `Loopback (127.0.0.1) port ${String(port)} is already in use.`,
+      `Stop the conflicting process, re-run with --auto-ports, or set explicit --web-port / --mcp-port / --console-port values.`,
     );
   }
   if (probeResult.kind === "permission_denied") {
@@ -325,7 +429,7 @@ async function installEnvPublishPortMatches(
   return env?.get(envKey) === String(port);
 }
 
-function probeLoopbackPortAvailability(
+export function probeLoopbackPortAvailability(
   port: number,
 ): Promise<LoopbackPortProbeResult> {
   return new Promise((resolve) => {

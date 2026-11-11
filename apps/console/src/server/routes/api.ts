@@ -310,6 +310,34 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/api-keys") {
+        const body = await readJsonBody(request);
+        const created = await client.createApiKey(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const apiKeyRevokeMatch = pathname.match(
+        /^\/api\/v1\/api-keys\/([^/]+)\/revoke$/,
+      );
+      if (apiKeyRevokeMatch !== null) {
+        const revoked = await client.revokeApiKey(apiKeyRevokeMatch[1] ?? "");
+        sendJson(
+          response,
+          200,
+          revoked.data,
+          upstreamRequestIdHeaders(revoked.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       if (pathname === "/api/v1/agents") {
         const body = await readJsonBody(request);
         const created = await client.createAgent(body);
@@ -787,6 +815,18 @@ export async function handleConsoleApiRequest(
         200,
         usage.data,
         upstreamRequestIdHeaders(usage.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/api-keys") {
+      const listed = await client.listApiKeys();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
         deps.security,
       );
       return true;

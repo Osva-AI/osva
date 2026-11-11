@@ -229,6 +229,7 @@ describe("console human session real stack", () => {
       headers: {
         cookie: ownerCookie,
         "content-type": "application/json",
+        origin: webOrigin,
         "x-osva-workspace-id": workspaceId,
       },
       body: JSON.stringify({ key, name: key }),

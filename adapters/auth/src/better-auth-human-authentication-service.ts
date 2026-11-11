@@ -7,7 +7,7 @@ import type {
   HumanSignInWithEmailCommand,
 } from "@osva/domain";
 import type { UserRepository } from "@osva/domain";
-import { UserNotFoundError } from "@osva/domain";
+import { InvalidHumanCredentialsError, UserNotFoundError } from "@osva/domain";
 import { eq } from "drizzle-orm";
 
 import type { Database } from "@osva/db";
@@ -43,7 +43,7 @@ export class BetterAuthHumanAuthenticationService implements HumanAuthentication
     });
 
     if (!response.ok) {
-      throw new Error("Invalid email or password.");
+      throw new InvalidHumanCredentialsError();
     }
 
     const sessionToken = readSessionTokenFromSetCookie(

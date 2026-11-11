@@ -256,8 +256,10 @@ Commands:
   doctor [--json]
   platform status|start|stop|restart|logs|doctor|upgrade [--install-dir PATH] [--json]
         Manage an existing local Compose installation (no API key required).
-  setup [--json] [--preflight-only] [--yes] [--install-dir PATH]
+  setup [--json] [--preflight-only] [--yes] [--auto-ports] [--install-dir PATH]
         [--web-port PORT] [--mcp-port PORT] [--console-port PORT]
+        [--bootstrap-admin-api-key]
+        [--admin-email EMAIL] [--admin-name NAME] [--organization-name NAME]
         [--remote-http-dev] [--runtime-capability-port PORT]
         Installation preflight and local Docker Compose provisioning.
   version

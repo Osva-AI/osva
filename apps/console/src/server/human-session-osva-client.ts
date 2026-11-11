@@ -724,6 +724,34 @@ export function createHumanSessionOsvaClient(
           path: `/v1/builder/publications/${encodeURIComponent(publicationId)}`,
         })
         .then(toDataOnly),
+
+    listApiKeys: () =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: "/v1/api-keys",
+          requireWorkspace: true,
+        })
+        .then(toDataOnly),
+
+    createApiKey: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/api-keys",
+          body,
+          requireWorkspace: true,
+        })
+        .then(toDataOnly),
+
+    revokeApiKey: (apiKeyId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/api-keys/${encodeURIComponent(apiKeyId)}/revoke`,
+          requireWorkspace: true,
+        })
+        .then(toDataOnly),
   };
 }
 

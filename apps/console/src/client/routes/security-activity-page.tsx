@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useWorkspaceAccess } from "../context/auth-context";
-import { consoleFetch } from "../lib/console-api";
+import { workspaceScopedFetch } from "../lib/console-api";
 import { roleCanReadAuditEvents } from "../lib/permissions";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
@@ -20,7 +20,8 @@ export function SecurityActivityPage() {
     queryKey: ["auth", "audit-events", access?.workspaceId],
     enabled: access !== undefined && roleCanReadAuditEvents(access.role),
     queryFn: async () => {
-      const body = await consoleFetch<{ events: AuditEventRow[] }>(
+      const body = await workspaceScopedFetch<{ events: AuditEventRow[] }>(
+        access?.workspaceId,
         "/api/v1/auth/audit-events",
       );
       return body.events;

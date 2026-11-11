@@ -1,7 +1,11 @@
 import type { EvaluationQualityGatePolicyV1 } from "@osva-ai/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { consoleFetch, ConsoleApiError } from "../lib/console-api";
+import {
+  ConsoleApiError,
+  workspaceScopedFetch,
+  workspaceMutationFetch,
+} from "../lib/console-api";
 import { ACTIVE_RUN_POLL_MS } from "../lib/query-client";
 import { isEvaluationRunLive } from "../lib/evaluation-run-status";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
@@ -133,7 +137,10 @@ export function useEvaluationSuitesQuery() {
     queryKey: ["evaluation-suites", workspaceId, "list"],
     enabled: workspaceId !== undefined,
     queryFn: () =>
-      consoleFetch<EvaluationSuiteListResource>("/api/v1/evaluation-suites"),
+      workspaceScopedFetch<EvaluationSuiteListResource>(
+        workspaceId,
+        "/api/v1/evaluation-suites",
+      ),
   });
 }
 
@@ -143,7 +150,8 @@ export function useEvaluationSuiteQuery(evaluationSuiteId: string | undefined) {
     queryKey: ["evaluation-suites", workspaceId, evaluationSuiteId],
     enabled: workspaceId !== undefined && evaluationSuiteId !== undefined,
     queryFn: () =>
-      consoleFetch<EvaluationSuiteResource>(
+      workspaceScopedFetch<EvaluationSuiteResource>(
+        workspaceId,
         `/api/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId!)}`,
       ),
   });
@@ -157,7 +165,8 @@ export function useEvaluationSuiteVersionsQuery(
     queryKey: ["evaluation-suites", workspaceId, evaluationSuiteId, "versions"],
     enabled: workspaceId !== undefined && evaluationSuiteId !== undefined,
     queryFn: () =>
-      consoleFetch<EvaluationSuiteVersionListResource>(
+      workspaceScopedFetch<EvaluationSuiteVersionListResource>(
+        workspaceId,
         `/api/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId!)}/versions`,
       ),
   });
@@ -181,7 +190,8 @@ export function useEvaluationSuiteVersionQuery(
       evaluationSuiteId !== undefined &&
       evaluationSuiteVersionId !== undefined,
     queryFn: () =>
-      consoleFetch<EvaluationSuiteVersionResource>(
+      workspaceScopedFetch<EvaluationSuiteVersionResource>(
+        workspaceId,
         `/api/v1/evaluation-suites/${encodeURIComponent(evaluationSuiteId!)}/versions/${encodeURIComponent(evaluationSuiteVersionId!)}`,
       ),
   });
@@ -201,7 +211,8 @@ export function useEvaluationRunQuery(evaluationRunId: string | undefined) {
     queryKey: ["evaluation-runs", workspaceId, evaluationRunId],
     enabled: workspaceId !== undefined && evaluationRunId !== undefined,
     queryFn: () =>
-      consoleFetch<EvaluationRunDetailResource>(
+      workspaceScopedFetch<EvaluationRunDetailResource>(
+        workspaceId,
         `/api/v1/evaluation-runs/${encodeURIComponent(evaluationRunId!)}`,
       ),
     refetchInterval: (query) =>
@@ -218,7 +229,8 @@ export function useEvaluationCaseResultsQuery(
     queryKey: ["evaluation-runs", workspaceId, evaluationRunId, "case-results"],
     enabled: workspaceId !== undefined && evaluationRunId !== undefined,
     queryFn: () =>
-      consoleFetch<EvaluationCaseResultListResource>(
+      workspaceScopedFetch<EvaluationCaseResultListResource>(
+        workspaceId,
         `/api/v1/evaluation-runs/${encodeURIComponent(evaluationRunId!)}/case-results`,
       ),
     refetchInterval: evaluationRunRefetchInterval(evaluationRunStatus),
@@ -248,9 +260,11 @@ export function useResolvedEvaluationSuiteVersionQuery(
       suitesQuery.data !== undefined,
     queryFn: async (): Promise<ResolvedEvaluationSuiteVersion> => {
       for (const suite of suitesQuery.data!.items) {
-        const versions = await consoleFetch<EvaluationSuiteVersionListResource>(
-          `/api/v1/evaluation-suites/${encodeURIComponent(suite.id)}/versions`,
-        );
+        const versions =
+          await workspaceScopedFetch<EvaluationSuiteVersionListResource>(
+            workspaceId,
+            `/api/v1/evaluation-suites/${encodeURIComponent(suite.id)}/versions`,
+          );
         const version = versions.items.find(
           (item) => item.id === evaluationSuiteVersionId,
         );
@@ -295,7 +309,8 @@ export function useEvaluationRunsListQuery(filters: ListEvaluationRunsFilters) {
   return useQuery({
     queryKey: ["evaluation-runs", workspaceId, filters],
     enabled: workspaceId !== undefined,
-    queryFn: () => consoleFetch<EvaluationRunListResource>(path),
+    queryFn: () =>
+      workspaceScopedFetch<EvaluationRunListResource>(workspaceId, path),
   });
 }
 
@@ -310,11 +325,14 @@ export function useCreateEvaluationSuiteMutation() {
   const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: CreateEvaluationSuiteInput) =>
-      consoleFetch<EvaluationSuiteResource>("/api/v1/evaluation-suites", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(input),
-      }),
+      workspaceMutationFetch<EvaluationSuiteResource>(
+        "/api/v1/evaluation-suites",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(input),
+        },
+      ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["evaluation-suites", workspaceId],
@@ -348,18 +366,21 @@ export function useLaunchEvaluationRunMutation() {
   const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: LaunchEvaluationRunInput) =>
-      consoleFetch<EvaluationRunDetailResource>("/api/v1/evaluation-runs", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          evaluationSuiteVersionId: input.evaluationSuiteVersionId,
-          targetType: "AGENT_VERSION",
-          targetVersionId: input.targetVersionId,
-          ...(input.qualityGatePolicy !== undefined
-            ? { qualityGatePolicy: input.qualityGatePolicy }
-            : {}),
-        }),
-      }),
+      workspaceMutationFetch<EvaluationRunDetailResource>(
+        "/api/v1/evaluation-runs",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            evaluationSuiteVersionId: input.evaluationSuiteVersionId,
+            targetType: "AGENT_VERSION",
+            targetVersionId: input.targetVersionId,
+            ...(input.qualityGatePolicy !== undefined
+              ? { qualityGatePolicy: input.qualityGatePolicy }
+              : {}),
+          }),
+        },
+      ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["evaluation-runs", workspaceId],
@@ -373,7 +394,7 @@ export function usePublishEvaluationSuiteVersionMutation() {
   const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: PublishEvaluationSuiteVersionInput) =>
-      consoleFetch<EvaluationSuiteVersionResource>(
+      workspaceMutationFetch<EvaluationSuiteVersionResource>(
         `/api/v1/evaluation-suites/${encodeURIComponent(input.evaluationSuiteId)}/versions`,
         {
           method: "POST",

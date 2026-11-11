@@ -18,6 +18,56 @@ export type AdministratorBootstrapPhase =
   | "multiple_unlinked_workspaces"
   | "ambiguous_workspace_state";
 
+/** Durable installation lifecycle states for CLI onboarding and recovery. */
+export type InstallationLifecycleState =
+  | "platform_not_installed"
+  | "infrastructure_installed"
+  | "workspace_bootstrap_pending"
+  | "human_administrator_bootstrap_pending"
+  | "administrator_password_setup_pending"
+  | "administrator_active"
+  | "installation_ready"
+  | "recovery_required";
+
+export function deriveInstallationLifecycleState(input: {
+  readonly hasInstallationMarker: boolean;
+  readonly infrastructureReady: boolean;
+  readonly status: InstallationStatusSnapshot;
+}): InstallationLifecycleState {
+  if (!input.hasInstallationMarker) {
+    return "platform_not_installed";
+  }
+  if (!input.infrastructureReady) {
+    return "infrastructure_installed";
+  }
+  if (input.status.workspaceCount === 0) {
+    return "workspace_bootstrap_pending";
+  }
+
+  const adminPhase = classifyAdministratorBootstrapPhase(input.status);
+  if (adminPhase === "multiple_unlinked_workspaces") {
+    return "recovery_required";
+  }
+  if (adminPhase === "ambiguous_workspace_state") {
+    return "recovery_required";
+  }
+  if (
+    adminPhase === "fresh_installation" ||
+    adminPhase === "workspace_without_human_administrator"
+  ) {
+    return "human_administrator_bootstrap_pending";
+  }
+  if (adminPhase === "administrator_pending_password_setup") {
+    return "administrator_password_setup_pending";
+  }
+  if (adminPhase === "administrator_ready") {
+    return input.status.humanUserCount > 0
+      ? "installation_ready"
+      : "administrator_active";
+  }
+  return "recovery_required";
+}
+
 export function parseInstallationStatusJson(
   stdout: string,
 ): InstallationStatusSnapshot {
@@ -60,8 +110,17 @@ export function classifyAdministratorBootstrapPhase(
     return "workspace_without_human_administrator";
   }
 
-  if (status.workspaceCount === 0 && status.apiKeyCount === 0) {
+  if (status.workspaceCount === 0) {
     return "fresh_installation";
+  }
+
+  if (
+    status.workspaceCount > 0 &&
+    status.organizationCount === 0 &&
+    status.unlinkedWorkspaceIds.length === 0 &&
+    status.humanUserCount === 0
+  ) {
+    return "ambiguous_workspace_state";
   }
 
   return "ambiguous_workspace_state";

@@ -8,6 +8,12 @@ export class AuthenticationRequiredError extends DomainError {
   }
 }
 
+export class InvalidHumanCredentialsError extends DomainError {
+  constructor() {
+    super("Invalid email or password.");
+  }
+}
+
 export class PermissionDeniedError extends DomainError {
   constructor() {
     super("Permission denied.");

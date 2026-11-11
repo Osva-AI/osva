@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import {
+  workspaceScopedFetch,
+  workspaceMutationFetch,
+} from "../lib/console-api";
 import { ACTIVE_RUN_POLL_MS } from "../lib/query-client";
 import { isAttemptLive, isRunLive } from "../lib/statuses";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
@@ -162,7 +165,7 @@ export function useRunsListQuery(filters: ListRunsFilters) {
   return useQuery({
     queryKey: ["runs", workspaceId, "list", filters],
     enabled: workspaceId !== undefined,
-    queryFn: () => consoleFetch<RunListResource>(path),
+    queryFn: () => workspaceScopedFetch<RunListResource>(workspaceId, path),
   });
 }
 
@@ -171,7 +174,8 @@ export function useRunQuery(runId: string | undefined) {
   return useQuery({
     queryKey: ["runs", workspaceId, runId],
     enabled: workspaceId !== undefined && runId !== undefined,
-    queryFn: () => consoleFetch<RunResource>(`/api/v1/runs/${runId}`),
+    queryFn: () =>
+      workspaceScopedFetch<RunResource>(workspaceId, `/api/v1/runs/${runId}`),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status !== undefined && isRunLive(status)
@@ -190,7 +194,10 @@ export function useRunAttemptsQuery(
     queryKey: ["runs", workspaceId, runId, "attempts"],
     enabled: workspaceId !== undefined && runId !== undefined,
     queryFn: () =>
-      consoleFetch<RunAttemptListResource>(`/api/v1/runs/${runId}/attempts`),
+      workspaceScopedFetch<RunAttemptListResource>(
+        workspaceId,
+        `/api/v1/runs/${runId}/attempts`,
+      ),
     refetchInterval:
       runStatus !== undefined && isRunLive(runStatus)
         ? ACTIVE_RUN_POLL_MS
@@ -211,7 +218,8 @@ export function useRunAttemptQuery(
       runId !== undefined &&
       runAttemptId !== undefined,
     queryFn: () =>
-      consoleFetch<RunAttemptResource>(
+      workspaceScopedFetch<RunAttemptResource>(
+        workspaceId,
         `/api/v1/runs/${runId}/attempts/${runAttemptId}`,
       ),
     refetchInterval:
@@ -234,7 +242,8 @@ export function useRunStepsQuery(
       runId !== undefined &&
       runAttemptId !== undefined,
     queryFn: () =>
-      consoleFetch<RunStepListResource>(
+      workspaceScopedFetch<RunStepListResource>(
+        workspaceId,
         `/api/v1/runs/${runId}/attempts/${runAttemptId}/steps`,
       ),
     refetchInterval:
@@ -257,7 +266,8 @@ export function useRunUsageQuery(
       runId !== undefined &&
       runAttemptId !== undefined,
     queryFn: () =>
-      consoleFetch<RunAttemptUsageResource>(
+      workspaceScopedFetch<RunAttemptUsageResource>(
+        workspaceId,
         `/api/v1/runs/${runId}/attempts/${runAttemptId}/usage`,
       ),
     refetchInterval:
@@ -281,9 +291,10 @@ export interface CreateRunResponseResource {
 
 export function useCreateRunMutation() {
   const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: CreateRunInput) =>
-      consoleFetch<CreateRunResponseResource>("/api/v1/runs", {
+      workspaceMutationFetch<CreateRunResponseResource>("/api/v1/runs", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -296,7 +307,12 @@ export function useCreateRunMutation() {
         }),
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["runs", "list"] });
+      if (workspaceId === undefined) {
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: ["runs", workspaceId, "list"],
+      });
     },
   });
 }
@@ -310,7 +326,10 @@ export function useRunRecoveryQuery(
     queryKey: ["runs", workspaceId, runId, "recovery"],
     enabled: workspaceId !== undefined && runId !== undefined && enabled,
     queryFn: () =>
-      consoleFetch<RunRecoveryStatusResource>(`/api/v1/runs/${runId}/recovery`),
+      workspaceScopedFetch<RunRecoveryStatusResource>(
+        workspaceId,
+        `/api/v1/runs/${runId}/recovery`,
+      ),
   });
 }
 
@@ -319,14 +338,15 @@ export function useResumeRunMutation(runId: string | undefined) {
   const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: () =>
-      consoleFetch<{ runId: string; runAttemptId: string; outcome: string }>(
-        `/api/v1/runs/${runId}/resume`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: "{}",
-        },
-      ),
+      workspaceMutationFetch<{
+        runId: string;
+        runAttemptId: string;
+        outcome: string;
+      }>(`/api/v1/runs/${runId}/resume`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["runs", workspaceId, runId],
@@ -352,7 +372,8 @@ export function useArtifactsQuery(params: {
     enabled:
       workspaceId !== undefined &&
       (params.runId !== undefined || params.runAttemptId !== undefined),
-    queryFn: () => consoleFetch<ArtifactListResource>(path),
+    queryFn: () =>
+      workspaceScopedFetch<ArtifactListResource>(workspaceId, path),
     refetchInterval: params.live ? ACTIVE_RUN_POLL_MS : false,
   });
 }

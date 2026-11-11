@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { USER_STATUSES, type UserId } from "@osva-ai/contracts";
-import { User } from "@osva/domain";
+import { InvalidHumanCredentialsError, User } from "@osva/domain";
 import {
   createDatabase,
   migrateDatabase,
@@ -188,6 +188,80 @@ describe("human password setup and recovery lifecycle", () => {
         newPassword: "Recovery-Password-12!",
       }),
     ).rejects.toThrow(/Disabled users cannot reset passwords/);
+  });
+
+  it("invalidates prior outstanding recovery tokens when a newer token is issued", async () => {
+    const email = "reissue-recover@example.com";
+    await seedPendingUser(email);
+    const setupIssued = await passwordTokens.issuePasswordResetToken({
+      email,
+      redirectTo: `${ORIGIN}/v1/auth/setup/complete`,
+    });
+    await humanAuthentication.completeInitialSetupWithToken({
+      token: setupIssued.token,
+      newPassword: "Initial-Password-12!",
+    });
+
+    const firstRecovery = await passwordTokens.issuePasswordResetToken({
+      email,
+      redirectTo: `${ORIGIN}/v1/auth/recovery/complete`,
+    });
+    const secondRecovery = await passwordTokens.issuePasswordResetToken({
+      email,
+      redirectTo: `${ORIGIN}/v1/auth/recovery/complete`,
+    });
+
+    await expect(
+      humanAuthentication.resetPassword({
+        token: firstRecovery.token,
+        newPassword: "Should-Not-Apply-12!",
+      }),
+    ).rejects.toThrow(/Invalid or expired recovery token/);
+
+    await humanAuthentication.resetPassword({
+      token: secondRecovery.token,
+      newPassword: "Recovery-Password-12!",
+    });
+
+    await expect(
+      humanAuthentication.signInWithEmail({
+        email,
+        password: "Initial-Password-12!",
+      }),
+    ).rejects.toBeInstanceOf(InvalidHumanCredentialsError);
+
+    const signIn = await humanAuthentication.signInWithEmail({
+      email,
+      password: "Recovery-Password-12!",
+    });
+    expect(signIn.userId).toBeDefined();
+
+    await expect(
+      humanAuthentication.resetPassword({
+        token: secondRecovery.token,
+        newPassword: "Recovery-Password-12!",
+      }),
+    ).rejects.toThrow(/Invalid or expired recovery token/);
+  });
+
+  it("rejects invalid email credentials without treating them as server faults", async () => {
+    const email = "signin-negative@example.com";
+    await seedPendingUser(email);
+    const issued = await passwordTokens.issuePasswordResetToken({
+      email,
+      redirectTo: `${ORIGIN}/v1/auth/setup/complete`,
+    });
+    await humanAuthentication.completeInitialSetupWithToken({
+      token: issued.token,
+      newPassword: "Initial-Password-12!",
+    });
+
+    await expect(
+      humanAuthentication.signInWithEmail({
+        email,
+        password: "Wrong-Password-12!",
+      }),
+    ).rejects.toBeInstanceOf(InvalidHumanCredentialsError);
   });
 
   it("persists Better Auth verification rows with user id in value, not token in value", async () => {

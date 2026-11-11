@@ -11,6 +11,7 @@ interface BootstrapCliOptions {
   readonly connectionString?: string;
   readonly workspaceName: string;
   readonly workspaceId?: WorkspaceId;
+  readonly skipAdminApiKey: boolean;
 }
 
 function parseBootstrapCliOptions(
@@ -41,10 +42,14 @@ function parseBootstrapCliOptions(
     }
   }
 
+  const skipEnv = process.env.OSVA_BOOTSTRAP_SKIP_ADMIN_API_KEY?.trim();
+  const skipAdminApiKey = skipEnv === "1" || skipEnv?.toLowerCase() === "true";
+
   return {
     connectionString,
     workspaceName,
     workspaceId,
+    skipAdminApiKey,
   };
 }
 
@@ -84,21 +89,32 @@ if (!options.connectionString) {
         ...(options.workspaceId === undefined
           ? {}
           : { workspaceId: options.workspaceId }),
+        ...(options.skipAdminApiKey ? { createMachineAdminApiKey: false } : {}),
       }),
     )
     .then(async (result) => {
-      process.stdout.write(
-        [
-          "OSVA installation bootstrap completed.",
-          `Workspace ID: ${result.workspace.id}`,
+      const lines = [
+        "OSVA installation bootstrap completed.",
+        `Workspace ID: ${result.workspace.id}`,
+      ];
+      if (result.apiKey !== undefined && result.plaintextToken !== undefined) {
+        lines.push(
           `API key ID: ${result.apiKey.id}`,
           `Role: ${result.apiKey.role}`,
           "",
           "Copy the API key below now. It cannot be retrieved again:",
           result.plaintextToken,
           "",
-        ].join("\n"),
-      );
+        );
+      } else {
+        lines.push(
+          "",
+          "No machine ADMIN API key was created (human-first bootstrap).",
+          "Create a scoped key from Console Settings → API Keys after sign-in.",
+          "",
+        );
+      }
+      process.stdout.write(lines.join("\n"));
       await database.close();
     })
     .catch(async (error: unknown) => {

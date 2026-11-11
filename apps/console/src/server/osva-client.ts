@@ -275,6 +275,9 @@ export interface ConsoleOsvaClient {
   getBuilderPublicationReceipt(
     publicationId: string,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listApiKeys(): Promise<ConsoleUpstreamResponse<unknown>>;
+  createApiKey(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  revokeApiKey(apiKeyId: string): Promise<ConsoleUpstreamResponse<unknown>>;
 }
 
 export function createConsoleOsvaClient(
@@ -805,6 +808,22 @@ export function createConsoleOsvaClient(
       http.requestWithMeta({
         method: "GET",
         path: `/v1/builder/publications/${encodeURIComponent(publicationId)}`,
+      }),
+    listApiKeys: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/api-keys",
+      }),
+    createApiKey: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/api-keys",
+        body,
+      }),
+    revokeApiKey: (apiKeyId) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/api-keys/${encodeURIComponent(apiKeyId)}/revoke`,
       }),
   };
 }

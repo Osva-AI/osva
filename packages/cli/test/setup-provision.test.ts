@@ -257,7 +257,7 @@ describe("osva setup provisioning", () => {
             : {
                 schemaVersion: 1,
                 workspaceCount: 1,
-                apiKeyCount: 1,
+                apiKeyCount: 0,
                 organizationCount: 0,
                 humanUserCount: 0,
                 pendingSetupUserCount: 0,
@@ -388,6 +388,73 @@ describe("osva setup provisioning", () => {
       provision.checks.find((check) => check.id === "compose_migrate")?.status,
     ).toBe("SKIP");
     expect(calls.some((call) => call.includes("migrate"))).toBe(false);
+  });
+
+  it("recovers once from Docker host-port conflict when --auto-ports is set", async () => {
+    const installDir = await makeTempDir("osva-setup-toctou-");
+    let platformUpAttempts = 0;
+    const spawn: ProbeSpawnFn = (_executable, args) => {
+      const joined = args.join(" ");
+      if (joined.includes("ps") && joined.includes("running")) {
+        return { status: 0, stdout: "", stderr: "", error: undefined };
+      }
+      if (joined.includes("config") || joined.includes("pull")) {
+        return { status: 0, stdout: "", stderr: "", error: undefined };
+      }
+      if (joined.includes("up") && joined.includes("postgres")) {
+        return { status: 0, stdout: "", stderr: "", error: undefined };
+      }
+      if (joined.includes("up") && joined.includes("migrate")) {
+        return { status: 0, stdout: "", stderr: "", error: undefined };
+      }
+      if (
+        joined.includes("up") &&
+        joined.includes("workflow-orchestrator") &&
+        joined.includes("mcp-server")
+      ) {
+        platformUpAttempts += 1;
+        if (platformUpAttempts === 1) {
+          return {
+            status: 1,
+            stdout: "",
+            stderr: "Bind for 127.0.0.1:8080 failed: port is already allocated",
+            error: undefined,
+          };
+        }
+        return { status: 0, stdout: "", stderr: "", error: undefined };
+      }
+      return { status: 0, stdout: "", stderr: "", error: undefined };
+    };
+    const options = readSetupOptions({ "auto-ports": true }, {}, "linux");
+    const probe = async (port: number) =>
+      ({
+        kind: port === 8080 ? ("in_use" as const) : ("available" as const),
+      }) as import("../src/setup/run-setup.js").LoopbackPortProbeResult;
+    const provision = await runSetupProvision(
+      { ...options, installDir },
+      {
+        spawn,
+        processEnv: provisionTestProcessEnv(),
+        fetch: async () => new Response(null, { status: 200 }),
+        explicitPublishPorts: {
+          web: false,
+          mcp: false,
+          console: false,
+          runtime: false,
+        },
+        probeLoopbackPort: probe,
+      },
+    );
+    expect(platformUpAttempts).toBe(2);
+    expect(
+      provision.checks.find(
+        (check) => check.id === "compose_host_port_recovery",
+      )?.status,
+    ).toBe("WARN");
+    expect(
+      provision.checks.find((check) => check.id === "compose_platform_up")
+        ?.status,
+    ).toBe("PASS");
   });
 
   it("redacts secrets from provisioning failure messages", async () => {

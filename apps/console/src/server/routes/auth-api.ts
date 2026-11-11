@@ -122,6 +122,49 @@ export async function tryHandleConsoleAuthApiRequest(
     return true;
   }
 
+  if (pathname === "/api/v1/auth/workspaces" && method === "POST") {
+    const body = await readJsonBody(request);
+    const result = await upstream.requestJson(deps.ctx, {
+      method: "POST",
+      path: "/v1/auth/workspaces",
+      body,
+      requireWorkspace: false,
+    });
+    sendJson(
+      response,
+      result.status,
+      result.data,
+      upstreamRequestIdHeaders(result.requestId),
+      deps.security,
+    );
+    return true;
+  }
+
+  const renameWorkspaceMatch = /^\/api\/v1\/auth\/workspaces\/([^/]+)$/.exec(
+    pathname,
+  );
+  if (renameWorkspaceMatch !== null && method === "PATCH") {
+    const workspaceId = renameWorkspaceMatch[1]!;
+    const body = await readJsonBody(request);
+    const result = await upstream.requestJson(
+      { ...deps.ctx, workspaceId },
+      {
+        method: "PATCH",
+        path: `/v1/auth/workspaces/${encodeURIComponent(workspaceId)}`,
+        body,
+        requireWorkspace: true,
+      },
+    );
+    sendJson(
+      response,
+      result.status,
+      result.data,
+      upstreamRequestIdHeaders(result.requestId),
+      deps.security,
+    );
+    return true;
+  }
+
   if (pathname === "/api/v1/auth/setup/complete" && method === "POST") {
     const body = await readJsonBody(request);
     const result = await upstream.requestJson(deps.ctx, {

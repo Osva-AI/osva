@@ -12,6 +12,7 @@ import {
   DuplicateUserEmailError,
   DuplicateWorkspaceMembershipError,
   type CreateOrganizationWithOwnerInput,
+  type CreateWorkspaceWithOwnerInput,
   type AssignWorkspaceOwnerMembershipInput,
   type CreateWorkspaceMembershipInput,
   type ChangeWorkspaceMembershipRoleInput,
@@ -57,6 +58,8 @@ import { organizations } from "../schema/organizations.js";
 import { securityAuditEvents } from "../schema/security-audit-events.js";
 import { users } from "../schema/users.js";
 import { workspaceMemberships } from "../schema/workspace-memberships.js";
+import { workspaces } from "../schema/workspaces.js";
+import { workspaceToRow } from "../mappers/workspace-mapper.js";
 
 function mapIdentityUniqueViolation(error: unknown): never {
   if (postgresErrorCode(error) !== POSTGRES_UNIQUE_VIOLATION) {
@@ -309,6 +312,32 @@ export class PostgresIdentityLifecycleRepository implements IdentityLifecycleRep
       } catch (error) {
         if (postgresErrorCode(error) === POSTGRES_UNIQUE_VIOLATION) {
           throw new DuplicateUserEmailError(input.user.email);
+        }
+        throw mapIdentityUniqueViolation(error);
+      }
+    });
+  }
+
+  async createWorkspaceWithOwner(
+    input: CreateWorkspaceWithOwnerInput,
+  ): Promise<void> {
+    await this.database.db.transaction(async (tx) => {
+      const workspaceRow = workspaceToRow(input.workspace);
+      const membershipRow = workspaceMembershipToRow(input.membership);
+      const auditRow = securityAuditEventToRow(input.auditEvent);
+      try {
+        await tx.insert(workspaces).values(workspaceRow);
+        await lockWorkspaceOwnerScope(tx, input.workspace.id);
+        await tx.insert(workspaceMemberships).values(membershipRow);
+        await tx.insert(securityAuditEvents).values(auditRow);
+        const ownersAfter = await countWorkspaceOwners(tx, input.workspace.id);
+        assertWorkspaceOwnerCountAfterChange(ownersAfter, false);
+      } catch (error) {
+        if (postgresErrorCode(error) === POSTGRES_UNIQUE_VIOLATION) {
+          throw new DuplicateWorkspaceMembershipError(
+            input.membership.workspaceId,
+            input.membership.userId,
+          );
         }
         throw mapIdentityUniqueViolation(error);
       }

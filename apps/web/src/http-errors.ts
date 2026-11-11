@@ -59,6 +59,7 @@ import {
   KnowledgeIncompatibleIndexesError,
   ApiKeyNotFoundError,
   AuthenticationRequiredError,
+  InvalidHumanCredentialsError,
   PermissionDeniedError,
   StdioConnectorsDisabledError,
 } from "@osva/domain";
@@ -89,6 +90,16 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
   const requestId = resolveRequestId();
 
   if (error instanceof AuthenticationRequiredError) {
+    sendV1Error(
+      response,
+      401,
+      PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
+      requestId,
+    );
+    return;
+  }
+
+  if (error instanceof InvalidHumanCredentialsError) {
     sendV1Error(
       response,
       401,

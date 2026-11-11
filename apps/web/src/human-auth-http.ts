@@ -5,6 +5,9 @@ import {
   HUMAN_AUTH_ROUTE_IDS,
   OSVA_WORKSPACE_ID_HEADER,
   PUBLIC_API_ERROR_CODES,
+  createOrganizationWorkspaceRequestSchema,
+  renameWorkspaceRequestSchema,
+  type OrganizationId,
   type UserId,
   type WorkspaceId,
 } from "@osva-ai/contracts";
@@ -13,6 +16,7 @@ import {
   PermissionDeniedError,
   WorkspaceSelectionRequiredError,
   authorizeHumanRoute,
+  WorkspaceNotFoundError,
   type HumanAuthenticationService,
   type SecurityAuditEventRepository,
   type UserRepository,
@@ -133,6 +137,23 @@ export async function handleHumanAuthRequest(
       method === "GET"
     ) {
       await handleListWorkspaces(request, response, services, requestId);
+      return true;
+    }
+
+    if (path === "/v1/auth/workspaces" && method === "POST") {
+      await handleCreateWorkspace(request, response, services, requestId);
+      return true;
+    }
+
+    const renameWorkspaceMatch = /^\/v1\/auth\/workspaces\/([^/]+)$/.exec(path);
+    if (renameWorkspaceMatch !== null && method === "PATCH") {
+      await handleRenameWorkspace(
+        request,
+        response,
+        services,
+        requestId,
+        renameWorkspaceMatch[1] as WorkspaceId,
+      );
       return true;
     }
 
@@ -421,10 +442,127 @@ async function handleListWorkspaces(
       workspaceId: workspace.id,
       name: workspace.name,
       role: membership.role,
+      ...(workspace.organizationId === undefined
+        ? {}
+        : { organizationId: workspace.organizationId }),
     });
   }
 
   sendJson(response, 200, { workspaces }, { "x-osva-request-id": requestId });
+}
+
+async function handleCreateWorkspace(
+  request: IncomingMessage,
+  response: ServerResponse,
+  services: HumanAuthHttpServices,
+  requestId: string,
+): Promise<void> {
+  const userId = await requireHumanUserId(
+    request,
+    response,
+    services,
+    requestId,
+  );
+  if (userId === undefined) {
+    return;
+  }
+  const parsed = createOrganizationWorkspaceRequestSchema.safeParse(
+    await readJsonBody(request),
+  );
+  if (!parsed.success) {
+    sendJson(response, 400, { status: "invalid_request" });
+    return;
+  }
+
+  const workspace = await services.identity.createOrganizationWorkspace({
+    organizationId: parsed.data.organizationId as OrganizationId,
+    name: parsed.data.name,
+    actorUserId: userId,
+  });
+
+  sendJson(
+    response,
+    201,
+    {
+      workspace: {
+        workspaceId: workspace.id,
+        name: workspace.name,
+        organizationId: workspace.organizationId,
+      },
+    },
+    { "x-osva-request-id": requestId },
+  );
+}
+
+async function handleRenameWorkspace(
+  request: IncomingMessage,
+  response: ServerResponse,
+  services: HumanAuthHttpServices,
+  requestId: string,
+  workspaceId: WorkspaceId,
+): Promise<void> {
+  const principal = getRequestPrincipal();
+  if (principal === undefined || !isHumanSessionRequestPrincipal(principal)) {
+    sendV1Error(
+      response,
+      401,
+      PUBLIC_API_ERROR_CODES.AUTHENTICATION_REQUIRED,
+      requestId,
+    );
+    return;
+  }
+
+  assertWorkspaceHeaderMatchesPath(request, workspaceId);
+  await authorizeHumanRoute(
+    {
+      users: services.users,
+      workspaceMemberships: services.workspaceMemberships,
+    },
+    {
+      principal,
+      routeId: HUMAN_AUTH_ROUTE_IDS.WORKSPACE_RENAME,
+      workspaceId,
+    },
+  );
+
+  const parsed = renameWorkspaceRequestSchema.safeParse(
+    await readJsonBody(request),
+  );
+  if (!parsed.success) {
+    sendJson(response, 400, { status: "invalid_request" });
+    return;
+  }
+
+  try {
+    const workspace = await services.identity.renameWorkspace({
+      workspaceId,
+      name: parsed.data.name,
+      actorUserId: principal.userId,
+    });
+    sendJson(
+      response,
+      200,
+      {
+        workspace: {
+          workspaceId: workspace.id,
+          name: workspace.name,
+          organizationId: workspace.organizationId,
+        },
+      },
+      { "x-osva-request-id": requestId },
+    );
+  } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) {
+      sendV1Error(
+        response,
+        404,
+        PUBLIC_API_ERROR_CODES.RESOURCE_NOT_FOUND,
+        requestId,
+      );
+      return;
+    }
+    throw error;
+  }
 }
 
 async function handleWorkspaceSelect(

@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import {
+  workspaceScopedFetch,
+  workspaceMutationFetch,
+} from "../lib/console-api";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface KnowledgeSourceResource {
@@ -93,9 +96,10 @@ export function useKnowledgeSourcesQuery(params?: {
     ],
     enabled: workspaceId !== undefined,
     queryFn: () =>
-      consoleFetch<{ items: KnowledgeSourceResource[]; nextCursor?: string }>(
-        `/api/v1/knowledge-sources${suffix}`,
-      ),
+      workspaceScopedFetch<{
+        items: KnowledgeSourceResource[];
+        nextCursor?: string;
+      }>(workspaceId, `/api/v1/knowledge-sources${suffix}`),
   });
 }
 
@@ -105,7 +109,8 @@ export function useKnowledgeSourceQuery(sourceId: string | undefined) {
     queryKey: ["knowledge", workspaceId, "source", sourceId],
     enabled: workspaceId !== undefined && sourceId !== undefined,
     queryFn: () =>
-      consoleFetch<KnowledgeSourceResource>(
+      workspaceScopedFetch<KnowledgeSourceResource>(
+        workspaceId,
         `/api/v1/knowledge-sources/${encodeURIComponent(sourceId ?? "")}`,
       ),
   });
@@ -129,7 +134,11 @@ export function useKnowledgeIndexesQuery(sourceId: string | undefined) {
       return false;
     },
     queryFn: () =>
-      consoleFetch<{ items: KnowledgeIndexResource[]; nextCursor?: string }>(
+      workspaceScopedFetch<{
+        items: KnowledgeIndexResource[];
+        nextCursor?: string;
+      }>(
+        workspaceId,
         `/api/v1/knowledge-sources/${encodeURIComponent(sourceId ?? "")}/indexes`,
       ),
   });
@@ -147,9 +156,10 @@ export function useKnowledgeSourcesCatalogQuery(params?: {
       const sources = sourcesQuery.data?.items ?? [];
       const entries = await Promise.all(
         sources.map(async (source) => {
-          const page = await consoleFetch<{
+          const page = await workspaceScopedFetch<{
             items: KnowledgeIndexResource[];
           }>(
+            workspaceId,
             `/api/v1/knowledge-sources/${encodeURIComponent(source.id)}/indexes`,
           );
           return { source, indexes: page.items };
@@ -173,7 +183,8 @@ export function useKnowledgeIndexQuery(indexId: string | undefined) {
       return 5_000;
     },
     queryFn: () =>
-      consoleFetch<KnowledgeIndexResource>(
+      workspaceScopedFetch<KnowledgeIndexResource>(
+        workspaceId,
         `/api/v1/knowledge-indexes/${encodeURIComponent(indexId ?? "")}`,
       ),
   });
@@ -188,10 +199,13 @@ export function useCreateKnowledgeSourceMutation() {
       readonly name: string;
       readonly artifactId: string;
     }) =>
-      consoleFetch<KnowledgeSourceResource>("/api/v1/knowledge-sources", {
-        method: "POST",
-        body: JSON.stringify(body),
-      }),
+      workspaceMutationFetch<KnowledgeSourceResource>(
+        "/api/v1/knowledge-sources",
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+        },
+      ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["knowledge", workspaceId],
@@ -205,7 +219,7 @@ export function useCreateKnowledgeIndexMutation(sourceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      consoleFetch<KnowledgeIndexResource>(
+      workspaceMutationFetch<KnowledgeIndexResource>(
         `/api/v1/knowledge-sources/${encodeURIComponent(sourceId)}/indexes`,
         { method: "POST", body: JSON.stringify({}) },
       ),
@@ -222,7 +236,7 @@ export function useRetryKnowledgeIndexMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (indexId: string) =>
-      consoleFetch<KnowledgeIndexResource>(
+      workspaceMutationFetch<KnowledgeIndexResource>(
         `/api/v1/knowledge-indexes/${encodeURIComponent(indexId)}/retry`,
         { method: "POST", body: JSON.stringify({}) },
       ),
@@ -241,7 +255,7 @@ export function useKnowledgeRetrieveMutation() {
       readonly query: string;
       readonly topK?: number;
     }) =>
-      consoleFetch<{ hits: KnowledgeHitResource[] }>(
+      workspaceMutationFetch<{ hits: KnowledgeHitResource[] }>(
         "/api/v1/knowledge/retrieve",
         {
           method: "POST",
@@ -271,9 +285,10 @@ export function useReadyKnowledgeIndexesCatalogQuery(enabled = true) {
       }> = [];
 
       for (const source of sourcesQuery.data?.items ?? []) {
-        const page = await consoleFetch<{
+        const page = await workspaceScopedFetch<{
           items: KnowledgeIndexResource[];
         }>(
+          workspaceId,
           `/api/v1/knowledge-sources/${encodeURIComponent(source.id)}/indexes`,
         );
         for (const index of page.items) {
@@ -294,7 +309,8 @@ export function useMemoryNamespacesQuery() {
     queryKey: ["memory", workspaceId, "namespaces"],
     enabled: workspaceId !== undefined,
     queryFn: () =>
-      consoleFetch<{ items: MemoryNamespaceResource[] }>(
+      workspaceScopedFetch<{ items: MemoryNamespaceResource[] }>(
+        workspaceId,
         "/api/v1/memory/namespaces",
       ),
   });
@@ -306,7 +322,8 @@ export function useMemoryNamespaceQuery(namespaceId: string | undefined) {
     queryKey: ["memory", workspaceId, "namespace", namespaceId],
     enabled: workspaceId !== undefined && namespaceId !== undefined,
     queryFn: () =>
-      consoleFetch<MemoryNamespaceResource>(
+      workspaceScopedFetch<MemoryNamespaceResource>(
+        workspaceId,
         `/api/v1/memory/namespaces/${encodeURIComponent(namespaceId ?? "")}`,
       ),
   });
@@ -345,7 +362,11 @@ export function useMemoryRecordsQuery(
     ],
     enabled: workspaceId !== undefined && namespaceId !== undefined,
     queryFn: () =>
-      consoleFetch<{ items: MemoryRecordResource[]; nextCursor?: string }>(
+      workspaceScopedFetch<{
+        items: MemoryRecordResource[];
+        nextCursor?: string;
+      }>(
+        workspaceId,
         `/api/v1/memory/namespaces/${encodeURIComponent(namespaceId ?? "")}/records${suffix}`,
       ),
   });
@@ -356,10 +377,13 @@ export function useCreateMemoryNamespaceMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: { readonly key: string; readonly name: string }) =>
-      consoleFetch<MemoryNamespaceResource>("/api/v1/memory/namespaces", {
-        method: "POST",
-        body: JSON.stringify(body),
-      }),
+      workspaceMutationFetch<MemoryNamespaceResource>(
+        "/api/v1/memory/namespaces",
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+        },
+      ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["memory", workspaceId],

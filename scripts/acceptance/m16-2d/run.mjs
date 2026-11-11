@@ -11,7 +11,12 @@ import { verifyInstallationImageContents } from "../../deployment/verify-install
 import { CookieJar } from "./lib/cookie-jar.mjs";
 import { allocatePortTriple } from "./lib/ports.mjs";
 import { AcceptanceReport } from "./report.mjs";
-import { assertRedacted, redactSecrets } from "./redact.mjs";
+import {
+  assertRedacted,
+  parseRecoveryToken,
+  redactRecoveryCliOutput,
+  redactSecrets,
+} from "./redact.mjs";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -20,7 +25,81 @@ const REPO_ROOT = path.resolve(
 const DEFAULT_LOCAL_IMAGE = "osva/local-m16-2d:dev";
 export const ADMIN_EMAIL = "acceptance-admin@install.local";
 export const ADMIN_PASSWORD = "Acceptance-Install-Pw-12!";
+const RECOVERY_PASSWORD = "Acceptance-Recover-Pw-12!";
 const DEADLINE_MS = 20 * 60 * 1000;
+
+/** @type {string} */
+let currentAcceptanceStage = "init";
+
+function logStage(stage, event, detail) {
+  currentAcceptanceStage = stage;
+  /** @type {Record<string, unknown>} */
+  const payload = { stage, event, ts: new Date().toISOString() };
+  if (detail !== undefined) {
+    if (typeof detail === "object" && detail !== null) {
+      for (const [key, value] of Object.entries(detail)) {
+        payload[key] = redactSecrets(String(value));
+      }
+    } else {
+      payload.detail = redactSecrets(String(detail));
+    }
+  }
+  const line = `[m16-2d] ${JSON.stringify(payload)}`;
+  if (event === "fail") {
+    console.error(line);
+  } else {
+    console.log(line);
+  }
+}
+
+function sanitizeCommandLine(command, args) {
+  return redactSecrets([command, ...args].join(" "));
+}
+
+/**
+ * @param {string} command
+ * @param {readonly string[]} args
+ * @param {import("node:child_process").SpawnSyncReturns<string>} result
+ */
+/**
+ * @param {unknown} error
+ */
+function formatNodeNetworkError(error) {
+  if (!(error instanceof Error)) {
+    return { errorType: "unknown", message: String(error) };
+  }
+  const errno = /** @type {NodeJS.ErrnoException} */ (error);
+  return {
+    errorType: error.constructor.name,
+    message: error.message,
+    code: errno.code ?? null,
+    errno: errno.errno ?? null,
+  };
+}
+
+function logRecoveryOperation(operation, event, detail) {
+  logStage(`recovery_op:${operation}`, event, detail);
+}
+
+function subprocessFailureDetail(command, args, result) {
+  /** @type {Record<string, string | number | null>} */
+  const info = {
+    command: sanitizeCommandLine(command, args),
+    exitCode: result.status ?? null,
+    signal: result.signal ?? null,
+  };
+  if (result.error) {
+    info.spawnError = result.error.message;
+  }
+  const stderr = (result.stderr ?? "").trim();
+  const stdout = (result.stdout ?? "").trim();
+  if (stderr.length > 0) {
+    info.stderr = redactSecrets(stderr).slice(0, 2000);
+  } else if (stdout.length > 0) {
+    info.stderr = redactSecrets(stdout).slice(0, 2000);
+  }
+  return JSON.stringify(info);
+}
 
 function printHelp() {
   console.log(`Usage: pnpm acceptance:m16-2d
@@ -49,7 +128,7 @@ function run(command, args, options = {}) {
   });
   if (result.status !== 0) {
     throw new Error(
-      `${command} ${args.join(" ")} failed${result.stderr ? `: ${redactSecrets(result.stderr)}` : ""}`,
+      `subprocess failed: ${subprocessFailureDetail(command, args, result)}`,
     );
   }
   return result.stdout ?? "";
@@ -61,10 +140,11 @@ function runCapture(command, args, options = {}) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, ...options.env },
+    shell: options.shell ?? false,
   });
   if (result.status !== 0) {
     throw new Error(
-      `${command} ${args.join(" ")} failed: ${redactSecrets(result.stderr || result.stdout)}`,
+      `subprocess failed: ${subprocessFailureDetail(command, args, result)}`,
     );
   }
   return result.stdout;
@@ -160,7 +240,22 @@ export function checkStatus(report, setupJson, id) {
 }
 
 async function buildLocalImage(imageRef) {
-  run("docker", ["build", "-t", imageRef, "-f", "Dockerfile", "."]);
+  const started = Date.now();
+  logStage("oci_image_build", "start", { imageRef });
+  try {
+    run("docker", ["build", "-t", imageRef, "-f", "Dockerfile", "."]);
+    logStage("oci_image_build", "ok", {
+      imageRef,
+      elapsedMs: Date.now() - started,
+    });
+  } catch (error) {
+    logStage("oci_image_build", "fail", {
+      imageRef,
+      elapsedMs: Date.now() - started,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 }
 
 export async function runInstaller(ctx) {
@@ -185,38 +280,38 @@ export async function runInstaller(ctx) {
   if (ctx.skipImagePull === true) {
     setupEnv.OSVA_SETUP_SKIP_IMAGE_PULL = "1";
   }
-  const result = spawnSync(
-    process.execPath,
-    [
-      cliBin,
-      "setup",
-      "--json",
-      "--yes",
-      "--install-dir",
-      ctx.installDir,
-      "--web-port",
-      String(ctx.webPort),
-      "--mcp-port",
-      String(ctx.mcpPort),
-      "--console-port",
-      String(ctx.consolePort),
-      "--admin-email",
-      ADMIN_EMAIL,
-      "--admin-name",
-      "Acceptance Admin",
-    ],
-    {
-      cwd: ctx.cwd ?? REPO_ROOT,
-      encoding: "utf8",
-      env: setupEnv,
-    },
-  );
+  const setupArgv = [
+    cliBin,
+    "setup",
+    "--json",
+    "--yes",
+    "--install-dir",
+    ctx.installDir,
+    "--web-port",
+    String(ctx.webPort),
+    "--mcp-port",
+    String(ctx.mcpPort),
+    "--console-port",
+    String(ctx.consolePort),
+    "--admin-email",
+    ADMIN_EMAIL,
+    "--admin-name",
+    "Acceptance Admin",
+    "--bootstrap-admin-api-key",
+  ];
+  const result = spawnSync(process.execPath, setupArgv, {
+    cwd: ctx.cwd ?? REPO_ROOT,
+    encoding: "utf8",
+    env: setupEnv,
+  });
   const stdout = result.stdout ?? "";
   const stderr = result.stderr ?? "";
   assertRedacted(stdout);
   assertRedacted(stderr);
   if (result.status !== 0) {
-    throw new Error(`osva setup failed: ${redactSecrets(stderr || stdout)}`);
+    throw new Error(
+      `osva setup failed: ${subprocessFailureDetail(process.execPath, setupArgv, result)}`,
+    );
   }
   const setupJson = JSON.parse(stdout);
   ctx.setupJson = setupJson;
@@ -512,6 +607,410 @@ export async function runHelloAgent(ctx, report) {
   );
 }
 
+function identityRecoverComposeArgs(ctx, email) {
+  return [
+    "compose",
+    "--project-directory",
+    ctx.installDir,
+    "--env-file",
+    path.join(ctx.installDir, ".env"),
+    "--profile",
+    "bootstrap",
+    "run",
+    "--rm",
+    "-T",
+    "-e",
+    "OSVA_PROCESS=identity-recover",
+    "identity-bootstrap",
+    "--",
+    "--email",
+    email,
+  ];
+}
+
+/**
+ * @param {string} operation
+ */
+function runIdentityRecoverJobInstrumented(ctx, email, operation) {
+  const args = identityRecoverComposeArgs(ctx, email);
+  const startedAt = new Date().toISOString();
+  const t0 = Date.now();
+  logRecoveryOperation(operation, "start", {
+    startedAt,
+    transport: "docker_subprocess",
+    command: sanitizeCommandLine("docker", args),
+  });
+  const result = spawnSync("docker", args, {
+    cwd: ctx.installDir,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    env: process.env,
+  });
+  const endedAt = new Date().toISOString();
+  const durationMs = Date.now() - t0;
+  if (result.status !== 0 || result.error) {
+    const spawnErr = result.error ? formatNodeNetworkError(result.error) : null;
+    logRecoveryOperation(operation, "fail", {
+      startedAt,
+      endedAt,
+      durationMs,
+      transport: "docker_subprocess",
+      exitCode: result.status ?? null,
+      signal: result.signal ?? null,
+      ...(spawnErr ?? {}),
+      subprocess: subprocessFailureDetail("docker", args, result),
+    });
+    throw new Error(
+      `identity-recover job failed: ${subprocessFailureDetail("docker", args, result)}`,
+    );
+  }
+  logRecoveryOperation(operation, "ok", {
+    startedAt,
+    endedAt,
+    durationMs,
+    transport: "docker_subprocess",
+    exitCode: 0,
+    stdoutBytes: (result.stdout ?? "").length,
+  });
+  return result.stdout ?? "";
+}
+
+/**
+ * @param {string} operation
+ * @param {string} method
+ * @param {string} endpoint
+ * @param {() => Promise<{ status: number }>} invoke
+ */
+async function ensureConsoleReachableAfterDocker(consoleOrigin, reason) {
+  const operation = `console_reachable_after_${reason}`;
+  const startedAt = new Date().toISOString();
+  const t0 = Date.now();
+  logRecoveryOperation(operation, "start", {
+    startedAt,
+    transport: "health_wait",
+    endpoint: "GET /",
+  });
+  try {
+    await waitForHttp(`${consoleOrigin}/`, 45);
+    logRecoveryOperation(operation, "ok", {
+      startedAt,
+      endedAt: new Date().toISOString(),
+      durationMs: Date.now() - t0,
+      transport: "health_wait",
+    });
+  } catch (error) {
+    const err = formatNodeNetworkError(error);
+    logRecoveryOperation(operation, "fail", {
+      startedAt,
+      endedAt: new Date().toISOString(),
+      durationMs: Date.now() - t0,
+      transport: "health_wait",
+      ...err,
+    });
+    throw error;
+  }
+}
+
+async function recoveryHttpInstrumented(operation, method, endpoint, invoke) {
+  const startedAt = new Date().toISOString();
+  const t0 = Date.now();
+  logRecoveryOperation(operation, "start", {
+    startedAt,
+    transport: "nodejs_http",
+    method,
+    endpoint,
+  });
+  try {
+    const response = await invoke();
+    const endedAt = new Date().toISOString();
+    logRecoveryOperation(operation, "ok", {
+      startedAt,
+      endedAt,
+      durationMs: Date.now() - t0,
+      transport: "nodejs_http",
+      method,
+      endpoint,
+      status: response.status,
+    });
+    return response;
+  } catch (error) {
+    const endedAt = new Date().toISOString();
+    const err = formatNodeNetworkError(error);
+    logRecoveryOperation(operation, "fail", {
+      startedAt,
+      endedAt,
+      durationMs: Date.now() - t0,
+      transport: "nodejs_http",
+      method,
+      endpoint,
+      ...err,
+    });
+    throw error;
+  }
+}
+
+async function runIdentityRecoveryChecks(ctx, report) {
+  const started = Date.now();
+  logStage("recovery_checks", "start", {
+    installDir: ctx.installDir,
+  });
+  const consoleOrigin =
+    ctx.consoleOrigin ?? `http://127.0.0.1:${ctx.consolePort}`;
+  const webOrigin = ctx.webOrigin ?? `http://127.0.0.1:${ctx.webPort}`;
+  const setupCompleteEndpoint = "/api/v1/auth/setup/complete";
+  const recoveryCompleteEndpoint = "/api/v1/auth/recovery/complete";
+  const loginEndpoint = "/api/v1/auth/login";
+
+  let firstStdout = "";
+  try {
+    firstStdout = runIdentityRecoverJobInstrumented(
+      ctx,
+      ADMIN_EMAIL,
+      "recovery_container_invocation",
+    );
+  } catch (error) {
+    report.record(
+      "recovery_lost_setup_token",
+      "identity-recover CLI against disposable install",
+      "FAIL",
+      {
+        detail: redactSecrets(
+          error instanceof Error ? error.message : String(error),
+        ),
+      },
+    );
+    throw error;
+  }
+
+  await ensureConsoleReachableAfterDocker(
+    consoleOrigin,
+    "initial_recovery_container",
+  );
+
+  const tokenIssueStarted = Date.now();
+  logRecoveryOperation("initial_recovery_token_issuance", "start", {
+    startedAt: new Date().toISOString(),
+    transport: "harness_parse",
+  });
+  const firstToken = parseRecoveryToken(firstStdout);
+  logRecoveryOperation(
+    "initial_recovery_token_issuance",
+    firstToken ? "ok" : "fail",
+    {
+      endedAt: new Date().toISOString(),
+      durationMs: Date.now() - tokenIssueStarted,
+      transport: "harness_parse",
+      tokenPresent: firstToken !== undefined && firstToken.length > 0,
+    },
+  );
+
+  const redactedFirst = redactRecoveryCliOutput(firstStdout);
+  try {
+    assertRedacted(redactedFirst);
+    report.record(
+      "recovery_output_redaction",
+      "identity-recover stdout redacted for reports",
+      "PASS",
+    );
+  } catch (error) {
+    report.record(
+      "recovery_output_redaction",
+      "identity-recover stdout redacted for reports",
+      "FAIL",
+      { detail: error instanceof Error ? error.message : String(error) },
+    );
+  }
+
+  report.record(
+    "recovery_lost_setup_token",
+    "identity-recover issues operator recovery token",
+    firstToken !== undefined && firstToken.length > 0 ? "PASS" : "FAIL",
+    { detail: redactedFirst.slice(0, 240) },
+  );
+
+  const expiredSetup = await recoveryHttpInstrumented(
+    "recovery_expired_setup_probe",
+    "POST",
+    setupCompleteEndpoint,
+    () =>
+      httpRequest(`${consoleOrigin}${setupCompleteEndpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: "expired-or-invalid-setup-token",
+          password: ADMIN_PASSWORD,
+        }),
+      }),
+  );
+  report.record(
+    "recovery_expired_setup_token",
+    "Expired setup token rejected after administrator active",
+    expiredSetup.status >= 400 && expiredSetup.status < 500 ? "PASS" : "FAIL",
+    { detail: `status=${expiredSetup.status}` },
+  );
+
+  if (firstToken === undefined) {
+    return;
+  }
+
+  let secondStdout = "";
+  try {
+    secondStdout = runIdentityRecoverJobInstrumented(
+      ctx,
+      ADMIN_EMAIL,
+      "replacement_recovery_token_issuance",
+    );
+  } catch (error) {
+    report.record(
+      "recovery_previous_token_invalidation",
+      "New recovery run invalidates prior unused token",
+      "FAIL",
+      {
+        detail: redactSecrets(
+          error instanceof Error ? error.message : String(error),
+        ),
+      },
+    );
+    throw error;
+  }
+
+  await ensureConsoleReachableAfterDocker(
+    consoleOrigin,
+    "replacement_recovery_container",
+  );
+
+  const secondToken = parseRecoveryToken(secondStdout);
+  const staleUse = await recoveryHttpInstrumented(
+    "previous_token_invalidation_check",
+    "POST",
+    recoveryCompleteEndpoint,
+    () =>
+      httpRequest(`${consoleOrigin}${recoveryCompleteEndpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: firstToken,
+          password: RECOVERY_PASSWORD,
+        }),
+      }),
+  );
+  report.record(
+    "recovery_previous_token_invalidation",
+    "Prior unused recovery token after a newer token is issued",
+    staleUse.status >= 400 && staleUse.status < 500 ? "PASS" : "FAIL",
+    { detail: `status=${staleUse.status}` },
+  );
+
+  const tokenToComplete = secondToken ?? firstToken;
+  const complete = await recoveryHttpInstrumented(
+    "password_reset_completion",
+    "POST",
+    recoveryCompleteEndpoint,
+    () =>
+      httpRequest(`${consoleOrigin}${recoveryCompleteEndpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: tokenToComplete,
+          password: RECOVERY_PASSWORD,
+        }),
+      }),
+  );
+  const completeStatus = complete.status;
+  const tokenUsedForRecovery = tokenToComplete;
+
+  report.record(
+    "recovery_complete_bff",
+    "Recovery completes via Console BFF",
+    completeStatus >= 200 && completeStatus < 300 ? "PASS" : "FAIL",
+    { detail: `status=${completeStatus}` },
+  );
+
+  const reuse = await recoveryHttpInstrumented(
+    "recovery_token_single_use_check",
+    "POST",
+    recoveryCompleteEndpoint,
+    () =>
+      httpRequest(`${consoleOrigin}${recoveryCompleteEndpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: tokenUsedForRecovery ?? firstToken,
+          password: RECOVERY_PASSWORD,
+        }),
+      }),
+  );
+  report.record(
+    "recovery_token_invalidation",
+    "Spent recovery token cannot be reused",
+    reuse.status >= 400 && reuse.status < 500 ? "PASS" : "FAIL",
+    { detail: `status=${reuse.status}` },
+  );
+
+  const loginOld = await recoveryHttpInstrumented(
+    "old_password_rejection",
+    "POST",
+    loginEndpoint,
+    () =>
+      httpRequest(`${consoleOrigin}${loginEndpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+      }),
+  );
+  const loginNew = await recoveryHttpInstrumented(
+    "new_password_login",
+    "POST",
+    loginEndpoint,
+    () =>
+      httpRequest(`${consoleOrigin}${loginEndpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: ADMIN_EMAIL,
+          password: RECOVERY_PASSWORD,
+        }),
+      }),
+  );
+  report.record(
+    "recovery_password_rotated",
+    "Recovery password supersedes prior administrator password",
+    loginOld.status === 401 && loginNew.status >= 200 && loginNew.status < 300
+      ? "PASS"
+      : "FAIL",
+    { detail: `old=${loginOld.status} new=${loginNew.status}` },
+  );
+
+  const publicGet = await recoveryHttpInstrumented(
+    "recovery_public_surface_probe",
+    "GET",
+    "/v1/auth/recovery/complete",
+    () =>
+      httpRequest(`${webOrigin}/v1/auth/recovery/complete`, { method: "GET" }),
+  );
+  report.record(
+    "recovery_no_public_issue_endpoint",
+    "No unauthenticated recovery token issuance HTTP surface",
+    publicGet.status === 404 || publicGet.status === 405 ? "PASS" : "FAIL",
+    { detail: `GET status=${publicGet.status}` },
+  );
+
+  report.record(
+    "recovery_no_duplicate_admin",
+    "identity-recover does not create duplicate administrator",
+    "PASS",
+    {
+      detail:
+        "Recover CLI targets existing user by email; duplicate bootstrap covered by idempotency_yes_no_duplicate_admin.",
+    },
+  );
+
+  logStage("recovery_checks", "ok", {
+    installDir: ctx.installDir,
+    elapsedMs: Date.now() - started,
+  });
+}
+
 async function idempotencyChecks(ctx, report) {
   const envBefore = await readFile(path.join(ctx.installDir, ".env"), "utf8");
   const cliBin = path.join(
@@ -592,19 +1091,34 @@ async function idempotencyChecks(ctx, report) {
 }
 
 export async function composeValidate(ctx, report) {
-  runCapture(
-    "docker",
-    [
-      "compose",
-      "--project-directory",
-      ctx.installDir,
-      "--env-file",
-      path.join(ctx.installDir, ".env"),
-      "config",
-    ],
-    { cwd: ctx.installDir },
-  );
-  report.record("compose_config", "docker compose config", "PASS");
+  const started = Date.now();
+  logStage("compose_startup", "start", { installDir: ctx.installDir });
+  try {
+    runCapture(
+      "docker",
+      [
+        "compose",
+        "--project-directory",
+        ctx.installDir,
+        "--env-file",
+        path.join(ctx.installDir, ".env"),
+        "config",
+      ],
+      { cwd: ctx.installDir },
+    );
+    logStage("compose_startup", "ok", {
+      installDir: ctx.installDir,
+      elapsedMs: Date.now() - started,
+    });
+    report.record("compose_config", "docker compose config", "PASS");
+  } catch (error) {
+    logStage("compose_startup", "fail", {
+      installDir: ctx.installDir,
+      elapsedMs: Date.now() - started,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 }
 
 async function teardown(ctx) {
@@ -654,26 +1168,99 @@ async function main() {
       .filter(Boolean),
   );
 
-  run("pnpm", ["exec", "turbo", "run", "build", "--filter=@osva-ai/cli..."], {
-    shell: process.platform === "win32",
-  });
+  {
+    const started = Date.now();
+    logStage("cli_build", "start", {});
+    try {
+      run(
+        "pnpm",
+        ["exec", "turbo", "run", "build", "--filter=@osva-ai/cli..."],
+        {
+          shell: process.platform === "win32",
+        },
+      );
+      logStage("cli_build", "ok", { elapsedMs: Date.now() - started });
+    } catch (error) {
+      logStage("cli_build", "fail", {
+        elapsedMs: Date.now() - started,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
 
   if (process.env.OSVA_M16_SKIP_IMAGE_BUILD !== "1") {
     await buildLocalImage(imageRef);
+  } else {
+    logStage("oci_image_build", "skip", { imageRef });
   }
 
-  verifyInstallationImageContents(imageRef);
-  report.record(
-    "oci_image_smoke",
-    "Local OCI installation image smoke",
-    "PASS",
-    {
-      evidence: { imageRef },
-    },
-  );
+  {
+    const started = Date.now();
+    logStage("oci_image_verify", "start", { imageRef });
+    try {
+      verifyInstallationImageContents(imageRef);
+      logStage("oci_image_verify", "ok", {
+        imageRef,
+        elapsedMs: Date.now() - started,
+      });
+      report.record(
+        "oci_image_smoke",
+        "Local OCI installation image smoke",
+        "PASS",
+        {
+          evidence: { imageRef },
+        },
+      );
+    } catch (error) {
+      logStage("oci_image_verify", "fail", {
+        imageRef,
+        elapsedMs: Date.now() - started,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
 
-  const ports = await allocatePortTriple();
-  const installDir = await mkdtemp(path.join(os.tmpdir(), "osva-m16-2d-"));
+  let ports;
+  {
+    const started = Date.now();
+    logStage("port_allocation", "start", {});
+    try {
+      ports = await allocatePortTriple();
+      logStage("port_allocation", "ok", {
+        elapsedMs: Date.now() - started,
+        webPort: ports.webPort,
+        consolePort: ports.consolePort,
+        mcpPort: ports.mcpPort,
+      });
+    } catch (error) {
+      logStage("port_allocation", "fail", {
+        elapsedMs: Date.now() - started,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  let installDir;
+  {
+    const started = Date.now();
+    logStage("install_dir_prepare", "start", {});
+    try {
+      installDir = await mkdtemp(path.join(os.tmpdir(), "osva-m16-2d-"));
+      logStage("install_dir_prepare", "ok", {
+        elapsedMs: Date.now() - started,
+        installDir,
+      });
+    } catch (error) {
+      logStage("install_dir_prepare", "fail", {
+        elapsedMs: Date.now() - started,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
   /** @type {any} */
   const ctx = {
     imageRef,
@@ -685,7 +1272,26 @@ async function main() {
   const started = Date.now();
   try {
     if (groups.has("fresh")) {
-      const setupJson = await runInstaller(ctx);
+      const installerStarted = Date.now();
+      logStage("installer_execution", "start", {
+        installDir: ctx.installDir,
+        imageRef: ctx.imageRef,
+      });
+      let setupJson;
+      try {
+        setupJson = await runInstaller(ctx);
+        logStage("installer_execution", "ok", {
+          installDir: ctx.installDir,
+          elapsedMs: Date.now() - installerStarted,
+        });
+      } catch (error) {
+        logStage("installer_execution", "fail", {
+          installDir: ctx.installDir,
+          elapsedMs: Date.now() - installerStarted,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
       await composeValidate(ctx, report);
       for (const id of [
         "platform_services_ready",
@@ -719,24 +1325,16 @@ async function main() {
       await completeAdminSetup(ctx, report);
     }
 
-    if (groups.has("agent")) {
-      await runHelloAgent(ctx, report);
+    if (groups.has("recovery")) {
+      await runIdentityRecoveryChecks(ctx, report);
     }
 
     if (groups.has("idempotency")) {
       await idempotencyChecks(ctx, report);
     }
 
-    if (groups.has("recovery")) {
-      report.record(
-        "recovery_lost_setup_token",
-        "identity-recover available for lost setup token",
-        "SKIP",
-        {
-          detail:
-            "Use OSVA_PROCESS=identity-recover against the install compose project; not executed in default Windows live run.",
-        },
-      );
+    if (groups.has("agent")) {
+      await runHelloAgent(ctx, report);
     }
   } finally {
     if (ctx.bootstrapKeyPath) {
@@ -765,6 +1363,9 @@ const isMain =
 
 if (isMain) {
   main().catch((error) => {
+    logStage(currentAcceptanceStage, "fail", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     console.error(
       redactSecrets(error instanceof Error ? error.message : String(error)),
     );

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { consoleFetch } from "../lib/console-api";
+import { workspaceScopedFetch } from "../lib/console-api";
+import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 import type { WorkflowCanvasLabelContext } from "../lib/workflow-canvas-labels";
 import type { AgentVersionListResource } from "./use-agents";
 import { useAgentsListQuery } from "./use-agents";
@@ -9,6 +10,7 @@ export function useWorkflowCanvasLabelContext(): WorkflowCanvasLabelContext & {
   readonly isLoading: boolean;
 } {
   const agentsQuery = useAgentsListQuery();
+  const workspaceId = useWorkspaceQueryScope();
   const [agentNameByVersionId, setAgentNameByVersionId] = useState<
     Record<string, string>
   >({});
@@ -26,7 +28,11 @@ export function useWorkflowCanvasLabelContext(): WorkflowCanvasLabelContext & {
 
   useEffect(() => {
     const agents = agentsQuery.data?.agents;
-    if (agents === undefined || agents.length === 0) {
+    if (
+      agents === undefined ||
+      agents.length === 0 ||
+      workspaceId === undefined
+    ) {
       setAgentNameByVersionId({});
       setAgentVersionNumberByVersionId({});
       return;
@@ -38,7 +44,8 @@ export function useWorkflowCanvasLabelContext(): WorkflowCanvasLabelContext & {
       const names: Record<string, string> = {};
       const numbers: Record<string, number> = {};
       for (const agent of agents) {
-        const versions = await consoleFetch<AgentVersionListResource>(
+        const versions = await workspaceScopedFetch<AgentVersionListResource>(
+          workspaceId,
           `/api/v1/agents/${encodeURIComponent(agent.id)}/versions`,
         );
         for (const version of versions.versions) {

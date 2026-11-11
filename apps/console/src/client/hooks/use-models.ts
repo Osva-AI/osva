@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { consoleFetch } from "../lib/console-api";
+import {
+  workspaceScopedFetch,
+  workspaceMutationFetch,
+} from "../lib/console-api";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface ModelProfileResource {
@@ -50,7 +53,8 @@ export function useModelProfilesListQuery() {
     queryKey: ["model-profiles", workspaceId, "list"],
     enabled: workspaceId !== undefined,
     queryFn: () =>
-      consoleFetch<{ modelProfiles: ModelProfileResource[] }>(
+      workspaceScopedFetch<{ modelProfiles: ModelProfileResource[] }>(
+        workspaceId,
         "/api/v1/model-profiles",
       ),
   });
@@ -61,7 +65,7 @@ export function useCreateModelProfileMutation() {
   const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (body: { readonly key: string; readonly name: string }) =>
-      consoleFetch<ModelProfileResource>("/api/v1/model-profiles", {
+      workspaceMutationFetch<ModelProfileResource>("/api/v1/model-profiles", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
@@ -82,7 +86,8 @@ export function useModelProfileVersionsQuery(
     queryKey: ["model-profiles", workspaceId, modelProfileId, "versions"],
     enabled: workspaceId !== undefined && modelProfileId !== undefined,
     queryFn: () =>
-      consoleFetch<{ versions: ModelProfileVersionResource[] }>(
+      workspaceScopedFetch<{ versions: ModelProfileVersionResource[] }>(
+        workspaceId,
         `/api/v1/model-profiles/${encodeURIComponent(modelProfileId ?? "")}/versions`,
       ),
   });
@@ -94,7 +99,8 @@ export function useModelProviderConnectionsListQuery() {
     queryKey: ["model-provider-connections", workspaceId, "list"],
     enabled: workspaceId !== undefined,
     queryFn: () =>
-      consoleFetch<{ connections: ModelProviderConnectionResource[] }>(
+      workspaceScopedFetch<{ connections: ModelProviderConnectionResource[] }>(
+        workspaceId,
         "/api/v1/model-provider-connections",
       ),
   });
@@ -113,7 +119,10 @@ export function useModelProviderConnectionVersionsQuery(
     ],
     enabled: workspaceId !== undefined && connectionId !== undefined,
     queryFn: () =>
-      consoleFetch<{ versions: ModelProviderConnectionVersionResource[] }>(
+      workspaceScopedFetch<{
+        versions: ModelProviderConnectionVersionResource[];
+      }>(
+        workspaceId,
         `/api/v1/model-provider-connections/${encodeURIComponent(connectionId ?? "")}/versions`,
       ),
   });
@@ -128,7 +137,8 @@ export function useCreateModelProviderConnectionMutation() {
       readonly name: string;
       readonly provider: string;
     }) =>
-      consoleFetch<ModelProviderConnectionResource>(
+      workspaceScopedFetch<ModelProviderConnectionResource>(
+        workspaceId,
         "/api/v1/model-provider-connections",
         {
           method: "POST",
@@ -157,7 +167,8 @@ export function useAppendModelProviderConnectionVersionMutation(
       };
       readonly credentialRef?: { readonly key: string };
     }) =>
-      consoleFetch<ModelProviderConnectionVersionResource>(
+      workspaceScopedFetch<ModelProviderConnectionVersionResource>(
+        workspaceId,
         `/api/v1/model-provider-connections/${encodeURIComponent(connectionId)}/versions`,
         {
           method: "POST",
@@ -182,7 +193,7 @@ export function useTestModelProviderConnectionVersionMutation(
       readonly model?: string;
       readonly modelProfileVersionId?: string;
     }) =>
-      consoleFetch<{
+      workspaceMutationFetch<{
         status: "READY" | "FAILED";
         checkedAt: string;
         code?: string;
@@ -206,7 +217,8 @@ export function useAppendModelProfileVersionMutation(modelProfileId: string) {
       readonly model: string;
       readonly modelProviderConnectionVersionId?: string;
     }) =>
-      consoleFetch<ModelProfileVersionResource>(
+      workspaceScopedFetch<ModelProfileVersionResource>(
+        workspaceId,
         `/api/v1/model-profiles/${encodeURIComponent(modelProfileId)}/versions`,
         {
           method: "POST",
@@ -239,10 +251,11 @@ export function useModelBindingReadinessQuery() {
     enabled: workspaceId !== undefined,
     queryFn: async (): Promise<ModelBindingReadinessResource> => {
       const [connections, profiles] = await Promise.all([
-        consoleFetch<{ connections: ModelProviderConnectionResource[] }>(
-          "/api/v1/model-provider-connections",
-        ),
-        consoleFetch<{ modelProfiles: ModelProfileResource[] }>(
+        workspaceScopedFetch<{
+          connections: ModelProviderConnectionResource[];
+        }>(workspaceId, "/api/v1/model-provider-connections"),
+        workspaceScopedFetch<{ modelProfiles: ModelProfileResource[] }>(
+          workspaceId,
           "/api/v1/model-profiles",
         ),
       ]);
@@ -252,9 +265,12 @@ export function useModelBindingReadinessQuery() {
       }> = [];
       let hasBoundProfileVersion = false;
       for (const profile of profiles.modelProfiles) {
-        const versions = await consoleFetch<{
+        const versions = await workspaceScopedFetch<{
           versions: ModelProfileVersionResource[];
-        }>(`/api/v1/model-profiles/${encodeURIComponent(profile.id)}/versions`);
+        }>(
+          workspaceId,
+          `/api/v1/model-profiles/${encodeURIComponent(profile.id)}/versions`,
+        );
         profileVersions.push({
           profileId: profile.id,
           versions: versions.versions,

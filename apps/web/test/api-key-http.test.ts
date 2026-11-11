@@ -104,6 +104,46 @@ describe("API key lifecycle HTTP API", () => {
     expect(serialized).not.toMatch(/secretDigest|verifier|digest/i);
   });
 
+  it("rejects expired and revoked machine keys", async () => {
+    const harness = await createTwoWorkspaceHarness(servers);
+    const { ApiKey: ApiKeyEntity, generateApiKeySecretMaterial } =
+      await import("@osva/domain");
+    const expired = ApiKeyEntity.create({
+      id: "ak-expired" as import("@osva-ai/contracts").ApiKeyId,
+      workspaceId: WS_A,
+      name: "expired",
+      role: COMMUNITY_EDITION_ROLES.ADMIN,
+      now: new Date("2020-01-01T00:00:00.000Z"),
+      expiresAt: new Date("2020-06-01T00:00:00.000Z"),
+    });
+    const expiredSecret = generateApiKeySecretMaterial(expired.id);
+    await harness.ctx.apiKeys.create({
+      apiKey: expired,
+      secretDigest: expiredSecret.secretDigest,
+    });
+
+    const revoked = await seedTestApiKey({
+      apiKeys: harness.ctx.apiKeys,
+      workspaceId: WS_A,
+      apiKeyId: "ak-revoked-live" as import("@osva-ai/contracts").ApiKeyId,
+      role: COMMUNITY_EDITION_ROLES.ADMIN,
+    });
+    await harness.ctx.apiKeys.revoke(
+      revoked.apiKeyId,
+      new Date("2026-01-16T00:00:00.000Z"),
+    );
+
+    for (const token of [
+      expiredSecret.plaintextToken,
+      revoked.plaintextToken,
+    ]) {
+      const denied = await fetchV1(`${harness.origin}/v1/agents`, {
+        headers: authorizationHeader(token),
+      });
+      expect(denied.status).toBe(401);
+    }
+  });
+
   it("revokes foreign keys with 404 and self-revoke without restart", async () => {
     const harness = await createTwoWorkspaceHarness(servers);
     const keyInB = await seedTestApiKey({

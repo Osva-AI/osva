@@ -145,14 +145,31 @@ describe("BootstrapInstallation", () => {
     };
   }
 
+  it("creates only the workspace when machine ADMIN key creation is disabled", async () => {
+    const deps = createDeps();
+    const bootstrap = new BootstrapInstallation(deps);
+    const result = await bootstrap.execute({
+      workspaceName: "Human first",
+      createMachineAdminApiKey: false,
+    });
+
+    expect(result.workspace.name).toBe("Human first");
+    expect(result.apiKey).toBeUndefined();
+    expect(result.plaintextToken).toBeUndefined();
+    expect(deps.workspaces.workspaces).toHaveLength(1);
+    expect(deps.apiKeys.records).toHaveLength(0);
+  });
+
   it("creates the initial workspace and ADMIN key on an empty installation", async () => {
     const deps = createDeps();
     const bootstrap = new BootstrapInstallation(deps);
     const result = await bootstrap.execute({ workspaceName: "Primary" });
 
     expect(result.workspace.name).toBe("Primary");
-    expect(result.apiKey.role).toBe(COMMUNITY_EDITION_ROLES.ADMIN);
-    expect(result.plaintextToken.startsWith("osva_ak_")).toBe(true);
+    expect(result.apiKey).toBeDefined();
+    expect(result.plaintextToken).toBeDefined();
+    expect(result.apiKey!.role).toBe(COMMUNITY_EDITION_ROLES.ADMIN);
+    expect(result.plaintextToken!.startsWith("osva_ak_")).toBe(true);
     expect(deps.workspaces.workspaces).toHaveLength(1);
     expect(deps.apiKeys.records).toHaveLength(1);
     expect(deps.apiKeys.records[0]?.secretDigest.length).toBe(32);

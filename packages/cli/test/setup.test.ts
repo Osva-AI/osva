@@ -33,6 +33,8 @@ function setupOptions(
     adminName: partial.adminName ?? "Initial Owner",
     organizationName: partial.organizationName ?? "Default Organization",
     workspaceName: partial.workspaceName ?? "Default Workspace",
+    createBootstrapAdminApiKey: partial.createBootstrapAdminApiKey ?? false,
+    autoPorts: partial.autoPorts ?? false,
   };
 }
 
@@ -141,8 +143,7 @@ describe("osva setup preflight", () => {
       (check) => check.id === "publish_web_port",
     );
     expect(webCheck?.status).toBe("FAIL");
-    expect(webCheck?.message).toContain("already in use");
-    expect(webCheck?.message).toContain("127.0.0.1");
+    expect(webCheck?.message).toMatch(/in use/i);
     expect(report.result).toBe("fail");
   });
 

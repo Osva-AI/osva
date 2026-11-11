@@ -10,7 +10,10 @@ import {
   loadWorkflowRunArtifacts,
   type WorkflowRunArtifactsResult,
 } from "../lib/workflow-artifacts";
+import type { ArtifactListResource, ArtifactResource } from "./use-runs";
+import { workspaceScopedFetch } from "../lib/console-api";
 import type { WorkflowNodeRunResource } from "./use-workflow-runs";
+import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export function useWorkflowRunArtifactsQuery(input: {
   readonly workflowRunId: string | undefined;
@@ -19,6 +22,7 @@ export function useWorkflowRunArtifactsQuery(input: {
   readonly workflowOutput: unknown;
   readonly live: boolean;
 }) {
+  const workspaceId = useWorkspaceQueryScope();
   const childRuns = useMemo(() => {
     if (input.definition === undefined || input.nodeRuns === undefined) {
       return [];
@@ -54,13 +58,16 @@ export function useWorkflowRunArtifactsQuery(input: {
   return useQuery({
     queryKey: [
       "workflow-runs",
+      workspaceId,
       input.workflowRunId,
       "artifacts",
       childRunKey,
       referenceIds,
     ],
     enabled:
-      input.workflowRunId !== undefined && input.definition !== undefined,
+      workspaceId !== undefined &&
+      input.workflowRunId !== undefined &&
+      input.definition !== undefined,
     queryFn: (): Promise<WorkflowRunArtifactsResult> => {
       const definition = input.definition;
       if (definition === undefined) {
@@ -72,6 +79,16 @@ export function useWorkflowRunArtifactsQuery(input: {
         definition,
         childRuns,
         referenceIds,
+        fetchPage: (path, signal) =>
+          workspaceScopedFetch<ArtifactListResource>(workspaceId, path, {
+            signal,
+          }),
+        fetchArtifact: (artifactId, signal) =>
+          workspaceScopedFetch<ArtifactResource>(
+            workspaceId,
+            `/api/v1/artifacts/${encodeURIComponent(artifactId)}`,
+            { signal },
+          ),
       });
     },
     refetchInterval: input.live ? ACTIVE_RUN_POLL_MS : false,

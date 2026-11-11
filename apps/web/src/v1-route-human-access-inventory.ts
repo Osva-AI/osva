@@ -76,6 +76,7 @@ const HUMAN_AUTH_ROUTE_ID_BY_PATH: Readonly<
     (typeof HUMAN_AUTH_ROUTE_IDS)[keyof typeof HUMAN_AUTH_ROUTE_IDS]
   >
 > = {
+  "PATCH /v1/auth/workspaces/*": HUMAN_AUTH_ROUTE_IDS.WORKSPACE_RENAME,
   "GET /v1/auth/workspaces/*/memberships":
     HUMAN_AUTH_ROUTE_IDS.WORKSPACE_MEMBERSHIPS_LIST,
   "POST /v1/auth/workspaces/*/memberships":
@@ -104,6 +105,8 @@ export const V1_HUMAN_AUTH_HTTP_ROUTES = [
   { method: "GET", path: "/v1/auth/me" },
   { method: "GET", path: "/v1/me/workspaces" },
   { method: "GET", path: "/v1/auth/workspaces" },
+  { method: "POST", path: "/v1/auth/workspaces" },
+  { method: "PATCH", path: "/v1/auth/workspaces/:workspaceId" },
   { method: "POST", path: "/v1/auth/workspaces/select" },
   { method: "GET", path: "/v1/auth/workspaces/:workspaceId/memberships" },
   { method: "POST", path: "/v1/auth/workspaces/:workspaceId/memberships" },

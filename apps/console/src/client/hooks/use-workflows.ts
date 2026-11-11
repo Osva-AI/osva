@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { WorkflowDefinitionV3 } from "@osva-ai/contracts";
 
-import { consoleFetch } from "../lib/console-api";
+import {
+  workspaceScopedFetch,
+  workspaceMutationFetch,
+} from "../lib/console-api";
 import type { WorkflowDefinitionView } from "../lib/workflow-definition";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
@@ -38,7 +41,11 @@ export function useWorkflowsListQuery() {
   return useQuery({
     queryKey: ["workflows", workspaceId, "list"],
     enabled: workspaceId !== undefined,
-    queryFn: () => consoleFetch<WorkflowListResource>("/api/v1/workflows"),
+    queryFn: () =>
+      workspaceScopedFetch<WorkflowListResource>(
+        workspaceId,
+        "/api/v1/workflows",
+      ),
   });
 }
 
@@ -48,7 +55,10 @@ export function useWorkflowQuery(workflowId: string | undefined) {
     queryKey: ["workflows", workspaceId, workflowId],
     enabled: workspaceId !== undefined && workflowId !== undefined,
     queryFn: () =>
-      consoleFetch<WorkflowResource>(`/api/v1/workflows/${workflowId}`),
+      workspaceScopedFetch<WorkflowResource>(
+        workspaceId,
+        `/api/v1/workflows/${workflowId}`,
+      ),
   });
 }
 
@@ -58,7 +68,8 @@ export function useWorkflowVersionsQuery(workflowId: string | undefined) {
     queryKey: ["workflows", workspaceId, workflowId, "versions"],
     enabled: workspaceId !== undefined && workflowId !== undefined,
     queryFn: () =>
-      consoleFetch<WorkflowVersionListResource>(
+      workspaceScopedFetch<WorkflowVersionListResource>(
+        workspaceId,
         `/api/v1/workflows/${workflowId}/versions`,
       ),
   });
@@ -82,7 +93,8 @@ export function useWorkflowVersionQuery(
       workflowId !== undefined &&
       workflowVersionId !== undefined,
     queryFn: () =>
-      consoleFetch<WorkflowVersionResource>(
+      workspaceScopedFetch<WorkflowVersionResource>(
+        workspaceId,
         `/api/v1/workflows/${workflowId}/versions/${workflowVersionId}`,
       ),
   });
@@ -96,15 +108,21 @@ export interface CreateWorkflowInput {
 
 export function useCreateWorkflowMutation() {
   const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: CreateWorkflowInput) =>
-      consoleFetch<WorkflowResource>("/api/v1/workflows", {
+      workspaceMutationFetch<WorkflowResource>("/api/v1/workflows", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(input),
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["workflows", "list"] });
+      if (workspaceId === undefined) {
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: ["workflows", workspaceId, "list"],
+      });
     },
   });
 }
@@ -116,9 +134,10 @@ export interface AppendWorkflowVersionInput {
 
 export function useAppendWorkflowVersionMutation() {
   const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
   return useMutation({
     mutationFn: (input: AppendWorkflowVersionInput) =>
-      consoleFetch<WorkflowVersionResource>(
+      workspaceMutationFetch<WorkflowVersionResource>(
         `/api/v1/workflows/${encodeURIComponent(input.workflowId)}/versions`,
         {
           method: "POST",
@@ -127,10 +146,15 @@ export function useAppendWorkflowVersionMutation() {
         },
       ),
     onSuccess: async (_data, input) => {
+      if (workspaceId === undefined) {
+        return;
+      }
       await queryClient.invalidateQueries({
-        queryKey: ["workflows", input.workflowId, "versions"],
+        queryKey: ["workflows", workspaceId, input.workflowId, "versions"],
       });
-      await queryClient.invalidateQueries({ queryKey: ["workflows", "list"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["workflows", workspaceId, "list"],
+      });
     },
   });
 }

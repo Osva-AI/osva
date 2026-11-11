@@ -187,6 +187,25 @@ describe("M11 Slice 2 human identity integration", () => {
     }
   }
 
+  it("returns 401 for incorrect password on login", async () => {
+    await bootstrapOrganization([WS_A]);
+
+    await withWeb(async (origin) => {
+      await completeOwnerSetup(origin);
+      const response = await fetch(`${origin}/v1/auth/login`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin },
+        body: JSON.stringify({
+          email: OWNER_EMAIL,
+          password: "Wrong-Password-12!",
+        }),
+      });
+      expect(response.status).toBe(401);
+      const body = (await response.json()) as { code?: string };
+      expect(body.code).toBe("AUTHENTICATION_REQUIRED");
+    });
+  });
+
   it("exercises human auth, membership mutations, ownership, and audit hygiene", async () => {
     const { ownerUserId, organizationId } = await bootstrapOrganization([WS_A]);
 

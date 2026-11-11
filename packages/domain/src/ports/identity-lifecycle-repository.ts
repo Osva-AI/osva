@@ -5,6 +5,7 @@ import type { Organization } from "../organization.js";
 import type { OrganizationMembership } from "../organization-membership.js";
 import type { SecurityAuditEvent } from "../security-audit-event.js";
 import type { User } from "../user.js";
+import type { Workspace } from "../workspace.js";
 import type { WorkspaceMembership } from "../workspace-membership.js";
 
 export interface RegisterUserInput {
@@ -52,8 +53,15 @@ export interface RemoveWorkspaceMembershipInput {
   readonly auditEvent: SecurityAuditEvent;
 }
 
+export interface CreateWorkspaceWithOwnerInput {
+  readonly workspace: Workspace;
+  readonly membership: WorkspaceMembership;
+  readonly auditEvent: SecurityAuditEvent;
+}
+
 export interface IdentityLifecycleRepository {
   registerUser(input: RegisterUserInput): Promise<void>;
+  createWorkspaceWithOwner(input: CreateWorkspaceWithOwnerInput): Promise<void>;
   createOrganizationWithOwner(
     input: CreateOrganizationWithOwnerInput,
   ): Promise<void>;

@@ -20,14 +20,48 @@ export class ConsoleApiError extends Error {
   }
 }
 
-function buildHeaders(init?: HeadersInit): Headers {
+/** Workspace pinned when a mutation or fetch begins (before async work). */
+export function workspaceIdForRequest(pinned?: string): string | undefined {
+  return pinned ?? getSelectedWorkspaceId();
+}
+
+/** Read/query calls: pin to the workspace encoded in the React Query key. */
+export function workspaceScopedFetch<T>(
+  workspaceId: string | undefined,
+  path: string,
+  init?: RequestInit,
+  options?: { readonly acceptErrorStatuses?: readonly number[] },
+): Promise<T> {
+  return consoleFetch<T>(path, init, {
+    ...options,
+    workspaceId,
+  });
+}
+
+/** Mutations: capture workspace at user action time (start of mutationFn). */
+export function workspaceMutationFetch<T>(
+  path: string,
+  init?: RequestInit,
+  options?: {
+    readonly acceptErrorStatuses?: readonly number[];
+    readonly workspaceId?: string;
+  },
+): Promise<T> {
+  const pinned = options?.workspaceId ?? workspaceIdForRequest();
+  return consoleFetch<T>(path, init, {
+    ...options,
+    workspaceId: pinned,
+  });
+}
+
+function buildHeaders(init?: HeadersInit, workspaceId?: string): Headers {
   const headers = new Headers(init);
   if (!headers.has("accept")) {
     headers.set("accept", "application/json");
   }
-  const workspaceId = getSelectedWorkspaceId();
-  if (workspaceId !== undefined) {
-    headers.set("x-osva-workspace-id", workspaceId);
+  const resolved = workspaceIdForRequest(workspaceId);
+  if (resolved !== undefined) {
+    headers.set("x-osva-workspace-id", resolved);
   }
   return headers;
 }
@@ -35,12 +69,16 @@ function buildHeaders(init?: HeadersInit): Headers {
 export async function consoleFetch<T>(
   path: string,
   init?: RequestInit,
-  options?: { readonly acceptErrorStatuses?: readonly number[] },
+  options?: {
+    readonly acceptErrorStatuses?: readonly number[];
+    /** Pin workspace for the entire request (mutations should set at action start). */
+    readonly workspaceId?: string;
+  },
 ): Promise<T> {
   const response = await fetch(path, {
     ...init,
     credentials: "include",
-    headers: buildHeaders(init?.headers),
+    headers: buildHeaders(init?.headers, options?.workspaceId),
   });
 
   if (response.status === 204) {
