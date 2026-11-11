@@ -116,7 +116,7 @@ function main() {
     }
   }
 
-  if (options.withBrowser) {
+  if (options.withBrowser && !options.browserOnly) {
     const playwrightInstall = ["exec", "playwright", "install"];
     if (process.env.CI === "true") {
       playwrightInstall.push("--with-deps");
