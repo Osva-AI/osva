@@ -13,15 +13,15 @@ class OfficeWorkersResource:
         return self._client.request("GET", "/v1/office/workers")
 
     def get(self, office_worker_id: str) -> dict[str, Any]:
-        return self._client.request("GET", f"/v1/office-workers/{office_worker_id}")
+        return self._client.request("GET", f"/v1/office/workers/{office_worker_id}")
 
     def create(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._client.request("POST", "/v1/office-workers", body=payload)
+        return self._client.request("POST", "/v1/office/workers", body=payload)
 
     def update(self, office_worker_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._client.request(
             "PATCH",
-            f"/v1/office-workers/{office_worker_id}",
+            f"/v1/office/workers/{office_worker_id}",
             body=payload,
         )
 
@@ -34,13 +34,17 @@ class RolesResource:
         return self._client.request("GET", "/v1/office/roles")
 
     def get(self, role_id: str) -> dict[str, Any]:
-        return self._client.request("GET", f"/v1/roles/{role_id}")
+        return self._client.request("GET", f"/v1/office/roles/{role_id}")
 
     def create(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._client.request("POST", "/v1/roles", body=payload)
+        return self._client.request("POST", "/v1/office/roles", body=payload)
 
     def update(self, role_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._client.request("PATCH", f"/v1/roles/{role_id}", body=payload)
+        return self._client.request(
+            "PATCH",
+            f"/v1/office/roles/{role_id}",
+            body=payload,
+        )
 
 
 class TeamsResource:
@@ -51,21 +55,28 @@ class TeamsResource:
         return self._client.request("GET", "/v1/office/teams")
 
     def get(self, team_id: str) -> dict[str, Any]:
-        return self._client.request("GET", f"/v1/teams/{team_id}")
+        return self._client.request("GET", f"/v1/office/teams/{team_id}")
 
     def create(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._client.request("POST", "/v1/teams", body=payload)
+        return self._client.request("POST", "/v1/office/teams", body=payload)
 
     def update(self, team_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._client.request("PATCH", f"/v1/teams/{team_id}", body=payload)
+        return self._client.request(
+            "PATCH",
+            f"/v1/office/teams/{team_id}",
+            body=payload,
+        )
 
     def list_memberships(self, team_id: str) -> dict[str, Any]:
-        return self._client.request("GET", f"/v1/teams/{team_id}/memberships")
+        return self._client.request(
+            "GET",
+            f"/v1/office/teams/{team_id}/memberships",
+        )
 
     def add_membership(self, team_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._client.request(
             "POST",
-            f"/v1/teams/{team_id}/memberships",
+            f"/v1/office/teams/{team_id}/memberships",
             body=payload,
         )
 
@@ -78,13 +89,17 @@ class GoalsResource:
         return self._client.request("GET", "/v1/office/goals")
 
     def get(self, goal_id: str) -> dict[str, Any]:
-        return self._client.request("GET", f"/v1/goals/{goal_id}")
+        return self._client.request("GET", f"/v1/office/goals/{goal_id}")
 
     def create(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._client.request("POST", "/v1/goals", body=payload)
+        return self._client.request("POST", "/v1/office/goals", body=payload)
 
     def update(self, goal_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._client.request("PATCH", f"/v1/goals/{goal_id}", body=payload)
+        return self._client.request(
+            "PATCH",
+            f"/v1/office/goals/{goal_id}",
+            body=payload,
+        )
 
 
 class AssignmentsResource:
@@ -95,26 +110,26 @@ class AssignmentsResource:
         return self._client.request("GET", "/v1/office/assignments")
 
     def get(self, assignment_id: str) -> dict[str, Any]:
-        return self._client.request("GET", f"/v1/assignments/{assignment_id}")
+        return self._client.request("GET", f"/v1/office/assignments/{assignment_id}")
 
     def create(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._client.request("POST", "/v1/assignments", body=payload)
+        return self._client.request("POST", "/v1/office/assignments", body=payload)
 
     def update(self, assignment_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._client.request(
             "PATCH",
-            f"/v1/assignments/{assignment_id}",
+            f"/v1/office/assignments/{assignment_id}",
             body=payload,
         )
 
     def launch(self, assignment_id: str) -> dict[str, Any]:
         return self._client.request(
             "POST",
-            f"/v1/assignments/{assignment_id}/launch",
+            f"/v1/office/assignments/{assignment_id}/launch",
         )
 
     def cancel(self, assignment_id: str) -> dict[str, Any]:
         return self._client.request(
             "POST",
-            f"/v1/assignments/{assignment_id}/cancel",
+            f"/v1/office/assignments/{assignment_id}/cancel",
         )

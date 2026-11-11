@@ -20,21 +20,21 @@ export class RolesResource {
   list(): Promise<RoleListResource> {
     return this.client.request({
       method: "GET",
-      path: "/v1/roles",
+      path: "/v1/office/roles",
     });
   }
 
   get(roleId: RoleId): Promise<RoleResource> {
     return this.client.request({
       method: "GET",
-      path: `/v1/roles/${encodeURIComponent(roleId)}`,
+      path: `/v1/office/roles/${encodeURIComponent(roleId)}`,
     });
   }
 
   create(input: CreateRoleRequest): Promise<RoleResource> {
     return this.client.request({
       method: "POST",
-      path: "/v1/roles",
+      path: "/v1/office/roles",
       body: input,
     });
   }
@@ -42,7 +42,7 @@ export class RolesResource {
   update(roleId: RoleId, input: UpdateRoleRequest): Promise<RoleResource> {
     return this.client.request({
       method: "PATCH",
-      path: `/v1/roles/${encodeURIComponent(roleId)}`,
+      path: `/v1/office/roles/${encodeURIComponent(roleId)}`,
       body: input,
     });
   }

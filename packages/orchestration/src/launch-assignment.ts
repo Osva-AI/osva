@@ -5,6 +5,7 @@ import type {
   RunId,
   WorkflowRunId,
   WorkflowVersionId,
+  WorkspaceId,
 } from "@osva-ai/contracts";
 import {
   AssignmentNotFoundError,
@@ -32,6 +33,7 @@ import { ReconcileAssignment } from "./reconcile-assignment.js";
 
 export interface LaunchAssignmentCommand {
   readonly assignmentId: AssignmentId;
+  readonly workspaceId: WorkspaceId;
   readonly runId: RunId;
   readonly runAttemptId: RunAttemptId;
   readonly workflowRunId: WorkflowRunId;
@@ -65,7 +67,8 @@ export class LaunchAssignment {
   private async executeInner(
     command: LaunchAssignmentCommand,
   ): Promise<Assignment> {
-    const assignment = await this.deps.office.findAssignmentById(
+    const assignment = await this.deps.office.findAssignmentByWorkspaceAndId(
+      command.workspaceId,
       command.assignmentId,
     );
     if (assignment === null) {
@@ -75,6 +78,7 @@ export class LaunchAssignment {
     if (isTerminalAssignmentState(assignment.status)) {
       return this.deps.reconcileAssignment.execute({
         assignmentId: assignment.id,
+        workspaceId: assignment.workspaceId,
         now: command.now,
       });
     }
@@ -169,6 +173,7 @@ export class LaunchAssignment {
 
     return this.deps.reconcileAssignment.execute({
       assignmentId: persisted.id,
+      workspaceId: persisted.workspaceId,
       now: command.now,
     });
   }
@@ -222,6 +227,7 @@ export class LaunchAssignment {
 
     return this.deps.reconcileAssignment.execute({
       assignmentId: persisted.id,
+      workspaceId: persisted.workspaceId,
       now: command.now,
     });
   }

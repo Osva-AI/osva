@@ -20,21 +20,21 @@ export class GoalsResource {
   list(): Promise<GoalListResource> {
     return this.client.request({
       method: "GET",
-      path: "/v1/goals",
+      path: "/v1/office/goals",
     });
   }
 
   get(goalId: GoalId): Promise<GoalResource> {
     return this.client.request({
       method: "GET",
-      path: `/v1/goals/${encodeURIComponent(goalId)}`,
+      path: `/v1/office/goals/${encodeURIComponent(goalId)}`,
     });
   }
 
   create(input: CreateGoalRequest): Promise<GoalResource> {
     return this.client.request({
       method: "POST",
-      path: "/v1/goals",
+      path: "/v1/office/goals",
       body: input,
     });
   }
@@ -42,7 +42,7 @@ export class GoalsResource {
   update(goalId: GoalId, input: UpdateGoalRequest): Promise<GoalResource> {
     return this.client.request({
       method: "PATCH",
-      path: `/v1/goals/${encodeURIComponent(goalId)}`,
+      path: `/v1/office/goals/${encodeURIComponent(goalId)}`,
       body: input,
     });
   }
