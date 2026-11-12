@@ -19,7 +19,7 @@ export function OfficeSectionNav(props: {
   }> = [
     { id: "mission-control", label: "Mission Control", to: "/office" },
     { id: "missions", label: "Missions", to: "/office/missions" },
-    { id: "tasks", label: "Tasks", to: "/office/tasks/new" },
+    { id: "tasks", label: "Tasks", to: "/office/tasks" },
     { id: "chat", label: "Team Chat", to: "/office/chat" },
     { id: "inbox", label: "Inbox", to: "/office/inbox" },
     { id: "teams", label: "Teams", to: "/office/teams" },

@@ -527,6 +527,38 @@ describe("M22.1 Virtual Office acceptance (real stack)", () => {
       expect(assignmentBody.status).toBe("PENDING");
       expect(assignmentBody.runId).toBeUndefined();
 
+      const assignmentId = (assignmentBody as { id: string }).id;
+      const launchRes = await fetch(
+        `${consoleOrigin}/api/v1/office/assignments/${assignmentId}/launch`,
+        {
+          method: "POST",
+          headers: {
+            ...consoleHeaders(jar, consoleOrigin, WS_A),
+            "content-type": "application/json",
+          },
+          body: "{}",
+        },
+      );
+      expect(launchRes.status).toBe(200);
+      const launched = (await launchRes.json()) as {
+        status: string;
+        runId?: string;
+      };
+      expect(launched.status).toBe("RUNNING");
+      expect(launched.runId).toBeDefined();
+
+      const detailAfterLaunch = await fetch(
+        `${consoleOrigin}/api/v1/office/assignments/${assignmentId}`,
+        { headers: consoleHeaders(jar, consoleOrigin, WS_A) },
+      );
+      expect(detailAfterLaunch.status).toBe(200);
+      const detailBody = (await detailAfterLaunch.json()) as {
+        status: string;
+        runId?: string;
+      };
+      expect(detailBody.status).toBe("RUNNING");
+      expect(detailBody.runId).toBe(launched.runId);
+
       const goalsB = await fetch(`${consoleOrigin}/api/v1/office/goals`, {
         headers: consoleHeaders(jar, consoleOrigin, WS_B),
       });

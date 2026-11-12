@@ -353,7 +353,8 @@ export function OfficeMissionControlPage() {
             {recent.length === 0 ? (
               <p className="muted">
                 No assignments yet.{" "}
-                <Link to="/office/tasks/new">Create a task</Link> or browse{" "}
+                <Link to="/office/tasks/new">Create a task</Link>, open the{" "}
+                <Link to="/office/tasks">Task Board</Link>, or browse{" "}
                 <Link to="/office/missions">missions</Link>.
               </p>
             ) : (
@@ -379,7 +380,11 @@ export function OfficeMissionControlPage() {
                             : undefined;
                       return (
                         <tr key={assignment.id}>
-                          <td>{assignment.title}</td>
+                          <td>
+                            <Link to={`/office/tasks/${assignment.id}`}>
+                              {assignment.title}
+                            </Link>
+                          </td>
                           <td>
                             {worker !== undefined ? (
                               <Link to={`/office/workers/${worker.id}`}>
@@ -401,13 +406,17 @@ export function OfficeMissionControlPage() {
                           </td>
                           <td>{formatTimestamp(assignment.createdAt)}</td>
                           <td>
+                            <Link to={`/office/tasks/${assignment.id}`}>
+                              Task
+                            </Link>
                             {executionLink !== undefined ? (
-                              <Link className="mono" to={executionLink}>
-                                Open
-                              </Link>
-                            ) : (
-                              <span className="muted">—</span>
-                            )}
+                              <>
+                                {" · "}
+                                <Link className="mono" to={executionLink}>
+                                  Run
+                                </Link>
+                              </>
+                            ) : null}
                           </td>
                         </tr>
                       );

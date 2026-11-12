@@ -6526,6 +6526,40 @@ button.agent-studio-v2-progress-link {
   font-size: 0.82rem;
 }
 
+.office-v2-task-board {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.office-v2-task-board-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.office-v2-task-board-column-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.office-v2-task-board-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.office-v2-task-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .data-table tr.is-highlighted-row {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }

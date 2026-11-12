@@ -195,15 +195,7 @@ export function OfficeTaskCreatePage() {
         ...(goalId.length > 0 ? { goalId } : {}),
       });
 
-      if (assignment.goalId !== undefined) {
-        navigate(
-          `/office/missions/${assignment.goalId}?task=${encodeURIComponent(assignment.id)}`,
-        );
-      } else {
-        navigate(
-          `/office/missions?created=${encodeURIComponent(assignment.id)}`,
-        );
-      }
+      navigate(`/office/tasks/${assignment.id}`);
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Task creation failed.",

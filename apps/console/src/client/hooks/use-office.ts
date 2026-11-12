@@ -9,6 +9,7 @@ import {
   workspaceMutationFetch,
   workspaceScopedFetch,
 } from "../lib/console-api";
+import { ACTIVE_RUN_POLL_MS } from "../lib/query-client";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface OfficeWorkerResource {
@@ -108,6 +109,41 @@ export interface OfficeGoalListResource {
 }
 
 const OFFICE_STALE_MS = 60_000;
+const OFFICE_ASSIGNMENTS_LIST_POLL_MS = 30_000;
+
+export function patchOfficeAssignmentsListCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  workspaceId: string | undefined,
+  assignment: OfficeAssignmentResource,
+): void {
+  if (workspaceId === undefined) {
+    return;
+  }
+  queryClient.setQueryData<OfficeAssignmentListResource>(
+    ["office", workspaceId, "assignments"],
+    (previous) => {
+      if (previous === undefined) {
+        return previous;
+      }
+      let found = false;
+      const items = previous.items.map((item) => {
+        if (item.id !== assignment.id) {
+          return item;
+        }
+        found = true;
+        return assignment;
+      });
+      if (!found) {
+        return previous;
+      }
+      return { items };
+    },
+  );
+  queryClient.setQueryData(
+    ["office", workspaceId, "assignments", assignment.id],
+    assignment,
+  );
+}
 
 function invalidateOfficeMissionsAndTasks(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -460,12 +496,23 @@ export function useUpdateOfficeGoalMutation(goalId: string) {
   });
 }
 
-export function useOfficeAssignmentsQuery() {
+export function useOfficeAssignmentsQuery(options?: {
+  readonly pollListWhenRunning?: boolean;
+}) {
   const workspaceId = useWorkspaceQueryScope();
   return useQuery({
     queryKey: ["office", workspaceId, "assignments"],
     enabled: workspaceId !== undefined,
     staleTime: OFFICE_STALE_MS,
+    refetchInterval: (query) => {
+      if (options?.pollListWhenRunning !== true) {
+        return false;
+      }
+      const items = query.state.data?.items ?? [];
+      return items.some((item) => item.status === "RUNNING")
+        ? OFFICE_ASSIGNMENTS_LIST_POLL_MS
+        : false;
+    },
     queryFn: () =>
       workspaceScopedFetch<OfficeAssignmentListResource>(
         workspaceId,
@@ -483,6 +530,8 @@ export function useOfficeAssignmentQuery(assignmentId: string | undefined) {
       assignmentId !== undefined &&
       assignmentId.length > 0,
     staleTime: OFFICE_STALE_MS,
+    refetchInterval: (query) =>
+      query.state.data?.status === "RUNNING" ? ACTIVE_RUN_POLL_MS : false,
     queryFn: () =>
       workspaceScopedFetch<OfficeAssignmentResource>(
         workspaceId,

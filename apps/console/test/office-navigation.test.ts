@@ -38,6 +38,8 @@ describe("Virtual Office navigation", () => {
       (item) => item.navId === "office-tasks",
     )!;
     expect(navItemMatchesPath(missions, "/office/missions/goal-1")).toBe(true);
+    expect(navItemMatchesPath(tasks, "/office/tasks")).toBe(true);
     expect(navItemMatchesPath(tasks, "/office/tasks/new")).toBe(true);
+    expect(navItemMatchesPath(tasks, "/office/tasks/asn-1")).toBe(true);
   });
 });

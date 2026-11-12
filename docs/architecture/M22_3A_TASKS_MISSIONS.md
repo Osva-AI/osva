@@ -56,7 +56,43 @@ Enforced on upstream `OfficeApplication` and launch HTTP policy (`v1-route-autho
 | `GET .../assignments/:id` | Yes — derives status from linked Run/WorkflowRun after READ auth |
 | `GET .../assignments` | No — persisted rows only |
 
-**M22.3C deferred:** list/board freshness may lag for RUNNING tasks until detail fetch, polling, or a bounded list-reconcile strategy is designed (avoid blind N+1).
+## M22.3C — Task Board, execution controls, deliverables
+
+### Task Board read model
+
+- Route: `/office/tasks` (`OfficeTasksBoardPage`).
+- Data: `GET /api/v1/office/assignments` (persisted statuses only).
+- Presentation grouping in `apps/console/src/client/lib/office-task-board.ts` (`TASK_BOARD_COLUMNS`, filters, duration labels).
+- Board and list views; filters for mission, worker, status, and title search.
+- Explicit **Refresh**; optional list poll every 30s when any listed row is `RUNNING` (`useOfficeAssignmentsQuery({ pollListWhenRunning: true })`).
+- Staleness notice when the list shows `RUNNING` — list GET does not reconcile.
+
+### Task Detail
+
+- Route: `/office/tasks/:taskId`.
+- Data: `GET /api/v1/office/assignments/:id` (reconciled status from linked Run/WorkflowRun).
+- Bounded poll while assignment status is `RUNNING` (`ACTIVE_RUN_POLL_MS`).
+- On each reconciled detail response, `patchOfficeAssignmentsListCache` updates the workspace assignments list cache (no N+1 list reconcile).
+
+### Launch and cancel
+
+- Launch/cancel: existing `POST .../launch` and `POST .../cancel` via `useLaunchOfficeAssignmentMutation` / `useCancelOfficeAssignmentMutation`.
+- EXECUTE permission (`roleCanExecuteControlPlaneActions`); confirm dialogs; duplicate launch guarded client-side (`launchSubmittingRef`) plus server idempotency.
+- Cancel only for `PENDING`; domain errors shown as-is.
+- No in-flight Run cancellation in UI.
+
+### Authorization (Console)
+
+Same matrix as M22.3A; controls use `roleCanExecuteControlPlaneActions` for launch/cancel and `roleCanWriteControlPlaneResources` for create/edit metadata.
+
+### Deliverables
+
+- `TaskDeliverablesSection` reuses `RunArtifactsSection` + `useArtifactsQuery` (agent) or `useWorkflowRunArtifactsQuery` (workflow, verified linkage).
+- Full execution UX remains on Run / WorkflowRun detail pages.
+
+### Deferred
+
+- Bulk list reconciliation endpoint (would avoid list staleness; not implemented — client refresh + detail cache patch only).
 
 ## React Query
 

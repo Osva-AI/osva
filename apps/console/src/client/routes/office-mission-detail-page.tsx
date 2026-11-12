@@ -397,7 +397,11 @@ function AssignmentRow(props: {
       className={props.highlighted ? "is-highlighted-row" : undefined}
       data-testid={`mission-task-${props.assignment.id}`}
     >
-      <td>{props.assignment.title}</td>
+      <td>
+        <Link to={`/office/tasks/${props.assignment.id}`}>
+          {props.assignment.title}
+        </Link>
+      </td>
       <td>
         {props.worker !== undefined ? (
           <Link to={`/office/workers/${props.worker.id}`}>
@@ -420,12 +424,17 @@ function AssignmentRow(props: {
         <span className="muted"> · {props.assignment.targetVersionId}</span>
       </td>
       <td>
+        <Link to={`/office/tasks/${props.assignment.id}`}>Task detail</Link>
         {executionLink !== undefined ? (
-          <Link className="mono" to={executionLink}>
-            Open run
-          </Link>
+          <>
+            {" "}
+            ·{" "}
+            <Link className="mono" to={executionLink}>
+              Execution
+            </Link>
+          </>
         ) : (
-          <span className="muted">Not launched</span>
+          <span className="muted"> · Not launched</span>
         )}
       </td>
     </tr>
