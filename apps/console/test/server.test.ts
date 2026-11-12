@@ -354,6 +354,56 @@ function createMockClient(
     revokeApiKey: async () => {
       throw new Error("not implemented");
     },
+    listOfficeWorkers: async () => ({
+      data: { items: [] },
+      requestId: "req-office-workers",
+    }),
+    getOfficeWorker: async () => {
+      throw new Error("not implemented");
+    },
+    createOfficeWorker: async () => {
+      throw new Error("not implemented");
+    },
+    updateOfficeWorker: async () => {
+      throw new Error("not implemented");
+    },
+    listOfficeRoles: async () => ({
+      data: { items: [] },
+      requestId: "req-office-roles",
+    }),
+    getOfficeRole: async () => {
+      throw new Error("not implemented");
+    },
+    createOfficeRole: async () => {
+      throw new Error("not implemented");
+    },
+    updateOfficeRole: async () => {
+      throw new Error("not implemented");
+    },
+    listOfficeTeams: async () => ({
+      data: { items: [] },
+      requestId: "req-office-teams",
+    }),
+    getOfficeTeam: async () => {
+      throw new Error("not implemented");
+    },
+    createOfficeTeam: async () => {
+      throw new Error("not implemented");
+    },
+    updateOfficeTeam: async () => {
+      throw new Error("not implemented");
+    },
+    listTeamMemberships: async () => ({
+      data: { items: [] },
+      requestId: "req-office-memberships",
+    }),
+    addTeamMembership: async () => {
+      throw new Error("not implemented");
+    },
+    listOfficeAssignments: async () => ({
+      data: { items: [] },
+      requestId: "req-office-assignments",
+    }),
     ...overrides,
   };
 }
@@ -1466,6 +1516,76 @@ describe("console server API", () => {
     await expect(
       fetch(`${origin}/api/v1/artifacts/artifact-1/content`),
     ).rejects.toBeInstanceOf(Error);
+  });
+
+  it("proxies office worker list and create routes", async () => {
+    let capturedWorkspace: string | undefined;
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        listOfficeWorkers: async () => ({
+          data: {
+            items: [
+              {
+                id: "ow-1",
+                workspaceId: "workspace-1",
+                key: "writer",
+                name: "Writer",
+                agentId: "agent-1",
+                createdAt: "2026-01-01T00:00:00.000Z",
+                updatedAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+          },
+          requestId: "req-office-workers",
+        }),
+        createOfficeWorker: async (body) => {
+          capturedWorkspace = "workspace-1";
+          return {
+            data: { ...(body as object), id: "ow-new" },
+            requestId: "req-office-worker-create",
+          };
+        },
+      }),
+    });
+    const origin = await listen(server);
+
+    const list = await fetch(`${origin}/api/v1/office/workers`, {
+      headers: { "x-osva-workspace-id": "workspace-1" },
+    });
+    const listBody = await list.json();
+    expect(list.status).toBe(200);
+    expect(listBody).toMatchObject({ items: [{ id: "ow-1" }] });
+    expect(list.headers.get("x-osva-request-id")).toBe("req-office-workers");
+
+    const created = await fetch(`${origin}/api/v1/office/workers`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-osva-workspace-id": "workspace-1",
+      },
+      body: JSON.stringify({
+        key: "ops",
+        name: "Ops",
+        agentId: "agent-1",
+      }),
+    });
+    expect(created.status).toBe(201);
+    expect(capturedWorkspace).toBe("workspace-1");
+  });
+
+  it("rejects unsupported office proxy paths", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient(),
+    });
+    const origin = await listen(server);
+
+    const response = await fetch(
+      `${origin}/api/v1/office/assignments/asn-1/launch`,
+      { method: "POST", body: "{}" },
+    );
+    expect(response.status).toBe(405);
   });
 
   it("reports missing configuration state", async () => {

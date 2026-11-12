@@ -24,6 +24,17 @@ export const BUILD_NAV_ITEMS: readonly ConsoleNavItem[] = [
   { label: "Workflows", to: "/workflows", navId: "workflows" },
 ];
 
+export const OFFICE_NAV_ITEMS: readonly ConsoleNavItem[] = [
+  {
+    label: "Mission Control",
+    to: "/office",
+    end: true,
+    navId: "office-mission-control",
+  },
+  { label: "Teams", to: "/office/teams", navId: "office-teams" },
+  { label: "Workers", to: "/office/workers", navId: "office-workers" },
+];
+
 export const MANAGE_NAV_ITEMS: readonly ConsoleNavItem[] = [
   { label: "Activity", to: "/activity", navId: "activity" },
   { label: "Testing", to: "/testing", navId: "testing" },
@@ -84,6 +95,10 @@ export function isResourcesRoute(pathname: string): boolean {
   return RESOURCE_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+export function isOfficeRoute(pathname: string): boolean {
+  return pathname === "/office" || pathname.startsWith("/office/");
 }
 
 export function isActivityRoute(pathname: string): boolean {

@@ -59,6 +59,11 @@ import { EvaluationSuiteVersionCreatePage } from "./routes/evaluation-suite-vers
 import { EvaluationSuiteVersionPage } from "./routes/evaluation-suite-version-page";
 import { EvaluationRunLaunchPage } from "./routes/evaluation-run-launch-page";
 import { EvaluationRunDetailPage } from "./routes/evaluation-run-detail-page";
+import { OfficeMissionControlPage } from "./routes/office-mission-control-page";
+import { OfficeTeamDetailPage } from "./routes/office-team-detail-page";
+import { OfficeTeamsPage } from "./routes/office-teams-page";
+import { OfficeWorkerDetailPage } from "./routes/office-worker-detail-page";
+import { OfficeWorkersPage } from "./routes/office-workers-page";
 
 const queryClient = createQueryClient();
 
@@ -214,6 +219,23 @@ export function App() {
                   <Route
                     path="/workflows/:workflowId/versions/:workflowVersionId"
                     element={<WorkflowVersionPage />}
+                  />
+                  <Route
+                    path="/office"
+                    element={<OfficeMissionControlPage />}
+                  />
+                  <Route path="/office/teams" element={<OfficeTeamsPage />} />
+                  <Route
+                    path="/office/teams/:teamId"
+                    element={<OfficeTeamDetailPage />}
+                  />
+                  <Route
+                    path="/office/workers"
+                    element={<OfficeWorkersPage />}
+                  />
+                  <Route
+                    path="/office/workers/:workerId"
+                    element={<OfficeWorkerDetailPage />}
                   />
                   <Route path="/workflow-runs" element={<WorkflowRunsPage />} />
                   <Route

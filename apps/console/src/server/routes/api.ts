@@ -20,6 +20,9 @@ import type {
   KnowledgeIndexId,
   KnowledgeSourceId,
   MemoryNamespaceId,
+  OfficeWorkerId,
+  RoleId,
+  TeamId,
 } from "@osva-ai/contracts";
 
 import {
@@ -650,6 +653,64 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/office/workers") {
+        const body = await readJsonBody(request);
+        const created = await client.createOfficeWorker(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/office/roles") {
+        const body = await readJsonBody(request);
+        const created = await client.createOfficeRole(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/office/teams") {
+        const body = await readJsonBody(request);
+        const created = await client.createOfficeTeam(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const officeTeamMembershipPostMatch = pathname.match(
+        /^\/api\/v1\/office\/teams\/([^/]+)\/memberships$/,
+      );
+      if (officeTeamMembershipPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await client.addTeamMembership(
+          officeTeamMembershipPostMatch[1] as TeamId,
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       sendJson(
         response,
         405,
@@ -661,6 +722,63 @@ export async function handleConsoleApiRequest(
     }
 
     if (method === "PATCH") {
+      const officeWorkerPatchMatch = pathname.match(
+        /^\/api\/v1\/office\/workers\/([^/]+)$/,
+      );
+      if (officeWorkerPatchMatch !== null) {
+        const body = await readJsonBody(request);
+        const updated = await client.updateOfficeWorker(
+          officeWorkerPatchMatch[1] as OfficeWorkerId,
+          body,
+        );
+        sendJson(
+          response,
+          200,
+          updated.data,
+          upstreamRequestIdHeaders(updated.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const officeRolePatchMatch = pathname.match(
+        /^\/api\/v1\/office\/roles\/([^/]+)$/,
+      );
+      if (officeRolePatchMatch !== null) {
+        const body = await readJsonBody(request);
+        const updated = await client.updateOfficeRole(
+          officeRolePatchMatch[1] as RoleId,
+          body,
+        );
+        sendJson(
+          response,
+          200,
+          updated.data,
+          upstreamRequestIdHeaders(updated.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const officeTeamPatchMatch = pathname.match(
+        /^\/api\/v1\/office\/teams\/([^/]+)$/,
+      );
+      if (officeTeamPatchMatch !== null) {
+        const body = await readJsonBody(request);
+        const updated = await client.updateOfficeTeam(
+          officeTeamPatchMatch[1] as TeamId,
+          body,
+        );
+        sendJson(
+          response,
+          200,
+          updated.data,
+          upstreamRequestIdHeaders(updated.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       const connectorPatchMatch = pathname.match(
         /^\/api\/v1\/connectors\/([^/]+)$/,
       );
@@ -1513,6 +1631,118 @@ export async function handleConsoleApiRequest(
           response.destroy();
         }
       }
+      return true;
+    }
+
+    if (pathname === "/api/v1/office/workers") {
+      const listed = await client.listOfficeWorkers();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const officeWorkerMatch = pathname.match(
+      /^\/api\/v1\/office\/workers\/([^/]+)$/,
+    );
+    if (officeWorkerMatch !== null) {
+      const worker = await client.getOfficeWorker(
+        officeWorkerMatch[1] as OfficeWorkerId,
+      );
+      sendJson(
+        response,
+        200,
+        worker.data,
+        upstreamRequestIdHeaders(worker.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/office/roles") {
+      const listed = await client.listOfficeRoles();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const officeRoleMatch = pathname.match(
+      /^\/api\/v1\/office\/roles\/([^/]+)$/,
+    );
+    if (officeRoleMatch !== null) {
+      const role = await client.getOfficeRole(officeRoleMatch[1] as RoleId);
+      sendJson(
+        response,
+        200,
+        role.data,
+        upstreamRequestIdHeaders(role.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/office/teams") {
+      const listed = await client.listOfficeTeams();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const officeTeamMembershipsMatch = pathname.match(
+      /^\/api\/v1\/office\/teams\/([^/]+)\/memberships$/,
+    );
+    if (officeTeamMembershipsMatch !== null) {
+      const memberships = await client.listTeamMemberships(
+        officeTeamMembershipsMatch[1] as TeamId,
+      );
+      sendJson(
+        response,
+        200,
+        memberships.data,
+        upstreamRequestIdHeaders(memberships.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const officeTeamMatch = pathname.match(
+      /^\/api\/v1\/office\/teams\/([^/]+)$/,
+    );
+    if (officeTeamMatch !== null) {
+      const team = await client.getOfficeTeam(officeTeamMatch[1] as TeamId);
+      sendJson(
+        response,
+        200,
+        team.data,
+        upstreamRequestIdHeaders(team.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/office/assignments") {
+      const listed = await client.listOfficeAssignments();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
       return true;
     }
 

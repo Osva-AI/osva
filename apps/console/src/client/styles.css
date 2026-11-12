@@ -6424,6 +6424,72 @@ button.agent-studio-v2-progress-link {
   margin-top: var(--space-2);
 }
 
+.office-v2-getting-started-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.office-v2-workspace-line {
+  margin: 0;
+}
+
+.office-v2-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.office-v2-entity-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.office-v2-card-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.office-v2-card-desc {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.office-v2-card-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.office-v2-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.office-v2-entity-chip {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.office-v2-nested-form {
+  margin-top: var(--space-4);
+}
+
 .workflow-nl-builder__validation pre {
   max-height: 12rem;
   overflow: auto;

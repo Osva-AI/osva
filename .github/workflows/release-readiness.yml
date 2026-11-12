@@ -65,6 +65,9 @@ jobs:
       - name: Secrets scan
         run: node scripts/release/secrets-scan.mjs
 
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium
+
       - name: Verify CI
         run: pnpm verify:ci
 

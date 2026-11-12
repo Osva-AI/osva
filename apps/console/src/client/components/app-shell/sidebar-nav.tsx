@@ -6,6 +6,7 @@ import {
   FOOTER_NAV_ITEMS,
   HOME_NAV_ITEM,
   MANAGE_NAV_ITEMS,
+  OFFICE_NAV_ITEMS,
   RESOURCES_NAV_ITEMS,
   isResourcesRoute,
   navItemMatchesPath,
@@ -194,6 +195,27 @@ export function SidebarNav({
         )}
         <ul className="nav-list">
           {BUILD_NAV_ITEMS.map((item) => (
+            <ShellNavItem
+              key={item.navId}
+              item={item}
+              compact={compact}
+              isActive={navItemMatchesPath(item, pathname)}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </ul>
+      </div>
+
+      <div className="nav-section" data-section="office">
+        {!compact ? (
+          <div className="nav-section-title">Virtual Office</div>
+        ) : (
+          <div className="nav-section-title visually-hidden">
+            Virtual Office
+          </div>
+        )}
+        <ul className="nav-list">
+          {OFFICE_NAV_ITEMS.map((item) => (
             <ShellNavItem
               key={item.navId}
               item={item}
