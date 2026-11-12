@@ -1,5 +1,4 @@
 import type {
-  AssignmentState,
   OfficeMessageId,
   OfficeThreadId,
   UserId,
@@ -300,10 +299,7 @@ class EmptyOfficeRepository implements OfficeRepository {
   async updateAssignment() {
     return null;
   }
-  async transitionAssignment(
-    _expectedStatus: AssignmentState,
-    _next: Assignment,
-  ): Promise<Assignment> {
+  async transitionAssignment(): Promise<Assignment> {
     throw new Error("not implemented");
   }
 }
