@@ -11,27 +11,27 @@ import {
 } from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
-import {
-  HumanPrincipalRequiredError,
-  InboxReadState,
-  OfficeMessage,
-  OfficeThread,
-  Workspace,
-  createOfficeCollaborationApplication,
-  type ControlPlaneScope,
-  type ListInboxQuery,
-  type ListInboxResult,
-  type ListOfficeMessagesQuery,
-  type ListOfficeMessagesResult,
-  type ListOfficeThreadsQuery,
-  type ListOfficeThreadsResult,
-  type OfficeCollaborationRepository,
-  type AppendOfficeMessageRepositoryCommand,
-  type WorkspaceMembershipRepository,
-  type WorkspaceRepository,
-  type OfficeRepository,
-  type Assignment,
-} from "@osva/domain";
+import type { Assignment } from "../src/assignment.js";
+import type { ControlPlaneScope } from "../src/control-plane.js";
+import { HumanPrincipalRequiredError } from "../src/errors.js";
+import { InboxReadState } from "../src/inbox-read-state.js";
+import { createOfficeCollaborationApplication } from "../src/office-collaboration-application.js";
+import { OfficeMessage } from "../src/office-message.js";
+import { OfficeThread } from "../src/office-thread.js";
+import type {
+  AppendOfficeMessageRepositoryCommand,
+  ListInboxQuery,
+  ListInboxResult,
+  ListOfficeMessagesQuery,
+  ListOfficeMessagesResult,
+  ListOfficeThreadsQuery,
+  ListOfficeThreadsResult,
+  OfficeCollaborationRepository,
+} from "../src/ports/office-collaboration-repository.js";
+import type { OfficeRepository } from "../src/ports/office-repository.js";
+import type { WorkspaceMembershipRepository } from "../src/ports/workspace-membership-repository.js";
+import type { WorkspaceRepository } from "../src/ports/workspace-repository.js";
+import { Workspace } from "../src/workspace.js";
 
 const WORKSPACE = "ws-office-chat" as WorkspaceId;
 const USER_A = "user-a" as UserId;
