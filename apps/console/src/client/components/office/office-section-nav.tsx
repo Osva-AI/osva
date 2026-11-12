@@ -1,7 +1,13 @@
 import { LinkButton } from "../ui/button";
 
 export type OfficeSectionNavActive =
-  "mission-control" | "teams" | "workers" | "chat" | "inbox";
+  | "mission-control"
+  | "missions"
+  | "tasks"
+  | "teams"
+  | "workers"
+  | "chat"
+  | "inbox";
 
 export function OfficeSectionNav(props: {
   readonly active: OfficeSectionNavActive;
@@ -12,6 +18,8 @@ export function OfficeSectionNav(props: {
     readonly to: string;
   }> = [
     { id: "mission-control", label: "Mission Control", to: "/office" },
+    { id: "missions", label: "Missions", to: "/office/missions" },
+    { id: "tasks", label: "Tasks", to: "/office/tasks/new" },
     { id: "chat", label: "Team Chat", to: "/office/chat" },
     { id: "inbox", label: "Inbox", to: "/office/inbox" },
     { id: "teams", label: "Teams", to: "/office/teams" },

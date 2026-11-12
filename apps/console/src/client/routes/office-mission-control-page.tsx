@@ -132,6 +132,12 @@ export function OfficeMissionControlPage() {
                 <LinkButton variant="secondary" to="/office/workers?register=1">
                   Add Worker
                 </LinkButton>
+                <LinkButton variant="secondary" to="/office/missions">
+                  Missions
+                </LinkButton>
+                <LinkButton variant="secondary" to="/office/tasks/new">
+                  Create Task
+                </LinkButton>
                 <LinkButton variant="primary" to="/office/teams?create=1">
                   Create Team
                 </LinkButton>
@@ -346,8 +352,9 @@ export function OfficeMissionControlPage() {
           <SectionPanel title="Recent assignments">
             {recent.length === 0 ? (
               <p className="muted">
-                No assignments recorded. Task management arrives in a later
-                milestone.
+                No assignments yet.{" "}
+                <Link to="/office/tasks/new">Create a task</Link> or browse{" "}
+                <Link to="/office/missions">missions</Link>.
               </p>
             ) : (
               <div className="data-table-wrap">
