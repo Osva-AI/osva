@@ -57,6 +57,10 @@ const STATIC_V1_SEGMENTS = new Set([
   "assignments",
   "launch",
   "cancel",
+  "threads",
+  "messages",
+  "inbox",
+  "read-state",
   "me",
   "workspaces",
   "select",
@@ -249,6 +253,17 @@ function enumerateSplitSegmentPaths(matchBody: string): Set<string> {
     (match) => match[1],
   );
 
+  if (matchBody.includes('segments[2] === "threads"')) {
+    paths.add("/v1/office/threads");
+    paths.add(`/v1/office/threads/${PROBE_SEGMENT}`);
+    paths.add(`/v1/office/threads/${PROBE_SEGMENT}/messages`);
+  }
+
+  if (matchBody.includes('segments[2] === "inbox"')) {
+    paths.add("/v1/office/inbox");
+    paths.add("/v1/office/inbox/read-state");
+  }
+
   for (const resource of new Set(resources)) {
     paths.add(`/v1/office/${resource}`);
     paths.add(`/v1/office/${resource}/${PROBE_SEGMENT}`);
@@ -261,6 +276,14 @@ function enumerateSplitSegmentPaths(matchBody: string): Set<string> {
       paths.add(`/v1/office/assignments/${PROBE_SEGMENT}/launch`);
       paths.add(`/v1/office/assignments/${PROBE_SEGMENT}/cancel`);
     }
+
+    if (resource === "threads") {
+      paths.add(`/v1/office/threads/${PROBE_SEGMENT}/messages`);
+    }
+
+    if (resource === "inbox") {
+      paths.add("/v1/office/inbox/read-state");
+    }
   }
 
   return paths;
@@ -272,14 +295,27 @@ export function enumerateProbePathsFromHandlerSource(source: string): string[] {
 
   addExactPathChecks(stripped, paths);
 
-  const matchBody = extractMatchRouteFunctionBody(stripped);
-  if (matchBody) {
+  let searchFrom = 0;
+  while (searchFrom < stripped.length) {
+    const slice = stripped.slice(searchFrom);
+    const relativeStart = slice.search(/function match\w+Route\(/);
+    if (relativeStart < 0) {
+      break;
+    }
+    const absoluteStart = searchFrom + relativeStart;
+    const matchBody = extractMatchRouteFunctionBody(
+      stripped.slice(absoluteStart),
+    );
+    if (matchBody === null) {
+      break;
+    }
     for (const path of enumerateSliceSegmentPaths(matchBody)) {
       paths.add(path);
     }
     for (const path of enumerateSplitSegmentPaths(matchBody)) {
       paths.add(path);
     }
+    searchFrom = absoluteStart + matchBody.length;
   }
 
   for (const match of stripped.matchAll(

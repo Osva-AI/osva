@@ -18,7 +18,15 @@ const webSrc = path.resolve(
 );
 
 function readHandlerSource(module: V1HandlerModule): string {
-  return fs.readFileSync(path.join(webSrc, `${module}.ts`), "utf8");
+  const primary = fs.readFileSync(path.join(webSrc, `${module}.ts`), "utf8");
+  if (module === "office-http") {
+    const collaboration = fs.readFileSync(
+      path.join(webSrc, "office-collaboration-http.ts"),
+      "utf8",
+    );
+    return `${primary}\n${collaboration}`;
+  }
+  return primary;
 }
 
 function isUnhandledNotFound(status: number, body: unknown): boolean {

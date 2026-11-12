@@ -10,6 +10,8 @@ from osva.resources.office import (
     OfficeWorkersResource,
     RolesResource,
     TeamsResource,
+    OfficeThreadsResource,
+    OfficeInboxResource,
 )
 from osva.resources.runs import RunsResource
 from osva.resources.schedules import SchedulesResource
@@ -43,3 +45,5 @@ class OSVAClient:
         self.teams = TeamsResource(self._http)
         self.goals = GoalsResource(self._http)
         self.assignments = AssignmentsResource(self._http)
+        self.office_threads = OfficeThreadsResource(self._http)
+        self.office_inbox = OfficeInboxResource(self._http)

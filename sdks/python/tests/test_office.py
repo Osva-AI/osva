@@ -37,6 +37,14 @@ def test_office_resources_use_canonical_v1_office_paths() -> None:
     client.assignments.get("asn-1")
     client.assignments.launch("asn-1")
     client.assignments.cancel("asn-1")
+    client.office_threads.list()
+    client.office_threads.get("thread-1")
+    client.office_threads.list_messages("thread-1")
+    client.office_threads.post_message("thread-1", {"body": "hi"})
+    client.office_inbox.list()
+    client.office_inbox.update_read_state(
+        {"threadId": "thread-1", "lastReadSequence": 1},
+    )
 
     paths = [path for _method, path, _body in captured]
     assert paths == [
@@ -53,4 +61,10 @@ def test_office_resources_use_canonical_v1_office_paths() -> None:
         "/v1/office/assignments/asn-1",
         "/v1/office/assignments/asn-1/launch",
         "/v1/office/assignments/asn-1/cancel",
+        "/v1/office/threads",
+        "/v1/office/threads/thread-1",
+        "/v1/office/threads/thread-1/messages",
+        "/v1/office/threads/thread-1/messages",
+        "/v1/office/inbox",
+        "/v1/office/inbox/read-state",
     ]

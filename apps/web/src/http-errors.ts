@@ -19,6 +19,9 @@ import {
   AssignmentNotFoundError,
   GoalNotFoundError,
   OfficeWorkerNotFoundError,
+  OfficeThreadNotFoundError,
+  OfficeMessageNotFoundError,
+  HumanPrincipalRequiredError,
   RoleNotFoundError,
   TeamNotFoundError,
   InvalidRunAttemptStateError,
@@ -112,7 +115,10 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     return;
   }
 
-  if (error instanceof PermissionDeniedError) {
+  if (
+    error instanceof PermissionDeniedError ||
+    error instanceof HumanPrincipalRequiredError
+  ) {
     sendV1Error(
       response,
       403,
@@ -218,6 +224,8 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof OfficeWorkerNotFoundError ||
     error instanceof RoleNotFoundError ||
     error instanceof TeamNotFoundError ||
+    error instanceof OfficeThreadNotFoundError ||
+    error instanceof OfficeMessageNotFoundError ||
     error instanceof ScheduleNotFoundError ||
     error instanceof WorkflowNotFoundError ||
     error instanceof WorkflowVersionNotFoundError ||

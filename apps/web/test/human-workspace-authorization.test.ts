@@ -70,6 +70,25 @@ describe("human workspace authorization", () => {
     expect(connectivityTest?.requiredHumanPermission).toBe("EXECUTE");
   });
 
+  it("maps office collaboration structural keys for human route access", () => {
+    expect(structuralRouteKeyFromPathname("POST", "/v1/office/threads")).toBe(
+      "POST /v1/office/threads",
+    );
+    expect(
+      structuralRouteKeyFromPathname(
+        "POST",
+        "/v1/office/threads/thread-1/messages",
+      ),
+    ).toBe("POST /v1/office/threads/*/messages");
+    expect(
+      structuralRouteKeyFromPathname("PATCH", "/v1/office/inbox/read-state"),
+    ).toBe("PATCH /v1/office/inbox/read-state");
+
+    const createThread = lookupV1RouteAccess("POST", "/v1/office/threads");
+    expect(createThread?.requiredHumanPermission).toBe("WRITE");
+    expect(createThread?.resourceFamily).toBe("office");
+  });
+
   it("denies VIEWER human principals for model provider connection writes", async () => {
     const user = User.create({
       id: USER,

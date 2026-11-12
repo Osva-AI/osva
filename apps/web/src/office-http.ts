@@ -53,6 +53,11 @@ import {
 } from "./control-plane-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
+import {
+  handleOfficeCollaborationRequest,
+  V1_OFFICE_COLLABORATION_HTTP_ROUTES,
+  type OfficeCollaborationHttpServices,
+} from "./office-collaboration-http.js";
 
 export interface OfficeHttpClock {
   now(): Date;
@@ -62,7 +67,7 @@ export interface OfficeHttpIds {
   createId(): string;
 }
 
-export interface OfficeHttpServices {
+export interface OfficeHttpServices extends OfficeCollaborationHttpServices {
   readonly office: OfficeApplication;
   readonly launchAssignment: LaunchAssignment;
   readonly reconcileAssignment: ReconcileAssignment;
@@ -78,6 +83,18 @@ export async function handleOfficeRequest(
   searchParams: URLSearchParams,
   services: OfficeHttpServices,
 ): Promise<boolean> {
+  const handledCollaboration = await handleOfficeCollaborationRequest(
+    request,
+    response,
+    method,
+    path,
+    searchParams,
+    services,
+  );
+  if (handledCollaboration) {
+    return true;
+  }
+
   const route = matchOfficeRoute(path);
   if (route === undefined) {
     return false;
@@ -746,6 +763,7 @@ function toAssignmentListResource(assignments: readonly Assignment[]) {
   });
 }
 export const V1_HTTP_ROUTES = [
+  ...V1_OFFICE_COLLABORATION_HTTP_ROUTES,
   { method: "GET", path: "/v1/office/workers" },
   { method: "POST", path: "/v1/office/workers" },
   { method: "GET", path: "/v1/office/workers/:officeWorkerId" },

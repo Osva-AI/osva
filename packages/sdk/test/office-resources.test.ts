@@ -74,6 +74,15 @@ describe("OsvaClient office resources", () => {
     await client.assignments.get("asn-1" as never);
     await client.assignments.launch("asn-1" as never);
     await client.assignments.cancel("asn-1" as never);
+    await client.officeThreads.list();
+    await client.officeThreads.get("thread-1" as never);
+    await client.officeThreads.listMessages("thread-1" as never);
+    await client.officeThreads.postMessage("thread-1" as never, { body: "hi" });
+    await client.officeInbox.list();
+    await client.officeInbox.updateReadState({
+      threadId: "thread-1" as never,
+      lastReadSequence: 1,
+    });
 
     expect(paths).toEqual([
       "/v1/office/workers",
@@ -89,6 +98,12 @@ describe("OsvaClient office resources", () => {
       "/v1/office/assignments/asn-1",
       "/v1/office/assignments/asn-1/launch",
       "/v1/office/assignments/asn-1/cancel",
+      "/v1/office/threads",
+      "/v1/office/threads/thread-1",
+      "/v1/office/threads/thread-1/messages",
+      "/v1/office/threads/thread-1/messages",
+      "/v1/office/inbox",
+      "/v1/office/inbox/read-state",
     ]);
   });
 });

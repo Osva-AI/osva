@@ -5,8 +5,9 @@
 | Slice | Scope | Status |
 | --- | --- | --- |
 | **M22.0** | Office foundation audit, workspace/security hardening, REST/SDK parity, execution integration verification, Chat/Inbox architecture (docs only), Console readiness spec | Complete (merged via PR #108) |
-| **M22.1** | Virtual Office shell, Mission Control, teams and workers UI | In progress |
-| **M22.2** | Team Chat, persistent conversations, unified Inbox | Planned |
+| **M22.1** | Virtual Office shell, Mission Control, teams and workers UI | Complete (merged via PR #109) |
+| **M22.2A** | Team Chat + Inbox **backend** (threads, messages, read state, inbox projection) | Implemented (awaiting PR) |
+| **M22.2B** | Team Chat + Inbox **Console UI** | Planned |
 | **M22.3** | Missions, task planning, assignment management UX | Planned |
 | **M22.4** | Real worker execution, handoffs, human approvals in Office context | Planned |
 | **M22.5** | Deliverables, activity, observability, end-to-end acceptance | Planned |

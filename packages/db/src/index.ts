@@ -68,6 +68,7 @@ export { PostgresWorkflowTimerWaitResolutionRepository } from "./repositories/po
 export { PostgresMemoryNamespaceRepository } from "./repositories/postgres-memory-namespace-repository.js";
 export { PostgresEvaluationSuiteRepository } from "./repositories/postgres-evaluation-suite-repository.js";
 export { PostgresOfficeRepository } from "./repositories/postgres-office-repository.js";
+export { PostgresOfficeCollaborationRepository } from "./repositories/postgres-office-collaboration-repository.js";
 export { PostgresArtifactRepository } from "./repositories/postgres-artifact-repository.js";
 export { PostgresBuilderPublicationRepository } from "./repositories/postgres-builder-publication-repository.js";
 export { PostgresRunCheckpointRepository } from "./repositories/postgres-run-checkpoint-repository.js";

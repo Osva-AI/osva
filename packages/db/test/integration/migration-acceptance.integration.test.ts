@@ -115,7 +115,16 @@ describe("PostgreSQL migration acceptance", () => {
       SELECT to_regclass('public.builder_publications') AS t
     `;
     expect(builderPublications[0]?.t).toBe("builder_publications");
-    expect(status.repositoryHead).toBe("0032_builder_publication_slice");
+
+    const officeThreads = await database.sql`
+      SELECT to_regclass('public.office_threads') AS t
+    `;
+    expect(officeThreads[0]?.t).toBe("office_threads");
+    const officeMessages = await database.sql`
+      SELECT to_regclass('public.office_messages') AS t
+    `;
+    expect(officeMessages[0]?.t).toBe("office_messages");
+    expect(status.repositoryHead).toBe(repositoryMigrationHead());
 
     await database.close();
   });
@@ -379,6 +388,80 @@ describe("PostgreSQL migration acceptance", () => {
         AND indexdef ILIKE '%unique%'
     `;
     expect(idempotencyUnique.length).toBeGreaterThan(0);
+
+    const status = await readMigrationStatus(database.sql);
+    expect(status.status).toBe("current");
+    expect(status.repositoryHead).toBe(repositoryMigrationHead());
+
+    await database.close();
+  });
+
+  it("upgrades a database at migration 0032 to 0033 (office collaboration)", async () => {
+    const stage32Dir = fs.mkdtempSync(path.join(os.tmpdir(), "osva-mig-32-"));
+    materializeMigrationsThroughIndex(stage32Dir, 32);
+
+    const database = createDatabase({
+      connectionString: postgres.connectionString,
+      max: 1,
+    });
+
+    await database.sql`DROP SCHEMA IF EXISTS drizzle CASCADE`;
+    await database.sql`DROP SCHEMA public CASCADE`;
+    await database.sql`CREATE SCHEMA public`;
+
+    await migrateDatabase(database, { migrationsFolder: stage32Dir });
+
+    const workspaceId = "ws-upgrade-33" as WorkspaceId;
+    await database.sql`
+      INSERT INTO workspaces (id, name, created_at)
+      VALUES (${workspaceId}, ${"Upgrade"}, ${"2026-01-01T00:00:00.000Z"})
+    `;
+    await database.sql`
+      INSERT INTO agents (id, workspace_id, key, name, created_at)
+      VALUES (
+        'agent-upgrade-33',
+        ${workspaceId},
+        'agent',
+        'Agent',
+        ${"2026-01-01T00:00:00.000Z"}
+      )
+    `;
+    await database.sql`
+      INSERT INTO office_workers (
+        id, workspace_id, key, name, agent_id, created_at, updated_at
+      )
+      VALUES (
+        'ow-upgrade-33',
+        ${workspaceId},
+        'worker',
+        'Worker',
+        'agent-upgrade-33',
+        ${"2026-01-01T00:00:00.000Z"},
+        ${"2026-01-01T00:00:00.000Z"}
+      )
+    `;
+
+    const beforeWorkers = await database.sql`
+      SELECT COUNT(*)::int AS count FROM office_workers
+    `;
+    expect(beforeWorkers[0]?.count).toBe(1);
+
+    const beforeThreads = await database.sql`
+      SELECT to_regclass('public.office_threads') AS t
+    `;
+    expect(beforeThreads[0]?.t).toBeNull();
+
+    await migrateDatabase(database);
+
+    const afterThreads = await database.sql`
+      SELECT to_regclass('public.office_threads') AS t
+    `;
+    expect(afterThreads[0]?.t).toBe("office_threads");
+
+    const afterWorkers = await database.sql`
+      SELECT COUNT(*)::int AS count FROM office_workers
+    `;
+    expect(afterWorkers[0]?.count).toBe(1);
 
     const status = await readMigrationStatus(database.sql);
     expect(status.status).toBe("current");

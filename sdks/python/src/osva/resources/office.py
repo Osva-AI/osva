@@ -102,6 +102,48 @@ class GoalsResource:
         )
 
 
+class OfficeThreadsResource:
+    def __init__(self, client: HTTPClient) -> None:
+        self._client = client
+
+    def list(self) -> dict[str, Any]:
+        return self._client.request("GET", "/v1/office/threads")
+
+    def get(self, thread_id: str) -> dict[str, Any]:
+        return self._client.request("GET", f"/v1/office/threads/{thread_id}")
+
+    def create(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._client.request("POST", "/v1/office/threads", body=payload)
+
+    def list_messages(self, thread_id: str) -> dict[str, Any]:
+        return self._client.request(
+            "GET",
+            f"/v1/office/threads/{thread_id}/messages",
+        )
+
+    def post_message(self, thread_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._client.request(
+            "POST",
+            f"/v1/office/threads/{thread_id}/messages",
+            body=payload,
+        )
+
+
+class OfficeInboxResource:
+    def __init__(self, client: HTTPClient) -> None:
+        self._client = client
+
+    def list(self) -> dict[str, Any]:
+        return self._client.request("GET", "/v1/office/inbox")
+
+    def update_read_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._client.request(
+            "PATCH",
+            "/v1/office/inbox/read-state",
+            body=payload,
+        )
+
+
 class AssignmentsResource:
     def __init__(self, client: HTTPClient) -> None:
         self._client = client

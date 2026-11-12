@@ -31,6 +31,7 @@ import {
   MemoryMemoryNamespaceRepository,
   MemoryArtifactRepository,
   MemoryOfficeRepository,
+  MemoryOfficeCollaborationRepository,
   MemoryWorkspaceRepository,
 } from "@osva/adapters-memory";
 import {
@@ -52,6 +53,7 @@ import {
   createToolApplication,
   createWorkflowApplication,
   createOfficeApplication,
+  createOfficeCollaborationApplication,
   AuthenticateApiKey,
   KnowledgeRetriever,
   createApiKeyApplication,
@@ -155,6 +157,8 @@ export async function createTestWebApplication(options?: {
   const artifactBlobStore = createArtifactBlobStore(artifactStorage);
   const evaluationSuites = new MemoryEvaluationSuiteRepository();
   const officeRepository = new MemoryOfficeRepository();
+  const officeCollaborationRepository =
+    new MemoryOfficeCollaborationRepository();
   const queue = new MemoryJobQueue();
   const clock = { now: () => TEST_NOW };
   let counter = 0;
@@ -447,6 +451,32 @@ export async function createTestWebApplication(options?: {
         workspaces,
         agents,
         workflows: workflowRepository,
+        clock,
+        ids,
+      }),
+      collaboration: createOfficeCollaborationApplication({
+        collaboration: officeCollaborationRepository,
+        office: officeRepository,
+        workspaces,
+        workspaceMemberships: {
+          async save() {},
+          async findById() {
+            return null;
+          },
+          async findByWorkspaceAndUser() {
+            return null;
+          },
+          async countByWorkspaceAndRole() {
+            return 0;
+          },
+          async deleteById() {},
+          async listByUserId() {
+            return [];
+          },
+          async listByWorkspaceId() {
+            return [];
+          },
+        },
         clock,
         ids,
       }),
