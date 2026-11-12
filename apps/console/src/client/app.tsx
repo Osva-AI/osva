@@ -64,6 +64,8 @@ import { OfficeTeamDetailPage } from "./routes/office-team-detail-page";
 import { OfficeTeamsPage } from "./routes/office-teams-page";
 import { OfficeWorkerDetailPage } from "./routes/office-worker-detail-page";
 import { OfficeWorkersPage } from "./routes/office-workers-page";
+import { OfficeChatPage } from "./routes/office-chat-page";
+import { OfficeInboxPage } from "./routes/office-inbox-page";
 
 const queryClient = createQueryClient();
 
@@ -224,6 +226,12 @@ export function App() {
                     path="/office"
                     element={<OfficeMissionControlPage />}
                   />
+                  <Route path="/office/chat" element={<OfficeChatPage />} />
+                  <Route
+                    path="/office/chat/:threadId"
+                    element={<OfficeChatPage />}
+                  />
+                  <Route path="/office/inbox" element={<OfficeInboxPage />} />
                   <Route path="/office/teams" element={<OfficeTeamsPage />} />
                   <Route
                     path="/office/teams/:teamId"

@@ -404,6 +404,30 @@ function createMockClient(
       data: { items: [] },
       requestId: "req-office-assignments",
     }),
+    listOfficeThreads: async () => ({
+      data: { items: [] },
+      requestId: "req-office-threads",
+    }),
+    createOfficeThread: async () => {
+      throw new Error("not implemented");
+    },
+    getOfficeThread: async () => {
+      throw new Error("not implemented");
+    },
+    listOfficeThreadMessages: async () => ({
+      data: { items: [] },
+      requestId: "req-office-messages",
+    }),
+    postOfficeThreadMessage: async () => {
+      throw new Error("not implemented");
+    },
+    listOfficeInbox: async () => ({
+      data: { items: [] },
+      requestId: "req-office-inbox",
+    }),
+    updateOfficeInboxReadState: async () => {
+      throw new Error("not implemented");
+    },
     ...overrides,
   };
 }
@@ -1572,6 +1596,82 @@ describe("console server API", () => {
     });
     expect(created.status).toBe(201);
     expect(capturedWorkspace).toBe("workspace-1");
+  });
+
+  it("proxies office collaboration thread and inbox routes", async () => {
+    let postedMessageBody: unknown;
+    let assignmentListCalls = 0;
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        listOfficeAssignments: async () => {
+          assignmentListCalls += 1;
+          return { data: { items: [] }, requestId: "req-assign" };
+        },
+        listOfficeThreads: async () => ({
+          data: {
+            items: [{ id: "thread-1", title: "General", unreadCount: 2 }],
+          },
+          requestId: "req-threads",
+        }),
+        listOfficeThreadMessages: async () => ({
+          data: { items: [{ id: "msg-1", sequence: 1, body: "Hi" }] },
+          requestId: "req-msgs",
+        }),
+        postOfficeThreadMessage: async (_threadId, body) => {
+          postedMessageBody = body;
+          return {
+            data: { id: "msg-2", sequence: 2 },
+            requestId: "req-msg-post",
+          };
+        },
+        listOfficeInbox: async () => ({
+          data: { items: [{ id: "in-1", kind: "CHAT_MENTION", unread: true }] },
+          requestId: "req-inbox",
+        }),
+      }),
+    });
+    const origin = await listen(server);
+
+    const threads = await fetch(`${origin}/api/v1/office/threads`, {
+      headers: { "x-osva-workspace-id": "workspace-1" },
+    });
+    expect(threads.status).toBe(200);
+    expect(await threads.json()).toMatchObject({
+      items: [{ id: "thread-1" }],
+    });
+
+    const messages = await fetch(
+      `${origin}/api/v1/office/threads/thread-1/messages`,
+      { headers: { "x-osva-workspace-id": "workspace-1" } },
+    );
+    expect(messages.status).toBe(200);
+
+    const posted = await fetch(
+      `${origin}/api/v1/office/threads/thread-1/messages`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-osva-workspace-id": "workspace-1",
+        },
+        body: JSON.stringify({
+          body: "Hello",
+          idempotencyKey: "idem-1",
+        }),
+      },
+    );
+    expect(posted.status).toBe(201);
+    expect(postedMessageBody).toMatchObject({
+      body: "Hello",
+      idempotencyKey: "idem-1",
+    });
+
+    const inbox = await fetch(`${origin}/api/v1/office/inbox`, {
+      headers: { "x-osva-workspace-id": "workspace-1" },
+    });
+    expect(inbox.status).toBe(200);
+    expect(assignmentListCalls).toBe(0);
   });
 
   it("rejects unsupported office proxy paths", async () => {

@@ -1,47 +1,39 @@
 import { LinkButton } from "../ui/button";
 
-export type OfficeSectionNavActive = "mission-control" | "teams" | "workers";
+export type OfficeSectionNavActive =
+  "mission-control" | "teams" | "workers" | "chat" | "inbox";
 
 export function OfficeSectionNav(props: {
   readonly active: OfficeSectionNavActive;
 }) {
+  const items: Array<{
+    readonly id: OfficeSectionNavActive;
+    readonly label: string;
+    readonly to: string;
+  }> = [
+    { id: "mission-control", label: "Mission Control", to: "/office" },
+    { id: "chat", label: "Team Chat", to: "/office/chat" },
+    { id: "inbox", label: "Inbox", to: "/office/inbox" },
+    { id: "teams", label: "Teams", to: "/office/teams" },
+    { id: "workers", label: "Workers", to: "/office/workers" },
+  ];
+
   return (
     <nav className="activity-v2-history-nav" aria-label="Virtual Office views">
-      {props.active === "mission-control" ? (
-        <span
-          className="button button-secondary is-active-nav"
-          aria-current="page"
-        >
-          Mission Control
-        </span>
-      ) : (
-        <LinkButton variant="secondary" to="/office">
-          Mission Control
-        </LinkButton>
-      )}
-      {props.active === "teams" ? (
-        <span
-          className="button button-secondary is-active-nav"
-          aria-current="page"
-        >
-          Teams
-        </span>
-      ) : (
-        <LinkButton variant="secondary" to="/office/teams">
-          Teams
-        </LinkButton>
-      )}
-      {props.active === "workers" ? (
-        <span
-          className="button button-secondary is-active-nav"
-          aria-current="page"
-        >
-          Workers
-        </span>
-      ) : (
-        <LinkButton variant="secondary" to="/office/workers">
-          Workers
-        </LinkButton>
+      {items.map((item) =>
+        props.active === item.id ? (
+          <span
+            key={item.id}
+            className="button button-secondary is-active-nav"
+            aria-current="page"
+          >
+            {item.label}
+          </span>
+        ) : (
+          <LinkButton key={item.id} variant="secondary" to={item.to}>
+            {item.label}
+          </LinkButton>
+        ),
       )}
     </nav>
   );

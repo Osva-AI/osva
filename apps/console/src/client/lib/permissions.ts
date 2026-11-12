@@ -36,6 +36,11 @@ export function roleCanWriteControlPlaneResources(role: string): boolean {
   return rolePermitsAuthorizationAction(role, AUTHORIZATION_ACTIONS.WRITE);
 }
 
+/** M22.2A: human chat posts require control-plane WRITE on office (not EXECUTE-only). */
+export function roleCanAuthorOfficeChat(role: string): boolean {
+  return rolePermitsAuthorizationAction(role, AUTHORIZATION_ACTIONS.WRITE);
+}
+
 export function roleCanManageMembers(role: string): boolean {
   return rolePermitsHumanPermission(
     role,

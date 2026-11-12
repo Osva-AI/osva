@@ -312,6 +312,41 @@ export interface ConsoleOsvaClient {
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
   listOfficeAssignments(): Promise<ConsoleUpstreamResponse<unknown>>;
+  listOfficeThreads(query?: {
+    readonly cursor?: string;
+    readonly limit?: number;
+  }): Promise<ConsoleUpstreamResponse<unknown>>;
+  createOfficeThread(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  getOfficeThread(threadId: string): Promise<ConsoleUpstreamResponse<unknown>>;
+  listOfficeThreadMessages(
+    threadId: string,
+    query?: { readonly cursor?: string; readonly limit?: number },
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  postOfficeThreadMessage(
+    threadId: string,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listOfficeInbox(query?: {
+    readonly cursor?: string;
+    readonly limit?: number;
+  }): Promise<ConsoleUpstreamResponse<unknown>>;
+  updateOfficeInboxReadState(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+}
+
+function officeCollaborationQuerySuffix(query?: {
+  readonly cursor?: string;
+  readonly limit?: number;
+}): string {
+  const params = new URLSearchParams();
+  if (query?.cursor !== undefined) {
+    params.set("cursor", query.cursor);
+  }
+  if (query?.limit !== undefined) {
+    params.set("limit", String(query.limit));
+  }
+  return params.size > 0 ? `?${params.toString()}` : "";
 }
 
 export function createConsoleOsvaClient(
@@ -940,6 +975,44 @@ export function createConsoleOsvaClient(
       http.requestWithMeta({
         method: "GET",
         path: "/v1/office/assignments",
+      }),
+    listOfficeThreads: (query) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/threads${officeCollaborationQuerySuffix(query)}`,
+      }),
+    createOfficeThread: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/office/threads",
+        body,
+      }),
+    getOfficeThread: (threadId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/threads/${encodeURIComponent(threadId)}`,
+      }),
+    listOfficeThreadMessages: (threadId, query) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/threads/${encodeURIComponent(threadId)}/messages${officeCollaborationQuerySuffix(query)}`,
+      }),
+    postOfficeThreadMessage: (threadId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/office/threads/${encodeURIComponent(threadId)}/messages`,
+        body,
+      }),
+    listOfficeInbox: (query) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/inbox${officeCollaborationQuerySuffix(query)}`,
+      }),
+    updateOfficeInboxReadState: (body) =>
+      http.requestWithMeta({
+        method: "PATCH",
+        path: "/v1/office/inbox/read-state",
+        body,
       }),
   };
 }
