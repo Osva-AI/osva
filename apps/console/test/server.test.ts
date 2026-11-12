@@ -400,10 +400,38 @@ function createMockClient(
     addTeamMembership: async () => {
       throw new Error("not implemented");
     },
+    listOfficeGoals: async () => ({
+      data: { items: [] },
+      requestId: "req-office-goals",
+    }),
+    getOfficeGoal: async () => {
+      throw new Error("not implemented");
+    },
+    createOfficeGoal: async () => {
+      throw new Error("not implemented");
+    },
+    updateOfficeGoal: async () => {
+      throw new Error("not implemented");
+    },
     listOfficeAssignments: async () => ({
       data: { items: [] },
       requestId: "req-office-assignments",
     }),
+    getOfficeAssignment: async () => {
+      throw new Error("not implemented");
+    },
+    createOfficeAssignment: async () => {
+      throw new Error("not implemented");
+    },
+    updateOfficeAssignment: async () => {
+      throw new Error("not implemented");
+    },
+    launchOfficeAssignment: async () => {
+      throw new Error("not implemented");
+    },
+    cancelOfficeAssignment: async () => {
+      throw new Error("not implemented");
+    },
     listOfficeThreads: async () => ({
       data: { items: [] },
       requestId: "req-office-threads",
@@ -1674,18 +1702,155 @@ describe("console server API", () => {
     expect(assignmentListCalls).toBe(0);
   });
 
-  it("rejects unsupported office proxy paths", async () => {
+  it("proxies office goals and assignment lifecycle routes", async () => {
+    let capturedGoalBody: unknown;
+    let capturedAssignmentBody: unknown;
+    let launchId: string | undefined;
+    let cancelId: string | undefined;
     server = createConsoleServer({
       config: testConfig,
-      client: createMockClient(),
+      client: createMockClient({
+        listOfficeGoals: async () => ({
+          data: { items: [{ id: "goal-1", title: "Mission" }] },
+          requestId: "req-goals-list",
+        }),
+        createOfficeGoal: async (body) => {
+          capturedGoalBody = body;
+          return {
+            data: { id: "goal-new", title: "New" },
+            requestId: "req-goal-create",
+          };
+        },
+        getOfficeGoal: async (goalId) => ({
+          data: { id: goalId, title: "Mission" },
+          requestId: "req-goal-get",
+        }),
+        updateOfficeGoal: async (goalId, body) => ({
+          data: { id: goalId, ...(body as object) },
+          requestId: "req-goal-patch",
+        }),
+        createOfficeAssignment: async (body) => {
+          capturedAssignmentBody = body;
+          return {
+            data: { id: "asn-new", status: "PENDING" },
+            requestId: "req-asn-create",
+          };
+        },
+        getOfficeAssignment: async (assignmentId) => ({
+          data: { id: assignmentId, status: "RUNNING" },
+          requestId: "req-asn-get",
+        }),
+        updateOfficeAssignment: async (assignmentId, body) => ({
+          data: { id: assignmentId, ...(body as object) },
+          requestId: "req-asn-patch",
+        }),
+        launchOfficeAssignment: async (assignmentId) => {
+          launchId = assignmentId;
+          return {
+            data: { id: assignmentId, status: "RUNNING" },
+            requestId: "req-asn-launch",
+          };
+        },
+        cancelOfficeAssignment: async (assignmentId) => {
+          cancelId = assignmentId;
+          return {
+            data: { id: assignmentId, status: "CANCELLED" },
+            requestId: "req-asn-cancel",
+          };
+        },
+      }),
+    });
+    const origin = await listen(server);
+    const headers = {
+      "content-type": "application/json",
+      "x-osva-workspace-id": "workspace-1",
+    };
+
+    const goals = await fetch(`${origin}/api/v1/office/goals`, { headers });
+    expect(goals.status).toBe(200);
+
+    const goalCreate = await fetch(`${origin}/api/v1/office/goals`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ key: "m1", title: "Alpha" }),
+    });
+    expect(goalCreate.status).toBe(201);
+    expect(capturedGoalBody).toMatchObject({ key: "m1", title: "Alpha" });
+
+    const goalGet = await fetch(`${origin}/api/v1/office/goals/goal-1`, {
+      headers,
+    });
+    expect(goalGet.status).toBe(200);
+
+    const goalPatch = await fetch(`${origin}/api/v1/office/goals/goal-1`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ status: "ACTIVE" }),
+    });
+    expect(goalPatch.status).toBe(200);
+
+    const asnCreate = await fetch(`${origin}/api/v1/office/assignments`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        officeWorkerId: "ow-1",
+        title: "Task",
+        targetType: "AGENT_VERSION",
+        targetVersionId: "av-1",
+        input: { schemaVersion: "1" },
+      }),
+    });
+    expect(asnCreate.status).toBe(201);
+    expect(capturedAssignmentBody).toMatchObject({ title: "Task" });
+
+    const asnGet = await fetch(`${origin}/api/v1/office/assignments/asn-1`, {
+      headers,
+    });
+    expect(asnGet.status).toBe(200);
+
+    const launch = await fetch(
+      `${origin}/api/v1/office/assignments/asn-1/launch`,
+      { method: "POST", headers, body: "{}" },
+    );
+    expect(launch.status).toBe(200);
+    expect(launchId).toBe("asn-1");
+
+    const cancel = await fetch(
+      `${origin}/api/v1/office/assignments/asn-1/cancel`,
+      { method: "POST", headers, body: "{}" },
+    );
+    expect(cancel.status).toBe(200);
+    expect(cancelId).toBe("asn-1");
+  });
+
+  it("forwards upstream authorization denials for office task routes", async () => {
+    server = createConsoleServer({
+      config: testConfig,
+      client: createMockClient({
+        createOfficeGoal: async () => {
+          const { OsvaApiError } = await import("@osva-ai/sdk");
+          throw new OsvaApiError(
+            403,
+            { status: "permission_denied" },
+            "req-forbidden-goal",
+          );
+        },
+      }),
     });
     const origin = await listen(server);
 
-    const response = await fetch(
-      `${origin}/api/v1/office/assignments/asn-1/launch`,
-      { method: "POST", body: "{}" },
+    const response = await fetch(`${origin}/api/v1/office/goals`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-osva-workspace-id": "workspace-1",
+      },
+      body: JSON.stringify({ key: "m1", title: "Alpha" }),
+    });
+    expect(response.status).toBe(403);
+    expect(response.headers.get("x-osva-request-id")).toBe(
+      "req-forbidden-goal",
     );
-    expect(response.status).toBe(405);
   });
 
   it("reports missing configuration state", async () => {

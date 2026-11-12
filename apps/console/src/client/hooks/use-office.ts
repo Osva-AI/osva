@@ -90,7 +90,42 @@ export interface OfficeAssignmentListResource {
   readonly items: readonly OfficeAssignmentResource[];
 }
 
+export type GoalStatus = "OPEN" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+
+export interface OfficeGoalResource {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly key: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly status: GoalStatus;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface OfficeGoalListResource {
+  readonly items: readonly OfficeGoalResource[];
+}
+
 const OFFICE_STALE_MS = 60_000;
+
+function invalidateOfficeMissionsAndTasks(
+  queryClient: ReturnType<typeof useQueryClient>,
+  workspaceId: string | undefined,
+): void {
+  if (workspaceId === undefined) {
+    return;
+  }
+  void queryClient.invalidateQueries({
+    queryKey: ["office", workspaceId, "goals"],
+  });
+  void queryClient.invalidateQueries({
+    queryKey: ["office", workspaceId, "assignments"],
+  });
+  void queryClient.invalidateQueries({
+    queryKey: ["office", workspaceId, "inbox"],
+  });
+}
 
 export function useOfficeWorkersQuery() {
   const workspaceId = useWorkspaceQueryScope();
@@ -344,6 +379,87 @@ export function useAddTeamMembershipMutation(teamId: string) {
   });
 }
 
+export function useOfficeGoalsQuery() {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: ["office", workspaceId, "goals"],
+    enabled: workspaceId !== undefined,
+    staleTime: OFFICE_STALE_MS,
+    queryFn: () =>
+      workspaceScopedFetch<OfficeGoalListResource>(
+        workspaceId,
+        "/api/v1/office/goals",
+      ),
+  });
+}
+
+export function useOfficeGoalQuery(goalId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: ["office", workspaceId, "goals", goalId],
+    enabled:
+      workspaceId !== undefined && goalId !== undefined && goalId.length > 0,
+    staleTime: OFFICE_STALE_MS,
+    queryFn: () =>
+      workspaceScopedFetch<OfficeGoalResource>(
+        workspaceId,
+        `/api/v1/office/goals/${encodeURIComponent(goalId!)}`,
+      ),
+  });
+}
+
+export function useCreateOfficeGoalMutation() {
+  const workspaceId = useWorkspaceQueryScope();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      readonly key: string;
+      readonly title: string;
+      readonly description?: string;
+    }) => {
+      const pinnedWorkspaceId = workspaceId;
+      return workspaceMutationFetch<OfficeGoalResource>(
+        "/api/v1/office/goals",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        },
+        { workspaceId: pinnedWorkspaceId },
+      );
+    },
+    onSuccess: () => {
+      invalidateOfficeMissionsAndTasks(queryClient, workspaceId);
+    },
+  });
+}
+
+export function useUpdateOfficeGoalMutation(goalId: string) {
+  const workspaceId = useWorkspaceQueryScope();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      readonly title?: string;
+      readonly description?: string;
+      readonly status?: GoalStatus;
+    }) => {
+      const pinnedWorkspaceId = workspaceId;
+      return workspaceMutationFetch<OfficeGoalResource>(
+        `/api/v1/office/goals/${encodeURIComponent(goalId)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        },
+        { workspaceId: pinnedWorkspaceId },
+      );
+    },
+    onSuccess: () => {
+      invalidateOfficeMissionsAndTasks(queryClient, workspaceId);
+    },
+  });
+}
+
 export function useOfficeAssignmentsQuery() {
   const workspaceId = useWorkspaceQueryScope();
   return useQuery({
@@ -355,6 +471,123 @@ export function useOfficeAssignmentsQuery() {
         workspaceId,
         "/api/v1/office/assignments",
       ),
+  });
+}
+
+export function useOfficeAssignmentQuery(assignmentId: string | undefined) {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: ["office", workspaceId, "assignments", assignmentId],
+    enabled:
+      workspaceId !== undefined &&
+      assignmentId !== undefined &&
+      assignmentId.length > 0,
+    staleTime: OFFICE_STALE_MS,
+    queryFn: () =>
+      workspaceScopedFetch<OfficeAssignmentResource>(
+        workspaceId,
+        `/api/v1/office/assignments/${encodeURIComponent(assignmentId!)}`,
+      ),
+  });
+}
+
+export function useCreateOfficeAssignmentMutation() {
+  const workspaceId = useWorkspaceQueryScope();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      readonly goalId?: string;
+      readonly officeWorkerId: string;
+      readonly title: string;
+      readonly description?: string;
+      readonly targetType: "AGENT_VERSION" | "WORKFLOW_VERSION";
+      readonly targetVersionId: string;
+      readonly input: unknown;
+    }) => {
+      const pinnedWorkspaceId = workspaceId;
+      return workspaceMutationFetch<OfficeAssignmentResource>(
+        "/api/v1/office/assignments",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        },
+        { workspaceId: pinnedWorkspaceId },
+      );
+    },
+    onSuccess: () => {
+      invalidateOfficeMissionsAndTasks(queryClient, workspaceId);
+    },
+  });
+}
+
+export function useUpdateOfficeAssignmentMutation(assignmentId: string) {
+  const workspaceId = useWorkspaceQueryScope();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      readonly title?: string;
+      readonly description?: string;
+      readonly goalId?: string | null;
+    }) => {
+      const pinnedWorkspaceId = workspaceId;
+      return workspaceMutationFetch<OfficeAssignmentResource>(
+        `/api/v1/office/assignments/${encodeURIComponent(assignmentId)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        },
+        { workspaceId: pinnedWorkspaceId },
+      );
+    },
+    onSuccess: () => {
+      invalidateOfficeMissionsAndTasks(queryClient, workspaceId);
+    },
+  });
+}
+
+export function useLaunchOfficeAssignmentMutation(assignmentId: string) {
+  const workspaceId = useWorkspaceQueryScope();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      const pinnedWorkspaceId = workspaceId;
+      return workspaceMutationFetch<OfficeAssignmentResource>(
+        `/api/v1/office/assignments/${encodeURIComponent(assignmentId)}/launch`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        },
+        { workspaceId: pinnedWorkspaceId },
+      );
+    },
+    onSuccess: () => {
+      invalidateOfficeMissionsAndTasks(queryClient, workspaceId);
+    },
+  });
+}
+
+export function useCancelOfficeAssignmentMutation(assignmentId: string) {
+  const workspaceId = useWorkspaceQueryScope();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      const pinnedWorkspaceId = workspaceId;
+      return workspaceMutationFetch<OfficeAssignmentResource>(
+        `/api/v1/office/assignments/${encodeURIComponent(assignmentId)}/cancel`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        },
+        { workspaceId: pinnedWorkspaceId },
+      );
+    },
+    onSuccess: () => {
+      invalidateOfficeMissionsAndTasks(queryClient, workspaceId);
+    },
   });
 }
 
