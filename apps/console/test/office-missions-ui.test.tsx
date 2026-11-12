@@ -15,7 +15,6 @@ import { AuthProvider } from "../src/client/context/auth-context";
 import { OfficeMissionDetailPage } from "../src/client/routes/office-mission-detail-page";
 import { OfficeMissionsPage } from "../src/client/routes/office-missions-page";
 import { OfficeTaskCreatePage } from "../src/client/routes/office-task-create-page";
-import { setSelectedWorkspaceId } from "../src/client/lib/workspace-selection";
 import { json, stubHumanSessionFetch } from "./human-auth-fetch-stub";
 
 function wrap(

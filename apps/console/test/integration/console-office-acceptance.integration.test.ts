@@ -521,13 +521,14 @@ describe("M22.1 Virtual Office acceptance (real stack)", () => {
       );
       expect(assignmentRes.status).toBe(201);
       const assignmentBody = (await assignmentRes.json()) as {
+        id: string;
         status: string;
         runId?: string;
       };
       expect(assignmentBody.status).toBe("PENDING");
       expect(assignmentBody.runId).toBeUndefined();
 
-      const assignmentId = (assignmentBody as { id: string }).id;
+      const assignmentId = assignmentBody.id;
       const launchRes = await fetch(
         `${consoleOrigin}/api/v1/office/assignments/${assignmentId}/launch`,
         {

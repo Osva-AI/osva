@@ -8,7 +8,7 @@
 | **M22.1** | Virtual Office shell, Mission Control, teams and workers UI | Complete (merged via PR #109) |
 | **M22.2A** | Team Chat + Inbox **backend** (threads, messages, read state, inbox projection) | Implemented (awaiting PR) |
 | **M22.2B** | Team Chat + Inbox **Console UI** | Planned |
-| **M22.3** | Missions, task planning, assignment management UX | Planned |
+| **M22.3** | Missions, task planning, assignment management UX (A–D on `feat/m22-3-tasks-missions`) | Implemented (awaiting combined PR + CI) |
 | **M22.4** | Real worker execution, handoffs, human approvals in Office context | Planned |
 | **M22.5** | Deliverables, activity, observability, end-to-end acceptance | Planned |
 

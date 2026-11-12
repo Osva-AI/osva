@@ -220,16 +220,23 @@ describe("Stage 2.9B assignment execution integration", () => {
         launchedBody.runId,
       );
 
-      await waitFor(
+      const terminalStatus = await waitFor(
         launchedBody.runId!,
         async () => {
-          const response = await fetchJson(
-            `${origin}/v1/office/assignments/${assignmentId}`,
-          );
-          return (response.body as { status: string }).status;
+          const response = await fetchJson(`${origin}/v1/office/assignments`);
+          const items = (
+            response.body as { items: { id: string; status: string }[] }
+          ).items;
+          return items.find((item) => item.id === assignmentId)?.status ?? "";
         },
         (status) => status === "COMPLETED",
       );
+      expect(terminalStatus).toBe("COMPLETED");
+
+      const detail = await fetchJson(
+        `${origin}/v1/office/assignments/${assignmentId}`,
+      );
+      expect((detail.body as { status: string }).status).toBe("COMPLETED");
 
       const runResponse = await fetchJson(
         `${origin}/v1/runs/${launchedBody.runId}`,

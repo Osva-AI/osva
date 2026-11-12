@@ -54,18 +54,17 @@ Enforced on upstream `OfficeApplication` and launch HTTP policy (`v1-route-autho
 | Endpoint | Reconciliation |
 | --- | --- |
 | `GET .../assignments/:id` | Yes — derives status from linked Run/WorkflowRun after READ auth |
-| `GET .../assignments` | No — persisted rows only |
+| `GET .../assignments` | Yes — reconciles non-terminal rows in one pass via `ReconcileAssignment.executeList` (bounded loads by unique linked execution ids; persists transitions) |
 
 ## M22.3C — Task Board, execution controls, deliverables
 
 ### Task Board read model
 
 - Route: `/office/tasks` (`OfficeTasksBoardPage`).
-- Data: `GET /api/v1/office/assignments` (persisted statuses only).
+- Data: `GET /api/v1/office/assignments` (list reconciles non-terminal assignments server-side).
 - Presentation grouping in `apps/console/src/client/lib/office-task-board.ts` (`TASK_BOARD_COLUMNS`, filters, duration labels).
 - Board and list views; filters for mission, worker, status, and title search.
 - Explicit **Refresh**; optional list poll every 30s when any listed row is `RUNNING` (`useOfficeAssignmentsQuery({ pollListWhenRunning: true })`).
-- Staleness notice when the list shows `RUNNING` — list GET does not reconcile.
 
 ### Task Detail
 
@@ -90,9 +89,11 @@ Same matrix as M22.3A; controls use `roleCanExecuteControlPlaneActions` for laun
 - `TaskDeliverablesSection` reuses `RunArtifactsSection` + `useArtifactsQuery` (agent) or `useWorkflowRunArtifactsQuery` (workflow, verified linkage).
 - Full execution UX remains on Run / WorkflowRun detail pages.
 
-### Deferred
+### Consistency guarantees (M22.3D)
 
-- Bulk list reconciliation endpoint (would avoid list staleness; not implemented — client refresh + detail cache patch only).
+- Board and mission progress polls observe terminal assignment status once the linked Run or WorkflowRun is terminal, without opening Task Detail (list GET reconciles).
+- Task Detail still reconciles on each GET and patches the React Query list cache for the reconciled row.
+- Terminal assignments are not re-derived on list or detail GET.
 
 ## React Query
 

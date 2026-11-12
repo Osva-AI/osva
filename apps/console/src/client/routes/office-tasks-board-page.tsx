@@ -22,7 +22,6 @@ import { formatTimestamp } from "../lib/formatting";
 import {
   assignmentDurationLabel,
   assignmentExecutionPath,
-  assignmentsMayHaveStaleListStatus,
   filterOfficeTasks,
   groupAssignmentsByStatus,
   TASK_BOARD_COLUMNS,
@@ -79,10 +78,7 @@ export function OfficeTasksBoardPage() {
     [assignments, filters],
   );
 
-  const grouped = useMemo(
-    () => groupAssignmentsByStatus(filtered),
-    [filtered],
-  );
+  const grouped = useMemo(() => groupAssignmentsByStatus(filtered), [filtered]);
 
   const listRows = useMemo(() => {
     const rows: OfficeAssignmentResource[] = [];
@@ -93,15 +89,15 @@ export function OfficeTasksBoardPage() {
   }, [grouped]);
 
   const loading =
-    assignmentsQuery.isLoading || goalsQuery.isLoading || workersQuery.isLoading;
+    assignmentsQuery.isLoading ||
+    goalsQuery.isLoading ||
+    workersQuery.isLoading;
   const error =
     assignmentsQuery.isError || goalsQuery.isError || workersQuery.isError;
   const loadError =
     (assignmentsQuery.error as Error | undefined) ??
     (goalsQuery.error as Error | undefined) ??
     (workersQuery.error as Error | undefined);
-
-  const staleListNotice = assignmentsMayHaveStaleListStatus(assignments);
 
   return (
     <div
@@ -110,7 +106,7 @@ export function OfficeTasksBoardPage() {
     >
       <PageHeader
         title="Task Board"
-        subtitle="Operational view of workspace assignments. Status on this board reflects persisted list data; use Refresh or open Task Detail for reconciled execution status."
+        subtitle="Operational view of workspace assignments, including reconciled execution status from linked runs and workflow runs."
         actions={
           <>
             {canWrite ? (
@@ -136,14 +132,6 @@ export function OfficeTasksBoardPage() {
       />
 
       <OfficeSectionNav active="tasks" />
-
-      {staleListNotice ? (
-        <p className="form-feedback warn" role="status">
-          One or more tasks are RUNNING on the list view. Execution may have
-          finished while this board shows a lagging status — use Refresh or open
-          the task for a reconciled view.
-        </p>
-      ) : null}
 
       <SectionPanel title="Filters">
         <div className="filters">
@@ -284,10 +272,7 @@ export function OfficeTasksBoardPage() {
             >
               <h2 className="office-v2-task-board-column-title">
                 {status}
-                <span className="muted">
-                  {" "}
-                  ({grouped[status].length})
-                </span>
+                <span className="muted"> ({grouped[status].length})</span>
               </h2>
               {grouped[status].length === 0 ? (
                 <p className="muted">No tasks</p>
@@ -360,8 +345,7 @@ function TaskCard(props: {
       </h3>
       {goal !== undefined ? (
         <p className="office-v2-card-meta">
-          Mission{" "}
-          <Link to={`/office/missions/${goal.id}`}>{goal.title}</Link>
+          Mission <Link to={`/office/missions/${goal.id}`}>{goal.title}</Link>
         </p>
       ) : (
         <p className="office-v2-card-meta muted">Unassigned to a mission</p>

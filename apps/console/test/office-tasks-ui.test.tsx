@@ -14,7 +14,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../src/client/context/auth-context";
 import { OfficeTaskDetailPage } from "../src/client/routes/office-task-detail-page";
 import { OfficeTasksBoardPage } from "../src/client/routes/office-tasks-board-page";
-import { setSelectedWorkspaceId } from "../src/client/lib/workspace-selection";
+import type { OfficeAssignmentResource } from "../src/client/hooks/use-office";
+import { clearSelectedWorkspaceId } from "../src/client/lib/workspace-selection";
 import { json, stubHumanSessionFetch } from "./human-auth-fetch-stub";
 
 const goalA = {
@@ -116,7 +117,7 @@ function officeStub(
     readonly onCancel?: () => void;
   },
 ) {
-  let pendingDetail = { ...assignments.pending };
+  let pendingDetail: OfficeAssignmentResource = { ...assignments.pending };
   return stubHumanSessionFetch(role, "ws-office", (url, init) => {
     const path = String(url);
     if (path.endsWith("/api/v1/office/goals") && !path.includes("/goals/")) {
@@ -202,7 +203,7 @@ describe("office tasks ui", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
-    setSelectedWorkspaceId(undefined);
+    clearSelectedWorkspaceId();
   });
 
   it("renders board columns and filters by mission", async () => {
@@ -286,11 +287,10 @@ describe("office tasks ui", () => {
     officeStub("VIEWER");
     wrap(<OfficeTaskDetailPage />, ["/office/tasks/asn-wf"]);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("task-execution-link")).toHaveAttribute(
-        "href",
-        "/workflow-runs/wfr-1",
-      ),
-    );
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("task-execution-link").getAttribute("href"),
+      ).toBe("/workflow-runs/wfr-1");
+    });
   });
 });

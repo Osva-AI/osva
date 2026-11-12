@@ -92,9 +92,3 @@ export function groupAssignmentsByStatus(
   }
   return grouped;
 }
-
-export function assignmentsMayHaveStaleListStatus(
-  assignments: readonly OfficeAssignmentResource[],
-): boolean {
-  return assignments.some((item) => item.status === "RUNNING");
-}
