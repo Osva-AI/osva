@@ -47,6 +47,16 @@ export function NavIconAgents({ className }: IconProps) {
   );
 }
 
+export function NavIconOffice({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 21V9l8-4 8 4v12" />
+      <path d="M9 21v-6h6v6" />
+      <path d="M9 13h.01M15 13h.01" />
+    </Svg>
+  );
+}
+
 export function NavIconWorkflows({ className }: IconProps) {
   return (
     <Svg className={className}>
@@ -230,6 +240,9 @@ const NAV_ICON_BY_ID: Record<string, (props: IconProps) => React.JSX.Element> =
     home: NavIconHome,
     agents: NavIconAgents,
     workflows: NavIconWorkflows,
+    "office-mission-control": NavIconOffice,
+    "office-teams": NavIconOffice,
+    "office-workers": NavIconOffice,
     activity: NavIconActivity,
     testing: NavIconTesting,
     models: NavIconModels,

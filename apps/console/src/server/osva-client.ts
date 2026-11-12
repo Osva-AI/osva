@@ -19,6 +19,9 @@ import type {
   KnowledgeIndexId,
   KnowledgeSourceId,
   MemoryNamespaceId,
+  OfficeWorkerId,
+  RoleId,
+  TeamId,
 } from "@osva-ai/contracts";
 import { OsvaHttpClient } from "@osva-ai/sdk";
 
@@ -278,6 +281,37 @@ export interface ConsoleOsvaClient {
   listApiKeys(): Promise<ConsoleUpstreamResponse<unknown>>;
   createApiKey(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
   revokeApiKey(apiKeyId: string): Promise<ConsoleUpstreamResponse<unknown>>;
+  listOfficeWorkers(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getOfficeWorker(
+    officeWorkerId: OfficeWorkerId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createOfficeWorker(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  updateOfficeWorker(
+    officeWorkerId: OfficeWorkerId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listOfficeRoles(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getOfficeRole(roleId: RoleId): Promise<ConsoleUpstreamResponse<unknown>>;
+  createOfficeRole(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  updateOfficeRole(
+    roleId: RoleId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listOfficeTeams(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getOfficeTeam(teamId: TeamId): Promise<ConsoleUpstreamResponse<unknown>>;
+  createOfficeTeam(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  updateOfficeTeam(
+    teamId: TeamId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listTeamMemberships(
+    teamId: TeamId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  addTeamMembership(
+    teamId: TeamId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listOfficeAssignments(): Promise<ConsoleUpstreamResponse<unknown>>;
 }
 
 export function createConsoleOsvaClient(
@@ -824,6 +858,88 @@ export function createConsoleOsvaClient(
       http.requestWithMeta({
         method: "POST",
         path: `/v1/api-keys/${encodeURIComponent(apiKeyId)}/revoke`,
+      }),
+    listOfficeWorkers: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/office/workers",
+      }),
+    getOfficeWorker: (officeWorkerId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/workers/${encodeURIComponent(officeWorkerId)}`,
+      }),
+    createOfficeWorker: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/office/workers",
+        body,
+      }),
+    updateOfficeWorker: (officeWorkerId, body) =>
+      http.requestWithMeta({
+        method: "PATCH",
+        path: `/v1/office/workers/${encodeURIComponent(officeWorkerId)}`,
+        body,
+      }),
+    listOfficeRoles: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/office/roles",
+      }),
+    getOfficeRole: (roleId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/roles/${encodeURIComponent(roleId)}`,
+      }),
+    createOfficeRole: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/office/roles",
+        body,
+      }),
+    updateOfficeRole: (roleId, body) =>
+      http.requestWithMeta({
+        method: "PATCH",
+        path: `/v1/office/roles/${encodeURIComponent(roleId)}`,
+        body,
+      }),
+    listOfficeTeams: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/office/teams",
+      }),
+    getOfficeTeam: (teamId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/teams/${encodeURIComponent(teamId)}`,
+      }),
+    createOfficeTeam: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/office/teams",
+        body,
+      }),
+    updateOfficeTeam: (teamId, body) =>
+      http.requestWithMeta({
+        method: "PATCH",
+        path: `/v1/office/teams/${encodeURIComponent(teamId)}`,
+        body,
+      }),
+    listTeamMemberships: (teamId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/teams/${encodeURIComponent(teamId)}/memberships`,
+      }),
+    addTeamMembership: (teamId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/office/teams/${encodeURIComponent(teamId)}/memberships`,
+        body,
+      }),
+    listOfficeAssignments: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/office/assignments",
       }),
   };
 }

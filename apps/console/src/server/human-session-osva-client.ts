@@ -752,6 +752,121 @@ export function createHumanSessionOsvaClient(
           requireWorkspace: true,
         })
         .then(toDataOnly),
+
+    listOfficeWorkers: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/office/workers" })
+        .then(toDataOnly),
+
+    getOfficeWorker: (officeWorkerId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/workers/${encodeURIComponent(officeWorkerId)}`,
+        })
+        .then(toDataOnly),
+
+    createOfficeWorker: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/office/workers",
+          body,
+        })
+        .then(toDataOnly),
+
+    updateOfficeWorker: (officeWorkerId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "PATCH",
+          path: `/v1/office/workers/${encodeURIComponent(officeWorkerId)}`,
+          body,
+        })
+        .then(toDataOnly),
+
+    listOfficeRoles: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/office/roles" })
+        .then(toDataOnly),
+
+    getOfficeRole: (roleId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/roles/${encodeURIComponent(roleId)}`,
+        })
+        .then(toDataOnly),
+
+    createOfficeRole: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/office/roles",
+          body,
+        })
+        .then(toDataOnly),
+
+    updateOfficeRole: (roleId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "PATCH",
+          path: `/v1/office/roles/${encodeURIComponent(roleId)}`,
+          body,
+        })
+        .then(toDataOnly),
+
+    listOfficeTeams: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/office/teams" })
+        .then(toDataOnly),
+
+    getOfficeTeam: (teamId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/teams/${encodeURIComponent(teamId)}`,
+        })
+        .then(toDataOnly),
+
+    createOfficeTeam: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/office/teams",
+          body,
+        })
+        .then(toDataOnly),
+
+    updateOfficeTeam: (teamId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "PATCH",
+          path: `/v1/office/teams/${encodeURIComponent(teamId)}`,
+          body,
+        })
+        .then(toDataOnly),
+
+    listTeamMemberships: (teamId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/teams/${encodeURIComponent(teamId)}/memberships`,
+        })
+        .then(toDataOnly),
+
+    addTeamMembership: (teamId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/office/teams/${encodeURIComponent(teamId)}/memberships`,
+          body,
+        })
+        .then(toDataOnly),
+
+    listOfficeAssignments: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/office/assignments" })
+        .then(toDataOnly),
   };
 }
 
