@@ -15,6 +15,7 @@ import {
   isHumanSessionRequestPrincipal,
 } from "@osva-ai/contracts";
 
+import { InboxItemReadState } from "./inbox-item-read-state.js";
 import { InboxReadState } from "./inbox-read-state.js";
 import {
   AssignmentNotFoundError,
@@ -443,10 +444,16 @@ export class ListOfficeMessages {
   }
 }
 
-export interface UpdateInboxReadStateCommand {
-  readonly threadId: OfficeThreadId;
-  readonly lastReadSequence: number;
-}
+export type UpdateInboxReadStateCommand =
+  | {
+      readonly threadId: OfficeThreadId;
+      readonly lastReadSequence: number;
+    }
+  | {
+      readonly itemId: string;
+    };
+
+export type UpdateInboxReadStateResult = InboxReadState | InboxItemReadState;
 
 export class UpdateInboxReadState {
   constructor(
@@ -456,7 +463,7 @@ export class UpdateInboxReadState {
   async execute(
     scope: ControlPlaneScope,
     command: UpdateInboxReadStateCommand,
-  ): Promise<InboxReadState> {
+  ): Promise<UpdateInboxReadStateResult> {
     requireControlPlaneAuthorization(
       scope,
       AUTHORIZATION_ACTIONS.WRITE,
@@ -464,6 +471,32 @@ export class UpdateInboxReadState {
     );
     const workspaceId = controlPlaneWorkspaceId(scope);
     const userId = requireHumanUserId(scope);
+    await assertWorkspaceExists(this.deps.workspaces, workspaceId);
+
+    if ("itemId" in command) {
+      if (!inboxItemKindIsOperationalKindFromItemId(command.itemId)) {
+        throw new PermissionDeniedError();
+      }
+
+      const ackable =
+        await this.deps.collaboration.isOperationalInboxItemAcknowledgeable(
+          workspaceId,
+          command.itemId,
+        );
+      if (!ackable) {
+        throw new PermissionDeniedError();
+      }
+
+      const now = this.deps.clock.now();
+      const next = InboxItemReadState.acknowledge({
+        workspaceId,
+        userId,
+        itemId: command.itemId,
+        now,
+      });
+      await this.deps.collaboration.upsertInboxItemReadState(next);
+      return next;
+    }
 
     const thread =
       await this.deps.collaboration.findOfficeThreadByWorkspaceAndId(
@@ -501,6 +534,13 @@ export class UpdateInboxReadState {
     await this.deps.collaboration.upsertInboxReadState(next);
     return next;
   }
+}
+
+function inboxItemKindIsOperationalKindFromItemId(itemId: string): boolean {
+  const prefix = itemId.split(":", 1)[0];
+  return (
+    prefix === "approval" || prefix === "assignment" || prefix === "deliverable"
+  );
 }
 
 export class ListInbox {

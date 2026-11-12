@@ -8,6 +8,7 @@ import type {
   WorkspaceId,
 } from "@osva-ai/contracts";
 
+import type { InboxItemReadState } from "../inbox-item-read-state.js";
 import type { InboxReadState } from "../inbox-read-state.js";
 import type { OfficeMessage } from "../office-message.js";
 import type { OfficeThread } from "../office-thread.js";
@@ -90,6 +91,22 @@ export interface OfficeCollaborationRepository {
     userId: UserId,
     threadId: OfficeThreadId,
   ): Promise<number>;
+
+  upsertInboxItemReadState(state: InboxItemReadState): Promise<void>;
+  findInboxItemReadState(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    itemId: string,
+  ): Promise<InboxItemReadState | null>;
+  listAcknowledgedInboxItemIds(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+  ): Promise<ReadonlySet<string>>;
+
+  isOperationalInboxItemAcknowledgeable(
+    workspaceId: WorkspaceId,
+    itemId: string,
+  ): Promise<boolean>;
 
   listInboxItems(query: ListInboxQuery): Promise<ListInboxResult>;
 }

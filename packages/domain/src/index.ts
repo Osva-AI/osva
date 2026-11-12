@@ -1008,8 +1008,25 @@ export {
   type OfficeCollaborationApplicationDependencies,
   type OfficeCollaborationApplicationIds,
   type UpdateInboxReadStateCommand,
+  type UpdateInboxReadStateResult,
 } from "./office-collaboration-application.js";
+export { InboxItemReadState } from "./inbox-item-read-state.js";
 export { InboxReadState } from "./inbox-read-state.js";
+export {
+  buildApprovalInboxItem,
+  buildAssignmentInboxItem,
+  buildChatInboxItem,
+  buildDeliverableInboxItem,
+  inboxItemIdForApproval,
+  inboxItemIdForAssignmentUpdate,
+  inboxItemIdForChatMessage,
+  inboxItemIdForDeliverable,
+  inboxItemKindIsOperational,
+  isInboxAssignmentAttentionState,
+  paginateInboxItems,
+  parseOperationalInboxItemId,
+  sortInboxItemsDescending,
+} from "./office-inbox-projection.js";
 export { OfficeMessage } from "./office-message.js";
 export { OfficeThread } from "./office-thread.js";
 export type {

@@ -55,6 +55,7 @@ export { assignments } from "./assignments.js";
 export { officeThreads } from "./office-threads.js";
 export { officeMessages } from "./office-messages.js";
 export { officeInboxReadStates } from "./office-inbox-read-states.js";
+export { officeInboxItemReadStates } from "./office-inbox-item-read-states.js";
 export { builderPublications } from "./builder-publications.js";
 export {
   PERSISTED_EVALUATOR_TYPES,

@@ -55,7 +55,12 @@ export interface OfficeMessageListResource {
   readonly nextCursor?: string;
 }
 
-export type InboxItemKind = "CHAT_MESSAGE" | "CHAT_MENTION";
+export type InboxItemKind =
+  | "CHAT_MESSAGE"
+  | "CHAT_MENTION"
+  | "APPROVAL_PENDING"
+  | "ASSIGNMENT_UPDATE"
+  | "DELIVERABLE_READY";
 
 export interface InboxItemResource {
   readonly id: string;
@@ -66,6 +71,11 @@ export interface InboxItemResource {
   readonly summary?: string;
   readonly threadId?: string;
   readonly messageId?: string;
+  readonly approvalRequestId?: string;
+  readonly assignmentId?: string;
+  readonly runId?: string;
+  readonly workflowRunId?: string;
+  readonly artifactId?: string;
 }
 
 export interface InboxListResource {
@@ -344,6 +354,30 @@ export function useUpdateInboxReadStateMutation() {
       void queryClient.invalidateQueries({
         queryKey: ["office", workspaceId, "threads"],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["office", workspaceId, "inbox"],
+      });
+    },
+  });
+}
+
+export function useAcknowledgeInboxItemMutation() {
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceQueryScope();
+  return useMutation({
+    mutationFn: (input: { readonly itemId: string }) => {
+      const pinnedWorkspace = workspaceIdForRequest(workspaceId);
+      return workspaceMutationFetch<{ itemId: string }>(
+        "/api/v1/office/inbox/read-state",
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(input),
+        },
+        { workspaceId: pinnedWorkspace },
+      );
+    },
+    onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["office", workspaceId, "inbox"],
       });

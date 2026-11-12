@@ -24,6 +24,7 @@ const STAGE0_TABLES = [
   "organizations",
   "assignments",
   "office_inbox_read_states",
+  "office_inbox_item_read_states",
   "office_messages",
   "office_threads",
   "team_memberships",

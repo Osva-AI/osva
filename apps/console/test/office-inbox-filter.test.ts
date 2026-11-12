@@ -1,20 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { InboxItemResource } from "../src/client/hooks/use-office-collaboration";
-
-function filterInboxItems(
-  items: readonly InboxItemResource[],
-  filter: "all" | "unread" | "mentions",
-): readonly InboxItemResource[] {
-  switch (filter) {
-    case "unread":
-      return items.filter((item) => item.unread);
-    case "mentions":
-      return items.filter((item) => item.kind === "CHAT_MENTION");
-    default:
-      return items;
-  }
-}
+import { filterInboxItems } from "../src/client/routes/office-inbox-page";
 
 const SAMPLE: readonly InboxItemResource[] = [
   {
@@ -31,12 +18,23 @@ const SAMPLE: readonly InboxItemResource[] = [
     unread: true,
     title: "B",
   },
+  {
+    id: "3",
+    kind: "APPROVAL_PENDING",
+    occurredAt: "2026-01-03T00:00:00.000Z",
+    unread: true,
+    title: "Approve",
+    approvalRequestId: "appr-1",
+    workflowRunId: "wfr-1",
+  },
 ];
 
 describe("inbox filters", () => {
-  it("filters unread and mention items", () => {
-    expect(filterInboxItems(SAMPLE, "all")).toHaveLength(2);
-    expect(filterInboxItems(SAMPLE, "unread")).toHaveLength(1);
+  it("filters unread, mention, and operational items", () => {
+    expect(filterInboxItems(SAMPLE, "all")).toHaveLength(3);
+    expect(filterInboxItems(SAMPLE, "unread")).toHaveLength(2);
     expect(filterInboxItems(SAMPLE, "mentions")).toHaveLength(1);
+    expect(filterInboxItems(SAMPLE, "approvals")).toHaveLength(1);
+    expect(filterInboxItems(SAMPLE, "assignments")).toHaveLength(0);
   });
 });

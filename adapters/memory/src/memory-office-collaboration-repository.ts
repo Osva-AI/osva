@@ -16,7 +16,16 @@ import {
   type ListOfficeThreadsResult,
   type OfficeCollaborationRepository,
 } from "@osva/domain";
-import type { InboxReadState, OfficeMessage, OfficeThread } from "@osva/domain";
+import {
+  buildChatInboxItem,
+  paginateInboxItems,
+  parseOperationalInboxItemId,
+  sortInboxItemsDescending,
+  type InboxItemReadState,
+  type InboxReadState,
+  type OfficeMessage,
+  type OfficeThread,
+} from "@osva/domain";
 
 function encodeCursor(payload: unknown): string {
   return JSON.stringify(payload);
@@ -26,6 +35,7 @@ export class MemoryOfficeCollaborationRepository implements OfficeCollaborationR
   private readonly threads = new Map<OfficeThreadId, OfficeThread>();
   private readonly messages = new Map<OfficeMessageId, OfficeMessage>();
   private readonly readStates = new Map<string, InboxReadState>();
+  private readonly itemReadStates = new Map<string, InboxItemReadState>();
 
   async saveOfficeThread(thread: OfficeThread): Promise<void> {
     this.threads.set(thread.id, thread);
@@ -173,8 +183,50 @@ export class MemoryOfficeCollaborationRepository implements OfficeCollaborationR
     ).length;
   }
 
+  async isOperationalInboxItemAcknowledgeable(
+    _workspaceId: WorkspaceId,
+    itemId: string,
+  ): Promise<boolean> {
+    return parseOperationalInboxItemId(itemId) !== null;
+  }
+
+  async upsertInboxItemReadState(state: InboxItemReadState): Promise<void> {
+    this.itemReadStates.set(
+      `${state.workspaceId}:${state.userId}:${state.itemId}`,
+      state,
+    );
+  }
+
+  async findInboxItemReadState(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    itemId: string,
+  ): Promise<InboxItemReadState | null> {
+    return (
+      this.itemReadStates.get(`${workspaceId}:${userId}:${itemId}`) ?? null
+    );
+  }
+
+  async listAcknowledgedInboxItemIds(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+  ): Promise<ReadonlySet<string>> {
+    return new Set(
+      [...this.itemReadStates.values()]
+        .filter(
+          (state) =>
+            state.workspaceId === workspaceId && state.userId === userId,
+        )
+        .map((state) => state.itemId),
+    );
+  }
+
   async listInboxItems(query: ListInboxQuery): Promise<ListInboxResult> {
     const unreadItems: InboxItemResourceV1[] = [];
+    const acknowledged = await this.listAcknowledgedInboxItemIds(
+      query.workspaceId,
+      query.userId,
+    );
     for (const message of this.messages.values()) {
       if (
         message.workspaceId !== query.workspaceId ||
@@ -195,21 +247,21 @@ export class MemoryOfficeCollaborationRepository implements OfficeCollaborationR
         (mention) =>
           mention.kind === "HUMAN" && mention.userId === query.userId,
       );
-      unreadItems.push({
-        id: `chat:${message.id}`,
-        kind: mentioned ? "CHAT_MENTION" : "CHAT_MESSAGE",
-        occurredAt: message.createdAt.toISOString(),
-        unread: true,
-        title: thread?.title ?? "Conversation",
-        summary: message.body.slice(0, 240),
-        threadId: message.threadId,
-        messageId: message.id,
-      });
+      unreadItems.push(
+        buildChatInboxItem({
+          message,
+          threadTitle: thread?.title ?? "Conversation",
+          mentioned,
+        }),
+      );
     }
 
-    unreadItems.sort((left, right) =>
-      right.occurredAt.localeCompare(left.occurredAt),
-    );
-    return { items: unreadItems.slice(0, query.limit) };
+    const sorted = sortInboxItemsDescending(unreadItems);
+    const paged = paginateInboxItems({
+      items: sorted.filter((item) => !acknowledged.has(item.id)),
+      limit: query.limit,
+      cursor: undefined,
+    });
+    return { items: paged.items, nextCursor: undefined };
   }
 }
