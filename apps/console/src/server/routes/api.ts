@@ -20,6 +20,7 @@ import type {
   KnowledgeIndexId,
   KnowledgeSourceId,
   MemoryNamespaceId,
+  OfficeThreadId,
   OfficeWorkerId,
   RoleId,
   TeamId,
@@ -653,6 +654,38 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      const officeThreadMessagesPostMatch = pathname.match(
+        /^\/api\/v1\/office\/threads\/([^/]+)\/messages$/,
+      );
+      if (officeThreadMessagesPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await client.postOfficeThreadMessage(
+          officeThreadMessagesPostMatch[1]!,
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/office/threads") {
+        const body = await readJsonBody(request);
+        const created = await client.createOfficeThread(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       if (pathname === "/api/v1/office/workers") {
         const body = await readJsonBody(request);
         const created = await client.createOfficeWorker(body);
@@ -722,6 +755,19 @@ export async function handleConsoleApiRequest(
     }
 
     if (method === "PATCH") {
+      if (pathname === "/api/v1/office/inbox/read-state") {
+        const body = await readJsonBody(request);
+        const updated = await client.updateOfficeInboxReadState(body);
+        sendJson(
+          response,
+          200,
+          updated.data,
+          upstreamRequestIdHeaders(updated.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       const officeWorkerPatchMatch = pathname.match(
         /^\/api\/v1\/office\/workers\/([^/]+)$/,
       );
@@ -1631,6 +1677,74 @@ export async function handleConsoleApiRequest(
           response.destroy();
         }
       }
+      return true;
+    }
+
+    const officeThreadMessagesMatch = pathname.match(
+      /^\/api\/v1\/office\/threads\/([^/]+)\/messages$/,
+    );
+    if (officeThreadMessagesMatch !== null) {
+      const listed = await client.listOfficeThreadMessages(
+        officeThreadMessagesMatch[1]!,
+        {
+          limit: parseOptionalInt(searchParams.get("limit")),
+          cursor: searchParams.get("cursor") ?? undefined,
+        },
+      );
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const officeThreadMatch = pathname.match(
+      /^\/api\/v1\/office\/threads\/([^/]+)$/,
+    );
+    if (officeThreadMatch !== null) {
+      const thread = await client.getOfficeThread(
+        officeThreadMatch[1] as OfficeThreadId,
+      );
+      sendJson(
+        response,
+        200,
+        thread.data,
+        upstreamRequestIdHeaders(thread.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/office/threads") {
+      const listed = await client.listOfficeThreads({
+        limit: parseOptionalInt(searchParams.get("limit")),
+        cursor: searchParams.get("cursor") ?? undefined,
+      });
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/office/inbox") {
+      const listed = await client.listOfficeInbox({
+        limit: parseOptionalInt(searchParams.get("limit")),
+        cursor: searchParams.get("cursor") ?? undefined,
+      });
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
       return true;
     }
 

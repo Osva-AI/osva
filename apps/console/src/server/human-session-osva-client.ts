@@ -867,7 +867,80 @@ export function createHumanSessionOsvaClient(
       upstream
         .requestJson(ctx, { method: "GET", path: "/v1/office/assignments" })
         .then(toDataOnly),
+
+    listOfficeThreads: (query) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/threads${collaborationQuerySuffix(query)}`,
+        })
+        .then(toDataOnly),
+
+    createOfficeThread: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/office/threads",
+          body,
+        })
+        .then(toDataOnly),
+
+    getOfficeThread: (threadId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/threads/${encodeURIComponent(threadId)}`,
+        })
+        .then(toDataOnly),
+
+    listOfficeThreadMessages: (threadId, query) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/threads/${encodeURIComponent(threadId)}/messages${collaborationQuerySuffix(query)}`,
+        })
+        .then(toDataOnly),
+
+    postOfficeThreadMessage: (threadId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/office/threads/${encodeURIComponent(threadId)}/messages`,
+          body,
+        })
+        .then(toDataOnly),
+
+    listOfficeInbox: (query) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/inbox${collaborationQuerySuffix(query)}`,
+        })
+        .then(toDataOnly),
+
+    updateOfficeInboxReadState: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "PATCH",
+          path: "/v1/office/inbox/read-state",
+          body,
+        })
+        .then(toDataOnly),
   };
+}
+
+function collaborationQuerySuffix(query?: {
+  readonly cursor?: string;
+  readonly limit?: number;
+}): string {
+  const params = new URLSearchParams();
+  if (query?.cursor !== undefined) {
+    params.set("cursor", query.cursor);
+  }
+  if (query?.limit !== undefined) {
+    params.set("limit", String(query.limit));
+  }
+  return params.size > 0 ? `?${params.toString()}` : "";
 }
 
 function toDataOnly<T>(
