@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import type { Assignment } from "../src/assignment.js";
 import type { ControlPlaneScope } from "../src/control-plane.js";
 import { HumanPrincipalRequiredError } from "../src/errors.js";
+import { PermissionDeniedError } from "../src/security-errors.js";
 import { InboxReadState } from "../src/inbox-read-state.js";
 import { createOfficeCollaborationApplication } from "../src/office-collaboration-application.js";
 import { OfficeMessage } from "../src/office-message.js";
@@ -117,6 +118,23 @@ class InMemoryCollaborationRepository implements OfficeCollaborationRepository {
     threadId: OfficeThreadId,
   ) {
     return this.readStates.get(`${workspaceId}:${userId}:${threadId}`) ?? null;
+  }
+
+  async upsertInboxItemReadState(): Promise<void> {}
+
+  async findInboxItemReadState() {
+    return null;
+  }
+
+  async listAcknowledgedInboxItemIds(): Promise<ReadonlySet<string>> {
+    return new Set();
+  }
+
+  async isOperationalInboxItemAcknowledgeable(
+    _workspaceId: WorkspaceId,
+    itemId: string,
+  ): Promise<boolean> {
+    return itemId.startsWith("approval:");
   }
 
   async countUnreadMessagesForUser(
@@ -397,5 +415,16 @@ describe("OfficeCollaborationApplication", () => {
         lastReadSequence: 0,
       }),
     ).rejects.toThrow();
+
+    await expect(
+      app.updateInboxReadState.execute(humanScope(USER_B), {
+        itemId: "chat:forged",
+      }),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+
+    const acked = await app.updateInboxReadState.execute(humanScope(USER_B), {
+      itemId: "approval:appr-1",
+    });
+    expect("itemId" in acked && acked.itemId).toBe("approval:appr-1");
   });
 });

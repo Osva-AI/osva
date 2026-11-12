@@ -4,6 +4,8 @@ import {
   createOfficeMessageRequestSchema,
   createOfficeThreadRequestSchema,
   inboxListResourceSchema,
+  inboxItemReadStateResourceSchema,
+  inboxReadStateMutationResourceSchema,
   inboxReadStateResourceSchema,
   listInboxQuerySchema,
   listOfficeMessagesQuerySchema,
@@ -15,6 +17,7 @@ import {
   updateInboxReadStateRequestSchema,
 } from "@osva-ai/contracts/schemas";
 import type {
+  InboxItemReadState,
   InboxReadState,
   OfficeCollaborationApplication,
   OfficeMessage,
@@ -286,7 +289,7 @@ async function dispatchOfficeCollaborationRoute(
         scope,
         parsed.data,
       );
-      sendJson(response, 200, toInboxReadStateResource(updated));
+      sendJson(response, 200, toInboxReadStateMutationResource(updated));
       return;
     }
 
@@ -350,6 +353,23 @@ function toInboxReadStateResource(state: InboxReadState) {
     lastReadSequence: state.lastReadSequence,
     updatedAt: state.updatedAt.toISOString(),
   });
+}
+
+function toInboxItemReadStateResource(state: InboxItemReadState) {
+  return inboxItemReadStateResourceSchema.parse({
+    itemId: state.itemId,
+    updatedAt: state.updatedAt.toISOString(),
+  });
+}
+
+function toInboxReadStateMutationResource(
+  state: InboxReadState | InboxItemReadState,
+) {
+  const resource =
+    "threadId" in state
+      ? toInboxReadStateResource(state)
+      : toInboxItemReadStateResource(state);
+  return inboxReadStateMutationResourceSchema.parse(resource);
 }
 
 export const V1_OFFICE_COLLABORATION_HTTP_ROUTES = [

@@ -205,6 +205,12 @@
       "tag": "0033_office_collaboration_slice",
       "file": "0033_office_collaboration_slice.sql",
       "sha256": "362248bfb3538e97e8fcc377afbd75862ae446664f18cde4ef9aed45b625fcb3"
+    },
+    {
+      "idx": 34,
+      "tag": "0034_office_inbox_item_read_states",
+      "file": "0034_office_inbox_item_read_states.sql",
+      "sha256": "d22964d9ae409a1f7a3ddbe507bb653d5e2bf676dd0d9352c0095606b09bb7b8"
     }
   ]
 }

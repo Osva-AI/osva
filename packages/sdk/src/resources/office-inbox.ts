@@ -1,7 +1,7 @@
 import type { OfficeThreadId } from "@osva-ai/contracts";
 import type {
   inboxListResourceSchema,
-  inboxReadStateResourceSchema,
+  inboxReadStateMutationResourceSchema,
   updateInboxReadStateRequestSchema,
 } from "@osva-ai/contracts/schemas";
 import type { z } from "zod";
@@ -9,7 +9,9 @@ import type { z } from "zod";
 import type { OsvaHttpClient } from "../http-client.js";
 
 type InboxListResource = z.infer<typeof inboxListResourceSchema>;
-type InboxReadStateResource = z.infer<typeof inboxReadStateResourceSchema>;
+type InboxReadStateMutationResource = z.infer<
+  typeof inboxReadStateMutationResourceSchema
+>;
 type UpdateInboxReadStateRequest = z.infer<
   typeof updateInboxReadStateRequestSchema
 >;
@@ -33,7 +35,7 @@ export class OfficeInboxResource {
   }
 
   updateReadState(input: UpdateInboxReadStateRequest) {
-    return this.client.request<InboxReadStateResource>({
+    return this.client.request<InboxReadStateMutationResource>({
       method: "PATCH",
       path: "/v1/office/inbox/read-state",
       body: input,

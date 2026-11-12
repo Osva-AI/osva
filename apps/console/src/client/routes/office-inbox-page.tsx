@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 
+import { OfficeInboxItemRow } from "../components/office/office-inbox-item-row";
 import { OfficeSectionNav } from "../components/office/office-section-nav";
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
@@ -8,13 +8,17 @@ import { LoadingBlock } from "../components/loading/loading-block";
 import { Button } from "../components/ui/button";
 import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
+import { useAuthContextQuery } from "../hooks/use-auth-context";
 import {
   useOfficeInboxQuery,
+  type InboxItemKind,
   type InboxItemResource,
 } from "../hooks/use-office-collaboration";
-import { formatTimestamp } from "../lib/formatting";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
+import { roleCanExecuteControlPlaneActions } from "../lib/permissions";
 
-type InboxFilter = "all" | "unread" | "mentions";
+type InboxFilter =
+  "all" | "unread" | "mentions" | "approvals" | "assignments" | "deliverables";
 
 function filterInboxItems(
   items: readonly InboxItemResource[],
@@ -25,13 +29,38 @@ function filterInboxItems(
       return items.filter((item) => item.unread);
     case "mentions":
       return items.filter((item) => item.kind === "CHAT_MENTION");
+    case "approvals":
+      return items.filter((item) => item.kind === "APPROVAL_PENDING");
+    case "assignments":
+      return items.filter((item) => item.kind === "ASSIGNMENT_UPDATE");
+    case "deliverables":
+      return items.filter((item) => item.kind === "DELIVERABLE_READY");
     default:
       return items;
   }
 }
 
+const FILTER_OPTIONS: readonly {
+  readonly id: InboxFilter;
+  readonly label: string;
+}[] = [
+  { id: "all", label: "All" },
+  { id: "unread", label: "Unread" },
+  { id: "mentions", label: "Mentions" },
+  { id: "approvals", label: "Approvals" },
+  { id: "assignments", label: "Assignments" },
+  { id: "deliverables", label: "Deliverables" },
+];
+
 export function OfficeInboxPage() {
   const inboxQuery = useOfficeInboxQuery();
+  const workspaceId = useWorkspaceQueryScope();
+  const authContextQuery = useAuthContextQuery();
+  const authContextAligned = authContextQuery.data?.workspaceId === workspaceId;
+  const canExecute =
+    authContextAligned &&
+    authContextQuery.data !== undefined &&
+    roleCanExecuteControlPlaneActions(authContextQuery.data.role);
   const [filter, setFilter] = useState<InboxFilter>("all");
 
   const visibleItems = useMemo(() => {
@@ -43,34 +72,30 @@ export function OfficeInboxPage() {
     <>
       <PageHeader
         title="Unified Inbox"
-        subtitle="Chat messages and @mentions for this workspace. Approvals and assignments are not included in M22.2A."
+        subtitle="Operational activity and chat for this workspace. Listing inbox data does not start Runs."
       />
       <OfficeSectionNav active="inbox" />
       <SectionPanel title="Inbox">
         <p className="panel-help">
-          Only <code>CHAT_MESSAGE</code> and <code>CHAT_MENTION</code> items
-          appear here. Mentioning a worker does not start a Run. Filters apply
-          to the loaded inbox page only, not the full server backlog.
+          Unread chat, pending approvals, failed or cancelled assignments, and
+          deliverables from completed assignment runs appear here. Filters apply
+          to the loaded page only.
         </p>
         <div
           className="office-inbox-filters"
           role="tablist"
           aria-label="Inbox filters"
         >
-          {(["all", "unread", "mentions"] as const).map((value) => (
+          {FILTER_OPTIONS.map((option) => (
             <Button
-              key={value}
+              key={option.id}
               type="button"
-              variant={filter === value ? "primary" : "secondary"}
+              variant={filter === option.id ? "primary" : "secondary"}
               role="tab"
-              aria-selected={filter === value}
-              onClick={() => setFilter(value)}
+              aria-selected={filter === option.id}
+              onClick={() => setFilter(option.id)}
             >
-              {value === "all"
-                ? "All"
-                : value === "unread"
-                  ? "Unread"
-                  : "Mentions"}
+              {option.label}
             </Button>
           ))}
         </div>
@@ -95,34 +120,16 @@ export function OfficeInboxPage() {
         ) : null}
         <ul className="office-inbox-list" role="list">
           {visibleItems.map((item) => (
-            <li
+            <OfficeInboxItemRow
               key={item.id}
-              className={
-                item.unread
-                  ? "office-inbox-item office-inbox-item--unread"
-                  : "office-inbox-item"
-              }
-            >
-              <div className="office-inbox-item-header">
-                <span className="office-inbox-kind">{item.kind}</span>
-                <time dateTime={item.occurredAt}>
-                  {formatTimestamp(item.occurredAt)}
-                </time>
-              </div>
-              <strong>{item.title}</strong>
-              {item.summary !== undefined ? <p>{item.summary}</p> : null}
-              {item.threadId !== undefined ? (
-                <Link
-                  to={`/office/chat/${item.threadId}`}
-                  className="text-link"
-                >
-                  Open conversation
-                </Link>
-              ) : null}
-            </li>
+              item={item}
+              canExecute={canExecute}
+            />
           ))}
         </ul>
       </SectionPanel>
     </>
   );
 }
+
+export { filterInboxItems, type InboxFilter, type InboxItemKind };

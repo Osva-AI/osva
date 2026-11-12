@@ -6,25 +6,67 @@ import {
   OFFICE_MESSAGE_BODY_MAX_LENGTH,
   PUBLIC_API_ERROR_CODES,
   USER_STATUSES,
+  type AgentId,
+  type AgentVersionId,
+  type ApprovalRequestId,
+  type ArtifactId,
+  type AssignmentId,
   type OfficeMessageId,
   type OfficeThreadId,
+  type OfficeWorkerId,
+  type RunAttemptId,
+  type RunId,
   type UserId,
+  type WorkflowId,
+  type WorkflowNodeRunId,
+  type WorkflowRunId,
+  type WorkflowVersionId,
   type WorkspaceId,
 } from "@osva-ai/contracts";
 import type { OrganizationId } from "@osva-ai/contracts";
-import { IdentityBootstrapApplication, Workspace } from "@osva/domain";
+import {
+  Agent,
+  AgentVersion,
+  ApprovalRequest,
+  Assignment,
+  Artifact,
+  IdentityBootstrapApplication,
+  OfficeWorker,
+  Run,
+  RunAttempt,
+  Workflow,
+  WorkflowNodeRun,
+  WorkflowRun,
+  WorkflowVersion,
+  Workspace,
+  inboxItemIdForApproval,
+  inboxItemIdForAssignmentUpdate,
+  inboxItemIdForDeliverable,
+} from "@osva/domain";
 import { BetterAuthOperatorPasswordTokenService } from "@osva/adapters-auth";
 import {
   createDatabase,
   migrateDatabase,
+  PostgresAgentRepository,
+  PostgresApprovalRequestRepository,
+  PostgresArtifactRepository,
   PostgresIdentityLifecycleRepository,
+  PostgresOfficeRepository,
   PostgresOrganizationRepository,
+  PostgresRunRepository,
   PostgresSecurityAuditEventRepository,
   PostgresUserRepository,
+  PostgresWorkflowRepository,
+  PostgresWorkflowRunRepository,
   PostgresWorkspaceMembershipRepository,
   PostgresWorkspaceRepository,
   type Database,
 } from "@osva/db";
+import {
+  createBindings,
+  createManifest,
+} from "../../../../packages/db/test/integration/fixtures.js";
+import type { ModelProfileVersionId } from "@osva-ai/contracts";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createWebProcess } from "../../src/process.js";
@@ -47,8 +89,142 @@ const WS_A = "ws-collab-a" as WorkspaceId;
 const WS_B = "ws-collab-b" as WorkspaceId;
 const OWNER_EMAIL = "owner@collab.test";
 const MEMBER_EMAIL = "member@collab.test";
+const VIEWER_EMAIL = "viewer@collab.test";
+const OPERATOR_EMAIL = "operator@collab.test";
 const ISOLATED_B_EMAIL = "isolated@collab.test";
 const WEB_PORT = 38_461;
+
+type InboxItemBody = {
+  readonly id: string;
+  readonly kind: string;
+  readonly approvalRequestId?: string;
+  readonly workflowRunId?: string;
+  readonly assignmentId?: string;
+  readonly artifactId?: string;
+  readonly messageId?: string;
+};
+
+function inboxItems(body: unknown): readonly InboxItemBody[] {
+  return (body as { items: InboxItemBody[] }).items;
+}
+
+async function seedPendingApproval(
+  database: Database,
+  workspaceId: WorkspaceId,
+  label: string,
+): Promise<{
+  readonly approvalRequestId: ApprovalRequestId;
+  readonly workflowRunId: WorkflowRunId;
+}> {
+  const workflows = new PostgresWorkflowRepository(database);
+  const workflowRuns = new PostgresWorkflowRunRepository(database);
+  const approvals = new PostgresApprovalRequestRepository(database);
+  const workflowId = `workflow-${label}` as WorkflowId;
+  const workflowVersionId = `workflow-version-${label}` as WorkflowVersionId;
+  const workflowRunId = `workflow-run-${label}` as WorkflowRunId;
+  const workflowNodeRunId = `node-run-${label}` as WorkflowNodeRunId;
+  const approvalRequestId = `approval-${label}` as ApprovalRequestId;
+
+  await workflows.saveWorkflow(
+    Workflow.create({
+      id: workflowId,
+      workspaceId,
+      key: `wf-${label}`,
+      name: "Workflow",
+      createdAt: NOW,
+      updatedAt: NOW,
+    }),
+  );
+  await workflows.saveWorkflowVersion(
+    WorkflowVersion.create({
+      id: workflowVersionId,
+      workflowId,
+      workspaceId,
+      version: 1,
+      definition: {
+        schemaVersion: "2",
+        nodes: [{ key: "review", type: "APPROVAL", title: "Review" }],
+        edges: [],
+      },
+      createdAt: NOW,
+    }),
+  );
+  await workflowRuns.saveWorkflowRun(
+    WorkflowRun.create({
+      id: workflowRunId,
+      workspaceId,
+      workflowId,
+      workflowVersionId,
+      input: { campaign: "launch" },
+      createdAt: NOW,
+    }),
+  );
+  await workflowRuns.saveWorkflowNodeRun(
+    WorkflowNodeRun.create({
+      id: workflowNodeRunId,
+      workspaceId,
+      workflowRunId,
+      workflowNodeKey: "review",
+      sequence: 1,
+      input: { campaign: "launch" },
+      createdAt: NOW,
+    }),
+  );
+  await approvals.saveApprovalRequest(
+    ApprovalRequest.create({
+      id: approvalRequestId,
+      workspaceId,
+      workflowRunId,
+      workflowNodeRunId,
+      createdAt: NOW,
+    }),
+  );
+  return { approvalRequestId, workflowRunId };
+}
+
+async function seedOfficeAssignmentGraph(
+  database: Database,
+  workspaceId: WorkspaceId,
+  label: string,
+): Promise<{
+  readonly officeWorkerId: OfficeWorkerId;
+  readonly agentVersionId: AgentVersionId;
+}> {
+  const agents = new PostgresAgentRepository(database);
+  const office = new PostgresOfficeRepository(database);
+  const agentId = `agent-${label}` as AgentId;
+  const agentVersionId = `agent-version-${label}` as AgentVersionId;
+  const officeWorkerId = `office-worker-${label}` as OfficeWorkerId;
+  await agents.saveAgent(
+    Agent.create({
+      id: agentId,
+      workspaceId,
+      key: `agent-key-${label}`,
+      name: "Example Agent",
+      createdAt: NOW,
+    }),
+  );
+  await agents.saveAgentVersion(
+    AgentVersion.create({
+      id: agentVersionId,
+      agentId,
+      version: 1,
+      manifest: createManifest(),
+      createdAt: NOW,
+    }),
+  );
+  await office.saveOfficeWorker(
+    OfficeWorker.create({
+      id: officeWorkerId,
+      workspaceId,
+      key: `worker-${label}`,
+      name: "Worker",
+      agentId,
+      now: NOW,
+    }),
+  );
+  return { officeWorkerId, agentVersionId };
+}
 
 type JsonResult = {
   readonly status: number;
@@ -595,4 +771,369 @@ describe("M22.2A office collaboration HTTP acceptance", () => {
       expect(unsupported.status).toBe(405);
     });
   }, 120_000);
+
+  it("M22.2C projects operational inbox items with auth, ack and pagination", async () => {
+    await bootstrapOrganization();
+    const office = new PostgresOfficeRepository(database);
+    const runs = new PostgresRunRepository(database);
+    const artifacts = new PostgresArtifactRepository(database);
+
+    const { approvalRequestId, workflowRunId } = await seedPendingApproval(
+      database,
+      WS_A,
+      "m22c-a",
+    );
+    const approvalInboxId = inboxItemIdForApproval(approvalRequestId);
+
+    const { officeWorkerId, agentVersionId } = await seedOfficeAssignmentGraph(
+      database,
+      WS_A,
+      "m22c-a",
+    );
+    const failedAssignmentId = "asn-failed-m22c" as AssignmentId;
+    const cancelledAssignmentId = "asn-cancelled-m22c" as AssignmentId;
+    const failedRunId = "run-failed-m22c" as RunId;
+    const deliverRunId = "run-deliver-m22c" as RunId;
+    const deliverAttemptId = "run-attempt-deliver-m22c" as RunAttemptId;
+    const modelProfileVersionId =
+      "model-profile-version-m22c" as ModelProfileVersionId;
+
+    await runs.saveRun(
+      Run.create({
+        id: failedRunId,
+        workspaceId: WS_A,
+        agentId: `agent-m22c-a` as AgentId,
+        effectiveBindings: createBindings(
+          agentVersionId,
+          modelProfileVersionId,
+        ),
+        input: { prompt: "fail" },
+        createdAt: NOW,
+      }),
+    );
+    await runs.saveRun(
+      Run.create({
+        id: deliverRunId,
+        workspaceId: WS_A,
+        agentId: `agent-m22c-a` as AgentId,
+        effectiveBindings: createBindings(
+          agentVersionId,
+          modelProfileVersionId,
+        ),
+        input: { prompt: "deliver" },
+        createdAt: NOW,
+      }),
+    );
+    await runs.saveRunAttempt(
+      RunAttempt.createFirst({
+        id: deliverAttemptId,
+        runId: deliverRunId,
+        createdAt: NOW,
+      }),
+    );
+
+    await office.saveAssignment(
+      Assignment.create({
+        id: failedAssignmentId,
+        workspaceId: WS_A,
+        officeWorkerId,
+        title: "Failed research",
+        targetType: "AGENT_VERSION",
+        targetVersionId: agentVersionId,
+        input: {},
+        now: NOW,
+      })
+        .markLaunched({ now: NOW, runId: failedRunId })
+        .transitionTo("FAILED", { now: NOW, completedAt: NOW }),
+    );
+    await office.saveAssignment(
+      Assignment.create({
+        id: cancelledAssignmentId,
+        workspaceId: WS_A,
+        officeWorkerId,
+        title: "Cancelled draft",
+        targetType: "AGENT_VERSION",
+        targetVersionId: agentVersionId,
+        input: {},
+        now: NOW,
+      }).cancel(NOW),
+    );
+
+    const deliverableArtifactId = "artifact-m22c" as ArtifactId;
+    await office.saveAssignment(
+      Assignment.create({
+        id: "asn-complete-m22c" as AssignmentId,
+        workspaceId: WS_A,
+        officeWorkerId,
+        title: "Completed report",
+        targetType: "AGENT_VERSION",
+        targetVersionId: agentVersionId,
+        input: {},
+        now: NOW,
+      })
+        .markLaunched({ now: NOW, runId: deliverRunId })
+        .transitionTo("COMPLETED", { now: NOW, completedAt: NOW }),
+    );
+    await artifacts.save(
+      Artifact.create({
+        id: deliverableArtifactId,
+        workspaceId: WS_A,
+        name: "report.md",
+        mediaType: "text/markdown",
+        sizeBytes: 64,
+        digest: `sha256:${"d".repeat(64)}`,
+        metadata: { source: "acceptance" },
+        producerRunId: deliverRunId,
+        producerRunAttemptId: deliverAttemptId,
+        createdAt: NOW,
+      }),
+    );
+
+    const { approvalRequestId: wsBApprovalId } = await seedPendingApproval(
+      database,
+      WS_B,
+      "m22c-b",
+    );
+    const wsBApprovalInboxId = inboxItemIdForApproval(wsBApprovalId);
+
+    await withWeb(async (origin) => {
+      await completeOwnerSetup(origin);
+      const ownerCookie = await login(origin, OWNER_EMAIL);
+      const ownerHeaders = humanHeaders(origin, ownerCookie, WS_A);
+
+      async function provisionHuman(
+        email: string,
+        workspaceId: WorkspaceId,
+        role: (typeof HUMAN_WORKSPACE_ROLES)[keyof typeof HUMAN_WORKSPACE_ROLES],
+      ): Promise<UserId> {
+        const provision = await requestJson(
+          origin,
+          `/v1/auth/workspaces/${workspaceId}/members/users`,
+          {
+            method: "POST",
+            headers: {
+              ...humanHeaders(origin, ownerCookie, workspaceId),
+              "content-type": "application/json",
+            },
+            body: { email, displayName: email, role },
+          },
+        );
+        expect(provision.status).toBe(201);
+        const { setupToken, user } = provision.body as {
+          setupToken: string;
+          user: { userId: UserId };
+        };
+        const setup = await requestJson(origin, "/v1/auth/setup/complete", {
+          method: "POST",
+          headers: { origin },
+          body: { token: setupToken, password: PASSWORD },
+        });
+        expect(setup.status).toBe(200);
+        return user.userId;
+      }
+
+      await provisionHuman(MEMBER_EMAIL, WS_A, HUMAN_WORKSPACE_ROLES.DEVELOPER);
+      await provisionHuman(VIEWER_EMAIL, WS_A, HUMAN_WORKSPACE_ROLES.VIEWER);
+      await provisionHuman(
+        OPERATOR_EMAIL,
+        WS_A,
+        HUMAN_WORKSPACE_ROLES.OPERATOR,
+      );
+      await provisionHuman(
+        ISOLATED_B_EMAIL,
+        WS_B,
+        HUMAN_WORKSPACE_ROLES.DEVELOPER,
+      );
+
+      const memberCookie = await login(origin, MEMBER_EMAIL);
+      const memberHeaders = humanHeaders(origin, memberCookie, WS_A);
+      const viewerCookie = await login(origin, VIEWER_EMAIL);
+      const viewerHeaders = humanHeaders(origin, viewerCookie, WS_A);
+      const operatorCookie = await login(origin, OPERATOR_EMAIL);
+      const operatorHeaders = humanHeaders(origin, operatorCookie, WS_A);
+      const isolatedBCookie = await login(origin, ISOLATED_B_EMAIL);
+      const isolatedBHeaders = humanHeaders(origin, isolatedBCookie, WS_B);
+
+      const chatThread = await requestJson(origin, "/v1/office/threads", {
+        method: "POST",
+        headers: { ...ownerHeaders, "content-type": "application/json" },
+        body: { title: "Ops channel" },
+      });
+      expect(chatThread.status).toBe(201);
+      const threadId = (chatThread.body as { id: OfficeThreadId }).id;
+      const ownerMessage = await requestJson(
+        origin,
+        `/v1/office/threads/${threadId}/messages`,
+        {
+          method: "POST",
+          headers: { ...ownerHeaders, "content-type": "application/json" },
+          body: { body: "Status update for inbox mix" },
+        },
+      );
+      expect(ownerMessage.status).toBe(201);
+
+      const memberInbox = await requestJson(origin, "/v1/office/inbox", {
+        headers: memberHeaders,
+      });
+      expect(memberInbox.status).toBe(200);
+      const items = inboxItems(memberInbox.body);
+      const approvalItem = items.find((item) => item.id === approvalInboxId);
+      expect(approvalItem).toMatchObject({
+        kind: "APPROVAL_PENDING",
+        approvalRequestId,
+        workflowRunId,
+      });
+
+      const failedInboxId = inboxItemIdForAssignmentUpdate(
+        failedAssignmentId,
+        "FAILED",
+      );
+      const cancelledInboxId = inboxItemIdForAssignmentUpdate(
+        cancelledAssignmentId,
+        "CANCELLED",
+      );
+      const deliverableInboxId = inboxItemIdForDeliverable(
+        deliverableArtifactId,
+      );
+      expect(items.some((item) => item.id === failedInboxId)).toBe(true);
+      expect(items.some((item) => item.id === cancelledInboxId)).toBe(true);
+      expect(
+        items.some(
+          (item) =>
+            item.id === deliverableInboxId &&
+            item.artifactId === deliverableArtifactId,
+        ),
+      ).toBe(true);
+
+      const viewerInbox = await requestJson(origin, "/v1/office/inbox", {
+        headers: viewerHeaders,
+      });
+      expect(viewerInbox.status).toBe(200);
+
+      const viewerAckDenied = await requestJson(
+        origin,
+        "/v1/office/inbox/read-state",
+        {
+          method: "PATCH",
+          headers: { ...viewerHeaders, "content-type": "application/json" },
+          body: { itemId: failedInboxId },
+        },
+      );
+      expect(viewerAckDenied.status).toBe(403);
+
+      const operatorAckDenied = await requestJson(
+        origin,
+        "/v1/office/inbox/read-state",
+        {
+          method: "PATCH",
+          headers: { ...operatorHeaders, "content-type": "application/json" },
+          body: { itemId: failedInboxId },
+        },
+      );
+      expect(operatorAckDenied.status).toBe(403);
+
+      const operatorDecision = await requestJson(
+        origin,
+        `/v1/approval-requests/${approvalRequestId}/decision`,
+        {
+          method: "POST",
+          headers: { ...operatorHeaders, "content-type": "application/json" },
+          body: { decision: "APPROVED", comment: "Ship it" },
+        },
+      );
+      expect(operatorDecision.status).toBe(200);
+
+      const viewerDecisionDenied = await requestJson(
+        origin,
+        `/v1/approval-requests/${approvalRequestId}/decision`,
+        {
+          method: "POST",
+          headers: { ...viewerHeaders, "content-type": "application/json" },
+          body: { decision: "REJECTED" },
+        },
+      );
+      expect(viewerDecisionDenied.status).toBe(403);
+
+      const crossWorkspaceAck = await requestJson(
+        origin,
+        "/v1/office/inbox/read-state",
+        {
+          method: "PATCH",
+          headers: { ...memberHeaders, "content-type": "application/json" },
+          body: { itemId: wsBApprovalInboxId },
+        },
+      );
+      expect(crossWorkspaceAck.status).toBe(403);
+      const foreignReadStates = await database.sql<{ count: number }[]>`
+        SELECT COUNT(*)::int AS count
+        FROM office_inbox_item_read_states
+        WHERE workspace_id = ${WS_B}
+      `;
+      expect(foreignReadStates[0]?.count).toBe(0);
+
+      const memberAck = await requestJson(
+        origin,
+        "/v1/office/inbox/read-state",
+        {
+          method: "PATCH",
+          headers: { ...memberHeaders, "content-type": "application/json" },
+          body: { itemId: failedInboxId },
+        },
+      );
+      expect(memberAck.status).toBe(200);
+      expect((memberAck.body as { itemId: string }).itemId).toBe(failedInboxId);
+
+      const memberAfterAck = await requestJson(origin, "/v1/office/inbox", {
+        headers: memberHeaders,
+      });
+      expect(
+        inboxItems(memberAfterAck.body).some(
+          (item) => item.id === failedInboxId,
+        ),
+      ).toBe(false);
+
+      const ownerStillSeesFailed = await requestJson(
+        origin,
+        "/v1/office/inbox",
+        {
+          headers: ownerHeaders,
+        },
+      );
+      expect(
+        inboxItems(ownerStillSeesFailed.body).some(
+          (item) => item.id === failedInboxId,
+        ),
+      ).toBe(true);
+
+      const pageOne = await requestJson(origin, "/v1/office/inbox?limit=2", {
+        headers: memberHeaders,
+      });
+      expect(pageOne.status).toBe(200);
+      const pageOneItems = inboxItems(pageOne.body);
+      expect(pageOneItems.length).toBe(2);
+      const nextCursor = (pageOne.body as { nextCursor?: string }).nextCursor;
+      expect(nextCursor).toBeDefined();
+
+      const pageTwo = await requestJson(
+        origin,
+        `/v1/office/inbox?limit=2&cursor=${encodeURIComponent(nextCursor!)}`,
+        { headers: memberHeaders },
+      );
+      expect(pageTwo.status).toBe(200);
+      const pageTwoItems = inboxItems(pageTwo.body);
+      const allIds = [...pageOneItems, ...pageTwoItems].map((item) => item.id);
+      expect(new Set(allIds).size).toBe(allIds.length);
+
+      const wsBInbox = await requestJson(origin, "/v1/office/inbox", {
+        headers: isolatedBHeaders,
+      });
+      expect(wsBInbox.status).toBe(200);
+      expect(
+        inboxItems(wsBInbox.body).some(
+          (item) => item.id === wsBApprovalInboxId,
+        ),
+      ).toBe(true);
+      void workflowRunId;
+    });
+  }, 180_000);
 });

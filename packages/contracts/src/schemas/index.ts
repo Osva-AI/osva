@@ -366,6 +366,8 @@ export {
   createOfficeThreadRequestSchema,
   inboxItemResourceSchema,
   inboxListResourceSchema,
+  inboxItemReadStateResourceSchema,
+  inboxReadStateMutationResourceSchema,
   inboxReadStateResourceSchema,
   listInboxQuerySchema,
   listOfficeMessagesQuerySchema,

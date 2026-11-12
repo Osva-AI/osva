@@ -1,6 +1,6 @@
 # M22 — Team Chat and unified Inbox (architecture)
 
-**M22.2A (backend):** durable threads, human messages, read state, and inbox projection are implemented. **M22.2B (Console):** Chat and Inbox UI — planned.
+**M22.2A (backend):** durable threads, human messages, and thread-scoped read state. **M22.2B (Console):** Chat and Inbox UI. **M22.2C:** unified inbox projections for approvals, assignments, and deliverables (this document).
 
 ## Goals
 
@@ -15,11 +15,11 @@ Prefer **projections** over duplicating authoritative state:
 
 | Inbox signal | Authoritative source | Inbox role |
 | --- | --- | --- |
-| Approval pending | `ApprovalRequest` + workflow wait state | Notification + deep link (**deferred** in M22.2A — no per-user recipient model) |
-| Assignment blocked / failed | `Assignment` + `Run` / `WorkflowRun` status | Action item (**deferred** in M22.2A) |
-| Deliverable ready | `Artifact` + run completion | Review queue (**deferred**) |
-| Human input required | Workflow wait nodes | Same as approvals (**deferred**) |
-| @mention / chat message | `OfficeMessage` (M22.2A) | Conversation |
+| Approval pending | `ApprovalRequest` (`PENDING`) | Inbox item for every workspace human with Office `READ`; decide via existing approval API (`EXECUTE`) |
+| Assignment failed / cancelled | `Assignment` terminal `FAILED` / `CANCELLED` | Inbox item per workspace human until user-acknowledged |
+| Deliverable ready | `Artifact.producerRunId` = completed `Assignment.runId` | Inbox item until user-acknowledged (agent-version assignments only in M22.2C) |
+| Human input required | Workflow wait nodes | Surfaced as `APPROVAL_PENDING` when an `ApprovalRequest` exists |
+| @mention / chat message | `OfficeMessage` | Conversation (thread read state unchanged) |
 
 Do not copy assignment or approval lifecycle into `InboxItem` as a second source of truth.
 
@@ -30,8 +30,9 @@ Do not copy assignment or approval lifecycle into `InboxItem` as a second source
 | `OfficeThread` | Workspace-scoped conversation; optional `teamId` / `goalId` **context only** |
 | `OfficeMessage` | Immutable body; human authorship from session; monotonic `sequence` per thread |
 | `InboxReadState` | Per-user `lastReadSequence` per thread (read ≠ resolved) |
+| `InboxItemReadState` | Per-user acknowledgement of operational inbox item ids (`approval:*`, `assignment:*`, `deliverable:*`) |
 
-`InboxItem` is a **derived feed** (`CHAT_MESSAGE`, `CHAT_MENTION`) built from messages + personal read state.
+`InboxItem` is a **derived feed** built at read time. Kinds: `CHAT_MESSAGE`, `CHAT_MENTION`, `APPROVAL_PENDING`, `ASSIGNMENT_UPDATE`, `DELIVERABLE_READY`. Stable ids: `chat:{messageId}`, `approval:{approvalRequestId}`, `assignment:{assignmentId}:{status}`, `deliverable:{artifactId}`.
 
 ## Visibility and authorization (v1)
 
@@ -59,7 +60,7 @@ Do not copy assignment or approval lifecycle into `InboxItem` as a second source
 3. **Untrusted content** — message bodies are data; mentions are not execution requests
 4. **Worker invocation** — messages alone do not start runs
 5. **Idempotency** — optional `idempotencyKey` per thread message POST; first successful write wins, safe retries return the stored message (conflicting bodies are not merged)
-6. **Inbox scope (M22.2A)** — chat messages and @mentions only; approvals, assignments, and deliverables remain deferred
+6. **Inbox scope (M22.2C)** — chat plus operational projections; listing inbox never enqueues execution
 
 ## REST (canonical)
 
@@ -81,4 +82,4 @@ Polling first. No WebSocket/SSE in M22.2A.
 
 ## Explicit non-goals (M22.2A)
 
-- Chat/Inbox frontend, worker auto-reply, separate message broker, approval/assignment inbox projection
+- Worker auto-reply, separate message broker, workflow-assignment deliverable join (no reliable single-run artifact link), M22.3 task board UX

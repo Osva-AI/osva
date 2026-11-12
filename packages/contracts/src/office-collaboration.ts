@@ -44,8 +44,21 @@ export interface OfficeMessageReferenceV1 {
   readonly id: string;
 }
 
-export const INBOX_ITEM_KINDS = ["CHAT_MESSAGE", "CHAT_MENTION"] as const;
+export const INBOX_ITEM_KINDS = [
+  "CHAT_MESSAGE",
+  "CHAT_MENTION",
+  "APPROVAL_PENDING",
+  "ASSIGNMENT_UPDATE",
+  "DELIVERABLE_READY",
+] as const;
 export type InboxItemKind = (typeof INBOX_ITEM_KINDS)[number];
+
+export const INBOX_ASSIGNMENT_ATTENTION_STATES = [
+  "FAILED",
+  "CANCELLED",
+] as const;
+export type InboxAssignmentAttentionState =
+  (typeof INBOX_ASSIGNMENT_ATTENTION_STATES)[number];
 
 export interface OfficeThreadResourceV1 {
   readonly id: OfficeThreadId;
@@ -121,16 +134,31 @@ export interface InboxListResourceV1 {
   readonly nextCursor?: string;
 }
 
-export interface UpdateInboxReadStateRequestV1 {
+export interface UpdateInboxThreadReadStateRequestV1 {
   readonly threadId: OfficeThreadId;
   readonly lastReadSequence: number;
 }
+
+export interface UpdateInboxItemReadStateRequestV1 {
+  readonly itemId: string;
+}
+
+export type UpdateInboxReadStateRequestV1 =
+  UpdateInboxThreadReadStateRequestV1 | UpdateInboxItemReadStateRequestV1;
 
 export interface InboxReadStateResourceV1 {
   readonly threadId: OfficeThreadId;
   readonly lastReadSequence: number;
   readonly updatedAt: string;
 }
+
+export interface InboxItemReadStateResourceV1 {
+  readonly itemId: string;
+  readonly updatedAt: string;
+}
+
+export type InboxReadStateMutationResourceV1 =
+  InboxReadStateResourceV1 | InboxItemReadStateResourceV1;
 
 export const OFFICE_THREAD_TITLE_MAX_LENGTH = 200;
 export const OFFICE_MESSAGE_BODY_MAX_LENGTH = 32_000;

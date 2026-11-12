@@ -13,6 +13,14 @@ import {
 import {
   DomainInvariantError,
   OfficeMessageIdempotencyConflictError,
+  buildApprovalInboxItem,
+  buildAssignmentInboxItem,
+  buildChatInboxItem,
+  buildDeliverableInboxItem,
+  paginateInboxItems,
+  parseOperationalInboxItemId,
+  sortInboxItemsDescending,
+  type InboxItemReadState,
   type InboxReadState,
   type OfficeCollaborationRepository,
   type OfficeMessage,
@@ -25,10 +33,26 @@ import {
   type ListOfficeThreadsQuery,
   type ListOfficeThreadsResult,
 } from "@osva/domain";
-import { and, asc, desc, eq, gt, lt, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  lt,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import type { Database } from "../database.js";
+import { approvalRequestFromRow } from "../mappers/approval-request-mapper.js";
+import { artifactFromRow } from "../mappers/artifact-mapper.js";
+import { assignmentFromRow } from "../mappers/office-mapper.js";
 import {
+  inboxItemReadStateFromRow,
+  inboxItemReadStateToRow,
   inboxReadStateFromRow,
   inboxReadStateToRow,
   officeMessageFromRow,
@@ -42,6 +66,10 @@ import {
   postgresConstraintName,
   postgresErrorCode,
 } from "../postgres-errors.js";
+import { approvalRequests } from "../schema/approval-requests.js";
+import { artifacts } from "../schema/artifacts.js";
+import { assignments } from "../schema/assignments.js";
+import { officeInboxItemReadStates } from "../schema/office-inbox-item-read-states.js";
 import { officeInboxReadStates } from "../schema/office-inbox-read-states.js";
 import { officeMessages } from "../schema/office-messages.js";
 import { officeThreads } from "../schema/office-threads.js";
@@ -93,24 +121,6 @@ function messageMentionsUser(message: OfficeMessage, userId: UserId): boolean {
   return message.mentions.some(
     (mention) => mention.kind === "HUMAN" && mention.userId === userId,
   );
-}
-
-function toInboxItem(
-  message: OfficeMessage,
-  threadTitle: string,
-  userId: UserId,
-): InboxItemResourceV1 {
-  const mentioned = messageMentionsUser(message, userId);
-  return {
-    id: `chat:${message.id}`,
-    kind: mentioned ? "CHAT_MENTION" : "CHAT_MESSAGE",
-    occurredAt: message.createdAt.toISOString(),
-    unread: true,
-    title: threadTitle,
-    summary: message.body.slice(0, 240),
-    threadId: message.threadId,
-    messageId: message.id,
-  };
 }
 
 export class PostgresOfficeCollaborationRepository implements OfficeCollaborationRepository {
@@ -389,6 +399,125 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
     return result?.count ?? 0;
   }
 
+  async upsertInboxItemReadState(state: InboxItemReadState): Promise<void> {
+    const row = inboxItemReadStateToRow(state);
+    await this.database.db
+      .insert(officeInboxItemReadStates)
+      .values(row)
+      .onConflictDoUpdate({
+        target: [
+          officeInboxItemReadStates.workspaceId,
+          officeInboxItemReadStates.userId,
+          officeInboxItemReadStates.itemId,
+        ],
+        set: {
+          updatedAt: row.updatedAt,
+        },
+      });
+  }
+
+  async findInboxItemReadState(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    itemId: string,
+  ): Promise<InboxItemReadState | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(officeInboxItemReadStates)
+      .where(
+        and(
+          eq(officeInboxItemReadStates.workspaceId, workspaceId),
+          eq(officeInboxItemReadStates.userId, userId),
+          eq(officeInboxItemReadStates.itemId, itemId),
+        ),
+      )
+      .limit(1);
+    return row === undefined ? null : inboxItemReadStateFromRow(row);
+  }
+
+  async isOperationalInboxItemAcknowledgeable(
+    workspaceId: WorkspaceId,
+    itemId: string,
+  ): Promise<boolean> {
+    const parsed = parseOperationalInboxItemId(itemId);
+    if (parsed === null) {
+      return false;
+    }
+
+    switch (parsed.kind) {
+      case "approval": {
+        const [row] = await this.database.db
+          .select({ id: approvalRequests.id })
+          .from(approvalRequests)
+          .where(
+            and(
+              eq(approvalRequests.workspaceId, workspaceId),
+              eq(approvalRequests.id, parsed.approvalRequestId),
+              eq(approvalRequests.status, "PENDING"),
+            ),
+          )
+          .limit(1);
+        return row !== undefined;
+      }
+      case "assignment": {
+        const [row] = await this.database.db
+          .select({ id: assignments.id })
+          .from(assignments)
+          .where(
+            and(
+              eq(assignments.workspaceId, workspaceId),
+              eq(assignments.id, parsed.assignmentId),
+              eq(assignments.status, parsed.status),
+            ),
+          )
+          .limit(1);
+        return row !== undefined;
+      }
+      case "deliverable": {
+        const rows = await this.database.db
+          .select({ id: artifacts.id })
+          .from(artifacts)
+          .innerJoin(
+            assignments,
+            and(
+              eq(assignments.workspaceId, artifacts.workspaceId),
+              eq(assignments.runId, artifacts.producerRunId),
+              eq(assignments.status, "COMPLETED"),
+            ),
+          )
+          .where(
+            and(
+              eq(artifacts.workspaceId, workspaceId),
+              eq(artifacts.id, parsed.artifactId),
+              isNotNull(artifacts.producerRunId),
+            ),
+          )
+          .limit(1);
+        return rows.length > 0;
+      }
+      default: {
+        const _exhaustive: never = parsed;
+        throw _exhaustive;
+      }
+    }
+  }
+
+  async listAcknowledgedInboxItemIds(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+  ): Promise<ReadonlySet<string>> {
+    const rows = await this.database.db
+      .select({ itemId: officeInboxItemReadStates.itemId })
+      .from(officeInboxItemReadStates)
+      .where(
+        and(
+          eq(officeInboxItemReadStates.workspaceId, workspaceId),
+          eq(officeInboxItemReadStates.userId, userId),
+        ),
+      );
+    return new Set(rows.map((row) => row.itemId));
+  }
+
   async listInboxItems(query: ListInboxQuery): Promise<ListInboxResult> {
     const threadRows = await this.database.db
       .select({
@@ -406,6 +535,11 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
       .from(officeMessages)
       .where(eq(officeMessages.workspaceId, query.workspaceId))
       .orderBy(desc(officeMessages.createdAt), desc(officeMessages.id));
+
+    const acknowledged = await this.listAcknowledgedInboxItemIds(
+      query.workspaceId,
+      query.userId,
+    );
 
     const unreadItems: InboxItemResourceV1[] = [];
     for (const row of messageRows) {
@@ -425,34 +559,102 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
       }
 
       const title = threadTitleById.get(message.threadId) ?? "Conversation";
-      unreadItems.push(toInboxItem(message, title, query.userId));
-    }
-
-    unreadItems.sort((left, right) =>
-      right.occurredAt.localeCompare(left.occurredAt),
-    );
-
-    let startIndex = 0;
-    if (query.cursor !== undefined) {
-      const cursor = decodeInboxCursor(query.cursor);
-      const index = unreadItems.findIndex(
-        (item) =>
-          item.occurredAt < cursor.occurredAt ||
-          (item.occurredAt === cursor.occurredAt && item.id < cursor.id),
+      unreadItems.push(
+        buildChatInboxItem({
+          message,
+          threadTitle: title,
+          mentioned: messageMentionsUser(message, query.userId),
+        }),
       );
-      startIndex = index === -1 ? unreadItems.length : index;
     }
 
-    const page = unreadItems.slice(startIndex, startIndex + query.limit);
-    const hasMore = startIndex + query.limit < unreadItems.length;
-    const next =
-      hasMore && page.length > 0
-        ? encodeCursor({
-            occurredAt: page.at(-1)!.occurredAt,
-            id: page.at(-1)!.id,
-          })
-        : undefined;
+    const approvalRows = await this.database.db
+      .select()
+      .from(approvalRequests)
+      .where(
+        and(
+          eq(approvalRequests.workspaceId, query.workspaceId),
+          eq(approvalRequests.status, "PENDING"),
+        ),
+      );
 
-    return { items: page, nextCursor: next };
+    for (const row of approvalRows) {
+      const item = buildApprovalInboxItem(approvalRequestFromRow(row));
+      if (!acknowledged.has(item.id)) {
+        unreadItems.push(item);
+      }
+    }
+
+    const assignmentRows = await this.database.db
+      .select()
+      .from(assignments)
+      .where(
+        and(
+          eq(assignments.workspaceId, query.workspaceId),
+          inArray(assignments.status, ["FAILED", "CANCELLED"]),
+        ),
+      );
+
+    for (const row of assignmentRows) {
+      const item = buildAssignmentInboxItem(assignmentFromRow(row));
+      if (item !== null && !acknowledged.has(item.id)) {
+        unreadItems.push(item);
+      }
+    }
+
+    const deliverableRows = await this.database.db
+      .select({
+        artifact: artifacts,
+        assignment: assignments,
+      })
+      .from(artifacts)
+      .innerJoin(
+        assignments,
+        and(
+          eq(assignments.workspaceId, artifacts.workspaceId),
+          eq(assignments.runId, artifacts.producerRunId),
+          eq(assignments.status, "COMPLETED"),
+        ),
+      )
+      .where(
+        and(
+          eq(artifacts.workspaceId, query.workspaceId),
+          isNotNull(artifacts.producerRunId),
+        ),
+      );
+
+    for (const row of deliverableRows) {
+      const assignment = assignmentFromRow(row.assignment);
+      const artifact = artifactFromRow(row.artifact);
+      const item = buildDeliverableInboxItem({
+        artifact,
+        assignmentId: assignment.id,
+        assignmentTitle: assignment.title,
+        runId: assignment.runId,
+      });
+      if (!acknowledged.has(item.id)) {
+        unreadItems.push(item);
+      }
+    }
+
+    const deduped = new Map<string, InboxItemResourceV1>();
+    for (const item of unreadItems) {
+      deduped.set(item.id, item);
+    }
+    const sorted = sortInboxItemsDescending([...deduped.values()]);
+    const paged = paginateInboxItems({
+      items: sorted,
+      limit: query.limit,
+      cursor:
+        query.cursor === undefined
+          ? undefined
+          : decodeInboxCursor(query.cursor),
+    });
+    const nextCursor =
+      paged.nextCursor === undefined
+        ? undefined
+        : encodeCursor(paged.nextCursor);
+
+    return { items: paged.items, nextCursor };
   }
 }

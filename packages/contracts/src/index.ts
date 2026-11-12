@@ -942,6 +942,7 @@ export type {
 } from "./office-registry.js";
 
 export {
+  INBOX_ASSIGNMENT_ATTENTION_STATES,
   INBOX_ITEM_KINDS,
   OFFICE_COLLABORATION_DEFAULT_PAGE_SIZE,
   OFFICE_COLLABORATION_MAX_PAGE_SIZE,
@@ -958,8 +959,11 @@ export type {
   CreateOfficeThreadRequestV1,
   InboxItemKind,
   InboxItemResourceV1,
+  InboxItemReadStateResourceV1,
   InboxListResourceV1,
+  InboxReadStateMutationResourceV1,
   InboxReadStateResourceV1,
+  InboxAssignmentAttentionState,
   OfficeMessageAuthorType,
   OfficeMessageListResourceV1,
   OfficeMessageMentionV1,

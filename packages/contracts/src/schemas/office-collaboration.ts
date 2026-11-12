@@ -142,16 +142,35 @@ export const listInboxQuerySchema = z.strictObject({
   cursor: z.string().min(1).optional(),
 });
 
-export const updateInboxReadStateRequestSchema = z.strictObject({
+export const updateInboxThreadReadStateRequestSchema = z.strictObject({
   threadId: officeThreadIdSchema,
   lastReadSequence: z.number().int().nonnegative(),
 });
+
+export const updateInboxItemReadStateRequestSchema = z.strictObject({
+  itemId: z.string().min(1),
+});
+
+export const updateInboxReadStateRequestSchema = z.union([
+  updateInboxThreadReadStateRequestSchema,
+  updateInboxItemReadStateRequestSchema,
+]);
 
 export const inboxReadStateResourceSchema = z.strictObject({
   threadId: officeThreadIdSchema,
   lastReadSequence: z.number().int().nonnegative(),
   updatedAt: z.string().min(1),
 });
+
+export const inboxItemReadStateResourceSchema = z.strictObject({
+  itemId: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
+export const inboxReadStateMutationResourceSchema = z.union([
+  inboxReadStateResourceSchema,
+  inboxItemReadStateResourceSchema,
+]);
 
 export const officeThreadListCursorPayloadSchema = z.strictObject({
   updatedAt: z.string().min(1),

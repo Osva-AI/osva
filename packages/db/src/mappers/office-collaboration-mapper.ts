@@ -9,11 +9,12 @@ import type {
   WorkspaceId,
 } from "@osva-ai/contracts";
 
-import { InboxReadState } from "@osva/domain";
+import { InboxItemReadState, InboxReadState } from "@osva/domain";
 import { OfficeMessage } from "@osva/domain";
 import { OfficeThread } from "@osva/domain";
 
 import type {
+  officeInboxItemReadStates,
   officeInboxReadStates,
   officeMessages,
   officeThreads,
@@ -25,6 +26,8 @@ type OfficeMessageRow = typeof officeMessages.$inferSelect;
 type OfficeMessageInsert = typeof officeMessages.$inferInsert;
 type InboxReadStateRow = typeof officeInboxReadStates.$inferSelect;
 type InboxReadStateInsert = typeof officeInboxReadStates.$inferInsert;
+type InboxItemReadStateRow = typeof officeInboxItemReadStates.$inferSelect;
+type InboxItemReadStateInsert = typeof officeInboxItemReadStates.$inferInsert;
 
 function parseMentions(value: unknown): readonly OfficeMessageMentionV1[] {
   if (!Array.isArray(value)) {
@@ -126,6 +129,28 @@ export function inboxReadStateFromRow(row: InboxReadStateRow): InboxReadState {
     userId: row.userId as UserId,
     threadId: row.threadId as OfficeThreadId,
     lastReadSequence: row.lastReadSequence,
+    updatedAt: row.updatedAt,
+  });
+}
+
+export function inboxItemReadStateToRow(
+  state: InboxItemReadState,
+): InboxItemReadStateInsert {
+  return {
+    workspaceId: state.workspaceId,
+    userId: state.userId,
+    itemId: state.itemId,
+    updatedAt: state.updatedAt,
+  };
+}
+
+export function inboxItemReadStateFromRow(
+  row: InboxItemReadStateRow,
+): InboxItemReadState {
+  return InboxItemReadState.rehydrate({
+    workspaceId: row.workspaceId as WorkspaceId,
+    userId: row.userId as UserId,
+    itemId: row.itemId,
     updatedAt: row.updatedAt,
   });
 }
