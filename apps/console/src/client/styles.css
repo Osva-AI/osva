@@ -6490,6 +6490,80 @@ button.agent-studio-v2-progress-link {
   margin-top: var(--space-4);
 }
 
+.office-mission-progress {
+  margin-top: var(--space-3);
+}
+
+.office-mission-progress-bar-wrap {
+  margin-top: var(--space-2);
+}
+
+.office-mission-progress-bar {
+  height: 0.45rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+  overflow: hidden;
+}
+
+.office-mission-progress-bar-fill {
+  height: 100%;
+  background: color-mix(in srgb, var(--accent) 72%, transparent);
+  transition: width 0.2s ease;
+}
+
+.office-mission-progress-label {
+  margin: var(--space-2) 0 0;
+  font-size: 0.85rem;
+}
+
+.office-mission-progress-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.office-v2-task-board {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.office-v2-task-board-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.office-v2-task-board-column-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.office-v2-task-board-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.office-v2-task-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.data-table tr.is-highlighted-row {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 .workflow-nl-builder__validation pre {
   max-height: 12rem;
   overflow: auto;

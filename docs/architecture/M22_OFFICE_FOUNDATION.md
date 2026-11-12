@@ -64,8 +64,8 @@ Previously `LaunchAssignment` used `findAssignmentById` without workspace or exp
 | Workers | `/v1/office/workers` | `/v1/office/workers` | `/v1/office/workers` | Not wired (M22.1) |
 | Roles | `/v1/office/roles` | `/v1/office/roles` | `/v1/office/roles` | Not wired |
 | Teams | `/v1/office/teams` | `/v1/office/teams` | `/v1/office/teams` | Not wired |
-| Goals | `/v1/office/goals` | `/v1/office/goals` | `/v1/office/goals` | Not wired |
-| Assignments | `/v1/office/assignments` | `/v1/office/assignments` | `/v1/office/assignments` | Not wired |
+| Goals | `/v1/office/goals` | `/v1/office/goals` | `/v1/office/goals` | Wired (M22.3A) |
+| Assignments | `/v1/office/assignments` | `/v1/office/assignments` | `/v1/office/assignments` | Wired (M22.3A) |
 
 No duplicate legacy route trees on the server.
 

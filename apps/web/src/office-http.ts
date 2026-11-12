@@ -452,7 +452,12 @@ async function dispatchOfficeRoute(
   if (route.kind === "assignments") {
     if (method === "GET") {
       const list = await services.office.listAssignments.execute(scope);
-      sendJson(response, 200, toAssignmentListResource(list));
+      const reconciled = await services.reconcileAssignment.executeList({
+        workspaceId: requireControlPlaneWorkspaceId(),
+        now: services.clock.now(),
+        assignments: list,
+      });
+      sendJson(response, 200, toAssignmentListResource(reconciled));
       return;
     }
 

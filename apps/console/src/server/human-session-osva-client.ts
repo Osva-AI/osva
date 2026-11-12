@@ -863,9 +863,84 @@ export function createHumanSessionOsvaClient(
         })
         .then(toDataOnly),
 
+    listOfficeGoals: () =>
+      upstream
+        .requestJson(ctx, { method: "GET", path: "/v1/office/goals" })
+        .then(toDataOnly),
+
+    getOfficeGoal: (goalId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/goals/${encodeURIComponent(goalId)}`,
+        })
+        .then(toDataOnly),
+
+    createOfficeGoal: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/office/goals",
+          body,
+        })
+        .then(toDataOnly),
+
+    updateOfficeGoal: (goalId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "PATCH",
+          path: `/v1/office/goals/${encodeURIComponent(goalId)}`,
+          body,
+        })
+        .then(toDataOnly),
+
     listOfficeAssignments: () =>
       upstream
         .requestJson(ctx, { method: "GET", path: "/v1/office/assignments" })
+        .then(toDataOnly),
+
+    getOfficeAssignment: (assignmentId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}`,
+        })
+        .then(toDataOnly),
+
+    createOfficeAssignment: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/office/assignments",
+          body,
+        })
+        .then(toDataOnly),
+
+    updateOfficeAssignment: (assignmentId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "PATCH",
+          path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}`,
+          body,
+        })
+        .then(toDataOnly),
+
+    launchOfficeAssignment: (assignmentId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}/launch`,
+          body: {},
+        })
+        .then(toDataOnly),
+
+    cancelOfficeAssignment: (assignmentId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}/cancel`,
+          body: {},
+        })
         .then(toDataOnly),
 
     listOfficeThreads: (query) =>

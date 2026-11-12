@@ -4,11 +4,13 @@ import type {
   AgentId,
   AgentVersionId,
   ApprovalRequestId,
+  AssignmentId,
   ConnectorId,
   ConnectorVersionId,
   EvaluationRunId,
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
+  GoalId,
   RunAttemptId,
   RunId,
   RunStepId,
@@ -725,6 +727,66 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/office/goals") {
+        const body = await readJsonBody(request);
+        const created = await client.createOfficeGoal(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/office/assignments") {
+        const body = await readJsonBody(request);
+        const created = await client.createOfficeAssignment(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const officeAssignmentLaunchPostMatch = pathname.match(
+        /^\/api\/v1\/office\/assignments\/([^/]+)\/launch$/,
+      );
+      if (officeAssignmentLaunchPostMatch !== null) {
+        const launched = await client.launchOfficeAssignment(
+          officeAssignmentLaunchPostMatch[1] as AssignmentId,
+        );
+        sendJson(
+          response,
+          200,
+          launched.data,
+          upstreamRequestIdHeaders(launched.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const officeAssignmentCancelPostMatch = pathname.match(
+        /^\/api\/v1\/office\/assignments\/([^/]+)\/cancel$/,
+      );
+      if (officeAssignmentCancelPostMatch !== null) {
+        const cancelled = await client.cancelOfficeAssignment(
+          officeAssignmentCancelPostMatch[1] as AssignmentId,
+        );
+        sendJson(
+          response,
+          200,
+          cancelled.data,
+          upstreamRequestIdHeaders(cancelled.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       const officeTeamMembershipPostMatch = pathname.match(
         /^\/api\/v1\/office\/teams\/([^/]+)\/memberships$/,
       );
@@ -813,6 +875,44 @@ export async function handleConsoleApiRequest(
         const body = await readJsonBody(request);
         const updated = await client.updateOfficeTeam(
           officeTeamPatchMatch[1] as TeamId,
+          body,
+        );
+        sendJson(
+          response,
+          200,
+          updated.data,
+          upstreamRequestIdHeaders(updated.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const officeGoalPatchMatch = pathname.match(
+        /^\/api\/v1\/office\/goals\/([^/]+)$/,
+      );
+      if (officeGoalPatchMatch !== null) {
+        const body = await readJsonBody(request);
+        const updated = await client.updateOfficeGoal(
+          officeGoalPatchMatch[1] as GoalId,
+          body,
+        );
+        sendJson(
+          response,
+          200,
+          updated.data,
+          upstreamRequestIdHeaders(updated.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const officeAssignmentPatchMatch = pathname.match(
+        /^\/api\/v1\/office\/assignments\/([^/]+)$/,
+      );
+      if (officeAssignmentPatchMatch !== null) {
+        const body = await readJsonBody(request);
+        const updated = await client.updateOfficeAssignment(
+          officeAssignmentPatchMatch[1] as AssignmentId,
           body,
         );
         sendJson(
@@ -1848,6 +1948,33 @@ export async function handleConsoleApiRequest(
       return true;
     }
 
+    if (pathname === "/api/v1/office/goals") {
+      const listed = await client.listOfficeGoals();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const officeGoalMatch = pathname.match(
+      /^\/api\/v1\/office\/goals\/([^/]+)$/,
+    );
+    if (officeGoalMatch !== null) {
+      const goal = await client.getOfficeGoal(officeGoalMatch[1] as GoalId);
+      sendJson(
+        response,
+        200,
+        goal.data,
+        upstreamRequestIdHeaders(goal.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
     if (pathname === "/api/v1/office/assignments") {
       const listed = await client.listOfficeAssignments();
       sendJson(
@@ -1855,6 +1982,23 @@ export async function handleConsoleApiRequest(
         200,
         listed.data,
         upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const officeAssignmentMatch = pathname.match(
+      /^\/api\/v1\/office\/assignments\/([^/]+)$/,
+    );
+    if (officeAssignmentMatch !== null) {
+      const assignment = await client.getOfficeAssignment(
+        officeAssignmentMatch[1] as AssignmentId,
+      );
+      sendJson(
+        response,
+        200,
+        assignment.data,
+        upstreamRequestIdHeaders(assignment.requestId),
         deps.security,
       );
       return true;

@@ -100,6 +100,43 @@ export function useWorkflowVersionQuery(
   });
 }
 
+export interface WorkflowVersionCatalogResource {
+  readonly entries: ReadonlyArray<{
+    readonly workflowId: string;
+    readonly versions: readonly WorkflowVersionResource[];
+  }>;
+}
+
+export function useWorkflowVersionCatalogQuery(enabled = true) {
+  const workspaceId = useWorkspaceQueryScope();
+  return useQuery({
+    queryKey: ["workflows", workspaceId, "version-catalog"],
+    enabled: enabled && workspaceId !== undefined,
+    queryFn: async (): Promise<WorkflowVersionCatalogResource> => {
+      const listed = await workspaceScopedFetch<WorkflowListResource>(
+        workspaceId,
+        "/api/v1/workflows",
+      );
+      const entries: Array<{
+        readonly workflowId: string;
+        readonly versions: readonly WorkflowVersionResource[];
+      }> = [];
+      for (const workflow of listed.workflows) {
+        const versions =
+          await workspaceScopedFetch<WorkflowVersionListResource>(
+            workspaceId,
+            `/api/v1/workflows/${encodeURIComponent(workflow.id)}/versions`,
+          );
+        entries.push({
+          workflowId: workflow.id,
+          versions: versions.versions,
+        });
+      }
+      return { entries };
+    },
+  });
+}
+
 export interface CreateWorkflowInput {
   readonly key: string;
   readonly name: string;

@@ -132,6 +132,12 @@ export function OfficeMissionControlPage() {
                 <LinkButton variant="secondary" to="/office/workers?register=1">
                   Add Worker
                 </LinkButton>
+                <LinkButton variant="secondary" to="/office/missions">
+                  Missions
+                </LinkButton>
+                <LinkButton variant="secondary" to="/office/tasks/new">
+                  Create Task
+                </LinkButton>
                 <LinkButton variant="primary" to="/office/teams?create=1">
                   Create Team
                 </LinkButton>
@@ -346,8 +352,10 @@ export function OfficeMissionControlPage() {
           <SectionPanel title="Recent assignments">
             {recent.length === 0 ? (
               <p className="muted">
-                No assignments recorded. Task management arrives in a later
-                milestone.
+                No assignments yet.{" "}
+                <Link to="/office/tasks/new">Create a task</Link>, open the{" "}
+                <Link to="/office/tasks">Task Board</Link>, or browse{" "}
+                <Link to="/office/missions">missions</Link>.
               </p>
             ) : (
               <div className="data-table-wrap">
@@ -372,7 +380,11 @@ export function OfficeMissionControlPage() {
                             : undefined;
                       return (
                         <tr key={assignment.id}>
-                          <td>{assignment.title}</td>
+                          <td>
+                            <Link to={`/office/tasks/${assignment.id}`}>
+                              {assignment.title}
+                            </Link>
+                          </td>
                           <td>
                             {worker !== undefined ? (
                               <Link to={`/office/workers/${worker.id}`}>
@@ -394,13 +406,17 @@ export function OfficeMissionControlPage() {
                           </td>
                           <td>{formatTimestamp(assignment.createdAt)}</td>
                           <td>
+                            <Link to={`/office/tasks/${assignment.id}`}>
+                              Task
+                            </Link>
                             {executionLink !== undefined ? (
-                              <Link className="mono" to={executionLink}>
-                                Open
-                              </Link>
-                            ) : (
-                              <span className="muted">—</span>
-                            )}
+                              <>
+                                {" · "}
+                                <Link className="mono" to={executionLink}>
+                                  Run
+                                </Link>
+                              </>
+                            ) : null}
                           </td>
                         </tr>
                       );

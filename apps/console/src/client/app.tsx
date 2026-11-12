@@ -66,6 +66,11 @@ import { OfficeWorkerDetailPage } from "./routes/office-worker-detail-page";
 import { OfficeWorkersPage } from "./routes/office-workers-page";
 import { OfficeChatPage } from "./routes/office-chat-page";
 import { OfficeInboxPage } from "./routes/office-inbox-page";
+import { OfficeMissionsPage } from "./routes/office-missions-page";
+import { OfficeMissionDetailPage } from "./routes/office-mission-detail-page";
+import { OfficeTaskCreatePage } from "./routes/office-task-create-page";
+import { OfficeTaskDetailPage } from "./routes/office-task-detail-page";
+import { OfficeTasksBoardPage } from "./routes/office-tasks-board-page";
 
 const queryClient = createQueryClient();
 
@@ -225,6 +230,26 @@ export function App() {
                   <Route
                     path="/office"
                     element={<OfficeMissionControlPage />}
+                  />
+                  <Route
+                    path="/office/missions"
+                    element={<OfficeMissionsPage />}
+                  />
+                  <Route
+                    path="/office/missions/:missionId"
+                    element={<OfficeMissionDetailPage />}
+                  />
+                  <Route
+                    path="/office/tasks/new"
+                    element={<OfficeTaskCreatePage />}
+                  />
+                  <Route
+                    path="/office/tasks/:taskId"
+                    element={<OfficeTaskDetailPage />}
+                  />
+                  <Route
+                    path="/office/tasks"
+                    element={<OfficeTasksBoardPage />}
                   />
                   <Route path="/office/chat" element={<OfficeChatPage />} />
                   <Route

@@ -3,11 +3,13 @@ import type {
   AgentVersionId,
   ApprovalRequestId,
   ArtifactId,
+  AssignmentId,
   ConnectorId,
   ConnectorVersionId,
   EvaluationRunId,
   EvaluationSuiteId,
   EvaluationSuiteVersionId,
+  GoalId,
   RunAttemptId,
   RunId,
   RunStepId,
@@ -311,7 +313,30 @@ export interface ConsoleOsvaClient {
     teamId: TeamId,
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listOfficeGoals(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getOfficeGoal(goalId: GoalId): Promise<ConsoleUpstreamResponse<unknown>>;
+  createOfficeGoal(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
+  updateOfficeGoal(
+    goalId: GoalId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
   listOfficeAssignments(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getOfficeAssignment(
+    assignmentId: AssignmentId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  createOfficeAssignment(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  updateOfficeAssignment(
+    assignmentId: AssignmentId,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  launchOfficeAssignment(
+    assignmentId: AssignmentId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  cancelOfficeAssignment(
+    assignmentId: AssignmentId,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
   listOfficeThreads(query?: {
     readonly cursor?: string;
     readonly limit?: number;
@@ -971,10 +996,61 @@ export function createConsoleOsvaClient(
         path: `/v1/office/teams/${encodeURIComponent(teamId)}/memberships`,
         body,
       }),
+    listOfficeGoals: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/office/goals",
+      }),
+    getOfficeGoal: (goalId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/goals/${encodeURIComponent(goalId)}`,
+      }),
+    createOfficeGoal: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/office/goals",
+        body,
+      }),
+    updateOfficeGoal: (goalId, body) =>
+      http.requestWithMeta({
+        method: "PATCH",
+        path: `/v1/office/goals/${encodeURIComponent(goalId)}`,
+        body,
+      }),
     listOfficeAssignments: () =>
       http.requestWithMeta({
         method: "GET",
         path: "/v1/office/assignments",
+      }),
+    getOfficeAssignment: (assignmentId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}`,
+      }),
+    createOfficeAssignment: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/office/assignments",
+        body,
+      }),
+    updateOfficeAssignment: (assignmentId, body) =>
+      http.requestWithMeta({
+        method: "PATCH",
+        path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}`,
+        body,
+      }),
+    launchOfficeAssignment: (assignmentId) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}/launch`,
+        body: {},
+      }),
+    cancelOfficeAssignment: (assignmentId) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/office/assignments/${encodeURIComponent(assignmentId)}/cancel`,
+        body: {},
       }),
     listOfficeThreads: (query) =>
       http.requestWithMeta({

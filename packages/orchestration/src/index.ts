@@ -49,6 +49,7 @@ export {
   ReconcileAssignment,
   type ReconcileAssignmentCommand,
   type ReconcileAssignmentDependencies,
+  type ReconcileAssignmentListCommand,
 } from "./reconcile-assignment.js";
 export { workflowNodeRunIdempotencyKey } from "./workflow-idempotency.js";
 export {

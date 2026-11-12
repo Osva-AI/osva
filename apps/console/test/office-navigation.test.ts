@@ -29,4 +29,17 @@ describe("Virtual Office navigation", () => {
     expect(navItemMatchesPath(teams, "/office/teams/team-1")).toBe(true);
     expect(navItemMatchesPath(workers, "/office/workers/ow-1")).toBe(true);
   });
+
+  it("marks missions and tasks routes as active", () => {
+    const missions = OFFICE_NAV_ITEMS.find(
+      (item) => item.navId === "office-missions",
+    )!;
+    const tasks = OFFICE_NAV_ITEMS.find(
+      (item) => item.navId === "office-tasks",
+    )!;
+    expect(navItemMatchesPath(missions, "/office/missions/goal-1")).toBe(true);
+    expect(navItemMatchesPath(tasks, "/office/tasks")).toBe(true);
+    expect(navItemMatchesPath(tasks, "/office/tasks/new")).toBe(true);
+    expect(navItemMatchesPath(tasks, "/office/tasks/asn-1")).toBe(true);
+  });
 });

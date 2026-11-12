@@ -319,7 +319,7 @@ describe("M22.1 Virtual Office acceptance (real stack)", () => {
       );
       expect(browserAuth.status).toBe(403);
 
-      const launchBlocked = await fetch(
+      const launchProxied = await fetch(
         `${consoleOrigin}/api/v1/office/assignments/asn-test/launch`,
         {
           method: "POST",
@@ -330,9 +330,9 @@ describe("M22.1 Virtual Office acceptance (real stack)", () => {
           body: "{}",
         },
       );
-      expect(launchBlocked.status).toBe(405);
+      expect(launchProxied.status).toBe(404);
 
-      const cancelBlocked = await fetch(
+      const cancelProxied = await fetch(
         `${consoleOrigin}/api/v1/office/assignments/asn-test/cancel`,
         {
           method: "POST",
@@ -343,7 +343,7 @@ describe("M22.1 Virtual Office acceptance (real stack)", () => {
           body: "{}",
         },
       );
-      expect(cancelBlocked.status).toBe(405);
+      expect(cancelProxied.status).toBe(404);
 
       const workerRes = await fetch(`${consoleOrigin}/api/v1/office/workers`, {
         method: "POST",
@@ -459,6 +459,113 @@ describe("M22.1 Virtual Office acceptance (real stack)", () => {
       expect(
         ((await teamsList.json()) as { items: unknown[] }).items,
       ).toHaveLength(1);
+
+      const goalRes = await fetch(`${consoleOrigin}/api/v1/office/goals`, {
+        method: "POST",
+        headers: {
+          ...consoleHeaders(jar, consoleOrigin, WS_A),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ key: "mission-1", title: "Acceptance mission" }),
+      });
+      expect(goalRes.status).toBe(201);
+      const goalBody = (await goalRes.json()) as { id: string; status: string };
+      expect(goalBody.status).toBe("OPEN");
+
+      const agentVersionRes = await fetch(
+        `${consoleOrigin}/api/v1/agents/${agentIdA}/versions`,
+        {
+          method: "POST",
+          headers: {
+            ...consoleHeaders(jar, consoleOrigin, WS_A),
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            manifest: {
+              schemaVersion: "1",
+              key: "accept-agent",
+              name: "Accept Agent",
+              runtime: {
+                type: "REMOTE_HTTP",
+                protocolVersion: "1",
+                endpoint: "http://127.0.0.1:59999/noop",
+              },
+              input: { schema: {} },
+              output: { schema: {} },
+              execution: { timeoutMs: 5_000, maxAttempts: 1 },
+              capabilities: { model: false, tools: [] },
+            },
+          }),
+        },
+      );
+      expect(agentVersionRes.status).toBe(201);
+      const agentVersionBody = (await agentVersionRes.json()) as { id: string };
+
+      const assignmentRes = await fetch(
+        `${consoleOrigin}/api/v1/office/assignments`,
+        {
+          method: "POST",
+          headers: {
+            ...consoleHeaders(jar, consoleOrigin, WS_A),
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            goalId: goalBody.id,
+            officeWorkerId: workerBody.id,
+            title: "Draft deliverable",
+            targetType: "AGENT_VERSION",
+            targetVersionId: agentVersionBody.id,
+            input: { schemaVersion: "1" },
+          }),
+        },
+      );
+      expect(assignmentRes.status).toBe(201);
+      const assignmentBody = (await assignmentRes.json()) as {
+        id: string;
+        status: string;
+        runId?: string;
+      };
+      expect(assignmentBody.status).toBe("PENDING");
+      expect(assignmentBody.runId).toBeUndefined();
+
+      const assignmentId = assignmentBody.id;
+      const launchRes = await fetch(
+        `${consoleOrigin}/api/v1/office/assignments/${assignmentId}/launch`,
+        {
+          method: "POST",
+          headers: {
+            ...consoleHeaders(jar, consoleOrigin, WS_A),
+            "content-type": "application/json",
+          },
+          body: "{}",
+        },
+      );
+      expect(launchRes.status).toBe(200);
+      const launched = (await launchRes.json()) as {
+        status: string;
+        runId?: string;
+      };
+      expect(launched.status).toBe("RUNNING");
+      expect(launched.runId).toBeDefined();
+
+      const detailAfterLaunch = await fetch(
+        `${consoleOrigin}/api/v1/office/assignments/${assignmentId}`,
+        { headers: consoleHeaders(jar, consoleOrigin, WS_A) },
+      );
+      expect(detailAfterLaunch.status).toBe(200);
+      const detailBody = (await detailAfterLaunch.json()) as {
+        status: string;
+        runId?: string;
+      };
+      expect(detailBody.status).toBe("RUNNING");
+      expect(detailBody.runId).toBe(launched.runId);
+
+      const goalsB = await fetch(`${consoleOrigin}/api/v1/office/goals`, {
+        headers: consoleHeaders(jar, consoleOrigin, WS_B),
+      });
+      expect(
+        ((await goalsB.json()) as { items: unknown[] }).items,
+      ).toHaveLength(0);
 
       const workersB = await fetch(`${consoleOrigin}/api/v1/office/workers`, {
         headers: consoleHeaders(jar, consoleOrigin, WS_B),
