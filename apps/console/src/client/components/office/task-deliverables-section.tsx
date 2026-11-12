@@ -14,7 +14,10 @@ export function TaskDeliverablesSection(props: {
 }) {
   const assignment = props.assignment;
 
-  if (assignment.targetType === "AGENT_VERSION" && assignment.runId !== undefined) {
+  if (
+    assignment.targetType === "AGENT_VERSION" &&
+    assignment.runId !== undefined
+  ) {
     return (
       <AgentRunDeliverables
         runId={assignment.runId}
@@ -74,8 +77,7 @@ function WorkflowRunDeliverables(props: {
   );
 
   const artifactsLive =
-    props.live ||
-    (run !== undefined && isWorkflowRunLive(run.status));
+    props.live || (run !== undefined && isWorkflowRunLive(run.status));
 
   const artifactsQuery = useWorkflowRunArtifactsQuery({
     workflowRunId: props.workflowRunId,
