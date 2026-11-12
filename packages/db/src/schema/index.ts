@@ -52,6 +52,9 @@ export { teams } from "./teams.js";
 export { teamMemberships } from "./team-memberships.js";
 export { goals } from "./goals.js";
 export { assignments } from "./assignments.js";
+export { officeThreads } from "./office-threads.js";
+export { officeMessages } from "./office-messages.js";
+export { officeInboxReadStates } from "./office-inbox-read-states.js";
 export { builderPublications } from "./builder-publications.js";
 export {
   PERSISTED_EVALUATOR_TYPES,

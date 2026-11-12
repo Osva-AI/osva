@@ -55,6 +55,7 @@ import {
   PostgresBuilderPublicationRepository,
   PostgresKnowledgeRepository,
   PostgresOfficeRepository,
+  PostgresOfficeCollaborationRepository,
   PostgresWorkspaceRepository,
   PostgresApiKeyRepository,
   PostgresIdentityLifecycleRepository,
@@ -81,6 +82,7 @@ import {
   createToolApplication,
   createWorkflowApplication,
   createOfficeApplication,
+  createOfficeCollaborationApplication,
   createKnowledgeApplication,
   KnowledgeRetriever,
   AuthenticateApiKey,
@@ -373,6 +375,8 @@ export function createWebProcess(
 
   const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
   const officeRepository = new PostgresOfficeRepository(database);
+  const officeCollaborationRepository =
+    new PostgresOfficeCollaborationRepository(database);
   const runCheckpoints = new PostgresRunCheckpointRepository(database);
   const runOperationJournal = new PostgresRunOperationJournalRepository(
     database,
@@ -550,6 +554,14 @@ export function createWebProcess(
           workspaces,
           agents,
           workflows: workflowRepository,
+          clock,
+          ids,
+        }),
+        collaboration: createOfficeCollaborationApplication({
+          collaboration: officeCollaborationRepository,
+          office: officeRepository,
+          workspaces,
+          workspaceMemberships: identityWorkspaceMemberships,
           clock,
           ids,
         }),

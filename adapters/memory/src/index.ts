@@ -27,5 +27,6 @@ export { MemoryWorkflowTimerWaitResolutionRepository } from "./memory-workflow-t
 export { MemoryMemoryNamespaceRepository } from "./memory-memory-namespace-repository.js";
 export { MemoryEvaluationSuiteRepository } from "./memory-evaluation-suite-repository.js";
 export { MemoryOfficeRepository } from "./memory-office-repository.js";
+export { MemoryOfficeCollaborationRepository } from "./memory-office-collaboration-repository.js";
 export { MemoryArtifactRepository } from "./memory-artifact-repository.js";
 export { MemoryApiKeyRepository } from "./memory-api-key-repository.js";

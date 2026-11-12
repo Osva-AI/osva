@@ -1,6 +1,6 @@
 # M22 — Team Chat and unified Inbox (architecture)
 
-**Implementation:** M22.2 and later. M22.0 defines boundaries only — no chat tables or endpoints.
+**M22.2A (backend):** durable threads, human messages, read state, and inbox projection are implemented. **M22.2B (Console):** Chat and Inbox UI — planned.
 
 ## Goals
 
@@ -15,39 +15,70 @@ Prefer **projections** over duplicating authoritative state:
 
 | Inbox signal | Authoritative source | Inbox role |
 | --- | --- | --- |
-| Approval pending | `ApprovalRequest` + workflow wait state | Notification + deep link |
-| Assignment blocked / failed | `Assignment` + `Run` / `WorkflowRun` status | Action item |
-| Deliverable ready | `Artifact` + run completion | Review queue |
-| Human input required | Workflow wait nodes | Same as approvals |
-| @mention / chat message | **New** durable message contract (M22.2) | Conversation |
+| Approval pending | `ApprovalRequest` + workflow wait state | Notification + deep link (**deferred** in M22.2A — no per-user recipient model) |
+| Assignment blocked / failed | `Assignment` + `Run` / `WorkflowRun` status | Action item (**deferred** in M22.2A) |
+| Deliverable ready | `Artifact` + run completion | Review queue (**deferred**) |
+| Human input required | Workflow wait nodes | Same as approvals (**deferred**) |
+| @mention / chat message | `OfficeMessage` (M22.2A) | Conversation |
 
 Do not copy assignment or approval lifecycle into `InboxItem` as a second source of truth.
 
-## Proposed persisted contracts (M22.2)
+## Persisted contracts (M22.2A)
 
 | Entity | Purpose |
 | --- | --- |
-| `OfficeThread` | Channel or mission-scoped conversation; workspace + membership ACL |
-| `OfficeMessage` | Immutable message body, author (human or worker id), thread id, ordering key |
-| `InboxReadState` | Per-principal cursor over inbox feed (not lifecycle) |
+| `OfficeThread` | Workspace-scoped conversation; optional `teamId` / `goalId` **context only** |
+| `OfficeMessage` | Immutable body; human authorship from session; monotonic `sequence` per thread |
+| `InboxReadState` | Per-user `lastReadSequence` per thread (read ≠ resolved) |
 
-`InboxItem` may exist as a **materialized feed row** (type + reference ids + sort key) rebuilt from events, similar to observability projections.
+`InboxItem` is a **derived feed** (`CHAT_MESSAGE`, `CHAT_MENTION`) built from messages + personal read state.
+
+## Visibility and authorization (v1)
+
+| Topic | M22.2A behavior |
+| --- | --- |
+| Thread visibility | **Workspace-wide** — any workspace human with Office `READ` can list/read threads |
+| Team / goal context | Optional metadata; **does not** restrict access (worker `TeamMembership` is unrelated) |
+| Create thread / post | Human session + Office `WRITE` |
+| List threads / messages | Human session or API key + Office `READ` (API keys see **all** workspace threads — same visibility as humans) |
+| Inbox / read state | **Human session only** + Office `READ` / `WRITE` |
+| Worker-authored messages | **Not exposed** — no public worker impersonation endpoint |
+| Mentions | Stored and validated; **do not** launch runs or consume model tokens |
+
+## Ordering and pagination
+
+- Per-thread monotonic `sequence` assigned under row lock on append
+- Message list: ascending `sequence` cursor
+- Thread list: `updatedAt` desc cursor
+- Inbox: `occurredAt` desc cursor over unread projected items
 
 ## Security and durability
 
-1. **Workspace isolation** — thread membership ⊆ workspace human members + registered office workers.
-2. **Authorship** — human sessions and API keys use existing principals; worker-authored messages only from execution audit pipelines.
-3. **Ordering** — monotonic sequence per thread (DB or append log); paginate by cursor.
-4. **Untrusted content** — treat all message bodies as prompt-injection surface; workers invoked only via bounded launch with policy checks.
-5. **Worker invocation** — a message alone does not start a run; an explicit **work request** API converts to `Assignment` launch or approved automation.
-6. **Retention** — align with workspace audit policy; soft-delete threads, hard-retain security events.
+1. **Workspace isolation** — all repository lookups are workspace-scoped
+2. **Authorship** — `authorUserId` from human session only; API keys cannot post as humans
+3. **Untrusted content** — message bodies are data; mentions are not execution requests
+4. **Worker invocation** — messages alone do not start runs
+5. **Idempotency** — optional `idempotencyKey` per thread message POST; first successful write wins, safe retries return the stored message (conflicting bodies are not merged)
+6. **Inbox scope (M22.2A)** — chat messages and @mentions only; approvals, assignments, and deliverables remain deferred
+
+## REST (canonical)
+
+- `GET/POST /v1/office/threads`
+- `GET /v1/office/threads/:threadId`
+- `GET/POST /v1/office/threads/:threadId/messages`
+- `GET /v1/office/inbox`
+- `PATCH /v1/office/inbox/read-state`
+
+## M22.2B Console readiness
+
+- Routes: `/office/chat`, `/office/chat/:threadId`, `/office/inbox`
+- BFF allowlist entries for the routes above (not added in M22.2A)
+- TanStack Query polling; safe markdown rendering for message bodies
 
 ## Notifications (deferred)
 
-M22.2 may use polling (TanStack Query refetch) first. WebSocket or SSE only after product proof — see Console integration doc.
+Polling first. No WebSocket/SSE in M22.2A.
 
-## Explicit non-goals (M22.0)
+## Explicit non-goals (M22.2A)
 
-- No autonomous “worker wakes on message” loops
-- No fake worker-to-worker chat without `Run` / handoff records
-- No separate message broker
+- Chat/Inbox frontend, worker auto-reply, separate message broker, approval/assignment inbox projection

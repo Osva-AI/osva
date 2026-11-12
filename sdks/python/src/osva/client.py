@@ -7,6 +7,8 @@ from osva.resources.artifacts import ArtifactsResource
 from osva.resources.office import (
     AssignmentsResource,
     GoalsResource,
+    OfficeInboxResource,
+    OfficeThreadsResource,
     OfficeWorkersResource,
     RolesResource,
     TeamsResource,
@@ -43,3 +45,5 @@ class OSVAClient:
         self.teams = TeamsResource(self._http)
         self.goals = GoalsResource(self._http)
         self.assignments = AssignmentsResource(self._http)
+        self.office_threads = OfficeThreadsResource(self._http)
+        self.office_inbox = OfficeInboxResource(self._http)

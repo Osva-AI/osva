@@ -232,6 +232,13 @@
       "when": 1790500000000,
       "tag": "0032_builder_publication_slice",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1790600000000,
+      "tag": "0033_office_collaboration_slice",
+      "breakpoints": true
     }
   ]
 }

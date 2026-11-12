@@ -37,6 +37,8 @@ import type {
   TeamId,
   GoalId,
   AssignmentId,
+  OfficeThreadId,
+  OfficeMessageId,
   AssignmentState,
   GoalState,
   KnowledgeIndexId,
@@ -799,6 +801,49 @@ export class AssignmentNotFoundError extends DomainError {
   constructor(assignmentId: AssignmentId) {
     super(`Assignment ${assignmentId} was not found.`);
     this.assignmentId = assignmentId;
+  }
+}
+
+export class OfficeThreadNotFoundError extends DomainError {
+  readonly threadId: OfficeThreadId;
+
+  constructor(threadId: OfficeThreadId) {
+    super(`Office thread ${threadId} was not found.`);
+    this.threadId = threadId;
+  }
+}
+
+export class OfficeMessageNotFoundError extends DomainError {
+  readonly messageId: OfficeMessageId;
+
+  constructor(messageId: OfficeMessageId) {
+    super(`Office message ${messageId} was not found.`);
+    this.messageId = messageId;
+  }
+}
+
+export class OfficeMessageIdempotencyConflictError extends DomainError {
+  readonly workspaceId: WorkspaceId;
+  readonly threadId: OfficeThreadId;
+  readonly idempotencyKey: string;
+
+  constructor(
+    workspaceId: WorkspaceId,
+    threadId: OfficeThreadId,
+    idempotencyKey: string,
+  ) {
+    super(
+      `Office message idempotency key '${idempotencyKey}' already exists for thread ${threadId} in workspace ${workspaceId}.`,
+    );
+    this.workspaceId = workspaceId;
+    this.threadId = threadId;
+    this.idempotencyKey = idempotencyKey;
+  }
+}
+
+export class HumanPrincipalRequiredError extends DomainError {
+  constructor() {
+    super("This operation requires an authenticated human session.");
   }
 }
 

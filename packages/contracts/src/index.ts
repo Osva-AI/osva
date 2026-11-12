@@ -37,6 +37,8 @@ export type {
   TeamId,
   GoalId,
   AssignmentId,
+  OfficeThreadId,
+  OfficeMessageId,
   KnowledgeSourceId,
   KnowledgeIndexId,
   KnowledgeChunkId,
@@ -938,3 +940,34 @@ export type {
   UpdateRoleRequestV1,
   UpdateTeamRequestV1,
 } from "./office-registry.js";
+
+export {
+  INBOX_ITEM_KINDS,
+  OFFICE_COLLABORATION_DEFAULT_PAGE_SIZE,
+  OFFICE_COLLABORATION_MAX_PAGE_SIZE,
+  OFFICE_MESSAGE_AUTHOR_TYPES,
+  OFFICE_MESSAGE_BODY_MAX_LENGTH,
+  OFFICE_MESSAGE_IDEMPOTENCY_KEY_MAX_LENGTH,
+  OFFICE_MESSAGE_MENTION_KINDS,
+  OFFICE_MESSAGE_REFERENCE_KINDS,
+  OFFICE_THREAD_TITLE_MAX_LENGTH,
+  OFFICE_THREAD_TYPES,
+} from "./office-collaboration.js";
+export type {
+  CreateOfficeMessageRequestV1,
+  CreateOfficeThreadRequestV1,
+  InboxItemKind,
+  InboxItemResourceV1,
+  InboxListResourceV1,
+  InboxReadStateResourceV1,
+  OfficeMessageAuthorType,
+  OfficeMessageListResourceV1,
+  OfficeMessageMentionV1,
+  OfficeMessageReferenceKind,
+  OfficeMessageReferenceV1,
+  OfficeMessageResourceV1,
+  OfficeThreadListResourceV1,
+  OfficeThreadResourceV1,
+  OfficeThreadType,
+  UpdateInboxReadStateRequestV1,
+} from "./office-collaboration.js";

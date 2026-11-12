@@ -150,6 +150,10 @@ export {
   GoalNotFoundError,
   DuplicateGoalKeyError,
   AssignmentNotFoundError,
+  OfficeThreadNotFoundError,
+  OfficeMessageNotFoundError,
+  OfficeMessageIdempotencyConflictError,
+  HumanPrincipalRequiredError,
   InvalidGoalTransitionError,
   InvalidAssignmentTransitionError,
 } from "./errors.js";
@@ -987,6 +991,37 @@ export {
   type UpdateRoleCommand,
   type UpdateTeamCommand,
 } from "./office-application.js";
+
+export {
+  AppendOfficeMessage,
+  CreateOfficeThread,
+  GetOfficeThread,
+  ListInbox,
+  ListOfficeMessages,
+  ListOfficeThreads,
+  UpdateInboxReadState,
+  createOfficeCollaborationApplication,
+  type AppendOfficeMessageCommand,
+  type CreateOfficeThreadCommand,
+  type OfficeCollaborationApplication,
+  type OfficeCollaborationApplicationClock,
+  type OfficeCollaborationApplicationDependencies,
+  type OfficeCollaborationApplicationIds,
+  type UpdateInboxReadStateCommand,
+} from "./office-collaboration-application.js";
+export { InboxReadState } from "./inbox-read-state.js";
+export { OfficeMessage } from "./office-message.js";
+export { OfficeThread } from "./office-thread.js";
+export type {
+  AppendOfficeMessageRepositoryCommand,
+  ListInboxQuery,
+  ListInboxResult,
+  ListOfficeMessagesQuery,
+  ListOfficeMessagesResult,
+  ListOfficeThreadsQuery,
+  ListOfficeThreadsResult,
+  OfficeCollaborationRepository,
+} from "./ports/office-collaboration-repository.js";
 
 export {
   digestApiKeySecret,

@@ -37,6 +37,8 @@ export {
   teamIdSchema,
   goalIdSchema,
   assignmentIdSchema,
+  officeThreadIdSchema,
+  officeMessageIdSchema,
   knowledgeSourceIdSchema,
   knowledgeIndexIdSchema,
   knowledgeChunkIdSchema,
@@ -358,6 +360,26 @@ export {
   updateRoleRequestSchema,
   updateTeamRequestSchema,
 } from "./office-registry.js";
+
+export {
+  createOfficeMessageRequestSchema,
+  createOfficeThreadRequestSchema,
+  inboxItemResourceSchema,
+  inboxListResourceSchema,
+  inboxReadStateResourceSchema,
+  listInboxQuerySchema,
+  listOfficeMessagesQuerySchema,
+  listOfficeThreadsQuerySchema,
+  officeMessageListResourceSchema,
+  officeMessageResourceSchema,
+  officeThreadListResourceSchema,
+  officeThreadResourceSchema,
+  parseOfficeCollaborationPageLimit,
+  updateInboxReadStateRequestSchema,
+  inboxListCursorPayloadSchema,
+  officeMessageListCursorPayloadSchema,
+  officeThreadListCursorPayloadSchema,
+} from "./office-collaboration.js";
 
 export {
   apiKeyListResourceSchema,
