@@ -76,7 +76,10 @@ function officeStub(
 ) {
   return stubHumanSessionFetch(role, "ws-office", (url, init) => {
     const path = String(url);
-    if (path === "/api/v1/office/goals" || path.endsWith("/api/v1/office/goals")) {
+    if (
+      path === "/api/v1/office/goals" ||
+      path.endsWith("/api/v1/office/goals")
+    ) {
       if (init?.method === "POST") {
         options?.onPostGoal?.(JSON.parse(String(init.body)));
         return json({
@@ -385,7 +388,6 @@ describe("Office Missions UI", () => {
       const headers = new Headers(postCall?.[1]?.headers);
       expect(headers.get("x-osva-workspace-id")).toBe("ws-office");
     });
-
   });
 
   it("shows missions section nav link", async () => {
@@ -398,8 +400,7 @@ describe("Office Missions UI", () => {
     expect(
       screen
         .getByLabelText("Virtual Office views")
-        .querySelector("[aria-current]")
-        ?.textContent,
+        .querySelector("[aria-current]")?.textContent,
     ).toBe("Missions");
     expect(screen.getByRole("link", { name: "Tasks" })).toBeTruthy();
   });

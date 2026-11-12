@@ -27,8 +27,18 @@ function assignment(
 
 describe("office task board", () => {
   const items = [
-    assignment({ id: "a1", status: "PENDING", title: "Alpha draft", goalId: "g1" }),
-    assignment({ id: "a2", status: "RUNNING", title: "Beta run", goalId: "g1" }),
+    assignment({
+      id: "a1",
+      status: "PENDING",
+      title: "Alpha draft",
+      goalId: "g1",
+    }),
+    assignment({
+      id: "a2",
+      status: "RUNNING",
+      title: "Beta run",
+      goalId: "g1",
+    }),
     assignment({
       id: "a3",
       status: "COMPLETED",

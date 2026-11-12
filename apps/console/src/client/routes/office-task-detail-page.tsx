@@ -36,10 +36,7 @@ import {
   roleCanWriteControlPlaneResources,
 } from "../lib/permissions";
 import { runExecutionStatusLabel } from "../lib/run-execution-labels";
-import {
-  runStatusCategory,
-  workflowRunStatusCategory,
-} from "../lib/statuses";
+import { runStatusCategory, workflowRunStatusCategory } from "../lib/statuses";
 import { workflowRunExecutionStatusLabel } from "../lib/workflow-execution-labels";
 
 export function OfficeTaskDetailPage() {
@@ -115,9 +112,7 @@ export function OfficeTaskDetailPage() {
         void assignmentQuery.refetch();
       }
     } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "Launch failed.",
-      );
+      setActionError(error instanceof Error ? error.message : "Launch failed.");
       if (error instanceof ConsoleApiError) {
         setActionRequestId(error.body.requestId);
       }
@@ -138,9 +133,7 @@ export function OfficeTaskDetailPage() {
       patchOfficeAssignmentsListCache(queryClient, workspaceId, updated);
       void assignmentQuery.refetch();
     } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "Cancel failed.",
-      );
+      setActionError(error instanceof Error ? error.message : "Cancel failed.");
       if (error instanceof ConsoleApiError) {
         setActionRequestId(error.body.requestId);
       }
@@ -148,9 +141,7 @@ export function OfficeTaskDetailPage() {
   }
 
   const loading =
-    assignmentQuery.isLoading ||
-    goalQuery.isLoading ||
-    workerQuery.isLoading;
+    assignmentQuery.isLoading || goalQuery.isLoading || workerQuery.isLoading;
 
   return (
     <div
@@ -245,7 +236,8 @@ export function OfficeTaskDetailPage() {
               </div>
               <div>
                 <p className="metric-label">Mission</p>
-                {assignment.goalId !== undefined && goalQuery.data !== undefined ? (
+                {assignment.goalId !== undefined &&
+                goalQuery.data !== undefined ? (
                   <Link to={`/office/missions/${assignment.goalId}`}>
                     {goalQuery.data.title}
                   </Link>
@@ -303,7 +295,8 @@ export function OfficeTaskDetailPage() {
                     Open full execution details
                   </Link>
                 </p>
-                {assignment.runId !== undefined && runQuery.data !== undefined ? (
+                {assignment.runId !== undefined &&
+                runQuery.data !== undefined ? (
                   <RunExecutionSummary
                     status={runQuery.data.status}
                     latestAttemptError={latestAttempt?.error}
@@ -362,8 +355,7 @@ export function OfficeTaskDetailPage() {
 function RunExecutionSummary(props: {
   readonly status: string;
   readonly latestAttemptError:
-    | { readonly code: string; readonly message: string }
-    | undefined;
+    { readonly code: string; readonly message: string } | undefined;
 }) {
   return (
     <div className="metadata-grid">

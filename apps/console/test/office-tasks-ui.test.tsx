@@ -132,7 +132,10 @@ function officeStub(
     if (path.includes("/api/v1/office/workers/")) {
       return json(worker);
     }
-    if (path.endsWith("/api/v1/office/assignments") && init?.method !== "POST") {
+    if (
+      path.endsWith("/api/v1/office/assignments") &&
+      init?.method !== "POST"
+    ) {
       return json({
         items: [assignments.pending, assignments.running, assignments.workflow],
       });
@@ -218,10 +221,7 @@ describe("office tasks ui", () => {
     expect(screen.getByTestId("task-column-RUNNING")).toBeTruthy();
 
     const user = userEvent.setup();
-    await user.selectOptions(
-      screen.getByLabelText("Mission"),
-      goalA.id,
-    );
+    await user.selectOptions(screen.getByLabelText("Mission"), goalA.id);
 
     await waitFor(() => {
       expect(screen.queryByTestId("task-card-asn-wf")).toBeNull();
