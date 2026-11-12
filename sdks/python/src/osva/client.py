@@ -7,11 +7,11 @@ from osva.resources.artifacts import ArtifactsResource
 from osva.resources.office import (
     AssignmentsResource,
     GoalsResource,
+    OfficeInboxResource,
+    OfficeThreadsResource,
     OfficeWorkersResource,
     RolesResource,
     TeamsResource,
-    OfficeThreadsResource,
-    OfficeInboxResource,
 )
 from osva.resources.runs import RunsResource
 from osva.resources.schedules import SchedulesResource

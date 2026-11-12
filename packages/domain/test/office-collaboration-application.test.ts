@@ -1,4 +1,5 @@
 import type {
+  AssignmentState,
   OfficeMessageId,
   OfficeThreadId,
   UserId,
@@ -30,6 +31,7 @@ import {
   type WorkspaceMembershipRepository,
   type WorkspaceRepository,
   type OfficeRepository,
+  type Assignment,
 } from "@osva/domain";
 
 const WORKSPACE = "ws-office-chat" as WorkspaceId;
@@ -180,6 +182,21 @@ class InMemoryWorkspaceRepository implements WorkspaceRepository {
   async findById(id: WorkspaceId) {
     return this.items.get(id) ?? null;
   }
+
+  async countAll(): Promise<number> {
+    return this.items.size;
+  }
+
+  async listIds(): Promise<readonly WorkspaceId[]> {
+    return [...this.items.keys()].sort();
+  }
+
+  async listUnlinkedIds(): Promise<readonly WorkspaceId[]> {
+    return [...this.items.values()]
+      .filter((workspace) => workspace.organizationId === undefined)
+      .map((workspace) => workspace.id)
+      .sort();
+  }
 }
 
 class StubWorkspaceMemberships implements WorkspaceMembershipRepository {
@@ -283,7 +300,10 @@ class EmptyOfficeRepository implements OfficeRepository {
   async updateAssignment() {
     return null;
   }
-  async transitionAssignment() {
+  async transitionAssignment(
+    _expectedStatus: AssignmentState,
+    _next: Assignment,
+  ): Promise<Assignment> {
     throw new Error("not implemented");
   }
 }
