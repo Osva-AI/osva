@@ -273,29 +273,25 @@ export function ConnectorCatalogDetailPage() {
             </p>
           ) : (
             <p className="muted">
-              Create a workspace connector with key{" "}
-              <code className="mono">{entry.connectorKey}</code>, then follow
-              the install guide on the worker. Console provisions Streamable
-              HTTP ConnectorVersions only; STDIO requires operator-controlled
-              provisioning.
+              Use guided setup to create a workspace connector with key{" "}
+              <code className="mono">{entry.connectorKey}</code>, follow STDIO
+              operator provisioning, and hand off to MCP discovery.
             </p>
           )}
           <div className="action-row">
+            <LinkButton
+              variant="primary"
+              to={`/tools/connectors/catalog/${catalogConnectorId}/setup`}
+              data-testid="connector-catalog-guided-setup"
+            >
+              Guided setup
+            </LinkButton>
             {workspaceStatus?.workspaceConnectorId !== undefined ? (
               <LinkButton
-                variant="primary"
+                variant="secondary"
                 to={`/tools/connectors/${workspaceStatus.workspaceConnectorId}`}
               >
                 Open workspace connector
-              </LinkButton>
-            ) : (
-              <LinkButton variant="primary" to="/tools/connectors">
-                Workspace connectors
-              </LinkButton>
-            )}
-            {canWrite ? (
-              <LinkButton variant="secondary" to="/tools/connectors">
-                Create connector identity
               </LinkButton>
             ) : null}
           </div>

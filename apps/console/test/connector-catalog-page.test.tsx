@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ConnectorCatalogPage } from "../src/client/routes/connector-catalog-page";
 import { ConnectorCatalogDetailPage } from "../src/client/routes/connector-catalog-detail-page";
+import { ConnectorCatalogSetupPage } from "../src/client/routes/connector-catalog-setup-page";
 import { AuthProvider } from "../src/client/context/auth-context";
 import { filterConnectorCatalogEntries } from "../src/client/lib/osva-connectors-catalog";
 import { stubHumanSessionFetch } from "./human-auth-fetch-stub";
@@ -25,6 +26,10 @@ function renderCatalog(path: string) {
             <Route
               path="/tools/connectors/catalog/:catalogConnectorId"
               element={<ConnectorCatalogDetailPage />}
+            />
+            <Route
+              path="/tools/connectors/catalog/:catalogConnectorId/setup"
+              element={<ConnectorCatalogSetupPage />}
             />
           </Routes>
         </MemoryRouter>

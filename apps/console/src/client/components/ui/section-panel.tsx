@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 export interface SectionPanelProps {
+  readonly id?: string;
   readonly title?: string;
   readonly description?: string;
   readonly actions?: ReactNode;
@@ -9,6 +10,7 @@ export interface SectionPanelProps {
 }
 
 export function SectionPanel({
+  id,
   title,
   description,
   actions,
@@ -21,7 +23,7 @@ export function SectionPanel({
       : "panel";
 
   return (
-    <section className={panelClassName}>
+    <section id={id} className={panelClassName}>
       {title !== undefined || actions !== undefined ? (
         <div className="panel-header-row">
           <div>

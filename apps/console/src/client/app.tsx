@@ -43,6 +43,7 @@ import { ConnectorsPage } from "./routes/connectors-page";
 import { ConnectorDetailPage } from "./routes/connector-detail-page";
 import { ConnectorCatalogPage } from "./routes/connector-catalog-page";
 import { ConnectorCatalogDetailPage } from "./routes/connector-catalog-detail-page";
+import { ConnectorCatalogSetupPage } from "./routes/connector-catalog-setup-page";
 import { ExampleDetailPage } from "./routes/example-detail-page";
 import { ExamplesPage } from "./routes/examples-page";
 import { ActivityPage } from "./routes/activity-page";
@@ -169,6 +170,10 @@ export function App() {
                   <Route
                     path="/tools/connectors/catalog"
                     element={<ConnectorCatalogPage />}
+                  />
+                  <Route
+                    path="/tools/connectors/catalog/:catalogConnectorId/setup"
+                    element={<ConnectorCatalogSetupPage />}
                   />
                   <Route
                     path="/tools/connectors/catalog/:catalogConnectorId"

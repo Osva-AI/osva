@@ -365,6 +365,7 @@ export function ConnectorDetailPage() {
 
       {canWrite ? (
         <SectionPanel
+          id="discover-import"
           title="Discover and import MCP tools"
           description="Discovery lists remote metadata only. Import creates immutable ToolVersions — bind them on an AgentVersion to execute."
         >
