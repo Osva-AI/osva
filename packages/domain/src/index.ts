@@ -1013,6 +1013,33 @@ export {
 export { InboxItemReadState } from "./inbox-item-read-state.js";
 export { InboxReadState } from "./inbox-read-state.js";
 export {
+  buildAgentBackedExecutionContext,
+  buildOfficeWorkerAssignmentHistory,
+  buildWorkflowBackedExecutionContext,
+  buildWorkflowExecutionTimeline,
+  compareOfficeExecutionNodeRuns,
+  indexOfficeWorkersByAgentId,
+  isWorkflowNodeExecutionStatus,
+  resolveWorkflowNodeWorkerAttribution,
+  sortOfficeExecutionNodeRuns,
+  WORKFLOW_NODE_EXECUTION_STATUSES,
+  type AgentBackedExecutionContext,
+  type OfficeAssignmentExecutionContext,
+  type OfficeExecutionAgentVersionRecord,
+  type OfficeExecutionApprovalRecord,
+  type OfficeExecutionAssignmentRecord,
+  type OfficeExecutionNodeRunRecord,
+  type OfficeExecutionRunRecord,
+  type OfficeExecutionWorkerRecord,
+  type OfficeExecutionWorkflowNodeDef,
+  type OfficeExecutionWorkflowRunRecord,
+  type OfficeWorkerAssignmentHistoryRow,
+  type OfficeWorkerAttributionState,
+  type WorkflowBackedExecutionContext,
+  type WorkflowNodeExecutionStatus,
+  type WorkflowNodeTimelineEntry,
+} from "./office-execution-context-projection.js";
+export {
   buildApprovalInboxItem,
   buildAssignmentInboxItem,
   buildChatInboxItem,
