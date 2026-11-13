@@ -37,6 +37,11 @@ describe("Virtual Office navigation", () => {
     expect(navItemMatchesPath(deliverables, "/office/deliverables")).toBe(true);
   });
 
+  it("marks activity route under Virtual Office shell", () => {
+    expect(isOfficeRoute("/office/activity")).toBe(true);
+    expect(isOfficeRoute("/office/inbox")).toBe(true);
+  });
+
   it("marks missions and tasks routes as active", () => {
     const missions = OFFICE_NAV_ITEMS.find(
       (item) => item.navId === "office-missions",

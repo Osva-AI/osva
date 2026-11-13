@@ -1,8 +1,6 @@
 import type {
   AgentId,
-  AgentVersionId,
   ArtifactId,
-  AssignmentId,
   GoalId,
   OfficeWorkerId,
   RunId,
@@ -40,7 +38,6 @@ import {
   workflowDefinitionToExecutionNodes,
 } from "./office-execution-context";
 import {
-  buildOfficeDeliverableProvenanceContext,
   toOfficeDeliverableAssignmentRecords,
   type OfficeDeliverableWorkflowRunSnapshot,
 } from "./office-deliverable-provenance";
@@ -169,10 +166,6 @@ export function buildWorkspaceOfficeActivityFeed(props: {
     workersByAgentId,
   });
 
-  const provenance = buildOfficeDeliverableProvenanceContext(
-    props.assignments,
-    props.workflowRuns,
-  );
   const deliverableAssignments = toOfficeDeliverableAssignmentRecords(
     props.assignments,
   );

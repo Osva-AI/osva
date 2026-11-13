@@ -108,7 +108,7 @@ describe("office worker execution activity", () => {
     await waitFor(() =>
       expect(screen.getByTestId("worker-assignment-activity")).toBeTruthy(),
     );
-    expect(screen.getByText("Recent task")).toBeTruthy();
-    expect(screen.getByText("Mission Alpha")).toBeTruthy();
+    expect(screen.getAllByText("Recent task").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Mission Alpha").length).toBeGreaterThan(0);
   });
 });

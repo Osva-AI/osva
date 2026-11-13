@@ -10,8 +10,10 @@
 | **M22.2B** | Team Chat + Inbox **Console UI** | Planned |
 | **M22.3** | Missions, task planning, assignment management UX (A–D on `feat/m22-3-tasks-missions`) | Implemented (awaiting combined PR + CI) |
 | **M22.4** | Real worker execution, handoffs, human approvals in Office context (A–D on `feat/m22-4-worker-execution-handoffs`) | Implemented, awaiting PR/CI |
-| **M22.5A** | Unified Office deliverables library, mission/task provenance (this slice) | Implemented (awaiting human commit on `feat/m22-5-office-deliverables-activity`) |
-| **M22.5B–D** | Activity, observability, combined acceptance | Planned |
+| **M22.5A** | Unified Office deliverables library, mission/task provenance | Implemented on `feat/m22-5-office-deliverables-activity` (awaiting human PR) |
+| **M22.5B** | Office Activity feed (task-centric, persisted sources) | Implemented on branch (awaiting human PR) |
+| **M22.5C** | Mission Control observability metrics and bounded feeds | Implemented on branch (awaiting human PR) |
+| **M22.5D** | Integrated acceptance, query budget, closeout | Implemented on branch (awaiting human PR) |
 
 **M21** remains exclusively the OSVA Website. Do not conflate website work with Virtual Office milestones.
 
@@ -93,6 +95,16 @@ Assignment `launch` / `cancel` and goal mutations are intentionally **not** expo
 
 - Console unit tests: `office-mission-control-page.test.tsx`, `office-navigation.test.ts`, `server.test.ts` office BFF cases.
 - Full browser E2E against a live stack: **deferred** unless operator runs integration harness locally.
+
+## M22.5 Console surfaces (implemented on branch)
+
+| Console route | Purpose |
+| --- | --- |
+| `/office/deliverables` | Workspace artifact library with verified task/mission provenance |
+| `/office/activity` | Office Activity feed (tasks, workflow steps, approvals, deliverables) |
+| `/office` (Mission Control) | Extended task metrics, recent activity/deliverables, team/worker rollups |
+
+Closeout evidence: [M22_5_CLOSEOUT_SUMMARY.md](../operations/M22_5_CLOSEOUT_SUMMARY.md).
 
 ## References
 
