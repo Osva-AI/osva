@@ -27,6 +27,10 @@
     "./office-execution-context": {
       "types": "./dist/office-execution-context-projection.d.ts",
       "import": "./dist/office-execution-context-projection.js"
+    },
+    "./office-deliverable-provenance": {
+      "types": "./dist/office-deliverable-provenance.d.ts",
+      "import": "./dist/office-deliverable-provenance.js"
     }
   },
   "scripts": {

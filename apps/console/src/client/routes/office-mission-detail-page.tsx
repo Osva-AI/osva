@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
+import { MissionDeliverablesSection } from "../components/office/mission-deliverables-section";
 import { OfficeSectionNav } from "../components/office/office-section-nav";
 import { MissionProgressSummary } from "../components/office/mission-progress-summary";
 import { ErrorState } from "../components/error-state/error-state";
@@ -247,6 +248,11 @@ export function OfficeMissionDetailPage() {
               </ul>
             )}
           </SectionPanel>
+
+          <MissionDeliverablesSection
+            missionId={missionId}
+            linkedAssignments={linkedAssignments}
+          />
 
           <SectionPanel title="Linked tasks">
             {linkedAssignments.length === 0 ? (

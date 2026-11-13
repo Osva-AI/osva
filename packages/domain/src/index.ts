@@ -1056,6 +1056,19 @@ export {
   parseOperationalInboxItemId,
   sortInboxItemsDescending,
 } from "./office-inbox-projection.js";
+export {
+  buildOfficeAssignmentExecutionIndex,
+  buildWorkflowChildRunToAssignmentsIndex,
+  collectWorkflowChildRunBindings,
+  resolveOfficeDeliverableMissionAssociation,
+  resolveOfficeDeliverableTaskAssociation,
+  type OfficeAssignmentExecutionIndex,
+  type OfficeDeliverableAssignmentRecord,
+  type OfficeDeliverableMissionAssociation,
+  type OfficeDeliverableTaskAssociation,
+  type WorkflowChildRunBinding,
+  type WorkflowNodeRunChildRunRecord,
+} from "./office-deliverable-provenance.js";
 export { OfficeMessage } from "./office-message.js";
 export { OfficeThread } from "./office-thread.js";
 export type {

@@ -30,6 +30,13 @@ describe("Virtual Office navigation", () => {
     expect(navItemMatchesPath(workers, "/office/workers/ow-1")).toBe(true);
   });
 
+  it("marks deliverables route as active", () => {
+    const deliverables = OFFICE_NAV_ITEMS.find(
+      (item) => item.navId === "office-deliverables",
+    )!;
+    expect(navItemMatchesPath(deliverables, "/office/deliverables")).toBe(true);
+  });
+
   it("marks missions and tasks routes as active", () => {
     const missions = OFFICE_NAV_ITEMS.find(
       (item) => item.navId === "office-missions",

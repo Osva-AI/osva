@@ -71,6 +71,7 @@ import { OfficeMissionDetailPage } from "./routes/office-mission-detail-page";
 import { OfficeTaskCreatePage } from "./routes/office-task-create-page";
 import { OfficeTaskDetailPage } from "./routes/office-task-detail-page";
 import { OfficeTasksBoardPage } from "./routes/office-tasks-board-page";
+import { OfficeDeliverablesPage } from "./routes/office-deliverables-page";
 
 const queryClient = createQueryClient();
 
@@ -250,6 +251,10 @@ export function App() {
                   <Route
                     path="/office/tasks"
                     element={<OfficeTasksBoardPage />}
+                  />
+                  <Route
+                    path="/office/deliverables"
+                    element={<OfficeDeliverablesPage />}
                   />
                   <Route path="/office/chat" element={<OfficeChatPage />} />
                   <Route
