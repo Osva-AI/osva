@@ -23,6 +23,10 @@
     "./workflow-definition": {
       "types": "./dist/workflow-definition.d.ts",
       "import": "./dist/workflow-definition.js"
+    },
+    "./office-execution-context": {
+      "types": "./dist/office-execution-context-projection.d.ts",
+      "import": "./dist/office-execution-context-projection.js"
     }
   },
   "scripts": {

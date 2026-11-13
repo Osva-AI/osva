@@ -22,6 +22,9 @@ export function OfficeInboxItemRow({
   const acknowledge = useAcknowledgeInboxItemMutation();
   const approvalDecision = useApprovalDecisionMutation(
     item.workflowRunId ?? "",
+    item.assignmentId === undefined
+      ? undefined
+      : { assignmentId: item.assignmentId },
   );
   const [comment, setComment] = useState("");
   const [feedback, setFeedback] = useState<string | undefined>();
@@ -77,6 +80,19 @@ export function OfficeInboxItemRow({
         <Link to={sourceLink.to} className="text-link">
           {sourceLink.label}
         </Link>
+      ) : null}
+      {item.kind === "APPROVAL_PENDING" &&
+      item.assignmentId !== undefined &&
+      item.workflowRunId !== undefined ? (
+        <>
+          {" "}
+          <Link
+            to={`/workflow-runs/${encodeURIComponent(item.workflowRunId)}`}
+            className="text-link"
+          >
+            WorkflowRun detail
+          </Link>
+        </>
       ) : null}
       {item.kind === "APPROVAL_PENDING" &&
       item.approvalRequestId !== undefined ? (
@@ -161,11 +177,19 @@ function formatInboxKind(kind: InboxItemResource["kind"]): string {
 function resolveInboxItemLink(
   item: InboxItemResource,
 ): { readonly to: string; readonly label: string } | null {
-  if (item.workflowRunId !== undefined && item.kind === "APPROVAL_PENDING") {
-    return {
-      to: `/workflow-runs/${encodeURIComponent(item.workflowRunId)}`,
-      label: "Open workflow run",
-    };
+  if (item.kind === "APPROVAL_PENDING") {
+    if (item.assignmentId !== undefined) {
+      return {
+        to: `/office/tasks/${encodeURIComponent(item.assignmentId)}`,
+        label: "Open Office task",
+      };
+    }
+    if (item.workflowRunId !== undefined) {
+      return {
+        to: `/workflow-runs/${encodeURIComponent(item.workflowRunId)}`,
+        label: "Open workflow run",
+      };
+    }
   }
   if (item.runId !== undefined) {
     return {

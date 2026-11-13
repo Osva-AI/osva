@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../src/client/context/auth-context";
 import { OfficeTaskDetailPage } from "../src/client/routes/office-task-detail-page";
@@ -73,7 +73,7 @@ const assignments = {
     targetType: "WORKFLOW_VERSION" as const,
     targetVersionId: "wv-1",
     input: {},
-    status: "COMPLETED" as const,
+    status: "RUNNING" as const,
     workflowRunId: "wfr-1",
     createdAt: "2026-01-01T00:00:00.000Z",
     startedAt: "2026-01-01T00:01:00.000Z",
@@ -189,13 +189,161 @@ function officeStub(
     if (path.includes("/api/v1/workflow-runs/wfr-1")) {
       return json({
         id: "wfr-1",
+        workspaceId: "ws-office",
         workflowId: "wf-1",
         workflowVersionId: "wv-1",
-        status: "SUCCEEDED",
+        status: "WAITING",
         input: {},
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:02:00.000Z",
-        nodeRuns: [],
+        nodeRuns: [
+          {
+            id: "nr-agent",
+            workspaceId: "ws-office",
+            workflowRunId: "wfr-1",
+            workflowNodeKey: "agent-a",
+            sequence: 1,
+            status: "SUCCEEDED",
+            input: {},
+            childRunId: "child-run-1",
+            createdAt: "2026-01-01T00:01:00.000Z",
+            updatedAt: "2026-01-01T00:01:30.000Z",
+          },
+          {
+            id: "nr-approve",
+            workspaceId: "ws-office",
+            workflowRunId: "wfr-1",
+            workflowNodeKey: "approve",
+            sequence: 2,
+            status: "WAITING",
+            input: {},
+            createdAt: "2026-01-01T00:01:30.000Z",
+            updatedAt: "2026-01-01T00:02:00.000Z",
+          },
+          {
+            id: "nr-agent-b",
+            workspaceId: "ws-office",
+            workflowRunId: "wfr-1",
+            workflowNodeKey: "agent-b",
+            sequence: 3,
+            status: "PENDING",
+            input: {},
+            createdAt: "2026-01-01T00:02:00.000Z",
+            updatedAt: "2026-01-01T00:02:00.000Z",
+          },
+        ],
+        approvalRequests: [
+          {
+            id: "apr-1",
+            workspaceId: "ws-office",
+            workflowRunId: "wfr-1",
+            workflowNodeRunId: "nr-approve",
+            status: "PENDING",
+            createdAt: "2026-01-01T00:01:30.000Z",
+          },
+        ],
+      });
+    }
+    if (path.includes("/api/v1/workflows/wf-1/versions/wv-1")) {
+      return json({
+        id: "wv-1",
+        workflowId: "wf-1",
+        workspaceId: "ws-office",
+        version: 1,
+        definition: {
+          schemaVersion: "3",
+          nodes: [
+            { key: "agent-a", type: "AGENT", agentVersionId: "av-1" },
+            { key: "approve", type: "APPROVAL", title: "Review" },
+            { key: "agent-b", type: "AGENT", agentVersionId: "av-2" },
+          ],
+          edges: [
+            { from: "agent-a", to: "approve" },
+            { from: "approve", to: "agent-b" },
+          ],
+        },
+        createdAt: "2026-01-01T00:00:00.000Z",
+      });
+    }
+    if (path.endsWith("/api/v1/agents")) {
+      return json({
+        agents: [
+          {
+            id: "agent-1",
+            key: "agent-a",
+            name: "Agent A",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+          {
+            id: "agent-2",
+            key: "agent-b",
+            name: "Agent B",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      });
+    }
+    if (path.includes("/api/v1/agents/agent-1/versions")) {
+      return json({
+        versions: [
+          {
+            id: "av-1",
+            agentId: "agent-1",
+            version: 1,
+            manifest: { schemaVersion: "1", key: "a" },
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      });
+    }
+    if (path.includes("/api/v1/agents/agent-2/versions")) {
+      return json({
+        versions: [
+          {
+            id: "av-2",
+            agentId: "agent-2",
+            version: 1,
+            manifest: { schemaVersion: "1", key: "b" },
+            createdAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      });
+    }
+    if (path.endsWith("/api/v1/office/teams")) {
+      return json({
+        items: [
+          {
+            id: "team-1",
+            workspaceId: "ws-office",
+            key: "ops",
+            name: "Ops",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      });
+    }
+    if (path.includes("/api/v1/office/teams/team-1/memberships")) {
+      return json({
+        items: [
+          { teamId: "team-1", officeWorkerId: worker.id, roleId: "role-1" },
+        ],
+      });
+    }
+    if (path.endsWith("/api/v1/office/roles")) {
+      return json({
+        items: [
+          {
+            id: "role-1",
+            workspaceId: "ws-office",
+            key: "analyst",
+            name: "Analyst",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
       });
     }
     return undefined;
@@ -203,6 +351,17 @@ function officeStub(
 }
 
 describe("office tasks ui", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    );
+  });
+
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -292,5 +451,57 @@ describe("office tasks ui", () => {
         screen.getByTestId("task-execution-link").getAttribute("href"),
       ).toBe("/workflow-runs/wfr-1");
     });
+  });
+
+  it("renders workflow handoff panel and populated node timeline", async () => {
+    officeStub("VIEWER");
+    wrap(<OfficeTaskDetailPage />, ["/office/tasks/asn-wf"]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("task-workflow-handoff-panel")).toBeTruthy();
+    });
+
+    expect(screen.getByTestId("task-execution-timeline")).toBeTruthy();
+    expect(screen.queryByTestId("task-execution-timeline-empty")).toBeNull();
+    expect(screen.getByTestId("timeline-node-agent-a")).toBeTruthy();
+    expect(screen.getByTestId("timeline-node-approve")).toBeTruthy();
+    expect(
+      screen.getByText(/membership only — not node ownership/i),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("handoff-edge-edge:agent-a->approve"),
+    ).toBeTruthy();
+    expect(screen.getByText(/Blocking point:/i)).toBeTruthy();
+  });
+
+  it("renders human approvals on workflow-backed task detail", async () => {
+    officeStub("VIEWER");
+    wrap(<OfficeTaskDetailPage />, ["/office/tasks/asn-wf"]);
+
+    const approvalCard = await screen.findByTestId(
+      "task-approval-apr-1",
+      {},
+      { timeout: 5_000 },
+    );
+    expect(approvalCard).toBeTruthy();
+    expect(
+      within(approvalCard).getByRole("heading", { name: "Review" }),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByTestId("task-approval-workflow-run-link")
+        .getAttribute("href"),
+    ).toBe("/workflow-runs/wfr-1");
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+  });
+
+  it("shows approval actions for OPERATOR on pending approval", async () => {
+    officeStub("OPERATOR");
+    wrap(<OfficeTaskDetailPage />, ["/office/tasks/asn-wf"]);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy(),
+    );
+    expect(screen.getByRole("button", { name: "Reject" })).toBeTruthy();
   });
 });

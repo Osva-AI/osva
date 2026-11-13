@@ -9,7 +9,7 @@
 | **M22.2A** | Team Chat + Inbox **backend** (threads, messages, read state, inbox projection) | Implemented (awaiting PR) |
 | **M22.2B** | Team Chat + Inbox **Console UI** | Planned |
 | **M22.3** | Missions, task planning, assignment management UX (A–D on `feat/m22-3-tasks-missions`) | Implemented (awaiting combined PR + CI) |
-| **M22.4** | Real worker execution, handoffs, human approvals in Office context | Planned |
+| **M22.4** | Real worker execution, handoffs, human approvals in Office context (A–D on `feat/m22-4-worker-execution-handoffs`) | Implemented, awaiting PR/CI |
 | **M22.5** | Deliverables, activity, observability, end-to-end acceptance | Planned |
 
 **M21** remains exclusively the OSVA Website. Do not conflate website work with Virtual Office milestones.

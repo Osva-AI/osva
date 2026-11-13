@@ -9,6 +9,7 @@ import { Button, LinkButton } from "../components/ui/button";
 import { DataTableRegion } from "../components/ui/data-table-region";
 import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
+import { WorkerAssignmentActivitySection } from "../components/office/worker-assignment-activity-section";
 import { useAgentQuery } from "../hooks/use-agents";
 import {
   useAllTeamMembershipsQuery,
@@ -22,9 +23,11 @@ import { useAuthContextQuery } from "../hooks/use-auth-context";
 import { ConsoleApiError } from "../lib/console-api";
 import { formatTimestamp } from "../lib/formatting";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
 export function OfficeWorkerDetailPage() {
   const { workerId } = useParams<{ workerId: string }>();
+  const workspaceId = useWorkspaceQueryScope();
   const authQuery = useAuthContextQuery();
   const workerQuery = useOfficeWorkerQuery(workerId);
   const agentQuery = useAgentQuery(workerQuery.data?.agentId);
@@ -268,6 +271,13 @@ export function OfficeWorkerDetailPage() {
               </dl>
             </SectionPanel>
           )}
+
+          {workspaceId !== undefined ? (
+            <WorkerAssignmentActivitySection
+              workspaceId={workspaceId}
+              officeWorkerId={workerQuery.data.id}
+            />
+          ) : null}
 
           <SectionPanel title="Team memberships">
             {membershipQueries.some((query) => query.isLoading) ? (

@@ -4716,6 +4716,61 @@ button.agent-studio-v2-progress-link {
   grid-area: list;
 }
 
+.office-task-execution-timeline {
+  margin-top: var(--space-4);
+}
+
+.office-task-execution-timeline-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.office-task-execution-timeline-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.office-task-execution-timeline-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.office-task-execution-timeline-item-title {
+  font-weight: 600;
+}
+
+.office-task-handoff-panel {
+  margin-top: var(--space-4);
+}
+
+.office-task-handoff-graph .workflow-graph-view {
+  height: min(320px, 50vh);
+  margin-top: var(--space-2);
+}
+
+.office-task-handoff-graph .workflow-graph-interaction-hint {
+  font-size: var(--text-sm);
+}
+
+.office-task-handoff-edges {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.office-worker-team-context {
+  display: inline;
+  font-size: var(--text-sm);
+}
+
 .workflow-run-inspector-head {
   display: flex;
   justify-content: space-between;

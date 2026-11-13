@@ -568,6 +568,30 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
       );
     }
 
+    const workflowAssignmentRows = await this.database.db
+      .select({
+        id: assignments.id,
+        workflowRunId: assignments.workflowRunId,
+      })
+      .from(assignments)
+      .where(
+        and(
+          eq(assignments.workspaceId, query.workspaceId),
+          isNotNull(assignments.workflowRunId),
+        ),
+      );
+
+    const assignmentIdsByWorkflowRunId = new Map<string, string[]>();
+    for (const row of workflowAssignmentRows) {
+      if (row.workflowRunId === null) {
+        continue;
+      }
+      const existing =
+        assignmentIdsByWorkflowRunId.get(row.workflowRunId) ?? [];
+      existing.push(row.id);
+      assignmentIdsByWorkflowRunId.set(row.workflowRunId, existing);
+    }
+
     const approvalRows = await this.database.db
       .select()
       .from(approvalRequests)
@@ -579,7 +603,20 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
       );
 
     for (const row of approvalRows) {
-      const item = buildApprovalInboxItem(approvalRequestFromRow(row));
+      const approval = approvalRequestFromRow(row);
+      const linkedAssignments = assignmentIdsByWorkflowRunId.get(
+        approval.workflowRunId,
+      );
+      const assignmentId =
+        linkedAssignments !== undefined && linkedAssignments.length === 1
+          ? linkedAssignments[0]
+          : undefined;
+      const item = buildApprovalInboxItem(
+        approval,
+        assignmentId === undefined
+          ? undefined
+          : { assignmentId: assignmentId as never },
+      );
       if (!acknowledged.has(item.id)) {
         unreadItems.push(item);
       }

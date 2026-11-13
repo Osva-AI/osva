@@ -157,7 +157,10 @@ export function useCreateWorkflowRunMutation() {
   });
 }
 
-export function useApprovalDecisionMutation(workflowRunId: string) {
+export function useApprovalDecisionMutation(
+  workflowRunId: string,
+  options?: { readonly assignmentId?: string },
+) {
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceQueryScope();
   return useMutation({
@@ -189,6 +192,22 @@ export function useApprovalDecisionMutation(workflowRunId: string) {
       await queryClient.invalidateQueries({
         queryKey: ["workflow-runs", workspaceId, "list"],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["office", workspaceId, "assignments"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["office", workspaceId, "inbox"],
+      });
+      if (options?.assignmentId !== undefined) {
+        await queryClient.invalidateQueries({
+          queryKey: [
+            "office",
+            workspaceId,
+            "assignments",
+            options.assignmentId,
+          ],
+        });
+      }
     },
   });
 }

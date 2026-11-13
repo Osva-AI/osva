@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { TaskDeliverablesSection } from "../components/office/task-deliverables-section";
+import { TaskExecutionContextSection } from "../components/office/task-execution-context-section";
+import { TaskWorkflowApprovalSection } from "../components/office/task-workflow-approval-section";
 import { OfficeSectionNav } from "../components/office/office-section-nav";
 import { ErrorState } from "../components/error-state/error-state";
 import { JsonView } from "../components/json-view/json-view";
@@ -21,9 +23,14 @@ import {
   useOfficeGoalQuery,
   useOfficeWorkerQuery,
 } from "../hooks/use-office";
-import { useRunAttemptsQuery, useRunQuery } from "../hooks/use-runs";
+import { useRunQuery } from "../hooks/use-runs";
 import { useWorkflowRunQuery } from "../hooks/use-workflow-runs";
+import { useWorkflowVersionQuery } from "../hooks/use-workflows";
 import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
+import {
+  asWorkflowDefinitionView,
+  type WorkflowDefinitionView,
+} from "../lib/workflow-definition";
 import { ConsoleApiError } from "../lib/console-api";
 import {
   assignmentDurationLabel,
@@ -35,9 +42,6 @@ import {
   roleCanExecuteControlPlaneActions,
   roleCanWriteControlPlaneResources,
 } from "../lib/permissions";
-import { runExecutionStatusLabel } from "../lib/run-execution-labels";
-import { runStatusCategory, workflowRunStatusCategory } from "../lib/statuses";
-import { workflowRunExecutionStatusLabel } from "../lib/workflow-execution-labels";
 
 export function OfficeTaskDetailPage() {
   const { taskId } = useParams<{ readonly taskId: string }>();
@@ -75,15 +79,17 @@ export function OfficeTaskDetailPage() {
   }, [assignment, queryClient, workspaceId]);
 
   const runQuery = useRunQuery(assignment?.runId);
-  const attemptsQuery = useRunAttemptsQuery(
-    assignment?.runId,
-    runQuery.data?.status,
-  );
   const workflowRunQuery = useWorkflowRunQuery(assignment?.workflowRunId);
-
-  const latestAttempt = attemptsQuery.data?.attempts.at(-1);
-  const executionPath =
-    assignment !== undefined ? assignmentExecutionPath(assignment) : undefined;
+  const workflowVersionQuery = useWorkflowVersionQuery(
+    workflowRunQuery.data?.workflowId,
+    workflowRunQuery.data?.workflowVersionId,
+  );
+  const workflowDefinition = useMemo((): WorkflowDefinitionView | undefined => {
+    if (workflowVersionQuery.data?.definition === undefined) {
+      return undefined;
+    }
+    return asWorkflowDefinitionView(workflowVersionQuery.data.definition);
+  }, [workflowVersionQuery.data?.definition]);
 
   if (taskId === undefined) {
     return (
@@ -282,39 +288,25 @@ export function OfficeTaskDetailPage() {
             <JsonView value={assignment.input} />
           </SectionPanel>
 
-          <SectionPanel title="Execution">
-            {executionPath === undefined ? (
-              <p className="muted">
-                Not launched yet. Launch starts a Run or WorkflowRun for this
-                worker and target version.
-              </p>
-            ) : (
-              <>
-                <p>
-                  <Link to={executionPath} data-testid="task-execution-link">
-                    Open full execution details
-                  </Link>
-                </p>
-                {assignment.runId !== undefined &&
-                runQuery.data !== undefined ? (
-                  <RunExecutionSummary
-                    status={runQuery.data.status}
-                    latestAttemptError={latestAttempt?.error}
-                  />
-                ) : null}
-                {assignment.workflowRunId !== undefined &&
-                workflowRunQuery.data !== undefined ? (
-                  <WorkflowExecutionSummary
-                    status={workflowRunQuery.data.status}
-                  />
-                ) : null}
-              </>
-            )}
-            <p className="muted">
-              In-flight Run cancellation is not available from the Task Board.
-              Cancel applies only to PENDING assignments.
-            </p>
-          </SectionPanel>
+          <TaskExecutionContextSection
+            assignment={assignment}
+            officeWorker={workerQuery.data}
+            run={runQuery.data}
+            workflowRun={workflowRunQuery.data}
+            runLoading={runQuery.isLoading}
+            workflowRunLoading={workflowRunQuery.isLoading}
+          />
+
+          {assignment.workflowRunId !== undefined &&
+          workflowRunQuery.data !== undefined ? (
+            <TaskWorkflowApprovalSection
+              assignmentId={assignment.id}
+              workspaceId={assignment.workspaceId}
+              workflowRun={workflowRunQuery.data}
+              definition={workflowDefinition}
+              canExecute={canExecute}
+            />
+          ) : null}
 
           <SectionPanel title="Deliverables">
             <TaskDeliverablesSection assignment={assignment} />
@@ -348,46 +340,6 @@ export function OfficeTaskDetailPage() {
         onConfirm={() => void confirmCancel()}
         onCancel={() => setCancelDialogOpen(false)}
       />
-    </div>
-  );
-}
-
-function RunExecutionSummary(props: {
-  readonly status: string;
-  readonly latestAttemptError:
-    { readonly code: string; readonly message: string } | undefined;
-}) {
-  return (
-    <div className="metadata-grid">
-      <div>
-        <p className="metric-label">Run status</p>
-        <StatusChip
-          status={runExecutionStatusLabel(props.status)}
-          category={runStatusCategory(props.status)}
-        />
-      </div>
-      {props.latestAttemptError !== undefined ? (
-        <div>
-          <p className="metric-label">Latest attempt error</p>
-          <p className="form-feedback error">
-            {props.latestAttemptError.code}: {props.latestAttemptError.message}
-          </p>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function WorkflowExecutionSummary(props: { readonly status: string }) {
-  return (
-    <div className="metadata-grid">
-      <div>
-        <p className="metric-label">WorkflowRun status</p>
-        <StatusChip
-          status={workflowRunExecutionStatusLabel(props.status)}
-          category={workflowRunStatusCategory(props.status)}
-        />
-      </div>
     </div>
   );
 }
