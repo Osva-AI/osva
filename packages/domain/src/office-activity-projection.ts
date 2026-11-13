@@ -5,7 +5,6 @@ import type {
   GoalId,
   OfficeWorkerId,
   RunId,
-  WorkflowNodeRunId,
   WorkflowRunId,
   WorkspaceId,
 } from "@osva-ai/contracts";

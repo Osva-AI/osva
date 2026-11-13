@@ -56,6 +56,7 @@ describe("Office Mission Control", () => {
       running: 1,
       completed: 1,
       failed: 0,
+      cancelled: 0,
     });
   });
 

@@ -74,5 +74,5 @@ Omissions are labeled in UI footnotes. Mission/worker summaries cap at 15 rows a
 
 ## M22.5C dependencies
 
-- Observability rollups and automation hooks may consume the same projection package.
+- Observability rollups documented in `M22_5C_OFFICE_OBSERVABILITY.md` (domain `@osva/domain/office-observability`).
 - Combined M22.5A–D acceptance (`verify:ci:clean`) remains M22.5D.

@@ -11,6 +11,7 @@ import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
 import { WorkerAssignmentActivitySection } from "../components/office/worker-assignment-activity-section";
 import { WorkerOfficeActivitySection } from "../components/office/worker-office-activity-section";
+import { OfficeWorkerPerformanceSection } from "../components/office/office-worker-performance-section";
 import { useAgentQuery } from "../hooks/use-agents";
 import {
   useAllTeamMembershipsQuery,
@@ -272,6 +273,10 @@ export function OfficeWorkerDetailPage() {
               </dl>
             </SectionPanel>
           )}
+
+          <OfficeWorkerPerformanceSection
+            officeWorkerId={workerQuery.data.id}
+          />
 
           {workspaceId !== undefined ? (
             <WorkerAssignmentActivitySection

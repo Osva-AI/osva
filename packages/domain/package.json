@@ -35,6 +35,10 @@
     "./office-activity": {
       "types": "./dist/office-activity-projection.d.ts",
       "import": "./dist/office-activity-projection.js"
+    },
+    "./office-observability": {
+      "types": "./dist/office-observability-projection.d.ts",
+      "import": "./dist/office-observability-projection.js"
     }
   },
   "scripts": {
