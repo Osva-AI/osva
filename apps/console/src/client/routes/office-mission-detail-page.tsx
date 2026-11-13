@@ -10,6 +10,7 @@ import { Button, LinkButton } from "../components/ui/button";
 import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
+import { useOfficeInboxQuery } from "../hooks/use-office-collaboration";
 import {
   useOfficeAssignmentsQuery,
   useOfficeGoalQuery,
@@ -38,6 +39,7 @@ export function OfficeMissionDetailPage() {
   const goalQuery = useOfficeGoalQuery(missionId);
   const assignmentsQuery = useOfficeAssignmentsQuery();
   const workersQuery = useOfficeWorkersQuery();
+  const inboxQuery = useOfficeInboxQuery();
 
   const canWrite =
     authQuery.data !== undefined &&
@@ -79,6 +81,40 @@ export function OfficeMissionDetailPage() {
       .map((id) => workerById.get(id))
       .filter((w): w is OfficeWorkerResource => w !== undefined);
   }, [linkedAssignments, workerById]);
+
+  const missionApprovalInboxItems = useMemo(() => {
+    if (linkedAssignments.length === 0) {
+      return [];
+    }
+    const workflowRunIds = new Set(
+      linkedAssignments
+        .map((row) => row.workflowRunId)
+        .filter((id): id is string => id !== undefined),
+    );
+    const assignmentByWorkflowRunId = new Map<
+      string,
+      OfficeAssignmentResource
+    >();
+    for (const row of linkedAssignments) {
+      if (row.workflowRunId !== undefined) {
+        assignmentByWorkflowRunId.set(row.workflowRunId, row);
+      }
+    }
+    return (inboxQuery.data?.items ?? [])
+      .filter(
+        (item) =>
+          item.kind === "APPROVAL_PENDING" &&
+          item.workflowRunId !== undefined &&
+          workflowRunIds.has(item.workflowRunId),
+      )
+      .map((item) => ({
+        item,
+        assignment:
+          item.workflowRunId === undefined
+            ? undefined
+            : assignmentByWorkflowRunId.get(item.workflowRunId),
+      }));
+  }, [inboxQuery.data?.items, linkedAssignments]);
 
   const executionSummary = useMemo(() => {
     let pending = 0;
@@ -179,6 +215,10 @@ export function OfficeMissionDetailPage() {
             ) : null}
             <MissionProgressSummary progress={progress} />
             <ExecutionSummaryRow summary={executionSummary} />
+            <MissionApprovalAttention
+              items={missionApprovalInboxItems}
+              inboxLoading={inboxQuery.isLoading}
+            />
           </SectionPanel>
 
           {canWrite ? (
@@ -243,6 +283,68 @@ export function OfficeMissionDetailPage() {
   );
 }
 
+function MissionApprovalAttention(props: {
+  readonly items: readonly {
+    readonly item: { readonly id: string; readonly approvalRequestId?: string };
+    readonly assignment?: OfficeAssignmentResource;
+  }[];
+  readonly inboxLoading: boolean;
+}) {
+  if (props.inboxLoading) {
+    return (
+      <p className="muted" data-testid="mission-approval-attention-loading">
+        Loading inbox-backed approval attention…
+      </p>
+    );
+  }
+
+  if (props.items.length === 0) {
+    return (
+      <p className="muted" data-testid="mission-approval-attention-empty">
+        No pending approvals for this mission&apos;s workflow-backed tasks
+        appear in your Unified Inbox projection. Open individual task detail
+        pages or{" "}
+        <Link to="/office/inbox" className="text-link">
+          Unified Inbox
+        </Link>{" "}
+        for workspace-wide approval items.
+      </p>
+    );
+  }
+
+  return (
+    <section
+      className="stack"
+      data-testid="mission-approval-attention"
+      aria-label="Pending approvals from inbox"
+    >
+      <h3 className="panel-title">Approval attention</h3>
+      <p className="muted">
+        Listed from inbox projection only (pending{" "}
+        <span className="mono">ApprovalRequest</span> rows for tasks on this
+        mission). Not an exhaustive mission-wide count.
+      </p>
+      <ul className="office-v2-chip-list">
+        {props.items.map((row) =>
+          row.assignment !== undefined ? (
+            <li key={row.item.id}>
+              <Link
+                className="office-v2-entity-chip"
+                to={`/office/tasks/${row.assignment.id}`}
+              >
+                {row.assignment.title} — approval pending
+              </Link>
+            </li>
+          ) : null,
+        )}
+      </ul>
+      <Link to="/office/inbox" className="text-link">
+        Open Unified Inbox
+      </Link>
+    </section>
+  );
+}
+
 function ExecutionSummaryRow(props: {
   readonly summary: {
     readonly pending: number;
@@ -258,9 +360,10 @@ function ExecutionSummaryRow(props: {
     >
       Execution: {props.summary.pending} pending, {props.summary.running}{" "}
       running, {props.summary.completed} completed
-      {props.summary.failed > 0 ? `, ${props.summary.failed} failed` : null}.{" "}
-      Workflow handoff graphs live on each workflow-backed task&apos;s Task
-      detail — not aggregated here.
+      {props.summary.failed > 0
+        ? `, ${props.summary.failed} failed`
+        : null}. Workflow handoff graphs live on each workflow-backed
+      task&apos;s Task detail — not aggregated here.
     </p>
   );
 }

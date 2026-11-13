@@ -568,6 +568,29 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
       );
     }
 
+    const workflowAssignmentRows = await this.database.db
+      .select({
+        id: assignments.id,
+        workflowRunId: assignments.workflowRunId,
+      })
+      .from(assignments)
+      .where(
+        and(
+          eq(assignments.workspaceId, query.workspaceId),
+          isNotNull(assignments.workflowRunId),
+        ),
+      );
+
+    const assignmentIdByWorkflowRunId = new Map<string, string>();
+    for (const row of workflowAssignmentRows) {
+      if (row.workflowRunId === null) {
+        continue;
+      }
+      if (!assignmentIdByWorkflowRunId.has(row.workflowRunId)) {
+        assignmentIdByWorkflowRunId.set(row.workflowRunId, row.id);
+      }
+    }
+
     const approvalRows = await this.database.db
       .select()
       .from(approvalRequests)
@@ -579,7 +602,16 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
       );
 
     for (const row of approvalRows) {
-      const item = buildApprovalInboxItem(approvalRequestFromRow(row));
+      const approval = approvalRequestFromRow(row);
+      const assignmentId = assignmentIdByWorkflowRunId.get(
+        approval.workflowRunId,
+      );
+      const item = buildApprovalInboxItem(
+        approval,
+        assignmentId === undefined
+          ? undefined
+          : { assignmentId: assignmentId as never },
+      );
       if (!acknowledged.has(item.id)) {
         unreadItems.push(item);
       }

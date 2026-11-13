@@ -76,7 +76,7 @@ Unchanged M22.3 matrix: READ suffices for execution summaries; links target exis
 ## M22.4B/C dependencies
 
 - **M22.4B:** Implemented — see `M22_4B_WORKFLOW_HANDOFFS.md` (graph handoffs, team context on Task detail).
-- **M22.4C:** Human approval UX enhancements remain on WorkflowRun detail; timeline shows approval id/status link only.
+- **M22.4C:** Implemented — see `M22_4C_HUMAN_APPROVALS.md` (Task/Mission/Inbox approval UX; shared `WorkflowApprovalActions`).
 
 ## Deferred scope
 

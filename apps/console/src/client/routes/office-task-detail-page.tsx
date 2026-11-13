@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { TaskDeliverablesSection } from "../components/office/task-deliverables-section";
 import { TaskExecutionContextSection } from "../components/office/task-execution-context-section";
+import { TaskWorkflowApprovalSection } from "../components/office/task-workflow-approval-section";
 import { OfficeSectionNav } from "../components/office/office-section-nav";
 import { ErrorState } from "../components/error-state/error-state";
 import { JsonView } from "../components/json-view/json-view";
@@ -24,7 +25,12 @@ import {
 } from "../hooks/use-office";
 import { useRunQuery } from "../hooks/use-runs";
 import { useWorkflowRunQuery } from "../hooks/use-workflow-runs";
+import { useWorkflowVersionQuery } from "../hooks/use-workflows";
 import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
+import {
+  asWorkflowDefinitionView,
+  type WorkflowDefinitionView,
+} from "../lib/workflow-definition";
 import { ConsoleApiError } from "../lib/console-api";
 import {
   assignmentDurationLabel,
@@ -74,6 +80,16 @@ export function OfficeTaskDetailPage() {
 
   const runQuery = useRunQuery(assignment?.runId);
   const workflowRunQuery = useWorkflowRunQuery(assignment?.workflowRunId);
+  const workflowVersionQuery = useWorkflowVersionQuery(
+    workflowRunQuery.data?.workflowId,
+    workflowRunQuery.data?.workflowVersionId,
+  );
+  const workflowDefinition = useMemo((): WorkflowDefinitionView | undefined => {
+    if (workflowVersionQuery.data?.definition === undefined) {
+      return undefined;
+    }
+    return asWorkflowDefinitionView(workflowVersionQuery.data.definition);
+  }, [workflowVersionQuery.data?.definition]);
 
   if (taskId === undefined) {
     return (
@@ -280,6 +296,17 @@ export function OfficeTaskDetailPage() {
             runLoading={runQuery.isLoading}
             workflowRunLoading={workflowRunQuery.isLoading}
           />
+
+          {assignment.workflowRunId !== undefined &&
+          workflowRunQuery.data !== undefined ? (
+            <TaskWorkflowApprovalSection
+              assignmentId={assignment.id}
+              workspaceId={assignment.workspaceId}
+              workflowRun={workflowRunQuery.data}
+              definition={workflowDefinition}
+              canExecute={canExecute}
+            />
+          ) : null}
 
           <SectionPanel title="Deliverables">
             <TaskDeliverablesSection assignment={assignment} />

@@ -66,6 +66,7 @@ export function buildChatInboxItem(props: {
 
 export function buildApprovalInboxItem(
   request: ApprovalRequest,
+  options?: { readonly assignmentId?: AssignmentId },
 ): InboxItemResourceV1 {
   return {
     id: inboxItemIdForApproval(request.id),
@@ -76,6 +77,9 @@ export function buildApprovalInboxItem(
     summary: "A workflow is waiting for a human decision.",
     approvalRequestId: request.id,
     workflowRunId: request.workflowRunId,
+    ...(options?.assignmentId === undefined
+      ? {}
+      : { assignmentId: options.assignmentId }),
   };
 }
 

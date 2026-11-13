@@ -42,6 +42,10 @@ describe("office inbox projection", () => {
       createdAt: NOW,
     });
     const item = buildApprovalInboxItem(pending);
+    const withAssignment = buildApprovalInboxItem(pending, {
+      assignmentId: "asn-1" as never,
+    });
+    expect(withAssignment.assignmentId).toBe("asn-1");
     expect(item.kind).toBe("APPROVAL_PENDING");
     expect(item.workflowRunId).toBe("wfr-1");
   });

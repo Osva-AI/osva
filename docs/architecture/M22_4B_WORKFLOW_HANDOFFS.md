@@ -65,5 +65,5 @@ Concise copy only: handoff graphs stay on Task detail to avoid N+1 WorkflowRun f
 
 ## Dependencies
 
-- **M22.4C:** Human approval UX enhancements remain on WorkflowRun detail; Task view links there for decisions.
+- **M22.4C:** Implemented — see `M22_4C_HUMAN_APPROVALS.md` (Task approval section; Inbox → Task navigation).
 - **M22.4D:** Combined verification gate after full M22.4 slice.

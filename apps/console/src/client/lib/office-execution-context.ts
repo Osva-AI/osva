@@ -1,5 +1,6 @@
 import {
   buildAgentBackedExecutionContext,
+  buildOfficeWorkflowApprovalViews as buildOfficeWorkflowApprovalViewsFromDomain,
   buildOfficeWorkerAssignmentHistory,
   buildOfficeWorkflowHandoffProjection,
   buildWorkflowBackedExecutionContext,
@@ -137,6 +138,7 @@ function toOfficeExecutionApprovalRecord(
     workflowRunId: request.workflowRunId as WorkflowRunId,
     workflowNodeRunId: request.workflowNodeRunId as WorkflowNodeRunId,
     status: request.status,
+    decisionComment: request.decisionComment,
     createdAt: new Date(request.createdAt),
     decidedAt: parseDate(request.decidedAt),
   };
@@ -155,7 +157,29 @@ export function workflowDefinitionToExecutionNodes(
       node.type === "AGENT" && typeof node.agentVersionId === "string"
         ? (node.agentVersionId as AgentVersionId)
         : undefined,
+    title: typeof node.title === "string" ? node.title : undefined,
+    description:
+      typeof node.description === "string" ? node.description : undefined,
   }));
+}
+
+export function buildOfficeWorkflowApprovalViews(props: {
+  readonly workspaceId: string;
+  readonly workflowRun: WorkflowRunResource;
+  readonly workflowDefinition: WorkflowDefinitionView;
+}) {
+  const nodes = workflowDefinitionToExecutionNodes(props.workflowDefinition);
+  if (nodes === undefined) {
+    return [];
+  }
+  return buildOfficeWorkflowApprovalViewsFromDomain({
+    workspaceId: props.workspaceId as WorkspaceId,
+    approvalRequests: props.workflowRun.approvalRequests.map(
+      toOfficeExecutionApprovalRecord,
+    ),
+    nodeRuns: props.workflowRun.nodeRuns.map(toOfficeExecutionNodeRunRecord),
+    workflowNodes: nodes,
+  });
 }
 
 export function workflowDefinitionToExecutionEdges(

@@ -96,6 +96,7 @@ export interface OfficeExecutionApprovalRecord {
   readonly workflowRunId: WorkflowRunId;
   readonly workflowNodeRunId: WorkflowNodeRunId;
   readonly status: string;
+  readonly decisionComment?: string;
   readonly createdAt: Date;
   readonly decidedAt?: Date;
 }
@@ -104,6 +105,8 @@ export interface OfficeExecutionWorkflowNodeDef {
   readonly key: string;
   readonly type: string;
   readonly agentVersionId?: AgentVersionId;
+  readonly title?: string;
+  readonly description?: string;
 }
 
 export interface OfficeExecutionAgentVersionRecord {
@@ -151,7 +154,23 @@ export interface WorkflowNodeTimelineEntry {
   readonly selectedBranchTargetKey?: string;
   readonly approvalRequestId?: ApprovalRequestId;
   readonly approvalStatus?: string;
+  readonly approvalCreatedAt?: string;
+  readonly approvalDecidedAt?: string;
+  readonly approvalDecisionComment?: string;
   readonly workerAttribution: OfficeWorkerAttributionState;
+}
+
+export interface OfficeWorkflowApprovalView {
+  readonly approvalRequestId: ApprovalRequestId;
+  readonly workflowNodeRunId: WorkflowNodeRunId;
+  readonly workflowNodeKey: string;
+  readonly approvalStatus: string;
+  readonly workflowNodeRunStatus: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly approvalCreatedAt: string;
+  readonly approvalDecidedAt?: string;
+  readonly approvalDecisionComment?: string;
 }
 
 export interface WorkflowBackedExecutionContext {
@@ -355,8 +374,69 @@ export function buildWorkflowExecutionTimeline(props: {
       selectedBranchTargetKey: nodeRun.selectedTargetKey,
       approvalRequestId: approval?.id,
       approvalStatus: approval?.status,
+      approvalCreatedAt:
+        approval === undefined ? undefined : toIso(approval.createdAt),
+      approvalDecidedAt:
+        approval === undefined ? undefined : toIso(approval.decidedAt),
+      approvalDecisionComment: approval?.decisionComment,
       workerAttribution: attribution,
     };
+  });
+}
+
+export function buildOfficeWorkflowApprovalViews(props: {
+  readonly workspaceId: WorkspaceId;
+  readonly approvalRequests: readonly OfficeExecutionApprovalRecord[];
+  readonly nodeRuns: readonly OfficeExecutionNodeRunRecord[];
+  readonly workflowNodes?: readonly OfficeExecutionWorkflowNodeDef[];
+}): OfficeWorkflowApprovalView[] {
+  const nodeRunById = new Map<
+    WorkflowNodeRunId,
+    OfficeExecutionNodeRunRecord
+  >();
+  for (const nodeRun of props.nodeRuns) {
+    assertSameWorkspace(props.workspaceId, nodeRun.workspaceId, "NodeRun");
+    nodeRunById.set(nodeRun.id, nodeRun);
+  }
+
+  const nodeDefByKey = workflowNodeDefByKey(props.workflowNodes);
+  const views: OfficeWorkflowApprovalView[] = [];
+
+  for (const request of props.approvalRequests) {
+    assertSameWorkspace(
+      props.workspaceId,
+      request.workspaceId,
+      "ApprovalRequest",
+    );
+    const nodeRun = nodeRunById.get(request.workflowNodeRunId);
+    const workflowNodeKey = nodeRun?.workflowNodeKey ?? "unknown";
+    const def = nodeDefByKey.get(workflowNodeKey);
+
+    views.push({
+      approvalRequestId: request.id,
+      workflowNodeRunId: request.workflowNodeRunId,
+      workflowNodeKey,
+      approvalStatus: request.status,
+      workflowNodeRunStatus: nodeRun?.status ?? "PENDING",
+      title: def?.title,
+      description: def?.description,
+      approvalCreatedAt:
+        toIso(request.createdAt) ?? request.createdAt.toISOString(),
+      approvalDecidedAt: toIso(request.decidedAt),
+      approvalDecisionComment: request.decisionComment,
+    });
+  }
+
+  return views.sort((left, right) => {
+    const leftRun = nodeRunById.get(left.workflowNodeRunId);
+    const rightRun = nodeRunById.get(right.workflowNodeRunId);
+    if (leftRun !== undefined && rightRun !== undefined) {
+      const bySequence = compareOfficeExecutionNodeRuns(leftRun, rightRun);
+      if (bySequence !== 0) {
+        return bySequence;
+      }
+    }
+    return left.approvalRequestId.localeCompare(right.approvalRequestId);
   });
 }
 

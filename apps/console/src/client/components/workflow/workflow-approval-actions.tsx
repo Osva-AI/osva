@@ -15,6 +15,7 @@ interface WorkflowApprovalActionsProps {
   readonly workflowRunId: string;
   readonly canExecute: boolean;
   readonly workflowNodeRunStatus?: string;
+  readonly assignmentId?: string;
 }
 
 export function WorkflowApprovalActions({
@@ -23,8 +24,11 @@ export function WorkflowApprovalActions({
   workflowRunId,
   canExecute,
   workflowNodeRunStatus,
+  assignmentId,
 }: WorkflowApprovalActionsProps) {
-  const mutation = useApprovalDecisionMutation(workflowRunId);
+  const mutation = useApprovalDecisionMutation(workflowRunId, {
+    assignmentId,
+  });
   const [comment, setComment] = useState("");
   const [feedback, setFeedback] = useState<string | undefined>();
   const [errorRequestId, setErrorRequestId] = useState<string | undefined>();

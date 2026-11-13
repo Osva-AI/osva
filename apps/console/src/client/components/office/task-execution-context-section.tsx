@@ -429,15 +429,32 @@ function TaskWorkflowExecutionTimeline(props: {
                 ) : null}
                 {entry.approvalRequestId !== undefined ? (
                   <div>
-                    <dt className="metric-label">Approval</dt>
+                    <dt className="metric-label">Approval decision</dt>
                     <dd>
                       <Link
-                        to={`/workflow-runs/${props.workflowRunId}`}
+                        to={`#task-approval-${entry.approvalRequestId}`}
                         data-testid={`timeline-approval-${entry.workflowNodeRunId}`}
                       >
-                        {entry.approvalStatus ?? "PENDING"} — open WorkflowRun
+                        {entry.approvalStatus ?? "PENDING"}
                       </Link>
+                      {entry.approvalCreatedAt !== undefined ? (
+                        <span className="muted">
+                          {" "}
+                          · requested {formatTimestamp(entry.approvalCreatedAt)}
+                        </span>
+                      ) : null}
+                      {entry.approvalDecidedAt !== undefined ? (
+                        <span className="muted">
+                          {" "}
+                          · decided {formatTimestamp(entry.approvalDecidedAt)}
+                        </span>
+                      ) : null}
                     </dd>
+                    {entry.approvalDecisionComment !== undefined ? (
+                      <p className="muted office-task-approval-timeline-comment">
+                        Comment: {entry.approvalDecisionComment}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
               </dl>
@@ -448,7 +465,10 @@ function TaskWorkflowExecutionTimeline(props: {
               ) : null}
               {entry.nodeStatus === "WAITING" ? (
                 <p className="muted" role="status">
-                  Node is waiting. Workers are not kept alive during waits.
+                  {entry.nodeType === "APPROVAL" &&
+                  entry.approvalStatus === "PENDING"
+                    ? "Waiting for human approval. Decide in Human approvals above or on WorkflowRun detail."
+                    : "Node is waiting. Workers are not kept alive during waits."}
                 </p>
               ) : null}
             </li>

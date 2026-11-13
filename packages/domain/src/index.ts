@@ -1015,6 +1015,7 @@ export { InboxReadState } from "./inbox-read-state.js";
 export {
   buildAgentBackedExecutionContext,
   buildOfficeWorkerAssignmentHistory,
+  buildOfficeWorkflowApprovalViews,
   buildWorkflowBackedExecutionContext,
   buildWorkflowExecutionTimeline,
   compareOfficeExecutionNodeRuns,
@@ -1035,6 +1036,7 @@ export {
   type OfficeExecutionWorkflowRunRecord,
   type OfficeWorkerAssignmentHistoryRow,
   type OfficeWorkerAttributionState,
+  type OfficeWorkflowApprovalView,
   type WorkflowBackedExecutionContext,
   type WorkflowNodeExecutionStatus,
   type WorkflowNodeTimelineEntry,
