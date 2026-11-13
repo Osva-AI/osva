@@ -31,6 +31,10 @@
     "./office-deliverable-provenance": {
       "types": "./dist/office-deliverable-provenance.d.ts",
       "import": "./dist/office-deliverable-provenance.js"
+    },
+    "./office-activity": {
+      "types": "./dist/office-activity-projection.d.ts",
+      "import": "./dist/office-activity-projection.js"
     }
   },
   "scripts": {

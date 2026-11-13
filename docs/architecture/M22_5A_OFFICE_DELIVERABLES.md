@@ -57,6 +57,6 @@ No backend changes. Artifact READ remains control-plane scoped (workspace isolat
 - Library filters do not search beyond the loaded artifact page.
 - Mission view issues O(linked launched tasks) artifact/workflow calls — bounded by mission task count, not workspace workflow fan-out.
 
-## Deferred (M22.5B–D)
+## Deferred (M22.5C–D)
 
-Activity feeds, observability rollups, automation, acceptance harness extensions, and combined milestone PR/CI closeout.
+Observability rollups, automation, acceptance harness extensions, and combined milestone PR/CI closeout. Office Activity (M22.5B) is documented in `M22_5B_OFFICE_ACTIVITY.md`.

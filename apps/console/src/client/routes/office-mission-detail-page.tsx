@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { MissionDeliverablesSection } from "../components/office/mission-deliverables-section";
+import { MissionOfficeActivitySection } from "../components/office/mission-office-activity-section";
 import { OfficeSectionNav } from "../components/office/office-section-nav";
 import { MissionProgressSummary } from "../components/office/mission-progress-summary";
 import { ErrorState } from "../components/error-state/error-state";
@@ -30,12 +31,14 @@ import {
   selectableGoalStatuses,
 } from "../lib/office-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
 export function OfficeMissionDetailPage() {
   const { missionId } = useParams<{ readonly missionId: string }>();
   const [searchParams] = useSearchParams();
   const highlightAssignmentId = searchParams.get("task");
 
+  const workspaceId = useWorkspaceQueryScope();
   const authQuery = useAuthContextQuery();
   const goalQuery = useOfficeGoalQuery(missionId);
   const assignmentsQuery = useOfficeAssignmentsQuery();
@@ -253,6 +256,13 @@ export function OfficeMissionDetailPage() {
             missionId={missionId}
             linkedAssignments={linkedAssignments}
           />
+
+          {workspaceId !== undefined ? (
+            <MissionOfficeActivitySection
+              workspaceId={workspaceId}
+              missionId={missionId}
+            />
+          ) : null}
 
           <SectionPanel title="Linked tasks">
             {linkedAssignments.length === 0 ? (

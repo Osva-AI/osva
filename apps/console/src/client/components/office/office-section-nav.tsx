@@ -5,6 +5,7 @@ export type OfficeSectionNavActive =
   | "missions"
   | "tasks"
   | "deliverables"
+  | "activity"
   | "teams"
   | "workers"
   | "chat"
@@ -26,6 +27,7 @@ export function OfficeSectionNav(props: {
       label: "Deliverables",
       to: "/office/deliverables",
     },
+    { id: "activity", label: "Activity", to: "/office/activity" },
     { id: "chat", label: "Team Chat", to: "/office/chat" },
     { id: "inbox", label: "Inbox", to: "/office/inbox" },
     { id: "teams", label: "Teams", to: "/office/teams" },

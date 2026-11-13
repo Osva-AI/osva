@@ -69,6 +69,7 @@ import { OfficeInboxPage } from "./routes/office-inbox-page";
 import { OfficeMissionsPage } from "./routes/office-missions-page";
 import { OfficeMissionDetailPage } from "./routes/office-mission-detail-page";
 import { OfficeTaskCreatePage } from "./routes/office-task-create-page";
+import { OfficeActivityPage } from "./routes/office-activity-page";
 import { OfficeTaskDetailPage } from "./routes/office-task-detail-page";
 import { OfficeTasksBoardPage } from "./routes/office-tasks-board-page";
 import { OfficeDeliverablesPage } from "./routes/office-deliverables-page";
@@ -255,6 +256,10 @@ export function App() {
                   <Route
                     path="/office/deliverables"
                     element={<OfficeDeliverablesPage />}
+                  />
+                  <Route
+                    path="/office/activity"
+                    element={<OfficeActivityPage />}
                   />
                   <Route path="/office/chat" element={<OfficeChatPage />} />
                   <Route

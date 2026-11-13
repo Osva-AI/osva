@@ -1069,6 +1069,30 @@ export {
   type WorkflowChildRunBinding,
   type WorkflowNodeRunChildRunRecord,
 } from "./office-deliverable-provenance.js";
+export {
+  OFFICE_ACTIVITY_RECENT_LIMIT,
+  OFFICE_ACTIVITY_TYPES,
+  buildOfficeActivitiesForAssignments,
+  buildOfficeApprovalActivities,
+  buildOfficeArtifactActivities,
+  buildOfficeAssignmentLifecycleActivities,
+  buildOfficeTaskDetailActivityTimeline,
+  buildOfficeWorkflowNodeActivities,
+  collectWorkflowChildRunBindingsFromNodeRuns,
+  compareOfficeActivityEntries,
+  filterOfficeActivities,
+  mergeOfficeActivityEntries,
+  officeActivityTypeLabel,
+  paginateOfficeActivitiesBounded,
+  type OfficeActivityArtifactRecord,
+  type OfficeActivityEntry,
+  type OfficeActivityFilter,
+  type OfficeActivityNavKind,
+  type OfficeActivityNavigationTarget,
+  type OfficeActivitySourceKind,
+  type OfficeActivityType,
+  type OfficeActivityWorkflowSnapshot,
+} from "./office-activity-projection.js";
 export { OfficeMessage } from "./office-message.js";
 export { OfficeThread } from "./office-thread.js";
 export type {
