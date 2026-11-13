@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../src/client/context/auth-context";
 import { OfficeTaskDetailPage } from "../src/client/routes/office-task-detail-page";
@@ -351,6 +351,17 @@ function officeStub(
 }
 
 describe("office tasks ui", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    );
+  });
+
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -461,5 +472,36 @@ describe("office tasks ui", () => {
       screen.getByTestId("handoff-edge-edge:agent-a->approve"),
     ).toBeTruthy();
     expect(screen.getByText(/Blocking point:/i)).toBeTruthy();
+  });
+
+  it("renders human approvals on workflow-backed task detail", async () => {
+    officeStub("VIEWER");
+    wrap(<OfficeTaskDetailPage />, ["/office/tasks/asn-wf"]);
+
+    const approvalCard = await screen.findByTestId(
+      "task-approval-apr-1",
+      {},
+      { timeout: 5_000 },
+    );
+    expect(approvalCard).toBeTruthy();
+    expect(
+      within(approvalCard).getByRole("heading", { name: "Review" }),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByTestId("task-approval-workflow-run-link")
+        .getAttribute("href"),
+    ).toBe("/workflow-runs/wfr-1");
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+  });
+
+  it("shows approval actions for OPERATOR on pending approval", async () => {
+    officeStub("OPERATOR");
+    wrap(<OfficeTaskDetailPage />, ["/office/tasks/asn-wf"]);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy(),
+    );
+    expect(screen.getByRole("button", { name: "Reject" })).toBeTruthy();
   });
 });

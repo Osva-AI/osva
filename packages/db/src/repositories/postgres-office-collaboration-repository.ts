@@ -581,14 +581,15 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
         ),
       );
 
-    const assignmentIdByWorkflowRunId = new Map<string, string>();
+    const assignmentIdsByWorkflowRunId = new Map<string, string[]>();
     for (const row of workflowAssignmentRows) {
       if (row.workflowRunId === null) {
         continue;
       }
-      if (!assignmentIdByWorkflowRunId.has(row.workflowRunId)) {
-        assignmentIdByWorkflowRunId.set(row.workflowRunId, row.id);
-      }
+      const existing =
+        assignmentIdsByWorkflowRunId.get(row.workflowRunId) ?? [];
+      existing.push(row.id);
+      assignmentIdsByWorkflowRunId.set(row.workflowRunId, existing);
     }
 
     const approvalRows = await this.database.db
@@ -603,9 +604,13 @@ export class PostgresOfficeCollaborationRepository implements OfficeCollaboratio
 
     for (const row of approvalRows) {
       const approval = approvalRequestFromRow(row);
-      const assignmentId = assignmentIdByWorkflowRunId.get(
+      const linkedAssignments = assignmentIdsByWorkflowRunId.get(
         approval.workflowRunId,
       );
+      const assignmentId =
+        linkedAssignments !== undefined && linkedAssignments.length === 1
+          ? linkedAssignments[0]
+          : undefined;
       const item = buildApprovalInboxItem(
         approval,
         assignmentId === undefined

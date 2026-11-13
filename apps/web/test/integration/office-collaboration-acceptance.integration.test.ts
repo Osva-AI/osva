@@ -1136,4 +1136,53 @@ describe("M22.2A office collaboration HTTP acceptance", () => {
       void workflowRunId;
     });
   }, 180_000);
+
+  it("M22.4D links approval inbox items to the office assignment when workflowRun is unique", async () => {
+    await bootstrapOrganization();
+    const office = new PostgresOfficeRepository(database);
+
+    const { approvalRequestId, workflowRunId } = await seedPendingApproval(
+      database,
+      WS_A,
+      "m224-inbox",
+    );
+    const { officeWorkerId } = await seedOfficeAssignmentGraph(
+      database,
+      WS_A,
+      "m224-inbox",
+    );
+    const assignmentId = "asn-m224-inbox" as AssignmentId;
+    await office.saveAssignment(
+      Assignment.create({
+        id: assignmentId,
+        workspaceId: WS_A,
+        officeWorkerId,
+        title: "Workflow task",
+        targetType: "WORKFLOW_VERSION",
+        targetVersionId: "workflow-version-m224-inbox" as WorkflowVersionId,
+        input: {},
+        now: NOW,
+      }).markLaunched({ workflowRunId, now: NOW }),
+    );
+
+    await withWeb(async (origin) => {
+      await completeOwnerSetup(origin);
+      const ownerCookie = await login(origin, OWNER_EMAIL);
+      const ownerHeaders = humanHeaders(origin, ownerCookie, WS_A);
+
+      const inbox = await requestJson(origin, "/v1/office/inbox", {
+        headers: ownerHeaders,
+      });
+      expect(inbox.status).toBe(200);
+      const approvalItem = inboxItems(inbox.body).find(
+        (item) => item.id === inboxItemIdForApproval(approvalRequestId),
+      );
+      expect(approvalItem).toMatchObject({
+        kind: "APPROVAL_PENDING",
+        approvalRequestId,
+        workflowRunId,
+        assignmentId,
+      });
+    });
+  }, 120_000);
 });

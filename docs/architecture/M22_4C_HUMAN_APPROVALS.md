@@ -41,7 +41,7 @@ Orchestration continues the workflow after a durable approval transition; the UI
 - Assignment stores `workflowRunId` after launch.
 - `ApprovalRequest.workflowRunId` must match for context on Task detail.
 - `ApprovalRequest.workflowNodeRunId` binds to the APPROVAL `WorkflowNodeRun`.
-- Inbox adds `assignmentId` only when exactly one assignment in the workspace references that `workflowRunId` (first stable match in repository listing).
+- Inbox adds `assignmentId` only when exactly one assignment in the workspace references that `workflowRunId`; when zero or multiple matches exist, the approval row keeps workflow navigation only.
 
 ## Decision authorization
 
