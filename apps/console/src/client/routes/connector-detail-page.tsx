@@ -119,17 +119,20 @@ export function ConnectorDetailPage() {
     setDiscoveredTools(undefined);
     setImportPhase("idle");
     setImportResult(undefined);
-    const result = await discoverMutation.mutateAsync();
-    const tools = Array.isArray(result.tools) ? result.tools : [];
-    setDiscoveredTools(tools);
-    setImportDrafts(
-      tools.map((tool) => ({
-        remoteToolName: tool.remoteToolName,
-        toolKey: tool.remoteToolName.replace(/[^A-Za-z0-9_-]/g, "_"),
-        toolName: tool.remoteToolName,
-        selected: false,
-      })),
-    );
+    try {
+      const result = await discoverMutation.mutateAsync();
+      setDiscoveredTools([...result.tools]);
+      setImportDrafts(
+        [...result.tools].map((tool) => ({
+          remoteToolName: tool.remoteToolName,
+          toolKey: tool.remoteToolName.replace(/[^A-Za-z0-9_-]/g, "_"),
+          toolName: tool.remoteToolName,
+          selected: false,
+        })),
+      );
+    } catch {
+      // discoverMutation.isError surfaces operator guidance; do not treat as empty discovery.
+    }
   }
 
   function beginImportReview() {
