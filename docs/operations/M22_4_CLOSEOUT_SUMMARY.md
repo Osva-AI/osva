@@ -1,10 +1,10 @@
-﻿# M22.4 â€” Worker execution, handoffs, and human approvals (Aâ€“D)
+﻿# M22.4 — Worker execution, handoffs, and human approvals (A–D)
 
 **Branch:** `feat/m22-4-worker-execution-handoffs`
 **Milestone slices:** M22.4A execution context, M22.4B workflow handoffs, M22.4C human approvals, M22.4D acceptance and closeout
-**Status:** Implemented, awaiting combined Aâ€“D PR and hosted CI (`pnpm verify:ci:clean`)
+**Status:** Implemented, awaiting combined A–D PR and hosted CI (`pnpm verify:ci:clean`)
 
-## Deliverables (Aâ€“D)
+## Deliverables (A–D)
 
 | Slice | Scope |
 | --- | --- |
@@ -19,16 +19,16 @@ Architecture references: [M22_4A_EXECUTION_CONTEXT.md](../architecture/M22_4A_EX
 
 - **Task** (`Assignment`) freezes `AgentVersion` or `WorkflowVersion` at creation; **launch** is the sole execution entry (no enqueue on create).
 - **Mission** (`Goal`) links tasks; progress remains client-derived from reconciled assignment statuses.
-- **Execution evidence** always comes from `Run` / `WorkflowRun` / `WorkflowNodeRun` and pinned `WorkflowVersion` definitions â€” projections never invent handoffs or completions.
+- **Execution evidence** always comes from `Run` / `WorkflowRun` / `WorkflowNodeRun` and pinned `WorkflowVersion` definitions — projections never invent handoffs or completions.
 - **Approvals** reuse `ApprovalRequest` + `DecideApprovalRequest`; orchestration resumes after durable transitions.
 
 ## Inbox assignment mapping rules (M22.4C/D)
 
 PostgreSQL `listInboxItems` loads workspace assignments with non-null `workflowRunId` and:
 
-1. **Exactly one** assignment for a `workflowRunId` â†’ approval inbox row includes `assignmentId` (Task Detail navigation).
-2. **Zero** Office assignments â†’ approval row has `workflowRunId` only (WorkflowRun detail navigation).
-3. **Multiple** assignments for the same `workflowRunId` â†’ `assignmentId` omitted (no arbitrary pick).
+1. **Exactly one** assignment for a `workflowRunId` → approval inbox row includes `assignmentId` (Task Detail navigation).
+2. **Zero** Office assignments → approval row has `workflowRunId` only (WorkflowRun detail navigation).
+3. **Multiple** assignments for the same `workflowRunId` → `assignmentId` omitted (no arbitrary pick).
 
 Cross-workspace isolation follows existing assignment and approval predicates. Pagination dedupes by inbox item id before sort/cursor.
 
@@ -40,9 +40,9 @@ Unchanged M22.3 / workflow matrices: READ for execution surfaces; `EXECUTE` for 
 
 | Scenario | Evidence |
 | --- | --- |
-| Mission â†’ workflow assignment â†’ Agent A â†’ approval â†’ Agent B â†’ COMPLETED | `apps/worker/test/integration/m22-4-office-workflow-acceptance.integration.test.ts` |
+| Mission → workflow assignment → Agent A → approval → Agent B → COMPLETED | `apps/worker/test/integration/m22-4-office-workflow-acceptance.integration.test.ts` |
 | Approval rejection (no successor agent) | Same file, rejection case |
-| PostgreSQL inbox mapping Aâ€“F | `packages/db/test/integration/office-inbox-assignment-mapping.integration.test.ts` |
+| PostgreSQL inbox mapping A–F | `packages/db/test/integration/office-inbox-assignment-mapping.integration.test.ts` |
 | HTTP inbox `assignmentId` enrichment | `apps/web/test/integration/office-collaboration-acceptance.integration.test.ts` (M22.4D case) |
 | Domain projections (execution, handoff, approval, inbox) | `packages/domain/test/office-*-projection.test.ts` |
 | Console hooks / UI | `apps/console/test/office-*.test.ts(x)` |
@@ -58,13 +58,13 @@ Unchanged M22.3 / workflow matrices: READ for execution surfaces; `EXECUTE` for 
 ## Known limitations
 
 - Mission approval attention is inbox-scoped (pending only), not exhaustive mission fan-out.
-- Ambiguous `workflowRunId` â†” assignment relationships omit inbox `assignmentId`.
+- Ambiguous `workflowRunId` ↔ assignment relationships omit inbox `assignmentId`.
 - Explicit `officeWorkerId` on AGENT nodes remains deferred (catalog attribution).
 - `@osva/db` package consumers must rebuild after repository changes for dist-aligned integration tests.
 
 ## Deferred (M22.5+)
 
-Activity feeds, deliverable automation, worker performance dashboards, HumanTask persistence, autonomous delegation, new approval state machine â€” see [M22_VIRTUAL_OFFICE.md](../roadmap/M22_VIRTUAL_OFFICE.md).
+Activity feeds, deliverable automation, worker performance dashboards, HumanTask persistence, autonomous delegation, new approval state machine — see [M22_VIRTUAL_OFFICE.md](../roadmap/M22_VIRTUAL_OFFICE.md).
 
 ## Migrations
 

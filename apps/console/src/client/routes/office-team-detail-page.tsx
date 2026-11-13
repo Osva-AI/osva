@@ -21,6 +21,7 @@ import {
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import { ConsoleApiError } from "../lib/console-api";
 import { formatTimestamp } from "../lib/formatting";
+import { OfficeTeamOperationsSection } from "../components/office/office-team-operations-section";
 import { slugOfficeKeyFromName } from "../lib/office-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
@@ -310,6 +311,15 @@ export function OfficeTeamDetailPage() {
               </dl>
             </SectionPanel>
           )}
+
+          {membershipsQuery.data !== undefined ? (
+            <OfficeTeamOperationsSection
+              teamId={teamId}
+              memberWorkerIds={membershipsQuery.data.items.map(
+                (row) => row.officeWorkerId,
+              )}
+            />
+          ) : null}
 
           <SectionPanel title="Members">
             {membershipsQuery.isLoading ? (

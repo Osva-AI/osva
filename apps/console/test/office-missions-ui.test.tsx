@@ -258,10 +258,10 @@ describe("Office Missions UI", () => {
     wrap(<OfficeMissionDetailPage />, [`/office/missions/${goalA.id}`]);
 
     await waitFor(() => {
-      expect(screen.getByTestId("mission-execution-summary")).toBeTruthy();
+      expect(screen.getByText("Launch mission")).toBeTruthy();
     });
     expect(screen.getAllByText("Writer").length).toBeGreaterThan(0);
-    expect(screen.getByText("Draft post")).toBeTruthy();
+    expect(screen.getAllByText("Draft post").length).toBeGreaterThan(0);
 
     await user.selectOptions(screen.getByLabelText("Goal status"), "ACTIVE");
     await user.click(screen.getByRole("button", { name: "Save changes" }));

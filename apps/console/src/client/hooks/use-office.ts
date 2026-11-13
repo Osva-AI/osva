@@ -669,6 +669,7 @@ export interface OfficeOverviewCounts {
   readonly running: number;
   readonly completed: number;
   readonly failed: number;
+  readonly cancelled: number;
 }
 
 export function summarizeAssignmentCounts(
@@ -678,6 +679,7 @@ export function summarizeAssignmentCounts(
   let running = 0;
   let completed = 0;
   let failed = 0;
+  let cancelled = 0;
   for (const item of assignments) {
     switch (item.status) {
       case "PENDING":
@@ -692,11 +694,14 @@ export function summarizeAssignmentCounts(
       case "FAILED":
         failed += 1;
         break;
+      case "CANCELLED":
+        cancelled += 1;
+        break;
       default:
         break;
     }
   }
-  return { pending, running, completed, failed };
+  return { pending, running, completed, failed, cancelled };
 }
 
 export function recentAssignments(

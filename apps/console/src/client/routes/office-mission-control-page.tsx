@@ -11,15 +11,27 @@ import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
 import { useAgentsListQuery } from "../hooks/use-agents";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
+import type { WorkspaceId } from "@osva-ai/contracts";
+import {
+  rankWorkersByActiveTasks,
+  summarizeTaskExecution,
+} from "@osva/domain/office-observability";
+
+import { OfficeTaskMetricsPanel } from "../components/office/office-task-metrics-panel";
+import { MissionControlRecentSections } from "../components/office/mission-control-recent-sections";
+import {
+  mapOfficeObservabilityAssignments,
+  OFFICE_OBSERVABILITY_ASSIGNMENT_SCOPE_LABEL,
+} from "../lib/office-observability";
 import {
   recentAssignments,
-  summarizeAssignmentCounts,
   useAllTeamMembershipsQuery,
   useOfficeAssignmentsQuery,
   useOfficeTeamsQuery,
   useOfficeWorkersQuery,
   type OfficeWorkerResource,
 } from "../hooks/use-office";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 import { assignmentStatusCategory } from "../lib/office-presentation";
 import { formatTimestamp } from "../lib/formatting";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
@@ -49,6 +61,7 @@ function workerMembershipTeamIds(
 }
 
 export function OfficeMissionControlPage() {
+  const workspaceId = useWorkspaceQueryScope();
   const authQuery = useAuthContextQuery();
   const workersQuery = useOfficeWorkersQuery();
   const teamsQuery = useOfficeTeamsQuery();
@@ -66,14 +79,24 @@ export function OfficeMissionControlPage() {
   const teams = teamsQuery.data?.items ?? [];
   const assignments = assignmentsQuery.data?.items ?? [];
 
-  const counts = useMemo(() => {
-    const assignmentCounts = summarizeAssignmentCounts(assignments);
-    return {
-      workers: workers.length,
-      teams: teams.length,
-      ...assignmentCounts,
-    };
-  }, [assignments, teams.length, workers.length]);
+  const taskSummary = useMemo(() => {
+    if (workspaceId === undefined) {
+      return undefined;
+    }
+    return summarizeTaskExecution(
+      mapOfficeObservabilityAssignments(assignments),
+      workspaceId as WorkspaceId,
+    );
+  }, [assignments, workspaceId]);
+
+  const workerLoad = useMemo(() => {
+    if (workspaceId === undefined) {
+      return [];
+    }
+    return rankWorkersByActiveTasks(
+      mapOfficeObservabilityAssignments(assignments),
+    );
+  }, [assignments, workspaceId]);
 
   const workerById = useMemo(() => {
     const map = new Map<string, OfficeWorkerResource>();
@@ -135,6 +158,12 @@ export function OfficeMissionControlPage() {
                 <LinkButton variant="secondary" to="/office/missions">
                   Missions
                 </LinkButton>
+                <LinkButton variant="secondary" to="/office/activity">
+                  Activity
+                </LinkButton>
+                <LinkButton variant="secondary" to="/office/deliverables">
+                  Deliverables
+                </LinkButton>
                 <LinkButton variant="secondary" to="/office/tasks/new">
                   Create Task
                 </LinkButton>
@@ -188,32 +217,71 @@ export function OfficeMissionControlPage() {
             >
               <article className="metric-card">
                 <p className="metric-label">Registered workers</p>
-                <p className="metric-value">{counts.workers}</p>
+                <p className="metric-value">{workers.length}</p>
                 <p className="metric-detail muted">Office Worker records</p>
               </article>
               <article className="metric-card">
                 <p className="metric-label">Teams</p>
-                <p className="metric-value">{counts.teams}</p>
+                <p className="metric-value">{teams.length}</p>
                 <p className="metric-detail muted">Organizational groups</p>
               </article>
               <article className="metric-card">
-                <p className="metric-label">Pending assignments</p>
-                <p className="metric-value">{counts.pending}</p>
-              </article>
-              <article className="metric-card">
-                <p className="metric-label">Running assignments</p>
-                <p className="metric-value">{counts.running}</p>
-              </article>
-              <article className="metric-card">
-                <p className="metric-label">Completed assignments</p>
-                <p className="metric-value">{counts.completed}</p>
-              </article>
-              <article className="metric-card">
-                <p className="metric-label">Failed assignments</p>
-                <p className="metric-value">{counts.failed}</p>
+                <p className="metric-label">Missions</p>
+                <p className="metric-value">
+                  <Link to="/office/missions">View missions</Link>
+                </p>
               </article>
             </div>
           </SectionPanel>
+
+          {taskSummary !== undefined ? (
+            <SectionPanel title="Task execution summary">
+              <OfficeTaskMetricsPanel
+                summary={taskSummary}
+                testId="office-mission-control-task-metrics"
+                scopeLabel={OFFICE_OBSERVABILITY_ASSIGNMENT_SCOPE_LABEL}
+              />
+            </SectionPanel>
+          ) : null}
+
+          {workerLoad.length > 0 ? (
+            <SectionPanel title="Worker workload">
+              <p className="muted">
+                Active tasks (pending + running) by assigned Office Worker.
+              </p>
+              <div className="data-table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Worker</th>
+                      <th scope="col">Active tasks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workerLoad.map((row) => {
+                      const worker = workerById.get(row.officeWorkerId);
+                      return (
+                        <tr key={row.officeWorkerId}>
+                          <td>
+                            {worker !== undefined ? (
+                              <Link to={`/office/workers/${worker.id}`}>
+                                {worker.name}
+                              </Link>
+                            ) : (
+                              <span className="mono">{row.officeWorkerId}</span>
+                            )}
+                          </td>
+                          <td>{row.active}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </SectionPanel>
+          ) : null}
+
+          <MissionControlRecentSections />
 
           {isEmpty ? (
             <EmptyState

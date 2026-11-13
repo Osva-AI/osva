@@ -27,6 +27,18 @@
     "./office-execution-context": {
       "types": "./dist/office-execution-context-projection.d.ts",
       "import": "./dist/office-execution-context-projection.js"
+    },
+    "./office-deliverable-provenance": {
+      "types": "./dist/office-deliverable-provenance.d.ts",
+      "import": "./dist/office-deliverable-provenance.js"
+    },
+    "./office-activity": {
+      "types": "./dist/office-activity-projection.d.ts",
+      "import": "./dist/office-activity-projection.js"
+    },
+    "./office-observability": {
+      "types": "./dist/office-observability-projection.d.ts",
+      "import": "./dist/office-observability-projection.js"
     }
   },
   "scripts": {

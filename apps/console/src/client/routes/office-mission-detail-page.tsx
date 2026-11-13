@@ -1,6 +1,9 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
+import { MissionDeliverablesSection } from "../components/office/mission-deliverables-section";
+import { MissionOfficeActivitySection } from "../components/office/mission-office-activity-section";
+import { OfficeMissionObservabilitySection } from "../components/office/office-mission-observability-section";
 import { OfficeSectionNav } from "../components/office/office-section-nav";
 import { MissionProgressSummary } from "../components/office/mission-progress-summary";
 import { ErrorState } from "../components/error-state/error-state";
@@ -29,12 +32,14 @@ import {
   selectableGoalStatuses,
 } from "../lib/office-presentation";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
 
 export function OfficeMissionDetailPage() {
   const { missionId } = useParams<{ readonly missionId: string }>();
   const [searchParams] = useSearchParams();
   const highlightAssignmentId = searchParams.get("task");
 
+  const workspaceId = useWorkspaceQueryScope();
   const authQuery = useAuthContextQuery();
   const goalQuery = useOfficeGoalQuery(missionId);
   const assignmentsQuery = useOfficeAssignmentsQuery();
@@ -116,32 +121,6 @@ export function OfficeMissionDetailPage() {
       }));
   }, [inboxQuery.data?.items, linkedAssignments]);
 
-  const executionSummary = useMemo(() => {
-    let pending = 0;
-    let running = 0;
-    let completed = 0;
-    let failed = 0;
-    for (const item of linkedAssignments) {
-      switch (item.status) {
-        case "PENDING":
-          pending += 1;
-          break;
-        case "RUNNING":
-          running += 1;
-          break;
-        case "COMPLETED":
-          completed += 1;
-          break;
-        case "FAILED":
-          failed += 1;
-          break;
-        default:
-          break;
-      }
-    }
-    return { pending, running, completed, failed };
-  }, [linkedAssignments]);
-
   const loading =
     goalQuery.isLoading || assignmentsQuery.isLoading || workersQuery.isLoading;
 
@@ -214,7 +193,6 @@ export function OfficeMissionDetailPage() {
               <p className="office-v2-card-desc">{goal.description}</p>
             ) : null}
             <MissionProgressSummary progress={progress} />
-            <ExecutionSummaryRow summary={executionSummary} />
             <MissionApprovalAttention
               items={missionApprovalInboxItems}
               inboxLoading={inboxQuery.isLoading}
@@ -247,6 +225,23 @@ export function OfficeMissionDetailPage() {
               </ul>
             )}
           </SectionPanel>
+
+          <MissionDeliverablesSection
+            missionId={missionId}
+            linkedAssignments={linkedAssignments}
+          />
+
+          <OfficeMissionObservabilitySection
+            missionId={missionId}
+            linkedAssignments={linkedAssignments}
+          />
+
+          {workspaceId !== undefined ? (
+            <MissionOfficeActivitySection
+              workspaceId={workspaceId}
+              missionId={missionId}
+            />
+          ) : null}
 
           <SectionPanel title="Linked tasks">
             {linkedAssignments.length === 0 ? (
@@ -342,28 +337,6 @@ function MissionApprovalAttention(props: {
         Open Unified Inbox
       </Link>
     </section>
-  );
-}
-
-function ExecutionSummaryRow(props: {
-  readonly summary: {
-    readonly pending: number;
-    readonly running: number;
-    readonly completed: number;
-    readonly failed: number;
-  };
-}) {
-  return (
-    <p
-      className="muted office-v2-card-meta"
-      data-testid="mission-execution-summary"
-    >
-      Execution: {props.summary.pending} pending, {props.summary.running}{" "}
-      running, {props.summary.completed} completed
-      {props.summary.failed > 0 ? `, ${props.summary.failed} failed` : null}.
-      Workflow handoff graphs live on each workflow-backed task&apos;s Task
-      detail — not aggregated here.
-    </p>
   );
 }
 

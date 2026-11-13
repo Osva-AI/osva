@@ -33,6 +33,11 @@ export const OFFICE_NAV_ITEMS: readonly ConsoleNavItem[] = [
   },
   { label: "Missions", to: "/office/missions", navId: "office-missions" },
   { label: "Tasks", to: "/office/tasks", navId: "office-tasks" },
+  {
+    label: "Deliverables",
+    to: "/office/deliverables",
+    navId: "office-deliverables",
+  },
   { label: "Team Chat", to: "/office/chat", navId: "office-chat" },
   { label: "Inbox", to: "/office/inbox", navId: "office-inbox" },
   { label: "Teams", to: "/office/teams", navId: "office-teams" },

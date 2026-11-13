@@ -10,6 +10,8 @@ import { DataTableRegion } from "../components/ui/data-table-region";
 import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
 import { WorkerAssignmentActivitySection } from "../components/office/worker-assignment-activity-section";
+import { WorkerOfficeActivitySection } from "../components/office/worker-office-activity-section";
+import { OfficeWorkerPerformanceSection } from "../components/office/office-worker-performance-section";
 import { useAgentQuery } from "../hooks/use-agents";
 import {
   useAllTeamMembershipsQuery,
@@ -272,8 +274,19 @@ export function OfficeWorkerDetailPage() {
             </SectionPanel>
           )}
 
+          <OfficeWorkerPerformanceSection
+            officeWorkerId={workerQuery.data.id}
+          />
+
           {workspaceId !== undefined ? (
             <WorkerAssignmentActivitySection
+              workspaceId={workspaceId}
+              officeWorkerId={workerQuery.data.id}
+            />
+          ) : null}
+
+          {workspaceId !== undefined ? (
+            <WorkerOfficeActivitySection
               workspaceId={workspaceId}
               officeWorkerId={workerQuery.data.id}
             />

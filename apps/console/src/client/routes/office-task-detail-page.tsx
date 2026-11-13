@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { TaskDeliverablesSection } from "../components/office/task-deliverables-section";
+import { TaskOfficeActivitySection } from "../components/office/task-office-activity-section";
 import { TaskExecutionContextSection } from "../components/office/task-execution-context-section";
 import { TaskWorkflowApprovalSection } from "../components/office/task-workflow-approval-section";
 import { OfficeSectionNav } from "../components/office/office-section-nav";
@@ -295,6 +296,13 @@ export function OfficeTaskDetailPage() {
             workflowRun={workflowRunQuery.data}
             runLoading={runQuery.isLoading}
             workflowRunLoading={workflowRunQuery.isLoading}
+          />
+
+          <TaskOfficeActivitySection
+            assignment={assignment}
+            run={runQuery.data}
+            workflowRun={workflowRunQuery.data}
+            workflowDefinition={workflowDefinition}
           />
 
           {assignment.workflowRunId !== undefined &&
