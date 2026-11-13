@@ -35,6 +35,7 @@ export function resolveCatalogWorkspaceIntegration(params: {
   readonly workspaceConnectorId?: string;
   readonly workspaceConnectorIds: readonly string[];
   readonly importedMcpToolCount: number;
+  readonly importedMcpToolVersionIds: readonly string[];
 } {
   const matches = params.workspaceConnectors.filter(
     (connector) => connector.key === params.catalogConnectorKey,
@@ -44,6 +45,7 @@ export function resolveCatalogWorkspaceIntegration(params: {
       status: "catalog-only",
       workspaceConnectorIds: [],
       importedMcpToolCount: 0,
+      importedMcpToolVersionIds: [],
     };
   }
 
@@ -67,6 +69,7 @@ export function resolveCatalogWorkspaceIntegration(params: {
       workspaceConnectorId: matches[0]?.id,
       workspaceConnectorIds: matches.map((c) => c.id),
       importedMcpToolCount: 0,
+      importedMcpToolVersionIds: [],
     };
   }
 
@@ -76,6 +79,7 @@ export function resolveCatalogWorkspaceIntegration(params: {
       workspaceConnectorId: matches[0]?.id,
       workspaceConnectorIds: matches.map((c) => c.id),
       importedMcpToolCount: 0,
+      importedMcpToolVersionIds: [],
     };
   }
 
@@ -84,5 +88,6 @@ export function resolveCatalogWorkspaceIntegration(params: {
     workspaceConnectorId: matches[0]?.id,
     workspaceConnectorIds: matches.map((c) => c.id),
     importedMcpToolCount: importedMcp.length,
+    importedMcpToolVersionIds: importedMcp.map((version) => version.id),
   };
 }

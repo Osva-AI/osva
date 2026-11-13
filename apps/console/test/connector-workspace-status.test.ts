@@ -53,6 +53,7 @@ describe("connector workspace status", () => {
       ],
     });
     expect(resolved.status).toBe("tools-imported");
+    expect(resolved.importedMcpToolVersionIds).toEqual(["tv1"]);
     expect(resolved.status).not.toBe("connected");
   });
 });

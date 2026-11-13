@@ -1,20 +1,31 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useToolsCatalogQuery } from "../../hooks/use-tools-connectors";
-import { toolVersionSelectLabel } from "../../lib/tool-resource-presentation";
+import {
+  summarizeToolVersion,
+  toolVersionSelectLabel,
+} from "../../lib/tool-resource-presentation";
 import {
   applyToolBindingsToManifestText,
+  collectToolBindingValidationIssues,
   describeToolBindingNameError,
   extractToolBindingRows,
   type AgentToolBindingRow,
 } from "../../lib/agent-tool-bindings";
+import {
+  buildPreselectedBindingRows,
+  isMcpToolVersion,
+  lookupToolVersionInCatalog,
+  validateToolVersionHandoff,
+} from "../../lib/connector-agent-handoff";
 import { parseWorkflowRunInputJson } from "../../lib/workflow-run-input";
 
 export function ToolVersionBindingSelector(props: {
   readonly manifestText: string;
   readonly disabled?: boolean;
   readonly presentation?: "default" | "studio";
+  readonly preselectedToolVersionIds?: readonly string[];
   readonly onManifestChange: (next: string) => void;
 }) {
   const presentation = props.presentation ?? "default";
@@ -34,10 +45,16 @@ export function ToolVersionBindingSelector(props: {
   const [touchedRows, setTouchedRows] = useState<ReadonlySet<number>>(
     () => new Set(),
   );
+  const preselectionAppliedRef = useRef(false);
 
   const toolOptions = useMemo(
     () => catalogQuery.data?.map((entry) => entry.tool) ?? [],
     [catalogQuery.data],
+  );
+
+  const validationIssues = useMemo(
+    () => collectToolBindingValidationIssues(draftRows, catalogQuery.data),
+    [catalogQuery.data, draftRows],
   );
 
   function syncManifest(nextRows: readonly AgentToolBindingRow[]) {
@@ -45,6 +62,67 @@ export function ToolVersionBindingSelector(props: {
       applyToolBindingsToManifestText(props.manifestText, nextRows),
     );
   }
+
+  function hydrateToolIds(
+    rows: readonly AgentToolBindingRow[],
+  ): AgentToolBindingRow[] {
+    return rows.map((row) => {
+      if (row.toolId.length > 0 || row.toolVersionId.length === 0) {
+        return row;
+      }
+      const resolved = lookupToolVersionInCatalog(
+        catalogQuery.data,
+        row.toolVersionId,
+      );
+      if (resolved === undefined) {
+        return row;
+      }
+      return { ...row, toolId: resolved.tool.id };
+    });
+  }
+
+  useEffect(() => {
+    if (
+      preselectionAppliedRef.current ||
+      props.preselectedToolVersionIds === undefined ||
+      props.preselectedToolVersionIds.length === 0 ||
+      catalogQuery.data === undefined
+    ) {
+      return;
+    }
+    const existingVersionIds = new Set(
+      rowsFromManifest
+        .map((row) => row.toolVersionId)
+        .filter((id) => id.length > 0),
+    );
+    const { validated: catalogMatches } = validateToolVersionHandoff(
+      props.preselectedToolVersionIds,
+      catalogQuery.data,
+    );
+    const pending = catalogMatches.filter(
+      (entry) => !existingVersionIds.has(entry.toolVersionId),
+    );
+    preselectionAppliedRef.current = true;
+    if (pending.length === 0) {
+      return;
+    }
+    const nextRows = buildPreselectedBindingRows(pending);
+    setDraftRows((current) => {
+      const emptyDraft =
+        current.length === 0 ||
+        current.every(
+          (row) =>
+            row.bindingName.trim().length === 0 &&
+            row.toolId.length === 0 &&
+            row.toolVersionId.length === 0,
+        );
+      const base = emptyDraft ? [] : current;
+      const merged = [...base, ...nextRows];
+      const hydrated = hydrateToolIds(merged);
+      syncManifest(hydrated);
+      return hydrated;
+    });
+  }, [catalogQuery.data, props.preselectedToolVersionIds, rowsFromManifest]);
 
   function updateRow(index: number, patch: Partial<AgentToolBindingRow>): void {
     setDraftRows((current) => {
@@ -95,13 +173,36 @@ export function ToolVersionBindingSelector(props: {
   }
 
   return (
-    <section className="panel">
+    <section className="panel" data-testid="tool-version-binding-selector">
       <h2 className="section-title">Tool bindings</h2>
       <p className="muted">
-        Bind immutable ToolVersions by logical name. Importing or discovering
-        tools registers capabilities only — execution still flows through
-        ToolGateway at run time.
+        Stage 3 — bind immutable ToolVersions by logical name. This configures
+        the AgentVersion manifest only; Runtime authorization and execution
+        (stages 4–5) occur on authorized Runs through ToolGateway.
       </p>
+      <ul className="connector-binding-stage-legend muted">
+        <li>Discovery — remote MCP metadata only</li>
+        <li>Import — immutable ToolVersion registration</li>
+        <li>Binding — manifest toolVersionBindings (this form)</li>
+        <li>Authorization — ToolGateway on each Run</li>
+        <li>Execution — Tool RunSteps on Run Detail</li>
+      </ul>
+      {validationIssues.length > 0 ? (
+        <div
+          className="connector-binding-validation"
+          role="alert"
+          data-testid="tool-binding-validation-issues"
+        >
+          <p className="field-error">
+            Resolve binding issues before publishing:
+          </p>
+          <ul>
+            {validationIssues.map((issue, index) => (
+              <li key={`${issue.kind}-${String(index)}`}>{issue.message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {catalogQuery.isLoading ? (
         <p className="muted">Loading tool catalog…</p>
       ) : null}
@@ -143,6 +244,13 @@ export function ToolVersionBindingSelector(props: {
           (entry) => entry.tool.id === row.toolId,
         );
         const versions = catalogEntry?.versions ?? [];
+        const selectedVersion = versions.find(
+          (v) => v.id === row.toolVersionId,
+        );
+        const mcpVersion =
+          selectedVersion !== undefined && isMcpToolVersion(selectedVersion)
+            ? selectedVersion
+            : undefined;
         const nameError = describeToolBindingNameError(row.bindingName);
         const showNameError =
           nameError !== undefined &&
@@ -156,8 +264,15 @@ export function ToolVersionBindingSelector(props: {
               other.bindingName.trim() === row.bindingName.trim() &&
               other !== row,
           ).length > 0;
+        const versionSummary =
+          selectedVersion !== undefined
+            ? summarizeToolVersion(selectedVersion)
+            : undefined;
         return (
-          <div className="filters" key={`tool-binding-${String(index)}`}>
+          <div
+            className="filters connector-tool-binding-row"
+            key={`tool-binding-${String(index)}`}
+          >
             <div className="field">
               <label htmlFor={`tool-binding-name-${String(index)}`}>
                 Binding name
@@ -228,6 +343,44 @@ export function ToolVersionBindingSelector(props: {
                 </p>
               ) : null}
             </div>
+            {selectedVersion !== undefined && versionSummary !== undefined ? (
+              <div
+                className="connector-tool-binding-meta panel nested"
+                data-testid={`tool-binding-meta-${String(index)}`}
+              >
+                <p>
+                  <strong>{versionSummary.typeLabel}</strong> ·{" "}
+                  {versionSummary.capability}
+                </p>
+                {mcpVersion !== undefined ? (
+                  <>
+                    <dl className="meta-list">
+                      <div>
+                        <dt>Remote MCP tool</dt>
+                        <dd className="mono">
+                          {mcpVersion.mcp.remoteToolName}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>ConnectorVersion</dt>
+                        <dd className="mono">
+                          {mcpVersion.mcp.connectorVersionId}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Immutable version</dt>
+                        <dd>v{String(mcpVersion.version)}</dd>
+                      </div>
+                    </dl>
+                    <p className="muted">
+                      Catalog read-only vs mutation lists are not verified for
+                      this workspace import. ToolGateway enforces authorization
+                      at execution time.
+                    </p>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
             <button
               type="button"
               className="button"

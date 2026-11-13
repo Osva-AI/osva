@@ -11,6 +11,8 @@ import {
 import { EmptyState } from "../empty-state/empty-state";
 import { StatusChip } from "../status/status-chip";
 import { attemptStatusCategory } from "../../lib/statuses";
+import { buildRunStepToolDiagnosticsView } from "../../lib/execution-diagnostics";
+import { OperatorGuidancePanel } from "../operator/operator-guidance";
 
 interface RunStepTimelineProps {
   readonly steps: readonly RunStepResource[] | undefined;
@@ -59,6 +61,7 @@ export function RunStepTimeline({
       {steps.map((step, index) => {
         const bindingRef =
           step.modelProfileVersionId ?? step.toolVersionId ?? undefined;
+        const toolDiagnostics = buildRunStepToolDiagnosticsView(step);
         return (
           <li key={step.id} className="run-step-timeline-item">
             <div className="run-step-timeline-marker" aria-hidden="true">
@@ -107,11 +110,28 @@ export function RunStepTimeline({
                 ) : null}
                 {step.errorCode !== undefined ? (
                   <div>
-                    <dt>Error</dt>
+                    <dt>Error code</dt>
                     <dd className="mono">{step.errorCode}</dd>
                   </div>
                 ) : null}
+                {toolDiagnostics?.toolVersionId !== undefined ? (
+                  <div>
+                    <dt>ToolVersion</dt>
+                    <dd className="mono">{toolDiagnostics.toolVersionId}</dd>
+                  </div>
+                ) : null}
               </dl>
+              {toolDiagnostics?.guidance !== undefined ? (
+                <OperatorGuidancePanel guidance={toolDiagnostics.guidance} />
+              ) : null}
+              {step.kind === "TOOL" &&
+              toolDiagnostics?.guidance === undefined ? (
+                <p className="muted">
+                  Tool binding <span className="mono">{step.bindingName}</span>{" "}
+                  — execution authorization is enforced by ToolGateway; this
+                  step records the persisted outcome only.
+                </p>
+              ) : null}
             </article>
           </li>
         );

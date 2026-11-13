@@ -1,10 +1,12 @@
 import { useParams } from "react-router-dom";
 
+import { LinkButton } from "../components/ui/button";
+import { buildAgentPickerHandoffPath } from "../lib/connector-agent-handoff";
+
 import { IntegrationsSectionNav } from "../components/integrations/integrations-section-nav";
 import { JsonView } from "../components/json-view/json-view";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
-import { LinkButton } from "../components/ui/button";
 import { DataTableRegion } from "../components/ui/data-table-region";
 import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
@@ -84,6 +86,31 @@ export function ToolDetailPage() {
           ) : null}
         </dl>
       </details>
+
+      {latest !== undefined ? (
+        <SectionPanel
+          title="Use in an agent"
+          description="Binding selects an immutable ToolVersion on a new AgentVersion. This does not execute the tool."
+        >
+          <p className="muted">
+            Latest ToolVersion: <span className="mono">{latest.id}</span>
+            {latest.type === "MCP" ? (
+              <>
+                {" "}
+                · remote{" "}
+                <span className="mono">{latest.mcp.remoteToolName}</span>
+              </>
+            ) : null}
+          </p>
+          <LinkButton
+            variant="primary"
+            to={buildAgentPickerHandoffPath([latest.id])}
+            data-testid="tool-detail-use-in-agent"
+          >
+            Use tools in an agent
+          </LinkButton>
+        </SectionPanel>
+      ) : null}
 
       {versionsQuery.data !== undefined ? (
         <SectionPanel

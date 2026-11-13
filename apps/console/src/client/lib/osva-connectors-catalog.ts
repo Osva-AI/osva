@@ -59,7 +59,7 @@ export interface ConnectorCatalogProvenance {
   readonly refreshProcedure: string;
 }
 
-const RELATED_EXAMPLES_BY_CONNECTOR_ID: Readonly<
+export const RELATED_EXAMPLES_BY_CONNECTOR_ID: Readonly<
   Record<string, readonly string[]>
 > = {
   npm: ["19-research-report-agent"],

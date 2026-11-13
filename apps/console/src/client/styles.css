@@ -6859,3 +6859,27 @@ button.agent-studio-v2-progress-link {
     display: none;
   }
 }
+
+.connector-import-handoff .connector-adoption-journey {
+  margin: var(--space-3) 0;
+  padding-left: var(--space-4);
+}
+
+.connector-tool-handoff-banner,
+.connector-agent-handoff-banner {
+  margin-bottom: var(--space-4);
+}
+
+.connector-binding-stage-legend {
+  list-style: disc;
+  padding-left: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.connector-tool-binding-meta {
+  grid-column: 1 / -1;
+}
+
+.connector-binding-validation {
+  margin-bottom: var(--space-3);
+}

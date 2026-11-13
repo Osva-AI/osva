@@ -51,6 +51,10 @@ import {
   formatTransportLabel,
 } from "../lib/tool-resource-presentation";
 import { useWorkspaceQueryScope } from "../hooks/use-workspace-query-scope";
+import {
+  buildAgentPickerHandoffPath,
+  relatedExampleDocLinks,
+} from "../lib/connector-agent-handoff";
 
 export function ConnectorCatalogSetupPage() {
   const { catalogConnectorId } = useParams<{ catalogConnectorId: string }>();
@@ -191,6 +195,10 @@ export function ConnectorCatalogSetupPage() {
             canWrite={canWrite}
             integrationStatus={integrationStatus}
             workspaceConnectorId={workspaceConnectorId}
+            catalogConnectorId={catalogConnectorId}
+            importedToolVersionIds={
+              workspaceStatus?.importedMcpToolVersionIds ?? []
+            }
             linkedVersions={linkedVersions}
             versionsLoading={versionsQuery.isLoading}
             installAllowed={installAllowed}
@@ -233,6 +241,8 @@ function SetupStepPanel(props: {
   readonly canWrite: boolean;
   readonly integrationStatus: CatalogWorkspaceIntegrationStatus;
   readonly workspaceConnectorId?: string;
+  readonly catalogConnectorId?: string;
+  readonly importedToolVersionIds: readonly string[];
   readonly linkedVersions: readonly ConnectorVersionResource[];
   readonly versionsLoading: boolean;
   readonly installAllowed: boolean;
@@ -295,6 +305,8 @@ function SetupStepPanel(props: {
           canWrite={props.canWrite}
           integrationStatus={props.integrationStatus}
           workspaceConnectorId={props.workspaceConnectorId}
+          catalogConnectorId={props.catalogConnectorId}
+          importedToolVersionIds={props.importedToolVersionIds}
           linkedVersions={props.linkedVersions}
         />
       );
@@ -603,6 +615,8 @@ function DiscoverStep(props: {
   readonly canWrite: boolean;
   readonly integrationStatus: CatalogWorkspaceIntegrationStatus;
   readonly workspaceConnectorId?: string;
+  readonly catalogConnectorId?: string;
+  readonly importedToolVersionIds: readonly string[];
   readonly linkedVersions: readonly ConnectorVersionResource[];
 }) {
   if (props.workspaceConnectorId === undefined) {
@@ -641,18 +655,41 @@ function DiscoverStep(props: {
         </li>
       </ul>
       {props.integrationStatus === "tools-imported" ? (
-        <p role="status" data-testid="connector-setup-tools-imported">
-          MCP ToolVersions are imported for this connector key. Configure agent
-          bindings in Agent Studio (B6.3C scope).
-        </p>
+        <div data-testid="connector-setup-tools-imported">
+          <p role="status">
+            MCP ToolVersions are imported for this connector key. Bind them on a
+            new AgentVersion, then launch an authorized Run to exercise
+            ToolGateway.
+          </p>
+          {props.canWrite && props.importedToolVersionIds.length > 0 ? (
+            <LinkButton
+              variant="primary"
+              to={buildAgentPickerHandoffPath(props.importedToolVersionIds)}
+              data-testid="connector-setup-use-in-agent"
+            >
+              Use tools in an agent
+            </LinkButton>
+          ) : null}
+        </div>
       ) : null}
       <LinkButton
-        variant="primary"
+        variant={
+          props.integrationStatus === "tools-imported" ? "secondary" : "primary"
+        }
         to={connectorDiscoverHandoffPath(props.workspaceConnectorId)}
         data-testid="connector-setup-discover-handoff"
       >
         Open discover &amp; import
       </LinkButton>
+      {props.catalogConnectorId !== undefined ? (
+        <ul className="example-detail-list">
+          {relatedExampleDocLinks(props.catalogConnectorId).map((link) => (
+            <li key={link.exampleId}>
+              <Link to={link.consolePath}>Example: {link.title}</Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
