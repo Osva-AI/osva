@@ -1,18 +1,25 @@
 import {
   buildAgentBackedExecutionContext,
   buildOfficeWorkerAssignmentHistory,
+  buildOfficeWorkflowHandoffProjection,
   buildWorkflowBackedExecutionContext,
   indexOfficeWorkersByAgentId,
   type OfficeExecutionAgentVersionRecord,
   type OfficeExecutionAssignmentRecord,
   type OfficeExecutionApprovalRecord,
   type OfficeExecutionNodeRunRecord,
+  type OfficeExecutionRoleRecord,
   type OfficeExecutionRunRecord,
+  type OfficeExecutionTeamMembershipRecord,
+  type OfficeExecutionTeamRecord,
   type OfficeExecutionWorkerRecord,
+  type OfficeExecutionWorkflowEdgeDef,
   type OfficeExecutionWorkflowNodeDef,
   type OfficeExecutionWorkflowRunRecord,
   type OfficeAssignmentExecutionContext,
+  type OfficeWorkflowHandoffProjection,
   type OfficeWorkerAssignmentHistoryRow,
+  type WorkflowHandoffEdgeKind,
 } from "@osva/domain/office-execution-context";
 import type {
   AgentId,
@@ -113,6 +120,7 @@ function toOfficeExecutionNodeRunRecord(
     sequence: nodeRun.sequence,
     status: nodeRun.status,
     childRunId: nodeRun.childRunId as RunId | undefined,
+    selectedTargetKey: nodeRun.selectedTargetKey,
     startedAt: parseDate(nodeRun.startedAt),
     completedAt: parseDate(nodeRun.completedAt),
     createdAt: new Date(nodeRun.createdAt),
@@ -148,6 +156,81 @@ export function workflowDefinitionToExecutionNodes(
         ? (node.agentVersionId as AgentVersionId)
         : undefined,
   }));
+}
+
+export function workflowDefinitionToExecutionEdges(
+  definition: WorkflowDefinitionView | undefined,
+): OfficeExecutionWorkflowEdgeDef[] | undefined {
+  if (definition === undefined) {
+    return undefined;
+  }
+  return definition.edges.map((edge) => ({
+    from: edge.from,
+    to: edge.to,
+  }));
+}
+
+export function handoffEdgeKindToGraphAppearance(
+  kind: WorkflowHandoffEdgeKind,
+): "selected" | "inactive" | "skipped" | undefined {
+  switch (kind) {
+    case "EXECUTED_TRANSITION":
+    case "SELECTED_BRANCH":
+      return "selected";
+    case "INACTIVE_BRANCH":
+      return "inactive";
+    case "SKIPPED_PATH":
+      return "skipped";
+    case "DEFINED_CONNECTION":
+    case "FAILED_DOWNSTREAM":
+      return undefined;
+  }
+}
+
+export function buildOfficeAssignmentHandoffProjection(props: {
+  readonly workspaceId: string;
+  readonly workflowDefinition?: WorkflowDefinitionView;
+  readonly workflowRun?: WorkflowRunResource;
+  readonly workers: readonly OfficeWorkerResource[];
+  readonly agentVersionCatalog?: AgentVersionCatalogResource;
+  readonly teamsById?: ReadonlyMap<string, OfficeExecutionTeamRecord>;
+  readonly rolesById?: ReadonlyMap<string, OfficeExecutionRoleRecord>;
+  readonly membershipsByWorkerId?: ReadonlyMap<
+    OfficeWorkerId,
+    readonly OfficeExecutionTeamMembershipRecord[]
+  >;
+}): OfficeWorkflowHandoffProjection | undefined {
+  if (
+    props.workflowRun === undefined ||
+    props.workflowDefinition === undefined
+  ) {
+    return undefined;
+  }
+
+  const nodes = workflowDefinitionToExecutionNodes(props.workflowDefinition);
+  const edges = workflowDefinitionToExecutionEdges(props.workflowDefinition);
+  if (nodes === undefined || edges === undefined) {
+    return undefined;
+  }
+
+  const workersByAgentId = indexOfficeWorkersByAgentId(
+    props.workers.map(toOfficeExecutionWorkerRecord),
+  );
+
+  return buildOfficeWorkflowHandoffProjection({
+    workspaceId: props.workspaceId as WorkspaceId,
+    workflowNodes: nodes,
+    workflowEdges: edges,
+    nodeRuns: props.workflowRun.nodeRuns.map(toOfficeExecutionNodeRunRecord),
+    approvalRequests: props.workflowRun.approvalRequests.map(
+      toOfficeExecutionApprovalRecord,
+    ),
+    agentVersionsById: agentVersionIndexFromCatalog(props.agentVersionCatalog),
+    workersByAgentId,
+    teamsById: props.teamsById,
+    rolesById: props.rolesById,
+    membershipsByWorkerId: props.membershipsByWorkerId,
+  });
 }
 
 export function agentVersionIndexFromCatalog(

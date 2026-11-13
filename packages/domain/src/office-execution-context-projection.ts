@@ -83,6 +83,7 @@ export interface OfficeExecutionNodeRunRecord {
   readonly sequence: number;
   readonly status: string;
   readonly childRunId?: RunId;
+  readonly selectedTargetKey?: string;
   readonly startedAt?: Date;
   readonly completedAt?: Date;
   readonly createdAt: Date;
@@ -147,6 +148,7 @@ export interface WorkflowNodeTimelineEntry {
   readonly startedAt?: string;
   readonly completedAt?: string;
   readonly childRunId?: RunId;
+  readonly selectedBranchTargetKey?: string;
   readonly approvalRequestId?: ApprovalRequestId;
   readonly approvalStatus?: string;
   readonly workerAttribution: OfficeWorkerAttributionState;
@@ -350,6 +352,7 @@ export function buildWorkflowExecutionTimeline(props: {
       startedAt: toIso(nodeRun.startedAt),
       completedAt: toIso(nodeRun.completedAt),
       childRunId: nodeRun.childRunId,
+      selectedBranchTargetKey: nodeRun.selectedTargetKey,
       approvalRequestId: approval?.id,
       approvalStatus: approval?.status,
       workerAttribution: attribution,
@@ -495,3 +498,25 @@ export function buildOfficeWorkerAssignmentHistory(props: {
     }));
   return rows;
 }
+
+export {
+  buildOfficeWorkflowHandoffProjection,
+  indexTeamMembershipsByWorkerId,
+  resolveOfficeWorkerTeamContext,
+  resolveWorkflowHandoffEdgeKind,
+  resolveWorkflowHandoffStepKind,
+  selectLatestOfficeExecutionNodeRunByKey,
+  workflowHandoffEdgeId,
+  workflowHandoffEdgeTerminology,
+  type OfficeExecutionRoleRecord,
+  type OfficeExecutionTeamMembershipRecord,
+  type OfficeExecutionTeamRecord,
+  type OfficeExecutionWorkflowEdgeDef,
+  type OfficeWorkerTeamAssociation,
+  type OfficeWorkerTeamContext,
+  type OfficeWorkflowHandoffProjection,
+  type WorkflowHandoffEdgeKind,
+  type WorkflowHandoffEdgeView,
+  type WorkflowHandoffNodeView,
+  type WorkflowHandoffStepKind,
+} from "./office-workflow-handoff-projection.js";

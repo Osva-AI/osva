@@ -5,6 +5,7 @@ import type {
   AgentBackedExecutionContext,
   OfficeAssignmentExecutionContext,
   WorkflowBackedExecutionContext,
+  WorkflowHandoffNodeView,
   WorkflowNodeTimelineEntry,
 } from "@osva/domain/office-execution-context";
 
@@ -13,11 +14,24 @@ import type {
   OfficeAssignmentResource,
   OfficeWorkerResource,
 } from "../../hooks/use-office";
-import { useOfficeWorkersQuery } from "../../hooks/use-office";
+import {
+  useAllTeamMembershipsQuery,
+  useOfficeRolesQuery,
+  useOfficeTeamsQuery,
+  useOfficeWorkersQuery,
+} from "../../hooks/use-office";
 import type { RunResource } from "../../hooks/use-runs";
 import type { WorkflowRunResource } from "../../hooks/use-workflow-runs";
 import { useWorkflowVersionQuery } from "../../hooks/use-workflows";
-import { buildOfficeAssignmentExecutionContext } from "../../lib/office-execution-context";
+import {
+  buildOfficeAssignmentExecutionContext,
+  buildOfficeAssignmentHandoffProjection,
+} from "../../lib/office-execution-context";
+import {
+  buildOfficeTeamContextIndexes,
+  flattenTeamMemberships,
+} from "../../lib/office-team-context";
+import { TaskWorkflowHandoffPanel } from "./task-workflow-handoff-panel";
 import { assignmentExecutionPath } from "../../lib/office-task-board";
 import { formatTimestamp } from "../../lib/formatting";
 import { assignmentStatusCategory } from "../../lib/office-presentation";
@@ -31,7 +45,10 @@ import {
   describeWorkflowNodeExecutionStatus,
   workflowRunExecutionStatusLabel,
 } from "../../lib/workflow-execution-labels";
-import { asWorkflowDefinitionView } from "../../lib/workflow-definition";
+import {
+  asWorkflowDefinitionView,
+  type WorkflowDefinitionView,
+} from "../../lib/workflow-definition";
 import { resolveWorkflowCanvasLabel } from "../../lib/workflow-canvas-labels";
 import { useWorkflowCanvasLabelContext } from "../../hooks/use-workflow-canvas-label-context";
 import { StatusChip } from "../status/status-chip";
@@ -67,6 +84,15 @@ export function TaskExecutionContextSection({
   workflowRunLoading,
 }: TaskExecutionContextSectionProps) {
   const workersQuery = useOfficeWorkersQuery();
+  const teamsQuery = useOfficeTeamsQuery();
+  const rolesQuery = useOfficeRolesQuery();
+  const teamIds = useMemo(
+    () => (teamsQuery.data?.items ?? []).map((team) => team.id),
+    [teamsQuery.data?.items],
+  );
+  const membershipQueries = useAllTeamMembershipsQuery(
+    assignment.workflowRunId !== undefined ? teamIds : undefined,
+  );
   const needsCatalog = executionContextNeedsAgentCatalog(
     assignment,
     workflowRun,
@@ -87,18 +113,59 @@ export function TaskExecutionContextSection({
   );
 
   const definitionByKey = useMemo(() => {
-    const map = new Map<
-      string,
-      { readonly key: string; readonly type: string }
-    >();
+    const map = new Map<string, WorkflowDefinitionView["nodes"][number]>();
     if (definition === undefined) {
       return map;
     }
     for (const node of definition.nodes) {
-      map.set(node.key, { key: node.key, type: node.type });
+      map.set(node.key, node);
     }
     return map;
   }, [definition]);
+
+  const teamContextIndexes = useMemo(() => {
+    if (assignment.workflowRunId === undefined) {
+      return undefined;
+    }
+    const membershipLists = membershipQueries.map((query) => ({
+      items: query.data?.items ?? [],
+    }));
+    const memberships = flattenTeamMemberships(teamIds, membershipLists);
+    return buildOfficeTeamContextIndexes({
+      teams: teamsQuery.data?.items ?? [],
+      roles: rolesQuery.data?.items ?? [],
+      memberships,
+    });
+  }, [
+    assignment.workflowRunId,
+    membershipQueries,
+    rolesQuery.data?.items,
+    teamIds,
+    teamsQuery.data?.items,
+  ]);
+
+  const handoffProjection = useMemo(() => {
+    if (workflowRun === undefined || definition === undefined) {
+      return undefined;
+    }
+    return buildOfficeAssignmentHandoffProjection({
+      workspaceId: assignment.workspaceId,
+      workflowDefinition: definition,
+      workflowRun,
+      workers: workersQuery.data?.items ?? [],
+      agentVersionCatalog: catalogQuery.data,
+      teamsById: teamContextIndexes?.teamsById,
+      rolesById: teamContextIndexes?.rolesById,
+      membershipsByWorkerId: teamContextIndexes?.membershipsByWorkerId,
+    });
+  }, [
+    assignment.workspaceId,
+    catalogQuery.data,
+    definition,
+    teamContextIndexes,
+    workflowRun,
+    workersQuery.data?.items,
+  ]);
 
   const executionPath = assignmentExecutionPath(assignment);
   const context = useMemo((): OfficeAssignmentExecutionContext | undefined => {
@@ -128,7 +195,12 @@ export function TaskExecutionContextSection({
     (assignment.runId !== undefined && runLoading) ||
     (assignment.workflowRunId !== undefined && workflowRunLoading) ||
     (needsCatalog && catalogQuery.isLoading) ||
-    (assignment.workflowRunId !== undefined && workflowVersionQuery.isLoading);
+    (assignment.workflowRunId !== undefined &&
+      workflowVersionQuery.isLoading) ||
+    (assignment.workflowRunId !== undefined &&
+      (teamsQuery.isLoading ||
+        rolesQuery.isLoading ||
+        membershipQueries.some((query) => query.isLoading)));
 
   return (
     <SectionPanel title="Execution context">
@@ -153,12 +225,22 @@ export function TaskExecutionContextSection({
           {context?.kind === "WORKFLOW_RUN" ? (
             <WorkflowRunExecutionContextView context={context} />
           ) : null}
+          {context?.kind === "WORKFLOW_RUN" &&
+          handoffProjection !== undefined &&
+          definition !== undefined ? (
+            <TaskWorkflowHandoffPanel
+              projection={handoffProjection}
+              definition={definition}
+              workflowRunId={context.workflowRunId}
+            />
+          ) : null}
           {context?.kind === "WORKFLOW_RUN" ? (
             <TaskWorkflowExecutionTimeline
               entries={context.timeline}
               definitionByKey={definitionByKey}
               canvasLabels={canvasLabels}
               workflowRunId={context.workflowRunId}
+              handoffByNodeKey={handoffProjection?.nodes}
             />
           ) : null}
         </>
@@ -250,11 +332,19 @@ function TaskWorkflowExecutionTimeline(props: {
   readonly entries: readonly WorkflowNodeTimelineEntry[];
   readonly definitionByKey: Map<
     string,
-    { readonly key: string; readonly type: string }
+    WorkflowDefinitionView["nodes"][number]
   >;
   readonly canvasLabels: ReturnType<typeof useWorkflowCanvasLabelContext>;
   readonly workflowRunId: string;
+  readonly handoffByNodeKey?: readonly WorkflowHandoffNodeView[];
 }) {
+  const handoffIndex = useMemo(() => {
+    const map = new Map<string, WorkflowHandoffNodeView>();
+    for (const row of props.handoffByNodeKey ?? []) {
+      map.set(row.workflowNodeKey, row);
+    }
+    return map;
+  }, [props.handoffByNodeKey]);
   if (props.entries.length === 0) {
     return (
       <p className="muted" data-testid="task-execution-timeline-empty">
@@ -276,6 +366,7 @@ function TaskWorkflowExecutionTimeline(props: {
       <ol className="office-task-execution-timeline-list">
         {props.entries.map((entry) => {
           const def = props.definitionByKey.get(entry.workflowNodeKey);
+          const handoff = handoffIndex.get(entry.workflowNodeKey);
           const label =
             def === undefined
               ? entry.workflowNodeKey
@@ -312,13 +403,20 @@ function TaskWorkflowExecutionTimeline(props: {
                   <dd>{formatTimestamp(entry.completedAt)}</dd>
                 </div>
                 <div>
-                  <dt className="metric-label">Worker attribution</dt>
+                  <dt className="metric-label">Associated OfficeWorker</dt>
                   <dd>
                     <WorkerAttributionSummary
                       attribution={entry.workerAttribution}
+                      teamContext={handoff?.teamContext}
                     />
                   </dd>
                 </div>
+                {entry.selectedBranchTargetKey !== undefined ? (
+                  <div>
+                    <dt className="metric-label">Selected branch</dt>
+                    <dd className="mono">{entry.selectedBranchTargetKey}</dd>
+                  </div>
+                ) : null}
                 {entry.childRunId !== undefined ? (
                   <div>
                     <dt className="metric-label">Child Run</dt>
@@ -363,12 +461,39 @@ function TaskWorkflowExecutionTimeline(props: {
 
 function WorkerAttributionSummary(props: {
   readonly attribution: WorkflowNodeTimelineEntry["workerAttribution"];
+  readonly teamContext?: {
+    readonly associations: readonly {
+      readonly teamId: string;
+      readonly teamName: string;
+      readonly roleName?: string;
+    }[];
+  };
 }) {
+  const teamLine =
+    props.teamContext !== undefined &&
+    props.teamContext.associations.length > 0 ? (
+      <span className="office-worker-team-context muted">
+        {" "}
+        · Teams:{" "}
+        {props.teamContext.associations.map((row, index) => (
+          <span key={row.teamId}>
+            {index > 0 ? ", " : null}
+            <Link to={`/office/teams/${row.teamId}`}>{row.teamName}</Link>
+            {row.roleName !== undefined ? ` (${row.roleName})` : null}
+          </span>
+        ))}{" "}
+        (membership only — not node ownership)
+      </span>
+    ) : null;
+
   if (props.attribution.kind === "RESOLVED") {
     return (
-      <Link to={`/office/workers/${props.attribution.officeWorkerId}`}>
-        {props.attribution.officeWorkerName}
-      </Link>
+      <span>
+        <Link to={`/office/workers/${props.attribution.officeWorkerId}`}>
+          {props.attribution.officeWorkerName}
+        </Link>
+        {teamLine}
+      </span>
     );
   }
   if (props.attribution.agentId !== undefined) {
@@ -382,8 +507,9 @@ function WorkerAttributionSummary(props: {
         <Link to={`/agents/${props.attribution.agentId}`} className="mono">
           {props.attribution.agentId}
         </Link>
+        {teamLine}
       </span>
     );
   }
-  return <span className="muted">Unavailable</span>;
+  return <span className="muted">Unavailable{teamLine}</span>;
 }

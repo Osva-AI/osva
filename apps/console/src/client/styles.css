@@ -4747,6 +4747,30 @@ button.agent-studio-v2-progress-link {
   font-weight: 600;
 }
 
+.office-task-handoff-panel {
+  margin-top: var(--space-4);
+}
+
+.office-task-handoff-graph .workflow-graph-view {
+  height: min(320px, 50vh);
+  margin-top: var(--space-2);
+}
+
+.office-task-handoff-graph .workflow-graph-interaction-hint {
+  font-size: var(--text-sm);
+}
+
+.office-task-handoff-edges {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.office-worker-team-context {
+  display: inline;
+  font-size: var(--text-sm);
+}
+
 .workflow-run-inspector-head {
   display: flex;
   justify-content: space-between;

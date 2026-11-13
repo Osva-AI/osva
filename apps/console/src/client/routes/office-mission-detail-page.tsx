@@ -258,7 +258,9 @@ function ExecutionSummaryRow(props: {
     >
       Execution: {props.summary.pending} pending, {props.summary.running}{" "}
       running, {props.summary.completed} completed
-      {props.summary.failed > 0 ? `, ${props.summary.failed} failed` : null}
+      {props.summary.failed > 0 ? `, ${props.summary.failed} failed` : null}.{" "}
+      Workflow handoff graphs live on each workflow-backed task&apos;s Task
+      detail — not aggregated here.
     </p>
   );
 }
