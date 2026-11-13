@@ -2921,6 +2921,11 @@ a.button:hover {
   flex-wrap: wrap;
 }
 
+.connector-catalog-auth-hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
 .example-catalog-grid {
   display: grid;
   gap: var(--space-4);

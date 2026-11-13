@@ -63,8 +63,11 @@ export function ToolsPage() {
                 Refreshing…
               </span>
             ) : null}
+            <LinkButton variant="secondary" to="/tools/connectors/catalog">
+              Connector catalog
+            </LinkButton>
             <LinkButton variant="primary" to="/tools/connectors">
-              MCP connectors
+              Workspace connectors
             </LinkButton>
             <button
               type="button"

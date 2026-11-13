@@ -1,6 +1,6 @@
 import { LinkButton } from "../ui/button";
 
-export type IntegrationsSectionNavActive = "tools" | "connectors";
+export type IntegrationsSectionNavActive = "tools" | "connectors" | "catalog";
 
 export function IntegrationsSectionNav(props: {
   readonly active: IntegrationsSectionNavActive;
@@ -19,16 +19,28 @@ export function IntegrationsSectionNav(props: {
           Tool registry
         </LinkButton>
       )}
+      {props.active === "catalog" ? (
+        <span
+          className="button button-secondary is-active-nav"
+          aria-current="page"
+        >
+          Connector catalog
+        </span>
+      ) : (
+        <LinkButton variant="secondary" to="/tools/connectors/catalog">
+          Connector catalog
+        </LinkButton>
+      )}
       {props.active === "connectors" ? (
         <span
           className="button button-secondary is-active-nav"
           aria-current="page"
         >
-          MCP connectors
+          Workspace connectors
         </span>
       ) : (
         <LinkButton variant="secondary" to="/tools/connectors">
-          MCP connectors
+          Workspace connectors
         </LinkButton>
       )}
     </nav>

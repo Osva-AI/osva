@@ -1,6 +1,6 @@
 /** Audited commit of https://github.com/Osva-AI/osva-examples used for catalog provenance. */
 export const OSVA_EXAMPLES_AUDITED_SHA =
-  "8c21466162bef3817fcec2ca838302ad75f61552";
+  "d1cf0d5c8ef55a256aa2b8fa5867869ccd50419e";
 
 export const OSVA_EXAMPLES_REPO = "Osva-AI/osva-examples" as const;
 

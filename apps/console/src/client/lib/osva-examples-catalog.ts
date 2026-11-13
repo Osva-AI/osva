@@ -531,7 +531,89 @@ export const OSVA_EXAMPLE_CATALOG: readonly OsvaExampleCatalogEntry[] = [
     consoleNextSteps: [
       { label: "Models", to: "/models" },
       { label: "Testing Studio", to: "/testing" },
+      { label: "Connector catalog", to: "/tools/connectors/catalog" },
       { label: "Open Agent Studio", to: "/agents/new", requiresWrite: true },
+    ],
+  }),
+  entry({
+    id: "20-github-repository-analyst",
+    title: "GitHub Repository Analyst",
+    description:
+      "Read-only repository intelligence brief using the published GitHub MCP connector on STDIO — bounded issue sampling and deterministic analysis (OSVA 1.1.x).",
+    category: "research",
+    keywords: [
+      "github",
+      "repository",
+      "issues",
+      "analysis",
+      "read-only",
+      "mcp",
+      "stdio",
+    ],
+    complexity: "advanced",
+    primitives: ["Connector", "ConnectorVersion", "MCP", "Run", "TOOL"],
+    requirements: [
+      "OSVA 1.1.x web + worker",
+      "@osva-ai/connector-github on worker host",
+      "Worker STDIO MCP operator gate",
+    ],
+    osvaVersion: "1.1.x",
+    limitations: [
+      "Write GitHub tools are never imported.",
+      "Hermetic vitest does not prove live GitHub integration.",
+    ],
+    sourcePath: "examples/20-github-repository-analyst",
+    fixtureBacked: true,
+    verification: {
+      offlineCiSmoke: true,
+      liveIntegrationVerified: false,
+    },
+    consoleNextSteps: [
+      { label: "GitHub connector", to: "/tools/connectors/catalog/github" },
+      { label: "Workspace connectors", to: "/tools/connectors" },
+      { label: "Open Agent Studio", to: "/agents/new", requiresWrite: true },
+    ],
+  }),
+  entry({
+    id: "21-commerce-growth-analyst",
+    title: "Commerce & Growth Analyst",
+    description:
+      "Multi-connector agent combining Shopify commerce with GA4 acquisition and ecommerce reporting — six read-only MCP tools on OSVA 1.1.x.",
+    category: "research",
+    keywords: [
+      "shopify",
+      "ga4",
+      "commerce",
+      "growth",
+      "analytics",
+      "mcp",
+      "multi-connector",
+    ],
+    complexity: "advanced",
+    primitives: ["Connector", "ConnectorVersion", "MCP", "Run", "TOOL"],
+    requirements: [
+      "OSVA 1.1.x web + worker",
+      "Shopify and GA4 connector packages on worker",
+      "Worker STDIO MCP operator gate",
+    ],
+    osvaVersion: "1.1.x",
+    limitations: [
+      "Does not reconcile Shopify revenue with GA4 purchase metrics.",
+      "Hermetic vitest does not prove live Shopify or GA4 calls.",
+    ],
+    sourcePath: "examples/21-commerce-growth-analyst",
+    fixtureBacked: true,
+    verification: {
+      offlineCiSmoke: true,
+      liveIntegrationVerified: false,
+    },
+    consoleNextSteps: [
+      {
+        label: "Shopify connector",
+        to: "/tools/connectors/catalog/shopify",
+      },
+      { label: "GA4 connector", to: "/tools/connectors/catalog/ga4" },
+      { label: "Workspace connectors", to: "/tools/connectors" },
     ],
   }),
 ];

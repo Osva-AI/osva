@@ -41,6 +41,8 @@ import { ToolsPage } from "./routes/tools-page";
 import { ToolDetailPage } from "./routes/tool-detail-page";
 import { ConnectorsPage } from "./routes/connectors-page";
 import { ConnectorDetailPage } from "./routes/connector-detail-page";
+import { ConnectorCatalogPage } from "./routes/connector-catalog-page";
+import { ConnectorCatalogDetailPage } from "./routes/connector-catalog-detail-page";
 import { ExampleDetailPage } from "./routes/example-detail-page";
 import { ExamplesPage } from "./routes/examples-page";
 import { ActivityPage } from "./routes/activity-page";
@@ -164,6 +166,14 @@ export function App() {
                     element={<MemoryNamespacePage />}
                   />
                   <Route path="/tools" element={<ToolsPage />} />
+                  <Route
+                    path="/tools/connectors/catalog"
+                    element={<ConnectorCatalogPage />}
+                  />
+                  <Route
+                    path="/tools/connectors/catalog/:catalogConnectorId"
+                    element={<ConnectorCatalogDetailPage />}
+                  />
                   <Route
                     path="/tools/connectors"
                     element={<ConnectorsPage />}

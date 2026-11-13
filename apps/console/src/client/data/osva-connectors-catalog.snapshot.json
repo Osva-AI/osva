@@ -1,0 +1,1607 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T16:47:03.543Z",
+  "connectorCount": 45,
+  "sdkPin": "1.1.4",
+  "connectors": [
+    {
+      "connectorId": "amplitude",
+      "connectorKey": "osva-connector-amplitude",
+      "npmPackage": "@osva-ai/connector-amplitude",
+      "displayName": "OSVA Connector Profile V1 Amplitude MCP connector (read-only Dashboard REST analytics)",
+      "provider": "Amplitude",
+      "directory": "packages/amplitude",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-AMPLITUDE.md",
+      "packageReadme": "packages/amplitude/README.md",
+      "authentication": {
+        "method": "API key",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_AMPLITUDE_API_KEY"]
+      },
+      "tools": {
+        "count": 7,
+        "readOnly": [
+          "amplitude.chart.get",
+          "amplitude.event.list",
+          "amplitude.event.segmentation",
+          "amplitude.funnel.run",
+          "amplitude.retention.run",
+          "amplitude.session.average",
+          "amplitude.user.active"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-amplitude.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "aws-s3",
+      "connectorKey": "osva-connector-aws-s3",
+      "npmPackage": "@osva-ai/connector-aws-s3",
+      "displayName": "OSVA Connector Profile V1 AWS S3 MCP connector (bounded bucket/object reads with gated create/replace)",
+      "provider": "Amazon S3",
+      "directory": "packages/aws-s3",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-AWS-S3.md",
+      "packageReadme": "packages/aws-s3/README.md",
+      "authentication": {
+        "method": "AWS credential chain (env / profile / IMDS)",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_S3_ALLOWED_BUCKETS_READ",
+          "OSVA_CONNECTOR_S3_REGION"
+        ]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "s3.bucket.get",
+          "s3.bucket.list",
+          "s3.object.list",
+          "s3.object.metadata.get",
+          "s3.object.text.read",
+          "s3.object.versions.list"
+        ],
+        "mutationCapable": ["s3.object.text.create", "s3.object.text.replace"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-aws-s3.mjs",
+      "ciCoverage": "test:package-acceptance:aws-s3"
+    },
+    {
+      "connectorId": "azure-blob",
+      "connectorKey": "osva-connector-azure-blob",
+      "npmPackage": "@osva-ai/connector-azure-blob",
+      "displayName": "OSVA Connector Profile V1 Azure Blob Storage MCP connector",
+      "provider": "Azure Blob Storage",
+      "directory": "packages/azure-blob",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-AZURE-BLOB.md",
+      "packageReadme": "packages/azure-blob/README.md",
+      "authentication": {
+        "method": "DefaultAzureCredential / account key via env",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_AZURE_BLOB_ACCOUNT_NAME",
+          "OSVA_CONNECTOR_AZURE_BLOB_ALLOWED_CONTAINERS_READ"
+        ]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "azureblob.blob.list",
+          "azureblob.blob.metadata.get",
+          "azureblob.blob.text.read",
+          "azureblob.blob.versions.list",
+          "azureblob.container.get",
+          "azureblob.container.list"
+        ],
+        "mutationCapable": [
+          "azureblob.blob.text.create",
+          "azureblob.blob.text.replace"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-azure-blob.mjs",
+      "ciCoverage": "test:package-acceptance:azure-blob"
+    },
+    {
+      "connectorId": "bigcommerce",
+      "connectorKey": "osva-connector-bigcommerce",
+      "npmPackage": "@osva-ai/connector-bigcommerce",
+      "displayName": "OSVA Connector Profile V1 BigCommerce MCP connector (Catalog v3, category trees, Orders v2, gated catalog/order status updates)",
+      "provider": "BigCommerce",
+      "directory": "packages/bigcommerce",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-BIGCOMMERCE.md",
+      "packageReadme": "packages/bigcommerce/README.md",
+      "authentication": {
+        "method": "Access token",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_BIGCOMMERCE_ACCESS_TOKEN",
+          "OSVA_CONNECTOR_BIGCOMMERCE_STORE_HASH"
+        ]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [
+          "bigcommerce.category.list",
+          "bigcommerce.category.tree.list",
+          "bigcommerce.order.get",
+          "bigcommerce.order.list",
+          "bigcommerce.order.product.list",
+          "bigcommerce.product.get",
+          "bigcommerce.product.list",
+          "bigcommerce.product.variant.list"
+        ],
+        "mutationCapable": [
+          "bigcommerce.order.status.update",
+          "bigcommerce.product.update"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-bigcommerce.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "bigquery",
+      "connectorKey": "osva-connector-bigquery",
+      "npmPackage": "@osva-ai/connector-bigquery",
+      "displayName": "OSVA Connector Profile V1 Google BigQuery MCP connector (read-only discovery and bounded queries)",
+      "provider": "Google BigQuery",
+      "directory": "packages/bigquery",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-BIGQUERY.md",
+      "packageReadme": "packages/bigquery/README.md",
+      "authentication": {
+        "method": "ADC",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_BIGQUERY_ALLOWED_DATASETS",
+          "OSVA_CONNECTOR_BIGQUERY_PROJECT_ID"
+        ]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "bigquery.dataset.get",
+          "bigquery.dataset.list",
+          "bigquery.project.get",
+          "bigquery.table.aggregate",
+          "bigquery.table.columns.list",
+          "bigquery.table.get",
+          "bigquery.table.list",
+          "bigquery.table.rows.sample"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-bigquery.mjs",
+      "ciCoverage": "test:package-acceptance:bigquery"
+    },
+    {
+      "connectorId": "confluence",
+      "connectorKey": "osva-connector-confluence",
+      "npmPackage": "@osva-ai/connector-confluence",
+      "displayName": "OSVA Connector Profile V1 Confluence Cloud MCP connector (bounded space/page reads; controlled page mutations when explicitly enabled)",
+      "provider": "Atlassian Confluence",
+      "directory": "packages/confluence",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-CONFLUENCE.md",
+      "packageReadme": "packages/confluence/README.md",
+      "authentication": {
+        "method": "API token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_CONFLUENCE_SITE_URL"]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "confluence.page.children.list",
+          "confluence.page.get",
+          "confluence.page.list",
+          "confluence.search",
+          "confluence.space.get",
+          "confluence.space.list"
+        ],
+        "mutationCapable": ["confluence.page.create", "confluence.page.update"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-confluence.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "exa",
+      "connectorKey": "osva-connector-exa",
+      "npmPackage": "@osva-ai/connector-exa",
+      "displayName": "OSVA Connector Profile V1 Exa MCP connector (web search, page contents, and grounded answers)",
+      "provider": "Exa",
+      "directory": "packages/exa",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-EXA.md",
+      "packageReadme": "packages/exa/README.md",
+      "authentication": {
+        "method": "API key",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_EXA_API_KEY"]
+      },
+      "tools": {
+        "count": 3,
+        "readOnly": ["exa.answer", "exa.contents.get", "exa.search"],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-exa.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "firecrawl",
+      "connectorKey": "osva-connector-firecrawl",
+      "npmPackage": "@osva-ai/connector-firecrawl",
+      "displayName": "OSVA Connector Profile V1 Firecrawl MCP connector (bounded scrape, search, map, and async crawl)",
+      "provider": "Firecrawl",
+      "directory": "packages/firecrawl",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-FIRECRAWL.md",
+      "packageReadme": "packages/firecrawl/README.md",
+      "authentication": {
+        "method": "API key",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_FIRECRAWL_API_KEY"]
+      },
+      "tools": {
+        "count": 5,
+        "readOnly": [
+          "firecrawl.crawl.start",
+          "firecrawl.crawl.status",
+          "firecrawl.map",
+          "firecrawl.scrape",
+          "firecrawl.search"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-firecrawl.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "freshdesk",
+      "connectorKey": "osva-connector-freshdesk",
+      "npmPackage": "@osva-ai/connector-freshdesk",
+      "displayName": "OSVA Freshdesk customer-support MCP connector",
+      "provider": "Freshdesk",
+      "directory": "packages/freshdesk",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-FRESHDESK.md",
+      "packageReadme": "packages/freshdesk/README.md",
+      "authentication": {
+        "method": "API key",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_FRESHDESK_API_KEY",
+          "OSVA_CONNECTOR_FRESHDESK_DOMAIN"
+        ]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "freshdesk.contact.get",
+          "freshdesk.contact.list",
+          "freshdesk.ticket.conversation.list",
+          "freshdesk.ticket.get",
+          "freshdesk.ticket.list",
+          "freshdesk.ticket.search"
+        ],
+        "mutationCapable": [
+          "freshdesk.ticket.note.add",
+          "freshdesk.ticket.status.set"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-freshdesk.mjs",
+      "ciCoverage": "test:package-acceptance:freshdesk"
+    },
+    {
+      "connectorId": "ga4",
+      "connectorKey": "osva-connector-ga4",
+      "npmPackage": "@osva-ai/connector-ga4",
+      "displayName": "OSVA Connector Profile V1 Google Analytics 4 MCP connector (read-only property discovery, metadata, and reporting)",
+      "provider": "Google Analytics 4",
+      "directory": "packages/ga4",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-GA4.md",
+      "packageReadme": "packages/ga4/README.md",
+      "authentication": {
+        "method": "Service account",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_GA4_PROPERTY_ID"]
+      },
+      "tools": {
+        "count": 7,
+        "readOnly": [
+          "ga4.metadata.get",
+          "ga4.property.get",
+          "ga4.property.list",
+          "ga4.report.acquisition",
+          "ga4.report.ecommerce",
+          "ga4.report.realtime",
+          "ga4.report.run"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-ga4.mjs",
+      "ciCoverage": "test:package-acceptance:ga4"
+    },
+    {
+      "connectorId": "gcs",
+      "connectorKey": "osva-connector-gcs",
+      "npmPackage": "@osva-ai/connector-gcs",
+      "displayName": "OSVA Connector Profile V1 Google Cloud Storage MCP connector",
+      "provider": "Google Cloud Storage",
+      "directory": "packages/gcs",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-GCS.md",
+      "packageReadme": "packages/gcs/README.md",
+      "authentication": {
+        "method": "ADC (GOOGLE_APPLICATION_CREDENTIALS or gcloud)",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_GCS_ALLOWED_BUCKETS_READ",
+          "OSVA_CONNECTOR_GCS_PROJECT_ID"
+        ]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "gcs.bucket.get",
+          "gcs.bucket.list",
+          "gcs.object.list",
+          "gcs.object.metadata.get",
+          "gcs.object.text.read",
+          "gcs.object.versions.list"
+        ],
+        "mutationCapable": ["gcs.object.text.create", "gcs.object.text.replace"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-gcs.mjs",
+      "ciCoverage": "test:package-acceptance:gcs"
+    },
+    {
+      "connectorId": "github",
+      "connectorKey": "osva-connector-github",
+      "npmPackage": "@osva-ai/connector-github",
+      "displayName": "OSVA Connector Profile V1 GitHub MCP connector (repository and issue read, issue create, issue comment create)",
+      "provider": "GitHub",
+      "directory": "packages/github",
+      "repositoryVersion": "0.4.0",
+      "publishedVersion": "0.4.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL.md",
+      "packageReadme": "packages/github/README.md",
+      "authentication": {
+        "method": "Fine-grained PAT",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_GITHUB_ALLOWED_REPOSITORIES",
+          "OSVA_CONNECTOR_GITHUB_TOKEN"
+        ]
+      },
+      "tools": {
+        "count": 5,
+        "readOnly": [
+          "github.issue.get",
+          "github.issue.list",
+          "github.repository.get"
+        ],
+        "mutationCapable": [
+          "github.issue.comment.create",
+          "github.issue.create"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance.mjs",
+      "ciCoverage": "test:package-acceptance"
+    },
+    {
+      "connectorId": "gmail",
+      "connectorKey": "osva-connector-gmail",
+      "npmPackage": "@osva-ai/connector-gmail",
+      "displayName": "OSVA Connector Profile V1 Gmail MCP connector (bounded reads; controlled drafts and sends when explicitly enabled by the host)",
+      "provider": "Gmail",
+      "directory": "packages/gmail",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-GMAIL.md",
+      "packageReadme": "packages/gmail/README.md",
+      "authentication": {
+        "method": "OAuth",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_GMAIL_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [
+          "gmail.draft.list",
+          "gmail.label.list",
+          "gmail.message.get",
+          "gmail.message.list",
+          "gmail.profile.get",
+          "gmail.thread.get",
+          "gmail.thread.list"
+        ],
+        "mutationCapable": [
+          "gmail.draft.create",
+          "gmail.draft.update",
+          "gmail.message.send"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-gmail.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "google-ads",
+      "connectorKey": "osva-connector-google-ads",
+      "npmPackage": "@osva-ai/connector-google-ads",
+      "displayName": "OSVA Connector Profile V1 Google Ads MCP connector (read-only customer discovery, campaign reporting, and constrained GAQL)",
+      "provider": "Google Ads",
+      "directory": "packages/google-ads",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-GOOGLE-ADS.md",
+      "packageReadme": "packages/google-ads/README.md",
+      "authentication": {
+        "method": "OAuth + developer token",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_GOOGLE_ADS_DEVELOPER_TOKEN",
+          "OSVA_CONNECTOR_GOOGLE_ADS_LOGIN_CUSTOMER_ID"
+        ]
+      },
+      "tools": {
+        "count": 9,
+        "readOnly": [
+          "ads.adGroup.performance",
+          "ads.asset.performance",
+          "ads.campaign.list",
+          "ads.campaign.performance",
+          "ads.customer.get",
+          "ads.customer.list",
+          "ads.keyword.performance",
+          "ads.report.query",
+          "ads.searchTerm.performance"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-google-ads.mjs",
+      "ciCoverage": "test:package-acceptance:google-ads"
+    },
+    {
+      "connectorId": "google-calendar",
+      "connectorKey": "osva-connector-google-calendar",
+      "npmPackage": "@osva-ai/connector-google-calendar",
+      "displayName": "OSVA Connector Profile V1 Google Calendar MCP connector (bounded reads; controlled event mutations when explicitly enabled)",
+      "provider": "Google Calendar",
+      "directory": "packages/google-calendar",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-GOOGLE-CALENDAR.md",
+      "packageReadme": "packages/google-calendar/README.md",
+      "authentication": {
+        "method": "OAuth",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_GOOGLE_CALENDAR_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 7,
+        "readOnly": [
+          "calendar.calendar.list",
+          "calendar.event.get",
+          "calendar.event.list",
+          "calendar.freebusy.query"
+        ],
+        "mutationCapable": [
+          "calendar.event.create",
+          "calendar.event.delete",
+          "calendar.event.update"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-google-calendar.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "google-drive",
+      "connectorKey": "osva-connector-google-drive",
+      "npmPackage": "@osva-ai/connector-google-drive",
+      "displayName": "OSVA Connector Profile V1 Google Drive MCP connector (read-only file discovery, metadata, text retrieval, Workspace export, shared drives, and change tracking)",
+      "provider": "Google Drive",
+      "directory": "packages/google-drive",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-GOOGLE-DRIVE.md",
+      "packageReadme": "packages/google-drive/README.md",
+      "authentication": {
+        "method": "OAuth",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_GOOGLE_DRIVE_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "drive.changes.list",
+          "drive.changes.start",
+          "drive.file.export",
+          "drive.file.get",
+          "drive.file.list",
+          "drive.file.read",
+          "drive.folder.list",
+          "drive.sharedDrive.list"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-google-drive.mjs",
+      "ciCoverage": "test:package-acceptance:google-drive"
+    },
+    {
+      "connectorId": "google-sheets",
+      "connectorKey": "osva-connector-google-sheets",
+      "npmPackage": "@osva-ai/connector-google-sheets",
+      "displayName": "OSVA Connector Profile V1 Google Sheets MCP connector (spreadsheet metadata, bounded value reads, and controlled writes when explicitly enabled)",
+      "provider": "Google Sheets",
+      "directory": "packages/google-sheets",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-GOOGLE-SHEETS.md",
+      "packageReadme": "packages/google-sheets/README.md",
+      "authentication": {
+        "method": "OAuth",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_GOOGLE_SHEETS_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "sheets.sheet.add",
+          "sheets.sheet.list",
+          "sheets.spreadsheet.get",
+          "sheets.values.batchGet",
+          "sheets.values.batchUpdate",
+          "sheets.values.get"
+        ],
+        "mutationCapable": ["sheets.values.append", "sheets.values.update"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-google-sheets.mjs",
+      "ciCoverage": "test:package-acceptance:google-sheets"
+    },
+    {
+      "connectorId": "gsc",
+      "connectorKey": "osva-connector-gsc",
+      "npmPackage": "@osva-ai/connector-gsc",
+      "displayName": "OSVA Connector Profile V1 Google Search Console MCP connector (read-only property discovery, search analytics, sitemaps, and URL inspection)",
+      "provider": "Google Search Console",
+      "directory": "packages/gsc",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-GSC.md",
+      "packageReadme": "packages/gsc/README.md",
+      "authentication": {
+        "method": "Service account",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_GSC_SITE_URL"]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "gsc.performance.pages",
+          "gsc.performance.queries",
+          "gsc.performance.query",
+          "gsc.property.get",
+          "gsc.property.list",
+          "gsc.sitemap.get",
+          "gsc.sitemap.list",
+          "gsc.url.inspect"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-gsc.mjs",
+      "ciCoverage": "test:package-acceptance:gsc"
+    },
+    {
+      "connectorId": "hubspot",
+      "connectorKey": "osva-connector-hubspot",
+      "npmPackage": "@osva-ai/connector-hubspot",
+      "displayName": "OSVA Connector Profile V1 HubSpot MCP connector (read-only CRM contacts, companies, deals, search, pipelines, owners, and associations)",
+      "provider": "HubSpot",
+      "directory": "packages/hubspot",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-HUBSPOT.md",
+      "packageReadme": "packages/hubspot/README.md",
+      "authentication": {
+        "method": "Private app token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_HUBSPOT_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [
+          "hubspot.association.list",
+          "hubspot.company.get",
+          "hubspot.company.list",
+          "hubspot.contact.get",
+          "hubspot.contact.list",
+          "hubspot.crm.search",
+          "hubspot.deal.get",
+          "hubspot.deal.list",
+          "hubspot.owner.list",
+          "hubspot.pipeline.list"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-hubspot.mjs",
+      "ciCoverage": "test:package-acceptance:hubspot"
+    },
+    {
+      "connectorId": "intercom",
+      "connectorKey": "osva-connector-intercom",
+      "npmPackage": "@osva-ai/connector-intercom",
+      "displayName": "OSVA Intercom customer-support MCP connector",
+      "provider": "Intercom",
+      "directory": "packages/intercom",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-INTERCOM.md",
+      "packageReadme": "packages/intercom/README.md",
+      "authentication": {
+        "method": "Bearer token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_INTERCOM_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 9,
+        "readOnly": [
+          "intercom.admin.list",
+          "intercom.contact.get",
+          "intercom.contact.list",
+          "intercom.contact.search",
+          "intercom.conversation.get",
+          "intercom.conversation.list",
+          "intercom.conversation.search"
+        ],
+        "mutationCapable": [
+          "intercom.conversation.note.add",
+          "intercom.conversation.state.set"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-intercom.mjs",
+      "ciCoverage": "test:package-acceptance:intercom"
+    },
+    {
+      "connectorId": "jira",
+      "connectorKey": "osva-connector-jira",
+      "npmPackage": "@osva-ai/connector-jira",
+      "displayName": "OSVA Connector Profile V1 Jira Cloud MCP connector (bounded project/issue reads; controlled issue mutations when explicitly enabled)",
+      "provider": "Atlassian Jira",
+      "directory": "packages/jira",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-JIRA.md",
+      "packageReadme": "packages/jira/README.md",
+      "authentication": {
+        "method": "API token or OAuth",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_JIRA_SITE_URL"]
+      },
+      "tools": {
+        "count": 9,
+        "readOnly": [
+          "jira.issue.get",
+          "jira.issue.search",
+          "jira.issue.transitions.list",
+          "jira.project.get",
+          "jira.project.list"
+        ],
+        "mutationCapable": [
+          "jira.issue.comment.create",
+          "jira.issue.create",
+          "jira.issue.transition",
+          "jira.issue.update"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-jira.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "klaviyo",
+      "connectorKey": "osva-connector-klaviyo",
+      "npmPackage": "@osva-ai/connector-klaviyo",
+      "displayName": "OSVA Connector Profile V1 Klaviyo MCP connector (read-only account discovery, campaigns, flows, metrics, events, and reporting)",
+      "provider": "Klaviyo",
+      "directory": "packages/klaviyo",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-KLAVIYO.md",
+      "packageReadme": "packages/klaviyo/README.md",
+      "authentication": {
+        "method": "API key",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_KLAVIYO_PRIVATE_API_KEY"]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [
+          "klaviyo.account.get",
+          "klaviyo.campaign.get",
+          "klaviyo.campaign.list",
+          "klaviyo.event.list",
+          "klaviyo.flow.get",
+          "klaviyo.flow.list",
+          "klaviyo.metric.get",
+          "klaviyo.metric.list",
+          "klaviyo.report.campaign",
+          "klaviyo.report.flow"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-klaviyo.mjs",
+      "ciCoverage": "test:package-acceptance:klaviyo"
+    },
+    {
+      "connectorId": "linear",
+      "connectorKey": "osva-connector-linear",
+      "npmPackage": "@osva-ai/connector-linear",
+      "displayName": "OSVA Connector Profile V1 Linear MCP connector (bounded workspace reads; controlled issue and comment mutations when explicitly enabled)",
+      "provider": "Linear",
+      "directory": "packages/linear",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-LINEAR.md",
+      "packageReadme": "packages/linear/README.md",
+      "authentication": {
+        "method": "API key / OAuth token",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_LINEAR_ACCESS_TOKEN",
+          "OSVA_CONNECTOR_LINEAR_ALLOWED_TEAM_IDS",
+          "OSVA_CONNECTOR_LINEAR_API_KEY",
+          "OSVA_CONNECTOR_LINEAR_HOST_MUTATIONS_APPROVED",
+          "OSVA_CONNECTOR_LINEAR_TIMEOUT_MS",
+          "OSVA_CONNECTOR_LINEAR_WRITE_ENABLED"
+        ]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [
+          "linear.issue.get",
+          "linear.issue.list",
+          "linear.issue.search",
+          "linear.project.get",
+          "linear.project.list",
+          "linear.team.list",
+          "linear.viewer.get"
+        ],
+        "mutationCapable": [
+          "linear.comment.create",
+          "linear.issue.create",
+          "linear.issue.update"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-linear.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "meta-ads",
+      "connectorKey": "osva-connector-meta-ads",
+      "npmPackage": "@osva-ai/connector-meta-ads",
+      "displayName": "OSVA Connector Profile V1 Meta (Facebook) Ads MCP connector (read-only account discovery, campaign structure, and Marketing API insights)",
+      "provider": "Meta Ads",
+      "directory": "packages/meta-ads",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-META-ADS.md",
+      "packageReadme": "packages/meta-ads/README.md",
+      "authentication": {
+        "method": "Access token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_META_ADS_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [
+          "meta.ad.list",
+          "meta.adAccount.get",
+          "meta.adAccount.list",
+          "meta.adSet.list",
+          "meta.campaign.list",
+          "meta.insights.account",
+          "meta.insights.ad",
+          "meta.insights.adSet",
+          "meta.insights.breakdown",
+          "meta.insights.campaign"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-meta-ads.mjs",
+      "ciCoverage": "test:package-acceptance:meta-ads"
+    },
+    {
+      "connectorId": "mixpanel",
+      "connectorKey": "osva-connector-mixpanel",
+      "npmPackage": "@osva-ai/connector-mixpanel",
+      "displayName": "OSVA Connector Profile V1 Mixpanel MCP connector (read-only Query API insights, segmentation, funnels, retention, cohorts, and top events)",
+      "provider": "Mixpanel",
+      "directory": "packages/mixpanel",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-MIXPANEL.md",
+      "packageReadme": "packages/mixpanel/README.md",
+      "authentication": {
+        "method": "Service account",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_MIXPANEL_PROJECT_ID"]
+      },
+      "tools": {
+        "count": 6,
+        "readOnly": [
+          "mixpanel.cohort.list",
+          "mixpanel.event.top",
+          "mixpanel.funnel.get",
+          "mixpanel.report.get",
+          "mixpanel.retention.run",
+          "mixpanel.segmentation.run"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-mixpanel.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "notion",
+      "connectorKey": "osva-connector-notion",
+      "npmPackage": "@osva-ai/connector-notion",
+      "displayName": "OSVA Connector Profile V1 Notion MCP connector (bounded workspace reads; controlled page and block mutations when explicitly enabled)",
+      "provider": "Notion",
+      "directory": "packages/notion",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-NOTION.md",
+      "packageReadme": "packages/notion/README.md",
+      "authentication": {
+        "method": "Integration token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_NOTION_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 9,
+        "readOnly": [
+          "notion.block.children.list",
+          "notion.database.get",
+          "notion.datasource.get",
+          "notion.datasource.query",
+          "notion.page.get",
+          "notion.search"
+        ],
+        "mutationCapable": [
+          "notion.block.children.append",
+          "notion.page.create",
+          "notion.page.update"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-notion.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "npm",
+      "connectorKey": "osva-connector-npm",
+      "npmPackage": "@osva-ai/connector-npm",
+      "displayName": "OSVA Connector Profile V1 npm registry MCP connector (read-only package metadata and download statistics)",
+      "provider": "npm registry",
+      "directory": "packages/npm",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-NPM.md",
+      "packageReadme": "packages/npm/README.md",
+      "authentication": {
+        "method": "Optional auth",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_NPM_TIMEOUT_MS"]
+      },
+      "tools": {
+        "count": 2,
+        "readOnly": ["npm_downloads", "npm_package_metadata"],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-npm.mjs",
+      "ciCoverage": "test:package-acceptance:npm"
+    },
+    {
+      "connectorId": "onedrive",
+      "connectorKey": "osva-connector-onedrive",
+      "npmPackage": "@osva-ai/connector-onedrive",
+      "displayName": "OSVA Connector Profile V1 Microsoft OneDrive MCP connector (delegated Graph v1 reads, bounded text retrieval, optional small upload when host-approved)",
+      "provider": "Microsoft OneDrive (Graph)",
+      "directory": "packages/onedrive",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-ONEDRIVE.md",
+      "packageReadme": "packages/onedrive/README.md",
+      "authentication": {
+        "method": "OAuth access token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_ONEDRIVE_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 6,
+        "readOnly": [
+          "onedrive.drive.get",
+          "onedrive.file.read",
+          "onedrive.file.search",
+          "onedrive.item.get",
+          "onedrive.item.list"
+        ],
+        "mutationCapable": ["onedrive.file.upload.small"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-onedrive.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "outlook",
+      "connectorKey": "osva-connector-outlook",
+      "npmPackage": "@osva-ai/connector-outlook",
+      "displayName": "OSVA Connector Profile V1 Outlook MCP connector (bounded mail and calendar reads; controlled send and calendar writes when explicitly enabled)",
+      "provider": "Microsoft Outlook (Graph)",
+      "directory": "packages/outlook",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-OUTLOOK.md",
+      "packageReadme": "packages/outlook/README.md",
+      "authentication": {
+        "method": "OAuth access token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_OUTLOOK_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 9,
+        "readOnly": [
+          "outlook.calendar.list",
+          "outlook.event.get",
+          "outlook.event.list",
+          "outlook.mailFolder.list",
+          "outlook.message.get",
+          "outlook.message.list",
+          "outlook.message.search"
+        ],
+        "mutationCapable": ["outlook.event.create", "outlook.message.send"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-outlook.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "pinecone",
+      "connectorKey": "osva-connector-pinecone",
+      "npmPackage": "@osva-ai/connector-pinecone",
+      "displayName": "OSVA Connector Profile V1 Pinecone MCP connector (index control plane reads, dense vector data plane, gated upsert)",
+      "provider": "Pinecone",
+      "directory": "packages/pinecone",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-PINECONE.md",
+      "packageReadme": "packages/pinecone/README.md",
+      "authentication": {
+        "method": "API key",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_PINECONE_ALLOWED_INDEXES",
+          "OSVA_CONNECTOR_PINECONE_API_KEY"
+        ]
+      },
+      "tools": {
+        "count": 7,
+        "readOnly": [
+          "pinecone.index.describe",
+          "pinecone.index.list",
+          "pinecone.index.stats",
+          "pinecone.vector.fetch",
+          "pinecone.vector.list",
+          "pinecone.vector.query"
+        ],
+        "mutationCapable": ["pinecone.vector.upsert"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-pinecone.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "pipedrive",
+      "connectorKey": "osva-connector-pipedrive",
+      "npmPackage": "@osva-ai/connector-pipedrive",
+      "displayName": "OSVA Pipedrive CRM MCP connector",
+      "provider": "Pipedrive",
+      "directory": "packages/pipedrive",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-PIPEDRIVE.md",
+      "packageReadme": "packages/pipedrive/README.md",
+      "authentication": {
+        "method": "API token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_PIPEDRIVE_API_TOKEN"]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [
+          "pipedrive.deal.get",
+          "pipedrive.deal.list",
+          "pipedrive.deal.search",
+          "pipedrive.organization.get",
+          "pipedrive.organization.list",
+          "pipedrive.person.get",
+          "pipedrive.person.list",
+          "pipedrive.pipeline.list",
+          "pipedrive.stage.list"
+        ],
+        "mutationCapable": ["pipedrive.deal.stage.set"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-pipedrive.mjs",
+      "ciCoverage": "test:package-acceptance:pipedrive"
+    },
+    {
+      "connectorId": "postgres",
+      "connectorKey": "osva-connector-postgres",
+      "npmPackage": "@osva-ai/connector-postgres",
+      "displayName": "OSVA Connector Profile V1 PostgreSQL MCP connector (connection test, catalog discovery, bounded read-only SELECT)",
+      "provider": "PostgreSQL",
+      "directory": "packages/postgres",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-POSTGRES.md",
+      "packageReadme": "packages/postgres/README.md",
+      "authentication": {
+        "method": "Connection URL",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_POSTGRES_ALLOWED_SCHEMAS"]
+      },
+      "tools": {
+        "count": 5,
+        "readOnly": [
+          "postgres.column.list",
+          "postgres.connection.test",
+          "postgres.query.read",
+          "postgres.schema.list",
+          "postgres.table.list"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-postgres.mjs",
+      "ciCoverage": "test:package-acceptance:postgres"
+    },
+    {
+      "connectorId": "qdrant",
+      "connectorKey": "osva-connector-qdrant",
+      "npmPackage": "@osva-ai/connector-qdrant",
+      "displayName": "OSVA Connector Profile V1 Qdrant MCP connector (collection and point reads with gated upsert)",
+      "provider": "Qdrant",
+      "directory": "packages/qdrant",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-QDRANT.md",
+      "packageReadme": "packages/qdrant/README.md",
+      "authentication": {
+        "method": "API key + cluster URL",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_QDRANT_ALLOWED_COLLECTIONS",
+          "OSVA_CONNECTOR_QDRANT_URL"
+        ]
+      },
+      "tools": {
+        "count": 7,
+        "readOnly": [
+          "qdrant.collection.get",
+          "qdrant.collection.list",
+          "qdrant.point.count",
+          "qdrant.point.get",
+          "qdrant.point.query",
+          "qdrant.point.scroll"
+        ],
+        "mutationCapable": ["qdrant.point.upsert"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-qdrant.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "salesforce",
+      "connectorKey": "osva-connector-salesforce",
+      "npmPackage": "@osva-ai/connector-salesforce",
+      "displayName": "OSVA Salesforce CRM MCP connector (bounded reads, opportunity stage updates, task creation)",
+      "provider": "Salesforce",
+      "directory": "packages/salesforce",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-SALESFORCE.md",
+      "packageReadme": "packages/salesforce/README.md",
+      "authentication": {
+        "method": "OAuth",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_SALESFORCE_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 9,
+        "readOnly": [
+          "salesforce.account.get",
+          "salesforce.account.list",
+          "salesforce.contact.get",
+          "salesforce.contact.list",
+          "salesforce.opportunity.get",
+          "salesforce.opportunity.list",
+          "salesforce.opportunity.stage.list"
+        ],
+        "mutationCapable": [
+          "salesforce.opportunity.stage.set",
+          "salesforce.task.create"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-salesforce.mjs",
+      "ciCoverage": "test:package-acceptance:salesforce"
+    },
+    {
+      "connectorId": "shopify",
+      "connectorKey": "osva-connector-shopify",
+      "npmPackage": "@osva-ai/connector-shopify",
+      "displayName": "OSVA Connector Profile V1 Shopify MCP connector (read-only shop, catalog, orders, inventory, and locations)",
+      "provider": "Shopify",
+      "directory": "packages/shopify",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-SHOPIFY.md",
+      "packageReadme": "packages/shopify/README.md",
+      "authentication": {
+        "method": "Admin API token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_SHOPIFY_SHOP_DOMAIN"]
+      },
+      "tools": {
+        "count": 7,
+        "readOnly": [
+          "shopify.inventory.levels.list",
+          "shopify.location.list",
+          "shopify.order.get",
+          "shopify.order.list",
+          "shopify.product.get",
+          "shopify.product.list",
+          "shopify.shop.get"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-shopify.mjs",
+      "ciCoverage": "test:package-acceptance:shopify"
+    },
+    {
+      "connectorId": "slack",
+      "connectorKey": "osva-connector-slack",
+      "npmPackage": "@osva-ai/connector-slack",
+      "displayName": "OSVA Connector Profile V1 Slack MCP connector (read-only channels and messages; controlled posting)",
+      "provider": "Slack",
+      "directory": "packages/slack",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-SLACK.md",
+      "packageReadme": "packages/slack/README.md",
+      "authentication": {
+        "method": "Bot token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_SLACK_BOT_TOKEN"]
+      },
+      "tools": {
+        "count": 7,
+        "readOnly": [
+          "slack.auth.test",
+          "slack.channel.info",
+          "slack.channel.list",
+          "slack.message.history",
+          "slack.message.post",
+          "slack.message.reply",
+          "slack.message.thread"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-slack.mjs",
+      "ciCoverage": "test:package-acceptance:slack"
+    },
+    {
+      "connectorId": "snowflake",
+      "connectorKey": "osva-connector-snowflake",
+      "npmPackage": "@osva-ai/connector-snowflake",
+      "displayName": "OSVA Connector Profile V1 Snowflake MCP connector (read-only catalog and bounded queries)",
+      "provider": "Snowflake",
+      "directory": "packages/snowflake",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-SNOWFLAKE.md",
+      "packageReadme": "packages/snowflake/README.md",
+      "authentication": {
+        "method": "User/password or key pair (connector env)",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_SNOWFLAKE_ACCOUNT",
+          "OSVA_CONNECTOR_SNOWFLAKE_ALLOWED_SCHEMAS",
+          "OSVA_CONNECTOR_SNOWFLAKE_DATABASE",
+          "OSVA_CONNECTOR_SNOWFLAKE_PASSWORD",
+          "OSVA_CONNECTOR_SNOWFLAKE_ROLE",
+          "OSVA_CONNECTOR_SNOWFLAKE_USER",
+          "OSVA_CONNECTOR_SNOWFLAKE_WAREHOUSE"
+        ]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "snowflake.database.get",
+          "snowflake.schema.get",
+          "snowflake.schema.list",
+          "snowflake.table.aggregate",
+          "snowflake.table.columns.list",
+          "snowflake.table.get",
+          "snowflake.table.list",
+          "snowflake.table.rows.sample"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-snowflake.mjs",
+      "ciCoverage": "test:package-acceptance:snowflake"
+    },
+    {
+      "connectorId": "stripe",
+      "connectorKey": "osva-connector-stripe",
+      "npmPackage": "@osva-ai/connector-stripe",
+      "displayName": "OSVA Connector Profile V1 Stripe MCP connector (read-only account, balance, payments, subscriptions, and invoices)",
+      "provider": "Stripe",
+      "directory": "packages/stripe",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-STRIPE.md",
+      "packageReadme": "packages/stripe/README.md",
+      "authentication": {
+        "method": "Secret key",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_STRIPE_SECRET_KEY"]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [],
+        "mutationCapable": [
+          "stripe.account.get",
+          "stripe.balance.get",
+          "stripe.balanceTransaction.list",
+          "stripe.charge.list",
+          "stripe.customer.get",
+          "stripe.invoice.list",
+          "stripe.paymentIntent.get",
+          "stripe.paymentIntent.list",
+          "stripe.refund.list",
+          "stripe.subscription.list"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-stripe.mjs",
+      "ciCoverage": "test:package-acceptance:stripe"
+    },
+    {
+      "connectorId": "supabase",
+      "connectorKey": "osva-connector-supabase",
+      "npmPackage": "@osva-ai/connector-supabase",
+      "displayName": "OSVA Supabase PostgREST MCP connector (read-only)",
+      "provider": "Supabase (PostgREST)",
+      "directory": "packages/supabase",
+      "repositoryVersion": "0.1.1",
+      "publishedVersion": "0.1.1",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-SUPABASE.md",
+      "packageReadme": "packages/supabase/README.md",
+      "authentication": {
+        "method": "Project URL + key / user JWT",
+        "requiredCredentialEnv": [
+          "OSVA_CONNECTOR_SUPABASE_PROJECT_URL",
+          "OSVA_CONNECTOR_SUPABASE_PUBLISHABLE_KEY"
+        ]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "supabase.project.get",
+          "supabase.schema.list",
+          "supabase.table.columns.list",
+          "supabase.table.get",
+          "supabase.table.list",
+          "supabase.table.row.get",
+          "supabase.table.rows.count",
+          "supabase.table.rows.list"
+        ],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-supabase.mjs",
+      "ciCoverage": "test:package-acceptance:supabase"
+    },
+    {
+      "connectorId": "tavily",
+      "connectorKey": "osva-connector-tavily",
+      "npmPackage": "@osva-ai/connector-tavily",
+      "displayName": "OSVA Connector Profile V1 Tavily MCP connector (bounded web search, extract, and crawl)",
+      "provider": "Tavily",
+      "directory": "packages/tavily",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-TAVILY.md",
+      "packageReadme": "packages/tavily/README.md",
+      "authentication": {
+        "method": "API key",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_TAVILY_API_KEY"]
+      },
+      "tools": {
+        "count": 3,
+        "readOnly": ["tavily.crawl", "tavily.extract", "tavily.search"],
+        "mutationCapable": []
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-tavily.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "teams",
+      "connectorKey": "osva-connector-teams",
+      "npmPackage": "@osva-ai/connector-teams",
+      "displayName": "OSVA Connector Profile V1 Microsoft Teams MCP connector (bounded Graph reads; controlled channel and chat sends when explicitly enabled)",
+      "provider": "Microsoft Teams",
+      "directory": "packages/teams",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-TEAMS.md",
+      "packageReadme": "packages/teams/README.md",
+      "authentication": {
+        "method": "Graph token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_TEAMS_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "teams.channel.list",
+          "teams.channel.message.list",
+          "teams.channel.reply.list",
+          "teams.chat.list",
+          "teams.chat.message.list",
+          "teams.team.list"
+        ],
+        "mutationCapable": [
+          "teams.channel.message.send",
+          "teams.chat.message.send"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-teams.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "whatsapp",
+      "connectorKey": "osva-connector-whatsapp",
+      "npmPackage": "@osva-ai/connector-whatsapp",
+      "displayName": "OSVA Connector Profile V1 WhatsApp Business Cloud API MCP connector (WABA discovery, templates, template analytics, guarded template send)",
+      "provider": "WhatsApp Business",
+      "directory": "packages/whatsapp",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-WHATSAPP.md",
+      "packageReadme": "packages/whatsapp/README.md",
+      "authentication": {
+        "method": "System user token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_WHATSAPP_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 8,
+        "readOnly": [
+          "whatsapp.analytics.get",
+          "whatsapp.businessAccount.get",
+          "whatsapp.businessProfile.get",
+          "whatsapp.phoneNumber.get",
+          "whatsapp.phoneNumber.list",
+          "whatsapp.template.get",
+          "whatsapp.template.list"
+        ],
+        "mutationCapable": ["whatsapp.template.send"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-whatsapp.mjs",
+      "ciCoverage": "test:package-acceptance:whatsapp"
+    },
+    {
+      "connectorId": "woocommerce",
+      "connectorKey": "osva-connector-woocommerce",
+      "npmPackage": "@osva-ai/connector-woocommerce",
+      "displayName": "OSVA Connector Profile V1 WooCommerce MCP connector (bounded catalog, variations, categories, orders, and order notes with gated product/order status updates)",
+      "provider": "WooCommerce",
+      "directory": "packages/woocommerce",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-WOOCOMMERCE.md",
+      "packageReadme": "packages/woocommerce/README.md",
+      "authentication": {
+        "method": "Consumer key/secret",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_WOOCOMMERCE_STORE_URL"]
+      },
+      "tools": {
+        "count": 10,
+        "readOnly": [
+          "woocommerce.category.list",
+          "woocommerce.order.get",
+          "woocommerce.order.list",
+          "woocommerce.order.note.list",
+          "woocommerce.product.get",
+          "woocommerce.product.list",
+          "woocommerce.product.variation.get",
+          "woocommerce.product.variation.list"
+        ],
+        "mutationCapable": [
+          "woocommerce.order.status.update",
+          "woocommerce.product.update"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-woocommerce.mjs",
+      "ciCoverage": "test:package-acceptance:ci-shard-b"
+    },
+    {
+      "connectorId": "zendesk",
+      "connectorKey": "osva-connector-zendesk",
+      "npmPackage": "@osva-ai/connector-zendesk",
+      "displayName": "OSVA Zendesk customer-support MCP connector",
+      "provider": "Zendesk",
+      "directory": "packages/zendesk",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-ZENDESK.md",
+      "packageReadme": "packages/zendesk/README.md",
+      "authentication": {
+        "method": "API token",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_ZENDESK_SUBDOMAIN"]
+      },
+      "tools": {
+        "count": 7,
+        "readOnly": [
+          "zendesk.ticket.comment.list",
+          "zendesk.ticket.get",
+          "zendesk.ticket.list",
+          "zendesk.ticket.search",
+          "zendesk.user.get"
+        ],
+        "mutationCapable": [
+          "zendesk.ticket.note.add",
+          "zendesk.ticket.status.set"
+        ]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-zendesk.mjs",
+      "ciCoverage": "test:package-acceptance:zendesk"
+    },
+    {
+      "connectorId": "zoho-crm",
+      "connectorKey": "osva-connector-zoho-crm",
+      "npmPackage": "@osva-ai/connector-zoho-crm",
+      "displayName": "OSVA Zoho CRM MCP connector",
+      "provider": "Zoho CRM",
+      "directory": "packages/zoho-crm",
+      "repositoryVersion": "0.1.0",
+      "publishedVersion": "0.1.0",
+      "npmPublishStatus": "published",
+      "sdkVersion": "1.1.4",
+      "mcpTransport": "stdio",
+      "installGuide": "docs/INSTALL-ZOHO-CRM.md",
+      "packageReadme": "packages/zoho-crm/README.md",
+      "authentication": {
+        "method": "OAuth",
+        "requiredCredentialEnv": ["OSVA_CONNECTOR_ZOHO_CRM_ACCESS_TOKEN"]
+      },
+      "tools": {
+        "count": 11,
+        "readOnly": [
+          "zoho.account.get",
+          "zoho.account.list",
+          "zoho.contact.get",
+          "zoho.contact.list",
+          "zoho.deal.get",
+          "zoho.deal.list",
+          "zoho.deal.stage.list",
+          "zoho.lead.get",
+          "zoho.lead.list"
+        ],
+        "mutationCapable": ["zoho.deal.note.add", "zoho.deal.stage.set"]
+      },
+      "packagedAcceptanceScript": "scripts/package-acceptance-zoho-crm.mjs",
+      "ciCoverage": "test:package-acceptance:zoho-crm"
+    }
+  ]
+}
