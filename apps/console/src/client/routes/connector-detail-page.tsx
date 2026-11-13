@@ -120,9 +120,10 @@ export function ConnectorDetailPage() {
     setImportPhase("idle");
     setImportResult(undefined);
     const result = await discoverMutation.mutateAsync();
-    setDiscoveredTools(result.tools);
+    const tools = Array.isArray(result.tools) ? result.tools : [];
+    setDiscoveredTools(tools);
     setImportDrafts(
-      result.tools.map((tool) => ({
+      tools.map((tool) => ({
         remoteToolName: tool.remoteToolName,
         toolKey: tool.remoteToolName.replace(/[^A-Za-z0-9_-]/g, "_"),
         toolName: tool.remoteToolName,
