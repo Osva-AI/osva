@@ -126,16 +126,25 @@ describe.skipIf(!LANE_ENABLED)(
         const connectorVersion = await fetchJson(
           `${origin}/v1/connectors/${seeded.connectorId}/versions/${seeded.connectorVersionId}`,
         );
-        assertNoSecretLeakInJson(
-          JSON.stringify(connectorVersion.body),
-          operatorPat,
-        );
-        expect(JSON.stringify(connectorVersion.body)).toContain(
-          GITHUB_LIVE_SECRET_REF_KEY,
-        );
-        expect(JSON.stringify(connectorVersion.body)).not.toContain(
-          operatorPat,
-        );
+        const connectorVersionBody = connectorVersion.body as {
+          transportConfig?: {
+            secretEnvironment?: Readonly<
+              Record<
+                string,
+                { readonly configured?: boolean; readonly key?: string }
+              >
+            >;
+          };
+        };
+        const publicSecretEnvironment =
+          connectorVersionBody.transportConfig?.secretEnvironment;
+        expect(publicSecretEnvironment).toEqual({
+          OSVA_CONNECTOR_GITHUB_TOKEN: { configured: true },
+        });
+        const connectorVersionJson = JSON.stringify(connectorVersion.body);
+        assertNoSecretLeakInJson(connectorVersionJson, operatorPat);
+        expect(connectorVersionJson).not.toContain(GITHUB_LIVE_SECRET_REF_KEY);
+        expect(connectorVersionJson).not.toContain(operatorPat);
 
         const agents = await createTrustedTypescriptAgent({
           origin,
