@@ -95,7 +95,11 @@
     "acceptance:m20-7:anthropic-refinement-probe": "node scripts/acceptance/m20-7/anthropic-builder-refinement-probe.mjs",
     "acceptance:m20-7:anthropic-count-tokens": "node scripts/acceptance/m20-7/anthropic-builder-count-tokens-probe.mjs",
     "acceptance:m20-7:anthropic-raw-messages": "node scripts/acceptance/m20-7/anthropic-builder-raw-messages-probe.mjs",
-    "acceptance:m20-7:test": "node --test scripts/acceptance/m20-7/test/*.test.mjs"
+    "acceptance:m20-7:test": "node --test scripts/acceptance/m20-7/test/*.test.mjs",
+    "acceptance:b7-1:fixture": "node scripts/acceptance/b7-1/run-fixture.mjs",
+    "acceptance:b7-1:prepare": "node scripts/acceptance/b7-1/prepare-consumer-install.mjs",
+    "acceptance:b7-1:published": "node scripts/acceptance/b7-1/run-published-artifact.mjs",
+    "acceptance:b7-1:test": "node --test scripts/acceptance/b7-1/test/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",
