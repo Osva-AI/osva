@@ -1,6 +1,72 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/** Packages that osva-connectors stdio test fixtures import at startup. */
+const EXTERNAL_STDIO_FIXTURE_PACKAGES = ["@osva-ai/connector-sdk"] as const;
+
+export function resolveConnectorCheckoutNodeModulesForStdioEntry(
+  stdioEntryAbsolutePath: string,
+): string | undefined {
+  let dir = path.dirname(path.resolve(stdioEntryAbsolutePath));
+  const root = path.parse(dir).root;
+  while (true) {
+    const candidate = path.join(dir, "node_modules");
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    if (dir === root) {
+      break;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
+  }
+  return undefined;
+}
+
+export function stdioEntryHasConnectorFixtureDependencies(
+  stdioEntryAbsolutePath: string,
+): boolean {
+  const nodeModules = resolveConnectorCheckoutNodeModulesForStdioEntry(
+    stdioEntryAbsolutePath,
+  );
+  if (nodeModules === undefined) {
+    return false;
+  }
+  return EXTERNAL_STDIO_FIXTURE_PACKAGES.every((pkg) =>
+    fs.existsSync(path.join(nodeModules, ...pkg.split("/"), "package.json")),
+  );
+}
+
+/**
+ * Removes explicit stdio entry overrides from a child-process environment when
+ * {@link connectorsRoot} is supplied, so a stale machine env cannot override the
+ * intended connectors checkout.
+ */
+export function applyConnectorsRootStdioFixtureEnvironment(
+  env: NodeJS.ProcessEnv,
+  options: {
+    readonly connectorsRoot?: string;
+    readonly explicitPathEnvVars: readonly string[];
+    readonly connectorsRootEnvVar: string;
+  },
+): NodeJS.ProcessEnv {
+  const next: NodeJS.ProcessEnv = { ...env };
+  if (
+    options.connectorsRoot === undefined ||
+    options.connectorsRoot.trim().length === 0
+  ) {
+    return next;
+  }
+  next[options.connectorsRootEnvVar] = options.connectorsRoot.trim();
+  for (const name of options.explicitPathEnvVars) {
+    delete next[name];
+  }
+  return next;
+}
+
 export interface ResolveExternalConnectorStdioEntryOptions {
   /**
    * Environment variables checked in order for an absolute path to a built stdio entry script.
@@ -32,7 +98,10 @@ export function resolveExternalConnectorStdioEntry(
       explicit.length > 0 &&
       fs.existsSync(explicit)
     ) {
-      return path.resolve(explicit);
+      const resolved = path.resolve(explicit);
+      if (stdioEntryHasConnectorFixtureDependencies(resolved)) {
+        return resolved;
+      }
     }
   }
 
