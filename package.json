@@ -99,7 +99,11 @@
     "acceptance:b7-1:fixture": "node scripts/acceptance/b7-1/run-fixture.mjs",
     "acceptance:b7-1:prepare": "node scripts/acceptance/b7-1/prepare-consumer-install.mjs",
     "acceptance:b7-1:published": "node scripts/acceptance/b7-1/run-published-artifact.mjs",
-    "acceptance:b7-1:test": "node --test scripts/acceptance/b7-1/test/*.test.mjs"
+    "acceptance:b7-1:test": "node --test scripts/acceptance/b7-1/test/*.test.mjs",
+    "acceptance:b7-2:fixture": "node scripts/acceptance/b7-2/run-fixture.mjs",
+    "acceptance:b7-2:prepare": "node scripts/acceptance/b7-2/prepare-consumer-install.mjs",
+    "acceptance:b7-2:published": "node scripts/acceptance/b7-2/run-published-artifact.mjs",
+    "acceptance:b7-2:test": "node --test scripts/acceptance/b7-2/test/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",

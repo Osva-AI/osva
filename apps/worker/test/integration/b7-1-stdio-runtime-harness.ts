@@ -36,6 +36,9 @@ export interface StdioMcpTransportConfig {
   readonly command: string;
   readonly args: readonly string[];
   readonly environment?: Readonly<Record<string, string>>;
+  readonly secretEnvironment?: Readonly<
+    Record<string, { readonly key: string }>
+  >;
 }
 
 export function buildStdioTransportConfig(

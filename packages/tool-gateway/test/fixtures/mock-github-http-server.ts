@@ -17,7 +17,7 @@ export const MOCK_REPOSITORY_JSON = {
 } as const;
 
 export type MockGithubMode =
-  "success" | "unauthorized" | "server_error" | "slow";
+  "success" | "unauthorized" | "not_found" | "server_error" | "slow";
 
 export interface MockGithubHttpServer {
   readonly apiBaseUrl: string;
@@ -106,6 +106,11 @@ export function startMockGithubHttpServer(
       !tokenMatches(lastAuthorization, expectedToken)
     ) {
       finish(401, JSON.stringify({ message: "Bad credentials" }));
+      return;
+    }
+
+    if (mode === "not_found") {
+      finish(404, JSON.stringify({ message: "Not Found" }));
       return;
     }
 
