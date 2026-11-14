@@ -15,7 +15,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:integration:github-connector": "vitest run --config vitest.integration.github-connector.config.ts",
-    "test:integration:connector-compatibility": "vitest run --config vitest.integration.connector-compatibility.config.ts"
+    "test:integration:connector-compatibility": "vitest run --config vitest.integration.connector-compatibility.config.ts",
+    "build:test-stdio-fixtures": "tsc -p test/fixtures/connector-stdio-fixtures-tsconfig.json"
   },
   "dependencies": {
     "@osva/adapters-mcp-client": "workspace:*",
@@ -23,6 +24,7 @@
     "@osva/domain": "workspace:*"
   },
   "devDependencies": {
+    "@osva-ai/connector-sdk": "1.1.4",
     "@osva/adapters-memory": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",

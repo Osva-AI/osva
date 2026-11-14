@@ -1835,6 +1835,9 @@ importers:
         specifier: workspace:*
         version: link:../domain
     devDependencies:
+      '@osva-ai/connector-sdk':
+        specifier: 1.1.4
+        version: 1.1.4
       '@osva/adapters-memory':
         specifier: workspace:*
         version: link:../../adapters/memory
@@ -2916,6 +2919,14 @@ packages:
   '@opentelemetry/semantic-conventions@1.43.0':
     resolution: {integrity: sha512-eSYWTm620tTk45EKSedaUL8MFYI8hW164hIXsgIHyxu3VobUB3fFCu5t0hQby6OoWRPsG1KkKUG2M5UadiLiVg==}
     engines: {node: '>=14'}
+
+  '@osva-ai/connector-sdk@1.1.4':
+    resolution: {integrity: sha512-P+R76pvjzTPLDY6fktva3YqzjWxv+QLyzwj0PLqqdhKcmJcn0a+trpcDT/rIGnUwWt0SOnQhnU8aeMYMBPF4cA==}
+    engines: {node: '>=24'}
+
+  '@osva-ai/contracts@1.1.4':
+    resolution: {integrity: sha512-lJJGY7sTapKv+m6+OKgKKxTjSncBBc2lMmBViDvqvh0Pi2w9Sc/MUkJEMM1mYHhS1q3T+XyrKer6tHTzPRskpg==}
+    engines: {node: '>=24'}
 
   '@oxc-project/types@0.155.0':
     resolution: {integrity: sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q==}
@@ -5841,6 +5852,17 @@ snapshots:
   '@opentelemetry/semantic-conventions@1.30.0': {}
 
   '@opentelemetry/semantic-conventions@1.43.0': {}
+
+  '@osva-ai/connector-sdk@1.1.4':
+    dependencies:
+      '@modelcontextprotocol/node': 2.1.2(@modelcontextprotocol/server@2.4.0)
+      '@modelcontextprotocol/server': 2.4.0
+      '@osva-ai/contracts': 1.1.4
+      zod: 4.6.7
+
+  '@osva-ai/contracts@1.1.4':
+    dependencies:
+      zod: 4.6.7
 
   '@oxc-project/types@0.155.0': {}
 

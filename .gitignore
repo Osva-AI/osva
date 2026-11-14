@@ -46,6 +46,9 @@ docker-compose.override.yml
 *.tsbuildinfo
 .cache/
 
+# B7.3 connector test stdio fixtures (tsc output; rebuilt via build:test-stdio-fixtures)
+packages/tool-gateway/test/fixtures/.build/
+
 # Local UX/design reference kit (not for GitHub)
 OSVA_V2_DESIGN_REVIEW_KIT/
 
