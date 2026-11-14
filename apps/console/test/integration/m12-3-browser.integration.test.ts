@@ -219,10 +219,44 @@ describe("M12.3 browser acceptance (Playwright)", () => {
         .waitFor({ timeout: 30_000 });
       await page.locator('tbody input[type="checkbox"]').first().check();
       await page.getByRole("button", { name: "Review import" }).click();
+      const importResponsePromise = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          response.url().includes("/import-mcp-tools") &&
+          response.status() === 200,
+      );
       await page.getByRole("button", { name: "Confirm import" }).click();
-      await page.getByRole("heading", { name: "Import results" }).waitFor({
-        timeout: 30_000,
-      });
+      const importResponse = await importResponsePromise;
+      const importBody = (await importResponse.json()) as {
+        imported?: ReadonlyArray<{ toolVersionId: string; toolKey: string }>;
+      };
+      expect((importBody.imported ?? []).length).toBeGreaterThan(0);
+      const importedToolVersionId = importBody.imported?.[0]?.toolVersionId;
+      expect(importedToolVersionId).toBeTruthy();
+
+      const handoffPanel = page.getByTestId("connector-import-handoff-panel");
+      await handoffPanel.waitFor({ timeout: 30_000 });
+      await handoffPanel
+        .getByRole("heading", { name: "Import complete — next steps" })
+        .waitFor({ timeout: 30_000 });
+      await handoffPanel
+        .getByRole("table", { name: "Imported ToolVersions" })
+        .waitFor({ timeout: 30_000 });
+      if (importedToolVersionId !== undefined) {
+        await handoffPanel
+          .getByRole("cell", { name: importedToolVersionId })
+          .waitFor({ timeout: 30_000 });
+      }
+      const agentHandoff = handoffPanel.getByTestId(
+        "connector-use-tools-in-agent",
+      );
+      await agentHandoff.waitFor({ timeout: 30_000 });
+      const handoffHref = await agentHandoff.getAttribute("href");
+      expect(handoffHref ?? "").toContain("toolVersionIds=");
+      expect(handoffHref ?? "").toContain(
+        encodeURIComponent(importedToolVersionId ?? ""),
+      );
+      expect(page.url()).not.toMatch(/\/runs\//);
 
       // Agent + version with model and tool bindings (developer runtime path)
       await page.goto(`${stack.consoleOrigin}/agents/new/developer`);
@@ -387,9 +421,12 @@ describe("M12.3 browser acceptance (Playwright)", () => {
         if (step.bindingName === undefined || step.bindingName.length === 0) {
           continue;
         }
-        await timeline.getByText(step.bindingName, { exact: true }).waitFor({
-          timeout: 15_000,
-        });
+        await timeline
+          .locator(".run-step-timeline-binding", {
+            hasText: step.bindingName,
+          })
+          .first()
+          .waitFor({ timeout: 15_000 });
       }
 
       // Workspace isolation in UI

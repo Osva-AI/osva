@@ -71,6 +71,7 @@ export function AgentStudioV2Workspace(props: {
   readonly initialTemplatesOpen?: boolean;
   readonly initialStage?: AgentStudioV2StageId;
   readonly onStageChange?: (stage: AgentStudioV2StageId) => void;
+  readonly preselectedToolVersionIds?: readonly string[];
 }) {
   const [stage, setStage] = useState<AgentStudioV2StageId>(
     () => props.initialStage ?? "describe",
@@ -109,9 +110,24 @@ export function AgentStudioV2Workspace(props: {
       const fromManifest = readOptionalCapabilitiesFromManifest(
         props.manifestText,
       );
-      return new Set([...current, ...fromManifest]);
+      const next = new Set([...current, ...fromManifest]);
+      if (
+        props.preselectedToolVersionIds !== undefined &&
+        props.preselectedToolVersionIds.length > 0
+      ) {
+        next.add("tools");
+      }
+      return next;
     });
-  }, [props.manifestText]);
+  }, [props.manifestText, props.preselectedToolVersionIds]);
+
+  useEffect(() => {
+    if (props.initialStage === undefined || props.initialStage === "describe") {
+      return;
+    }
+    setStage(props.initialStage);
+    setMaxStage(props.initialStage);
+  }, [props.initialStage]);
 
   useEffect(() => {
     if (examplesInManifest && optionalExamples !== instructionSplit.examples) {
@@ -502,6 +518,7 @@ export function AgentStudioV2Workspace(props: {
               presentation="studio"
               manifestText={props.manifestText}
               disabled={props.disabled || !props.canWrite}
+              preselectedToolVersionIds={props.preselectedToolVersionIds}
               onManifestChange={props.onManifestTextChange}
             />
           ) : null,

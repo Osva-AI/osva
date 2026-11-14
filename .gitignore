@@ -37,6 +37,8 @@ blob-report/
 *.sqlite
 *.sqlite3
 data/
+!apps/console/src/client/data/
+!apps/console/src/client/data/**
 tmp/
 temp/
 

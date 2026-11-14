@@ -45,4 +45,17 @@ describe("osva examples catalog", () => {
     );
     expect(ex19?.osvaVersion).toBe("1.1.x");
   });
+
+  it("includes B6.2 examples 20–21 at audited sha", () => {
+    const ex20 = OSVA_EXAMPLE_CATALOG.find(
+      (e) => e.id === "20-github-repository-analyst",
+    );
+    const ex21 = OSVA_EXAMPLE_CATALOG.find(
+      (e) => e.id === "21-commerce-growth-analyst",
+    );
+    expect(ex20?.osvaVersion).toBe("1.1.x");
+    expect(ex21?.osvaVersion).toBe("1.1.x");
+    expect(ex20?.sourceReadmeUrl).toContain(OSVA_EXAMPLES_AUDITED_SHA);
+    expect(ex21?.sourceReadmeUrl).toContain(OSVA_EXAMPLES_AUDITED_SHA);
+  });
 });

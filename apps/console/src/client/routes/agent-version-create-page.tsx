@@ -48,8 +48,43 @@ import { ConsoleApiError } from "../lib/console-api";
 import { parseWorkflowRunInputJson } from "../lib/workflow-run-input";
 import { describeControlPlaneWriteRoleRequirement } from "../lib/control-plane-access";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
+import {
+  parseToolVersionHandoffParam,
+  validateToolVersionHandoff,
+} from "../lib/connector-agent-handoff";
+import { useToolsCatalogQuery } from "../hooks/use-tools-connectors";
 
 type AuthoringSurface = "studio" | "developer";
+
+function ConnectorHandoffBanner(props: {
+  readonly validated: ReadonlyArray<{
+    readonly toolName: string;
+    readonly toolVersionId: string;
+  }>;
+  readonly rejected: readonly string[];
+}) {
+  return (
+    <div
+      className="connector-agent-handoff-banner"
+      data-testid="agent-version-tool-handoff-banner"
+    >
+      {props.validated.length > 0 ? (
+        <p className="muted">
+          Preselecting {props.validated.length} ToolVersion
+          {props.validated.length === 1 ? "" : "s"} from navigation hints.
+          Confirm binding names, publish, then launch an authorized test Run.
+        </p>
+      ) : null}
+      {props.rejected.length > 0 ? (
+        <p className="error-inline" role="alert">
+          Ignored {props.rejected.length} ToolVersion id
+          {props.rejected.length === 1 ? "" : "s"} not visible in this
+          workspace.
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export function AgentVersionCreatePage() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -58,6 +93,14 @@ export function AgentVersionCreatePage() {
   const authQuery = useAuthContextQuery();
   const agentQuery = useAgentQuery(agentId);
   const copyFromVersionId = searchParams.get("from") ?? undefined;
+  const toolVersionHandoffIds = parseToolVersionHandoffParam(
+    searchParams.get("toolVersionIds"),
+  );
+  const toolsCatalogQuery = useToolsCatalogQuery();
+  const toolHandoff = validateToolVersionHandoff(
+    toolVersionHandoffIds,
+    toolsCatalogQuery.data,
+  );
   const sourceVersionQuery = useAgentVersionQuery(agentId, copyFromVersionId);
   const mutation = useCreateAgentVersionMutation();
   const submittingRef = useRef(false);
@@ -347,6 +390,12 @@ export function AgentVersionCreatePage() {
                 feedback={feedback}
                 errorRequestId={errorRequestId}
                 errorStatus={errorStatus}
+                initialStage={
+                  toolHandoff.validated.length > 0 ? "equip" : undefined
+                }
+                preselectedToolVersionIds={toolHandoff.validated.map(
+                  (entry) => entry.toolVersionId,
+                )}
                 banner={
                   copyFromVersionId !== undefined ? (
                     <p className="muted">
@@ -354,6 +403,12 @@ export function AgentVersionCreatePage() {
                       <span className="mono">{copyFromVersionId}</span>. The
                       original version is unchanged.
                     </p>
+                  ) : toolHandoff.validated.length > 0 ||
+                    toolHandoff.rejected.length > 0 ? (
+                    <ConnectorHandoffBanner
+                      validated={toolHandoff.validated}
+                      rejected={toolHandoff.rejected}
+                    />
                   ) : undefined
                 }
               />
@@ -518,6 +573,9 @@ export function AgentVersionCreatePage() {
             <ToolVersionBindingSelector
               manifestText={manifestText}
               disabled={!canWrite || mutation.isPending}
+              preselectedToolVersionIds={toolHandoff.validated.map(
+                (entry) => entry.toolVersionId,
+              )}
               onManifestChange={(next) => {
                 setManifestText(next);
                 setFeedback(undefined);

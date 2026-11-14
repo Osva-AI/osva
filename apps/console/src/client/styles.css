@@ -2921,6 +2921,11 @@ a.button:hover {
   flex-wrap: wrap;
 }
 
+.connector-catalog-auth-hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
 .example-catalog-grid {
   display: grid;
   gap: var(--space-4);
@@ -5787,6 +5792,45 @@ button.agent-studio-v2-progress-link {
   margin-top: var(--space-3);
 }
 
+.connector-guided-setup-step-button {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.connector-guided-setup-step-button:focus-visible {
+  outline: 2px solid var(--focus-ring, currentColor);
+  outline-offset: 2px;
+}
+
+.connector-setup-step-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.connector-setup-copyable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.connector-setup-copyable-pre {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-muted, rgba(0, 0, 0, 0.04));
+}
+
 @media (max-width: 900px) {
   .integrations-v2.page-stack {
     gap: var(--space-3);
@@ -6814,4 +6858,28 @@ button.agent-studio-v2-progress-link {
   .office-chat-main--mobile-hidden {
     display: none;
   }
+}
+
+.connector-import-handoff .connector-adoption-journey {
+  margin: var(--space-3) 0;
+  padding-left: var(--space-4);
+}
+
+.connector-tool-handoff-banner,
+.connector-agent-handoff-banner {
+  margin-bottom: var(--space-4);
+}
+
+.connector-binding-stage-legend {
+  list-style: disc;
+  padding-left: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.connector-tool-binding-meta {
+  grid-column: 1 / -1;
+}
+
+.connector-binding-validation {
+  margin-bottom: var(--space-3);
 }

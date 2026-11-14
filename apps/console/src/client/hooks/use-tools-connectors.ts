@@ -4,6 +4,7 @@ import {
   workspaceScopedFetch,
   workspaceMutationFetch,
 } from "../lib/console-api";
+import { parseDiscoverConnectorToolsResponse } from "../lib/connector-discovery-response";
 import { useWorkspaceQueryScope } from "./use-workspace-query-scope";
 
 export interface ToolResource {
@@ -254,14 +255,13 @@ export function useDiscoverConnectorToolsMutation(
   connectorVersionId: string,
 ) {
   return useMutation({
-    mutationFn: () =>
-      workspaceMutationFetch<{
-        connectorVersionId: string;
-        tools: DiscoveredMcpTool[];
-      }>(
+    mutationFn: async () => {
+      const body = await workspaceMutationFetch<unknown>(
         `/api/v1/connectors/${encodeURIComponent(connectorId)}/versions/${encodeURIComponent(connectorVersionId)}/discover`,
         { method: "POST" },
-      ),
+      );
+      return parseDiscoverConnectorToolsResponse(body);
+    },
   });
 }
 

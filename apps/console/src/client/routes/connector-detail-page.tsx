@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { IntegrationsSectionNav } from "../components/integrations/integrations-section-nav";
 import { JsonView } from "../components/json-view/json-view";
@@ -30,6 +30,7 @@ import {
   formatConnectorVersionOption,
   formatTransportLabel,
 } from "../lib/tool-resource-presentation";
+import { ConnectorImportHandoffPanel } from "../components/connectors/connector-import-handoff-panel";
 
 type ImportDraft = {
   readonly remoteToolName: string;
@@ -67,6 +68,8 @@ export function ConnectorDetailPage() {
         readonly toolId: string;
         readonly toolVersionId: string;
         readonly toolKey: string;
+        readonly remoteToolName?: string;
+        readonly toolName?: string;
       }>
     | undefined
   >();
@@ -116,16 +119,20 @@ export function ConnectorDetailPage() {
     setDiscoveredTools(undefined);
     setImportPhase("idle");
     setImportResult(undefined);
-    const result = await discoverMutation.mutateAsync();
-    setDiscoveredTools(result.tools);
-    setImportDrafts(
-      result.tools.map((tool) => ({
-        remoteToolName: tool.remoteToolName,
-        toolKey: tool.remoteToolName.replace(/[^A-Za-z0-9_-]/g, "_"),
-        toolName: tool.remoteToolName,
-        selected: false,
-      })),
-    );
+    try {
+      const result = await discoverMutation.mutateAsync();
+      setDiscoveredTools([...result.tools]);
+      setImportDrafts(
+        [...result.tools].map((tool) => ({
+          remoteToolName: tool.remoteToolName,
+          toolKey: tool.remoteToolName.replace(/[^A-Za-z0-9_-]/g, "_"),
+          toolName: tool.remoteToolName,
+          selected: false,
+        })),
+      );
+    } catch {
+      // discoverMutation.isError surfaces operator guidance; do not treat as empty discovery.
+    }
   }
 
   function beginImportReview() {
@@ -149,7 +156,14 @@ export function ConnectorDetailPage() {
         toolName: row.toolName.trim(),
       })),
     });
-    setImportResult(imported.imported);
+    setImportResult(
+      imported.imported.map((row) => ({
+        toolId: row.toolId,
+        toolVersionId: row.toolVersionId,
+        toolKey: row.toolKey,
+        remoteToolName: row.remoteToolName,
+      })),
+    );
     setImportPhase("done");
   }
 
@@ -365,6 +379,7 @@ export function ConnectorDetailPage() {
 
       {canWrite ? (
         <SectionPanel
+          id="discover-import"
           title="Discover and import MCP tools"
           description="Discovery lists remote metadata only. Import creates immutable ToolVersions — bind them on an AgentVersion to execute."
         >
@@ -555,18 +570,20 @@ export function ConnectorDetailPage() {
                 />
               ) : null}
               {importPhase === "done" && importResult !== undefined ? (
-                <section className="panel nested">
-                  <h3 className="section-title">Import results</h3>
-                  <ul>
-                    {importResult.map((item) => (
-                      <li key={item.toolVersionId}>
-                        <Link to={`/tools/${item.toolId}`}>{item.toolKey}</Link>{" "}
-                        · ToolVersion{" "}
-                        <span className="mono">{item.toolVersionId}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <ConnectorImportHandoffPanel
+                  connectorVersionId={selectedVersionId}
+                  connectorName={connector?.name}
+                  imported={importResult.map((item) => ({
+                    toolId: item.toolId,
+                    toolVersionId: item.toolVersionId,
+                    toolKey: item.toolKey,
+                    remoteToolName: item.remoteToolName,
+                    toolName:
+                      item.toolName ??
+                      importDrafts.find((row) => row.toolKey === item.toolKey)
+                        ?.toolName,
+                  }))}
+                />
               ) : null}
             </>
           ) : null}

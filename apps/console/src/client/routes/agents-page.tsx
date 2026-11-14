@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
@@ -7,13 +7,24 @@ import { Button, LinkButton } from "../components/ui/button";
 import { DataTableRegion } from "../components/ui/data-table-region";
 import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
+import {
+  AgentHandoffVersionLink,
+  ToolVersionHandoffBanner,
+} from "../components/connectors/tool-version-handoff-banner";
 import { useAgentsListQuery } from "../hooks/use-agents";
+import { useToolsCatalogQuery } from "../hooks/use-tools-connectors";
+import { parseToolVersionHandoffParam } from "../lib/connector-agent-handoff";
 import { useAuthContextQuery } from "../hooks/use-auth-context";
 import { formatTimestamp } from "../lib/formatting";
 import { roleCanWriteControlPlaneResources } from "../lib/permissions";
 
 export function AgentsPage() {
+  const [searchParams] = useSearchParams();
+  const handoffIds = parseToolVersionHandoffParam(
+    searchParams.get("toolVersionIds"),
+  );
   const agentsQuery = useAgentsListQuery();
+  const toolsCatalogQuery = useToolsCatalogQuery();
   const authQuery = useAuthContextQuery();
   const canWrite =
     authQuery.data !== undefined &&
@@ -52,6 +63,13 @@ export function AgentsPage() {
         }
       />
 
+      <ToolVersionHandoffBanner
+        hintedIds={handoffIds}
+        catalog={toolsCatalogQuery.data}
+        catalogLoading={toolsCatalogQuery.isLoading}
+        canWrite={canWrite}
+      />
+
       {!canWrite ? (
         <p className="muted">
           Registering an Agent requires an EDITOR or ADMIN role. VIEWER can
@@ -88,6 +106,9 @@ export function AgentsPage() {
                 <th scope="col">Key</th>
                 <th scope="col">Agent ID</th>
                 <th scope="col">Created</th>
+                {handoffIds.length > 0 ? (
+                  <th scope="col">Tool handoff</th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -101,6 +122,15 @@ export function AgentsPage() {
                     </Link>
                   </td>
                   <td>{formatTimestamp(agent.createdAt)}</td>
+                  {handoffIds.length > 0 ? (
+                    <td>
+                      <AgentHandoffVersionLink
+                        agentId={agent.id}
+                        toolVersionIds={handoffIds}
+                        canWrite={canWrite}
+                      />
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

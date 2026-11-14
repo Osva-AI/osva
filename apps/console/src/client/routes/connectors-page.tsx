@@ -5,7 +5,7 @@ import { IntegrationsSectionNav } from "../components/integrations/integrations-
 import { EmptyState } from "../components/empty-state/empty-state";
 import { ErrorState } from "../components/error-state/error-state";
 import { LoadingBlock } from "../components/loading/loading-block";
-import { Button } from "../components/ui/button";
+import { Button, LinkButton } from "../components/ui/button";
 import { DataTableRegion } from "../components/ui/data-table-region";
 import { PageHeader } from "../components/ui/page-header";
 import { SectionPanel } from "../components/ui/section-panel";
@@ -74,17 +74,22 @@ export function ConnectorsPage() {
       data-testid="integrations-connectors-page"
     >
       <PageHeader
-        title="Connectors"
-        subtitle="MCP connector identities with immutable versions. Secret references are never shown after save."
+        title="Workspace connectors"
+        subtitle="Configured MCP connector identities in this workspace. Browse the published catalog for available packages."
         actions={
-          <button
-            type="button"
-            className="button"
-            onClick={() => void connectorsQuery.refetch()}
-            disabled={connectorsQuery.isFetching}
-          >
-            Refresh
-          </button>
+          <>
+            <LinkButton variant="secondary" to="/tools/connectors/catalog">
+              Browse catalog
+            </LinkButton>
+            <button
+              type="button"
+              className="button"
+              onClick={() => void connectorsQuery.refetch()}
+              disabled={connectorsQuery.isFetching}
+            >
+              Refresh
+            </button>
+          </>
         }
       />
 
