@@ -316,6 +316,10 @@ export class PostgresRunRepository implements RunRepository {
         outputTokens: row.outputTokens,
         totalTokens: row.totalTokens,
         cachedInputTokens: row.cachedInputTokens,
+        cacheWriteInputTokens: row.cacheWriteInputTokens,
+        usageIncomplete: row.usageIncomplete,
+        providerReportedModelId: row.providerReportedModelId,
+        providerRequestId: row.providerRequestId,
         estimatedCostUsdMicros: row.estimatedCostUsdMicros,
         errorCode: row.errorCode,
       })
@@ -400,6 +404,7 @@ export class PostgresRunRepository implements RunRepository {
         outputTokens: 0,
         totalTokens: 0,
         cachedInputTokens: 0,
+        cacheWriteInputTokens: 0,
         estimatedCostUsdMicros: null,
         pricedModelCalls: 0,
         unpricedModelCalls: 0,
@@ -416,6 +421,7 @@ export class PostgresRunRepository implements RunRepository {
         outputTokens: sql<number>`coalesce(sum(${runSteps.outputTokens}) filter (where ${measurableModel}), 0)`,
         totalTokens: sql<number>`coalesce(sum(${runSteps.totalTokens}) filter (where ${measurableModel}), 0)`,
         cachedInputTokens: sql<number>`coalesce(sum(${runSteps.cachedInputTokens}) filter (where ${measurableModel}), 0)`,
+        cacheWriteInputTokens: sql<number>`coalesce(sum(${runSteps.cacheWriteInputTokens}) filter (where ${measurableModel}), 0)`,
         estimatedCostUsdMicros: sql<
           number | null
         >`sum(${runSteps.estimatedCostUsdMicros}) filter (where ${measurableModel} and ${runSteps.estimatedCostUsdMicros} is not null)`,
@@ -924,6 +930,7 @@ function runAttemptUsageSummaryFromRow(
         readonly outputTokens: number;
         readonly totalTokens: number;
         readonly cachedInputTokens: number;
+        readonly cacheWriteInputTokens: number;
         readonly estimatedCostUsdMicros: number | null;
         readonly pricedModelCalls: number;
         readonly unpricedModelCalls: number;
@@ -937,6 +944,7 @@ function runAttemptUsageSummaryFromRow(
     outputTokens: Number(row?.outputTokens ?? 0),
     totalTokens: Number(row?.totalTokens ?? 0),
     cachedInputTokens: Number(row?.cachedInputTokens ?? 0),
+    cacheWriteInputTokens: Number(row?.cacheWriteInputTokens ?? 0),
     estimatedCostUsdMicros:
       row?.estimatedCostUsdMicros === null ||
       row?.estimatedCostUsdMicros === undefined

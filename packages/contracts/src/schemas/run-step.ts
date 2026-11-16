@@ -8,7 +8,20 @@ import {
   runStepIdSchema,
   toolVersionIdSchema,
 } from "./ids.js";
+import { MODEL_PROVIDER_MODEL_ID_MAX_LENGTH } from "../model-gateway.js";
 import { utcIso8601TimestampSchema } from "./utc-instant.js";
+
+const providerReportedModelIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MODEL_PROVIDER_MODEL_ID_MAX_LENGTH);
+const providerRequestIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9_.:-]+$/);
 
 export const runStepKindSchema = z.enum(RUN_STEP_KINDS);
 export const runStepStatusSchema = z.enum(RUN_STEP_STATUSES);
@@ -28,6 +41,10 @@ export const runStepResourceSchema = z.strictObject({
   outputTokens: z.int().nonnegative().optional(),
   totalTokens: z.int().nonnegative().optional(),
   cachedInputTokens: z.int().nonnegative().optional(),
+  cacheWriteInputTokens: z.int().nonnegative().optional(),
+  usageIncomplete: z.boolean().optional(),
+  providerReportedModelId: providerReportedModelIdSchema.optional(),
+  providerRequestId: providerRequestIdSchema.optional(),
   estimatedCostUsdMicros: z.int().nonnegative().nullable().optional(),
   errorCode: z.string().min(1).optional(),
 });
@@ -54,6 +71,7 @@ export const runAttemptUsageResourceSchema = z.strictObject({
   outputTokens: z.int().nonnegative(),
   totalTokens: z.int().nonnegative(),
   cachedInputTokens: z.int().nonnegative(),
+  cacheWriteInputTokens: z.int().nonnegative(),
   estimatedCostUsdMicros: z.int().nonnegative().nullable(),
   pricedModelCalls: z.int().nonnegative(),
   unpricedModelCalls: z.int().nonnegative(),

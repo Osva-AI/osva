@@ -2,18 +2,18 @@ import type { ModelToolCall } from "@osva-ai/contracts";
 import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
+  buildProviderInvocationMetadata,
+  sanitizeProviderModelId,
+  sanitizeProviderRequestId,
   type ModelFinishReason,
   type ModelProviderAdapter,
-  type NormalizedModelUsage,
   type ProviderGenerateTextResult,
   type ResolvedProviderGenerateTextRequest,
 } from "@osva/model-gateway";
 import Anthropic from "@anthropic-ai/sdk";
-import type {
-  Message,
-  Usage,
-} from "@anthropic-ai/sdk/resources/messages/messages";
+import type { Message } from "@anthropic-ai/sdk/resources/messages/messages";
 
+import { normalizeAnthropicMessagesUsage } from "./anthropic-usage.js";
 import { buildAnthropicMessagesCreateBody } from "./anthropic-messages-create-body.js";
 import { anthropicErrorMetadata } from "./anthropic-provider-error-metadata.js";
 import { emitAnthropicOperatorHttpDiagnostic } from "./anthropic-operator-http-diagnostic.js";
@@ -71,7 +71,7 @@ export class AnthropicProviderAdapter implements ModelProviderAdapter {
       const response = await this.client.messages.create(params, {
         signal: request.signal,
       });
-      return normalizeAnthropicResponse(response);
+      return normalizeAnthropicResponse(request, response);
     } catch (error) {
       throw mapAnthropicError(error);
     }
@@ -79,6 +79,7 @@ export class AnthropicProviderAdapter implements ModelProviderAdapter {
 }
 
 function normalizeAnthropicResponse(
+  request: ResolvedProviderGenerateTextRequest,
   message: Message,
 ): ProviderGenerateTextResult {
   const toolCalls = normalizeToolCalls(message.content);
@@ -97,13 +98,16 @@ function normalizeAnthropicResponse(
     );
   }
 
+  const reportedModel = sanitizeProviderModelId(message.model);
+
   return {
     text,
     toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-    usage: normalizeUsage(message.usage),
+    usage: normalizeAnthropicMessagesUsage(message.usage),
     finishReason: finish.reason,
     providerFinishReason: finish.raw,
-    providerRequestId: message.id,
+    providerRequestId: sanitizeProviderRequestId(message.id),
+    invocation: buildProviderInvocationMetadata(request.model, reportedModel),
   };
 }
 
@@ -145,27 +149,6 @@ function normalizeToolCalls(
   }
 
   return calls;
-}
-
-function normalizeUsage(
-  usage: Usage | undefined,
-): NormalizedModelUsage | undefined {
-  if (usage === undefined) {
-    return undefined;
-  }
-
-  const inputTokens = usage.input_tokens;
-  // `output_tokens` is the inclusive billed total (thinking is a breakdown only).
-  const outputTokens = usage.output_tokens;
-  const cachedInputTokens = usage.cache_read_input_tokens ?? 0;
-  const totalTokens = inputTokens + outputTokens;
-
-  return {
-    inputTokens,
-    outputTokens,
-    totalTokens,
-    cachedInputTokens: cachedInputTokens > 0 ? cachedInputTokens : undefined,
-  };
 }
 
 function normalizeAnthropicFinishReason(

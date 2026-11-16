@@ -349,6 +349,10 @@ function toRunStepResource(step: RunStep) {
     outputTokens: step.outputTokens,
     totalTokens: step.totalTokens,
     cachedInputTokens: step.cachedInputTokens,
+    cacheWriteInputTokens: step.cacheWriteInputTokens,
+    usageIncomplete: step.usageIncomplete,
+    providerReportedModelId: step.providerReportedModelId,
+    providerRequestId: step.providerRequestId,
     estimatedCostUsdMicros: step.estimatedCostUsdMicros,
     errorCode: step.errorCode,
   });

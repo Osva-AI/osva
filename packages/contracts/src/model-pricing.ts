@@ -9,6 +9,10 @@ export interface ModelProfileVersionPricing {
   readonly currency: ModelPricingCurrency;
   readonly inputUsdMicrosPerMillionTokens: number;
   readonly outputUsdMicrosPerMillionTokens: number;
+  /** Optional rate for cache-read input tokens (subset of total input). */
+  readonly cachedReadInputUsdMicrosPerMillionTokens?: number;
+  /** Optional rate for cache-write input tokens (subset of total input). */
+  readonly cachedWriteInputUsdMicrosPerMillionTokens?: number;
 }
 
 export function isModelPricingCurrency(

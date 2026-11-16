@@ -16,6 +16,7 @@ export type {
 } from "./provider-adapter.js";
 export type {
   NormalizedModelUsage,
+  ProviderGenerateTextInvocation,
   ProviderGenerateTextResult,
 } from "./usage.js";
 export {
@@ -28,3 +29,8 @@ export {
   type SplitModelMessagesResult,
 } from "./messages.js";
 export type { ModelGatewayErrorOptions } from "./errors.js";
+export {
+  buildProviderInvocationMetadata,
+  sanitizeProviderModelId,
+  sanitizeProviderRequestId,
+} from "./provider-invocation.js";

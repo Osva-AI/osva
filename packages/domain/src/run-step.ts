@@ -15,6 +15,11 @@ import {
   requireNonEmptyString,
   requireNonNegativeInteger,
 } from "./internals.js";
+import {
+  assertModelRunStepUsageInvariants,
+  sanitizePersistedProviderModelId,
+  sanitizePersistedProviderRequestId,
+} from "./model-run-step-usage.js";
 
 export interface RunStepIdentityProps {
   readonly id: RunStepId;
@@ -34,6 +39,10 @@ export interface RunStepProps extends RunStepIdentityProps {
   readonly outputTokens?: number;
   readonly totalTokens?: number;
   readonly cachedInputTokens?: number;
+  readonly cacheWriteInputTokens?: number;
+  readonly usageIncomplete?: boolean;
+  readonly providerReportedModelId?: string;
+  readonly providerRequestId?: string;
   readonly estimatedCostUsdMicros?: number | null;
   readonly errorCode?: string;
 }
@@ -49,6 +58,10 @@ export interface FinalizeRunStepProps {
   readonly outputTokens?: number;
   readonly totalTokens?: number;
   readonly cachedInputTokens?: number;
+  readonly cacheWriteInputTokens?: number;
+  readonly usageIncomplete?: boolean;
+  readonly providerReportedModelId?: string;
+  readonly providerRequestId?: string;
   readonly estimatedCostUsdMicros?: number | null;
   readonly errorCode?: string;
 }
@@ -68,6 +81,10 @@ export class RunStep {
   readonly outputTokens: number | undefined;
   readonly totalTokens: number | undefined;
   readonly cachedInputTokens: number | undefined;
+  readonly cacheWriteInputTokens: number | undefined;
+  readonly usageIncomplete: boolean | undefined;
+  readonly providerReportedModelId: string | undefined;
+  readonly providerRequestId: string | undefined;
   readonly estimatedCostUsdMicros: number | null | undefined;
   readonly errorCode: string | undefined;
 
@@ -86,6 +103,10 @@ export class RunStep {
     this.outputTokens = props.outputTokens;
     this.totalTokens = props.totalTokens;
     this.cachedInputTokens = props.cachedInputTokens;
+    this.cacheWriteInputTokens = props.cacheWriteInputTokens;
+    this.usageIncomplete = props.usageIncomplete;
+    this.providerReportedModelId = props.providerReportedModelId;
+    this.providerRequestId = props.providerRequestId;
     this.estimatedCostUsdMicros = props.estimatedCostUsdMicros;
     this.errorCode = props.errorCode;
   }
@@ -145,6 +166,24 @@ export class RunStep {
       );
     }
 
+    if (props.kind === "MODEL") {
+      assertModelRunStepUsageInvariants({
+        inputTokens: props.inputTokens,
+        outputTokens: props.outputTokens,
+        totalTokens: props.totalTokens,
+        cachedInputTokens: props.cachedInputTokens,
+        cacheWriteInputTokens: props.cacheWriteInputTokens,
+        usageIncomplete: props.usageIncomplete,
+      });
+    }
+
+    const providerReportedModelId = sanitizePersistedProviderModelId(
+      props.providerReportedModelId,
+    );
+    const providerRequestId = sanitizePersistedProviderRequestId(
+      props.providerRequestId,
+    );
+
     return Object.freeze(
       new RunStep({
         id: props.id,
@@ -164,6 +203,12 @@ export class RunStep {
         outputTokens: optionalNonNegativeInteger(props.outputTokens),
         totalTokens: optionalNonNegativeInteger(props.totalTokens),
         cachedInputTokens: optionalNonNegativeInteger(props.cachedInputTokens),
+        cacheWriteInputTokens: optionalNonNegativeInteger(
+          props.cacheWriteInputTokens,
+        ),
+        usageIncomplete: props.usageIncomplete,
+        providerReportedModelId,
+        providerRequestId,
         estimatedCostUsdMicros: props.estimatedCostUsdMicros,
         errorCode:
           props.errorCode === undefined
@@ -193,6 +238,10 @@ export class RunStep {
       outputTokens: props.outputTokens,
       totalTokens: props.totalTokens,
       cachedInputTokens: props.cachedInputTokens,
+      cacheWriteInputTokens: props.cacheWriteInputTokens,
+      usageIncomplete: props.usageIncomplete,
+      providerReportedModelId: props.providerReportedModelId,
+      providerRequestId: props.providerRequestId,
       estimatedCostUsdMicros: props.estimatedCostUsdMicros,
       errorCode: props.errorCode,
     });

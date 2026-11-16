@@ -41,6 +41,10 @@ describe("GeminiProviderAdapter", () => {
       finishReason: "stop",
       providerFinishReason: "STOP",
       providerRequestId: "gemini_ok",
+      invocation: {
+        configuredProviderModelId: "gemini-test-snapshot",
+        providerReportedModelId: "gemini-2.0-flash-001",
+      },
     });
     expect(server.requests).toHaveLength(1);
     expect(server.requests[0]?.url).toContain(

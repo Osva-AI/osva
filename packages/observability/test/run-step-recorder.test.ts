@@ -1,3 +1,4 @@
+import { MODEL_ERROR_CODES } from "@osva-ai/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { ExecutionRequest, GenerateTextRequest } from "@osva-ai/contracts";
 import {
@@ -78,7 +79,6 @@ describe("RunStepRecorder", () => {
           inputTokens: 120,
           outputTokens: 15,
           totalTokens: 135,
-          cachedInputTokens: 8,
         },
       })),
       generateText: vi.fn(),
@@ -108,6 +108,95 @@ describe("RunStepRecorder", () => {
     expect(steps[0]?.inputTokens).toBe(120);
     expect(steps[0]?.estimatedCostUsdMicros).toBe(150);
     expect(steps[0]).not.toHaveProperty("metadata");
+  });
+
+  it("records a failed model step when text output is empty after provider usage", async () => {
+    const runs = new MemoryRunRepository();
+    const modelProfiles = new MemoryModelProfileRepository();
+    const modelProfileVersionId =
+      "mpv-1" as import("@osva-ai/contracts").ModelProfileVersionId;
+
+    await modelProfiles.saveModelProfile(
+      ModelProfile.create({
+        id: "mp-1" as import("@osva-ai/contracts").ModelProfileId,
+        workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
+        key: "primary",
+        name: "Primary",
+        createdAt: NOW,
+      }),
+    );
+    await modelProfiles.saveModelProfileVersion(
+      ModelProfileVersion.create({
+        id: modelProfileVersionId,
+        modelProfileId: "mp-1" as import("@osva-ai/contracts").ModelProfileId,
+        version: 1,
+        provider: "OPENAI",
+        model: "gpt-test",
+        createdAt: NOW,
+      }),
+    );
+
+    const execution: ExecutionRequest = {
+      runId: "run-1" as import("@osva-ai/contracts").RunId,
+      runAttemptId: "attempt-1" as import("@osva-ai/contracts").RunAttemptId,
+      workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
+      agentId: "agent-1" as import("@osva-ai/contracts").AgentId,
+      agentVersionId: "av-1" as import("@osva-ai/contracts").AgentVersionId,
+      timeoutMs: 30_000,
+      input: { prompt: "hello" },
+      effectiveConfig: {},
+      runtime: {
+        type: "TRUSTED_TYPESCRIPT",
+        entrypoint: "agent.ts",
+        integrity: "sha256:00",
+      },
+      modelProfileVersionBindings: { default: modelProfileVersionId },
+      toolVersionBindings: {},
+      memoryNamespaceBindings: {},
+      knowledgeIndexBindings: {},
+      toolGrants: [],
+      policyContext: {},
+    };
+
+    const inner = {
+      generateTextOutcome: vi.fn(async () => ({
+        text: "   ",
+        finishReason: "stop",
+        usage: {
+          inputTokens: 12,
+          outputTokens: 0,
+          totalTokens: 12,
+        },
+        invocation: {
+          configuredProviderModelId: "gpt-test",
+          providerReportedModelId: "gpt-test-2026",
+        },
+        providerRequestId: "req_empty_text",
+      })),
+      generateCompletionOutcome: vi.fn(),
+      generateText: vi.fn(),
+    } as unknown as ModelGateway;
+
+    const recorder = createRunStepRecorder(execution, {
+      runs,
+      modelProfiles,
+      clock: { now: () => NOW },
+      ids: { createId: () => "step-empty" },
+    });
+
+    await expect(
+      recorder.wrapModelGateway(inner).generateText({
+        modelProfileVersionId,
+        messages: [{ role: "user", content: "hello" }],
+      }),
+    ).rejects.toBeTruthy();
+
+    const steps = runs.snapshotRunSteps();
+    expect(steps[0]?.status).toBe("FAILED");
+    expect(steps[0]?.errorCode).toBe(MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE);
+    expect(steps[0]?.inputTokens).toBe(12);
+    expect(steps[0]?.providerReportedModelId).toBe("gpt-test-2026");
+    expect(steps[0]?.providerRequestId).toBe("req_empty_text");
   });
 
   it("records a succeeded knowledge step without query text", async () => {

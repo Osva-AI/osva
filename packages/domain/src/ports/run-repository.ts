@@ -62,6 +62,7 @@ export interface RunAttemptUsageSummary {
   readonly outputTokens: number;
   readonly totalTokens: number;
   readonly cachedInputTokens: number;
+  readonly cacheWriteInputTokens: number;
   readonly estimatedCostUsdMicros: number | null;
   readonly pricedModelCalls: number;
   readonly unpricedModelCalls: number;

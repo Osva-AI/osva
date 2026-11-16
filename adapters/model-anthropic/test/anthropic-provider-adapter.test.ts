@@ -47,6 +47,10 @@ describe("AnthropicProviderAdapter", () => {
       finishReason: "stop",
       providerFinishReason: "end_turn",
       providerRequestId: "msg_ok",
+      invocation: {
+        configuredProviderModelId: "claude-test-snapshot",
+        providerReportedModelId: "claude-3-5-sonnet-20241022",
+      },
     });
     expect(server.requests).toHaveLength(1);
     expect(server.requests[0]?.url).toBe("/v1/messages");
@@ -288,9 +292,10 @@ describe("AnthropicProviderAdapter", () => {
     });
 
     expect(result.usage?.outputTokens).toBe(348);
-    expect(result.usage?.inputTokens).toBe(100);
+    expect(result.usage?.inputTokens).toBe(125);
     expect(result.usage?.cachedInputTokens).toBe(20);
-    expect(result.usage?.totalTokens).toBe(448);
+    expect(result.usage?.cacheWriteInputTokens).toBe(5);
+    expect(result.usage?.totalTokens).toBe(473);
   });
 
   it("structured request omits unsupported sampling parameters", async () => {
