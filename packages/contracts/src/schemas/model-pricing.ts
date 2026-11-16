@@ -7,14 +7,17 @@ import {
 
 export const modelPricingCurrencySchema = z.enum(MODEL_PRICING_CURRENCIES);
 
+const usdMicrosPerMillionTokensSchema = z
+  .int()
+  .nonnegative()
+  .max(MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS);
+
 export const modelProfileVersionPricingSchema = z.strictObject({
   currency: modelPricingCurrencySchema,
-  inputUsdMicrosPerMillionTokens: z
-    .int()
-    .nonnegative()
-    .max(MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS),
-  outputUsdMicrosPerMillionTokens: z
-    .int()
-    .nonnegative()
-    .max(MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS),
+  inputUsdMicrosPerMillionTokens: usdMicrosPerMillionTokensSchema,
+  outputUsdMicrosPerMillionTokens: usdMicrosPerMillionTokensSchema,
+  cachedReadInputUsdMicrosPerMillionTokens:
+    usdMicrosPerMillionTokensSchema.optional(),
+  cachedWriteInputUsdMicrosPerMillionTokens:
+    usdMicrosPerMillionTokensSchema.optional(),
 });

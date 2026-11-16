@@ -91,12 +91,108 @@ export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIRespon
         return;
       }
 
+      if (prompt === "responses-provenance-no-model") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "resp_no_model",
+            object: "response",
+            status: "completed",
+            output_text: "text without model field",
+            output: [
+              {
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "output_text",
+                    text: "text without model field",
+                  },
+                ],
+              },
+            ],
+            usage: {
+              input_tokens: 10,
+              output_tokens: 5,
+              total_tokens: 15,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "responses-provenance-no-usage") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "resp_no_usage",
+            object: "response",
+            status: "completed",
+            model: "gpt-reported-alias",
+            output_text: "text without usage",
+            output: [
+              {
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "output_text",
+                    text: "text without usage",
+                  },
+                ],
+              },
+            ],
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "responses-provenance-zero-usage") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "resp_zero_usage",
+            object: "response",
+            status: "completed",
+            model: "gpt-reported-zero",
+            output_text: "zero usage ok",
+            usage: {
+              input_tokens: 0,
+              output_tokens: 0,
+              total_tokens: 0,
+              input_tokens_details: { cached_tokens: 0 },
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "responses-provenance-no-cached") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "resp_no_cached",
+            object: "response",
+            status: "completed",
+            model: "gpt-reported-uncached",
+            output_text: "uncached usage",
+            usage: {
+              input_tokens: 50,
+              output_tokens: 10,
+              total_tokens: 60,
+            },
+          }),
+        );
+        return;
+      }
+
       res.writeHead(200, { "content-type": "application/json" });
       res.end(
         JSON.stringify({
           id: "resp_ok",
           object: "response",
           status: "completed",
+          model: "gpt-5.1-2026-01-15",
           output_text: "normalized text from fake openai",
           output: [
             {
@@ -247,11 +343,40 @@ function writeChatCompletionResponse(
   const tools = record.tools;
   const hasTools = Array.isArray(tools) && tools.length > 0;
   const scenario = extractChatScenario(body);
-  const usage = {
+  let usage: Record<string, unknown> = {
     prompt_tokens: 120,
     completion_tokens: 15,
     total_tokens: 135,
+    prompt_tokens_details: { cached_tokens: 8 },
   };
+  let reportedModel = "gpt-4o-mini-2026-01-15";
+
+  if (userText.includes("chat-provenance-no-model")) {
+    reportedModel = "";
+  }
+  if (userText.includes("chat-provenance-no-usage")) {
+    usage = {};
+  }
+  if (userText.includes("chat-provenance-zero-usage")) {
+    usage = {
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      prompt_tokens_details: { cached_tokens: 0 },
+    };
+    reportedModel = "gpt-reported-zero-chat";
+  }
+  if (userText.includes("chat-provenance-no-cached")) {
+    usage = {
+      prompt_tokens: 40,
+      completion_tokens: 12,
+      total_tokens: 52,
+    };
+    reportedModel = "gpt-reported-uncached-chat";
+  }
+  if (userText.includes("chat-provenance-actual-model")) {
+    reportedModel = "gpt-4o-mini-actual-snapshot-2026";
+  }
 
   const messages = record.messages;
   const hasToolResults =
@@ -276,6 +401,7 @@ function writeChatCompletionResponse(
       JSON.stringify({
         id: "chat_tool",
         object: "chat.completion",
+        model: reportedModel,
         choices: [
           {
             index: 0,
@@ -306,6 +432,7 @@ function writeChatCompletionResponse(
       JSON.stringify({
         id: "chat_m20_6_builder",
         object: "chat.completion",
+        model: reportedModel,
         choices: [
           {
             index: 0,
@@ -328,6 +455,7 @@ function writeChatCompletionResponse(
       JSON.stringify({
         id: "chat_m20_schema_probe",
         object: "chat.completion",
+        model: reportedModel,
         choices: [
           {
             index: 0,
@@ -366,6 +494,7 @@ function writeChatCompletionResponse(
     JSON.stringify({
       id: "chat_json",
       object: "chat.completion",
+      model: reportedModel.length > 0 ? reportedModel : undefined,
       choices: [
         {
           index: 0,

@@ -60,6 +60,7 @@ describe("OsvaClient runObservability", () => {
             outputTokens: 5,
             totalTokens: 15,
             cachedInputTokens: 0,
+            cacheWriteInputTokens: 0,
             estimatedCostUsdMicros: 100,
             pricedModelCalls: 1,
             unpricedModelCalls: 0,

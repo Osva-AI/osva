@@ -231,7 +231,12 @@ export {
   MEMORY_RECORD_INITIAL_REVISION,
   type MemoryRecordProps,
 } from "./memory-record.js";
-export { estimateModelCostUsdMicros } from "./model-cost.js";
+export {
+  estimateModelCostUsdMicros,
+  isModelPricingEligible,
+  type ModelCostEstimateOptions,
+  type ModelTokenUsageForCost,
+} from "./model-cost.js";
 export { jsonValuesEqual } from "./json-equality.js";
 export {
   Schedule,

@@ -289,6 +289,7 @@ export class MemoryRunRepository implements RunRepository {
         outputTokens: 0,
         totalTokens: 0,
         cachedInputTokens: 0,
+        cacheWriteInputTokens: 0,
         estimatedCostUsdMicros: null,
         pricedModelCalls: 0,
         unpricedModelCalls: 0,
@@ -306,6 +307,7 @@ export class MemoryRunRepository implements RunRepository {
     let outputTokens = 0;
     let totalTokens = 0;
     let cachedInputTokens = 0;
+    let cacheWriteInputTokens = 0;
     let estimatedCostUsdMicros = 0;
     let pricedModelCalls = 0;
     let unpricedModelCalls = 0;
@@ -326,6 +328,7 @@ export class MemoryRunRepository implements RunRepository {
       outputTokens += step.outputTokens ?? 0;
       totalTokens += step.totalTokens ?? 0;
       cachedInputTokens += step.cachedInputTokens ?? 0;
+      cacheWriteInputTokens += step.cacheWriteInputTokens ?? 0;
 
       if (
         step.estimatedCostUsdMicros === null ||
@@ -346,6 +349,7 @@ export class MemoryRunRepository implements RunRepository {
       outputTokens,
       totalTokens,
       cachedInputTokens,
+      cacheWriteInputTokens,
       estimatedCostUsdMicros: hasPricedCost ? estimatedCostUsdMicros : null,
       pricedModelCalls,
       unpricedModelCalls,

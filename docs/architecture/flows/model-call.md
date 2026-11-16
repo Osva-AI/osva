@@ -17,8 +17,8 @@ Agent runtime invokes text generation through ModelGateway using immutable Model
 4. **RunStep start:** `RunStepRecorder` opens MODEL step record.
 5. **ModelGateway.generateText:** Loads immutable ModelProfileVersion from repository.
 6. **Provider dispatch:** Selects adapter by `provider` field (OPENAI, ANTHROPIC, GEMINI).
-7. **Provider adapter:** Calls provider SDK; normalizes text, token usage, finish reason.
-8. **Usage / cost:** Recorder extracts usage; `estimateModelCostUsdMicros` when pricing exists.
+7. **Provider adapter:** Calls provider SDK; normalizes text, token usage, finish reason, and (internally) provider-reported model identity when the response includes it. Configured model id comes from the immutable ModelProfileVersion; `generateTextOutcome` may carry `invocation` metadata without changing public `GenerateTextResult`.
+8. **Usage / cost:** Recorder persists normalized usage, provenance, and cache-write metadata on the MODEL RunStep, then applies `estimateModelCostUsdMicros` (cache-aware; unknown when incomplete or rates missing). See [MODEL_RUN_STEP_PROVENANCE_AND_PRICING.md](../MODEL_RUN_STEP_PROVENANCE_AND_PRICING.md).
 9. **RunStep persist:** Step saved with normalized payload, usage, cost (or unpriced flag).
 10. **Return to runtime:** Normalized `GenerateTextResult` (text) returned to agent code.
 
@@ -71,6 +71,10 @@ sequenceDiagram
   Rec->>Rec: estimate cost if priced
   Rec-->>Agent: GenerateTextResult
 ```
+
+## Provider capabilities
+
+Implemented adapter capabilities (not upstream API surface): [MODEL_PROVIDER_CAPABILITY_MATRIX.md](../MODEL_PROVIDER_CAPABILITY_MATRIX.md).
 
 ## Key implementation files
 

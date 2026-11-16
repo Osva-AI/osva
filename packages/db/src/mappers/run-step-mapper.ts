@@ -30,6 +30,10 @@ export function runStepToRow(step: RunStep) {
     outputTokens: step.outputTokens ?? null,
     totalTokens: step.totalTokens ?? null,
     cachedInputTokens: step.cachedInputTokens ?? null,
+    cacheWriteInputTokens: step.cacheWriteInputTokens ?? null,
+    usageIncomplete: step.usageIncomplete ?? null,
+    providerReportedModelId: step.providerReportedModelId ?? null,
+    providerRequestId: step.providerRequestId ?? null,
     estimatedCostUsdMicros: step.estimatedCostUsdMicros ?? null,
     errorCode: step.errorCode ?? null,
   };
@@ -57,6 +61,10 @@ export function runStepFromRow(row: RunStepRow): RunStep {
     outputTokens: row.outputTokens ?? undefined,
     totalTokens: row.totalTokens ?? undefined,
     cachedInputTokens: row.cachedInputTokens ?? undefined,
+    cacheWriteInputTokens: row.cacheWriteInputTokens ?? undefined,
+    usageIncomplete: row.usageIncomplete ?? undefined,
+    providerReportedModelId: row.providerReportedModelId ?? undefined,
+    providerRequestId: row.providerRequestId ?? undefined,
     estimatedCostUsdMicros: row.estimatedCostUsdMicros,
     errorCode: row.errorCode ?? undefined,
   });

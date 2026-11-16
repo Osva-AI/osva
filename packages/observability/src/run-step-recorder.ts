@@ -28,11 +28,16 @@ import {
 import type { MemoryGateway } from "@osva-ai/contracts";
 import {
   RunStep,
-  estimateModelCostUsdMicros,
+  type FinalizeRunStepProps,
   type ModelProfileRepository,
   type RunRepository,
 } from "@osva/domain";
-import type { ModelGateway } from "@osva/model-gateway";
+import type {
+  ModelGateway,
+  ProviderGenerateTextResult,
+} from "@osva/model-gateway";
+
+import { buildModelRunStepFinalizeProps } from "./model-run-step-finalize.js";
 import type { ToolGateway } from "@osva/tool-gateway";
 
 import { OSVA_ATTR } from "./attributes.js";
@@ -205,40 +210,42 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
         [OSVA_ATTR.OPERATION]: "generate_text",
       },
       async (span) => {
+        let outcome: ProviderGenerateTextResult | undefined;
+        let version: Awaited<
+          ReturnType<ModelProfileRepository["findModelProfileVersionById"]>
+        > = null;
+        let runStepFinalized = false;
+
         try {
-          const outcome = await this.inner.generateTextOutcome(
-            request,
-            options,
+          outcome = await this.inner.generateTextOutcome(request, options);
+          version = await this.deps.modelProfiles.findModelProfileVersionById(
+            request.modelProfileVersionId,
           );
-          const version =
-            await this.deps.modelProfiles.findModelProfileVersionById(
-              request.modelProfileVersionId,
-            );
           if (version !== null) {
             span.setAttributes({
               [OSVA_ATTR.PROVIDER]: version.provider,
             });
           }
-          const estimatedCostUsdMicros =
-            outcome.usage === undefined
-              ? null
-              : estimateModelCostUsdMicros(
-                  {
-                    inputTokens: outcome.usage.inputTokens,
-                    outputTokens: outcome.usage.outputTokens,
-                  },
-                  version?.pricing,
-                );
 
-          await this.finalizeSafely(runStepId, {
+          if (outcome.text === undefined || outcome.text.trim().length === 0) {
+            const errorCode = MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE;
+            await this.finalizeModelRunStep(runStepId, {
+              outcome,
+              version,
+              status: "FAILED",
+              errorCode,
+            });
+            runStepFinalized = true;
+            span.setStatus(false, errorCode);
+            throw new Error(errorCode);
+          }
+
+          await this.finalizeModelRunStep(runStepId, {
+            outcome,
+            version,
             status: "SUCCEEDED",
-            completedAt: this.deps.clock.now(),
-            inputTokens: outcome.usage?.inputTokens,
-            outputTokens: outcome.usage?.outputTokens,
-            totalTokens: outcome.usage?.totalTokens,
-            cachedInputTokens: outcome.usage?.cachedInputTokens,
-            estimatedCostUsdMicros,
           });
+          runStepFinalized = true;
 
           span.setStatus(true);
           telemetry.recordCounter(OSVA_METRIC.MODEL_CALLS, 1, {
@@ -262,18 +269,25 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
             );
           }
 
-          if (outcome.text === undefined || outcome.text.trim().length === 0) {
-            throw new Error(MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE);
-          }
-
           return { text: outcome.text };
         } catch (error) {
           const errorCategory = mapModelErrorCode(error);
-          await this.finalizeSafely(runStepId, {
-            status: "FAILED",
-            completedAt: this.deps.clock.now(),
-            errorCode: errorCategory,
-          });
+          if (!runStepFinalized) {
+            if (outcome !== undefined) {
+              await this.finalizeModelRunStep(runStepId, {
+                outcome,
+                version,
+                status: "FAILED",
+                errorCode: errorCategory,
+              });
+            } else {
+              await this.finalizeSafely(runStepId, {
+                status: "FAILED",
+                completedAt: this.deps.clock.now(),
+                errorCode: errorCategory,
+              });
+            }
+          }
           span.setStatus(false, errorCategory);
           span.recordException(error);
           throw error;
@@ -328,40 +342,32 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
         [OSVA_ATTR.OPERATION]: "generate_completion",
       },
       async (span) => {
+        let outcome: ProviderGenerateTextResult | undefined;
+        let version: Awaited<
+          ReturnType<ModelProfileRepository["findModelProfileVersionById"]>
+        > = null;
+        let runStepFinalized = false;
+
         try {
-          const outcome = await this.inner.generateCompletionOutcome(
+          outcome = await this.inner.generateCompletionOutcome(
             request,
             options,
           );
-          const version =
-            await this.deps.modelProfiles.findModelProfileVersionById(
-              request.modelProfileVersionId,
-            );
+          version = await this.deps.modelProfiles.findModelProfileVersionById(
+            request.modelProfileVersionId,
+          );
           if (version !== null) {
             span.setAttributes({
               [OSVA_ATTR.PROVIDER]: version.provider,
             });
           }
-          const estimatedCostUsdMicros =
-            outcome.usage === undefined
-              ? null
-              : estimateModelCostUsdMicros(
-                  {
-                    inputTokens: outcome.usage.inputTokens,
-                    outputTokens: outcome.usage.outputTokens,
-                  },
-                  version?.pricing,
-                );
 
-          await this.finalizeSafely(runStepId, {
+          await this.finalizeModelRunStep(runStepId, {
+            outcome,
+            version,
             status: "SUCCEEDED",
-            completedAt: this.deps.clock.now(),
-            inputTokens: outcome.usage?.inputTokens,
-            outputTokens: outcome.usage?.outputTokens,
-            totalTokens: outcome.usage?.totalTokens,
-            cachedInputTokens: outcome.usage?.cachedInputTokens,
-            estimatedCostUsdMicros,
           });
+          runStepFinalized = true;
 
           span.setStatus(true);
           telemetry.recordCounter(OSVA_METRIC.MODEL_CALLS, 1, {
@@ -372,6 +378,18 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
             elapsedMs(perfStartedAt, performance.now()),
             { provider: version?.provider ?? "unknown" },
           );
+          if (outcome.usage !== undefined) {
+            telemetry.recordHistogram(
+              OSVA_METRIC.MODEL_INPUT_TOKENS,
+              outcome.usage.inputTokens,
+              { provider: version?.provider ?? "unknown" },
+            );
+            telemetry.recordHistogram(
+              OSVA_METRIC.MODEL_OUTPUT_TOKENS,
+              outcome.usage.outputTokens,
+              { provider: version?.provider ?? "unknown" },
+            );
+          }
 
           return {
             text: outcome.text,
@@ -380,17 +398,49 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
           };
         } catch (error) {
           const errorCategory = mapModelErrorCode(error);
-          await this.finalizeSafely(runStepId, {
-            status: "FAILED",
-            completedAt: this.deps.clock.now(),
-            errorCode: errorCategory,
-          });
+          if (!runStepFinalized) {
+            if (outcome !== undefined) {
+              await this.finalizeModelRunStep(runStepId, {
+                outcome,
+                version,
+                status: "FAILED",
+                errorCode: errorCategory,
+              });
+            } else {
+              await this.finalizeSafely(runStepId, {
+                status: "FAILED",
+                completedAt: this.deps.clock.now(),
+                errorCode: errorCategory,
+              });
+            }
+          }
           span.setStatus(false, errorCategory);
           span.recordException(error);
           throw error;
         }
       },
     );
+  }
+
+  private async finalizeModelRunStep(
+    runStepId: RunStepId,
+    input: {
+      readonly outcome: ProviderGenerateTextResult | undefined;
+      readonly version: Awaited<
+        ReturnType<ModelProfileRepository["findModelProfileVersionById"]>
+      >;
+      readonly status: "SUCCEEDED" | "FAILED";
+      readonly errorCode?: string;
+    },
+  ): Promise<void> {
+    const finalize: FinalizeRunStepProps = buildModelRunStepFinalizeProps({
+      outcome: input.outcome,
+      version: input.version,
+      status: input.status,
+      completedAt: this.deps.clock.now(),
+      errorCode: input.errorCode,
+    });
+    await this.finalizeSafely(runStepId, finalize);
   }
 
   private async finalizeSafely(

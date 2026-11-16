@@ -55,6 +55,7 @@ export function emptyRunAttemptUsageSummary(): RunAttemptUsageSummary {
     outputTokens: 0,
     totalTokens: 0,
     cachedInputTokens: 0,
+    cacheWriteInputTokens: 0,
     estimatedCostUsdMicros: null,
     pricedModelCalls: 0,
     unpricedModelCalls: 0,

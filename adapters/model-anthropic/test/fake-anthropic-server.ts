@@ -239,6 +239,96 @@ export async function startFakeAnthropicMessagesServer(): Promise<FakeAnthropicM
         return;
       }
 
+      if (prompt === "provenance-no-model") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "msg_no_model",
+            type: "message",
+            role: "assistant",
+            stop_reason: "end_turn",
+            content: [{ type: "text", text: "no model field" }],
+            usage: { input_tokens: 10, output_tokens: 5 },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-no-usage") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "msg_no_usage",
+            type: "message",
+            role: "assistant",
+            model: "claude-reported",
+            stop_reason: "end_turn",
+            content: [{ type: "text", text: "no usage" }],
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-cache-mixed") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "msg_cache_mixed",
+            type: "message",
+            role: "assistant",
+            model: "claude-cache-mixed",
+            stop_reason: "end_turn",
+            content: [{ type: "text", text: "cache mixed ok" }],
+            usage: {
+              input_tokens: 30,
+              cache_creation_input_tokens: 20,
+              cache_read_input_tokens: 100,
+              output_tokens: 25,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-zero-usage") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "msg_zero_usage",
+            type: "message",
+            role: "assistant",
+            model: "claude-zero",
+            stop_reason: "end_turn",
+            content: [{ type: "text", text: "zero" }],
+            usage: {
+              input_tokens: 0,
+              output_tokens: 0,
+              cache_read_input_tokens: 0,
+              cache_creation_input_tokens: 0,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-partial-usage") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "msg_partial_usage",
+            type: "message",
+            role: "assistant",
+            model: "claude-partial",
+            stop_reason: "end_turn",
+            content: [{ type: "text", text: "partial" }],
+            usage: {
+              input_tokens: 10,
+            },
+          }),
+        );
+        return;
+      }
+
       if (prompt === "malformed") {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
@@ -260,7 +350,7 @@ export async function startFakeAnthropicMessagesServer(): Promise<FakeAnthropicM
           id: "msg_ok",
           type: "message",
           role: "assistant",
-          model: "claude-test",
+          model: "claude-3-5-sonnet-20241022",
           stop_reason: "end_turn",
           content: [
             {
@@ -269,7 +359,7 @@ export async function startFakeAnthropicMessagesServer(): Promise<FakeAnthropicM
             },
           ],
           usage: {
-            input_tokens: 120,
+            input_tokens: 112,
             output_tokens: 15,
             cache_read_input_tokens: 8,
           },

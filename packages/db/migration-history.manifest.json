@@ -211,6 +211,12 @@
       "tag": "0034_office_inbox_item_read_states",
       "file": "0034_office_inbox_item_read_states.sql",
       "sha256": "d22964d9ae409a1f7a3ddbe507bb653d5e2bf676dd0d9352c0095606b09bb7b8"
+    },
+    {
+      "idx": 35,
+      "tag": "0035_model_run_step_provenance",
+      "file": "0035_model_run_step_provenance.sql",
+      "sha256": "b8d797806c8ad339066acdef31c0ffb90227664db9ff301cdb26001073b08349"
     }
   ]
 }

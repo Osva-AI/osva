@@ -138,6 +138,7 @@ class UsageLoaderRunRepository implements Partial<RunRepository> {
       outputTokens,
       totalTokens: inputTokens + outputTokens,
       cachedInputTokens: 0,
+      cacheWriteInputTokens: 0,
       estimatedCostUsdMicros: hasPriced ? pricedCostUsdMicros : null,
       pricedModelCalls: modelCalls - unpricedModelCalls,
       unpricedModelCalls,

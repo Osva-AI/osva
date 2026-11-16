@@ -5,14 +5,18 @@ import type {
 import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
+  buildProviderInvocationMetadata,
+  sanitizeProviderModelId,
+  sanitizeProviderRequestId,
   type ModelGatewayErrorOptions,
   type ModelFinishReason,
   type ModelProviderAdapter,
-  type NormalizedModelUsage,
   type ProviderGenerateTextResult,
   type ResolvedProviderGenerateTextRequest,
   splitSystemAndConversationMessages,
 } from "@osva/model-gateway";
+
+import { normalizeGeminiGenerateContentUsage } from "./gemini-usage.js";
 
 import { normalizeGeminiProviderBaseUrl } from "./gemini-api-base-url.js";
 import { projectJsonSchemaForGeminiResponseJsonSchema } from "./gemini-response-json-schema-projection.js";
@@ -94,7 +98,7 @@ export class GeminiProviderAdapter implements ModelProviderAdapter {
         this.timeout,
       );
       const payload = await parseGeminiGenerateContentResponse(response);
-      return normalizeGeminiResponse(payload);
+      return normalizeGeminiResponse(request, payload);
     } catch (error) {
       if (error instanceof ModelGatewayError) {
         throw error;
@@ -173,6 +177,7 @@ type GeminiPart =
 
 interface GeminiGenerateContentResponse {
   readonly responseId?: string;
+  readonly modelVersion?: string;
   readonly candidates?: readonly GeminiCandidate[];
   readonly usageMetadata?: GeminiUsageMetadata;
   readonly error?: GeminiErrorBody;
@@ -187,8 +192,10 @@ interface GeminiCandidate {
 
 interface GeminiUsageMetadata {
   readonly promptTokenCount?: number;
+  readonly cachedContentTokenCount?: number;
   readonly candidatesTokenCount?: number;
   readonly thoughtsTokenCount?: number;
+  readonly toolUsePromptTokenCount?: number;
   readonly totalTokenCount?: number;
 }
 
@@ -287,6 +294,7 @@ function toGeminiContent(message: ModelConversationMessage): GeminiContent {
 }
 
 function normalizeGeminiResponse(
+  request: ResolvedProviderGenerateTextRequest,
   payload: GeminiGenerateContentResponse,
 ): ProviderGenerateTextResult {
   const candidate = payload.candidates?.[0];
@@ -314,16 +322,19 @@ function normalizeGeminiResponse(
     );
   }
 
+  const reportedModel = sanitizeProviderModelId(payload.modelVersion);
+
   return {
     text,
     toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-    usage: normalizeUsage(payload.usageMetadata),
+    usage: normalizeGeminiGenerateContentUsage(payload.usageMetadata),
     finishReason:
       toolCalls.length > 0 && finish.reason === "stop"
         ? "tool_call"
         : finish.reason,
     providerFinishReason: finish.raw,
-    providerRequestId: payload.responseId,
+    providerRequestId: sanitizeProviderRequestId(payload.responseId),
+    invocation: buildProviderInvocationMetadata(request.model, reportedModel),
   };
 }
 
@@ -366,26 +377,6 @@ function normalizeGeminiToolCalls(
   }
 
   return calls;
-}
-
-function normalizeUsage(
-  usage: GeminiUsageMetadata | undefined,
-): NormalizedModelUsage | undefined {
-  if (usage === undefined) {
-    return undefined;
-  }
-
-  const inputTokens = usage.promptTokenCount ?? 0;
-  const outputTokens =
-    (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0);
-  const totalTokens =
-    usage.totalTokenCount ?? Math.max(0, inputTokens + outputTokens);
-
-  return {
-    inputTokens,
-    outputTokens,
-    totalTokens,
-  };
 }
 
 function normalizeGeminiFinishReason(finishReason: string | undefined): {

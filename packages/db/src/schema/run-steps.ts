@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   foreignKey,
   index,
@@ -40,6 +41,10 @@ export const runSteps = pgTable(
     outputTokens: integer("output_tokens"),
     totalTokens: integer("total_tokens"),
     cachedInputTokens: integer("cached_input_tokens"),
+    cacheWriteInputTokens: integer("cache_write_input_tokens"),
+    usageIncomplete: boolean("usage_incomplete"),
+    providerReportedModelId: text("provider_reported_model_id"),
+    providerRequestId: text("provider_request_id"),
     estimatedCostUsdMicros: bigint("estimated_cost_usd_micros", {
       mode: "number",
     }),

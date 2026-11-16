@@ -171,6 +171,199 @@ export async function startFakeGeminiGenerateContentServer(): Promise<FakeGemini
         return;
       }
 
+      if (prompt === "provenance-no-model") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_no_model",
+            candidates: [
+              {
+                content: { parts: [{ text: "no model version" }] },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 10,
+              candidatesTokenCount: 5,
+              totalTokenCount: 15,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-no-usage") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_no_usage",
+            modelVersion: "gemini-2.0-flash-001",
+            candidates: [
+              {
+                content: { parts: [{ text: "no usage" }] },
+                finishReason: "STOP",
+              },
+            ],
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-cached-prompt") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_cached",
+            modelVersion: "gemini-2.0-flash-001",
+            candidates: [
+              {
+                content: { parts: [{ text: "cached ok" }] },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 100,
+              cachedContentTokenCount: 40,
+              candidatesTokenCount: 12,
+              totalTokenCount: 112,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-no-cached-breakdown") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_no_cached",
+            modelVersion: "gemini-2.0-flash-001",
+            candidates: [
+              {
+                content: { parts: [{ text: "uncached" }] },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 80,
+              candidatesTokenCount: 20,
+              totalTokenCount: 100,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-tool-use-prompt-tokens") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_tool_prompt",
+            modelVersion: "gemini-2.0-flash-001",
+            candidates: [
+              {
+                content: { parts: [{ text: "tool prompt" }] },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 90,
+              toolUsePromptTokenCount: 30,
+              candidatesTokenCount: 10,
+              totalTokenCount: 100,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-provider-total-mismatch") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_total_mismatch",
+            modelVersion: "gemini-2.0-flash-001",
+            candidates: [
+              {
+                content: { parts: [{ text: "total mismatch" }] },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 50,
+              candidatesTokenCount: 10,
+              thoughtsTokenCount: 5,
+              totalTokenCount: 80,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-partial-usage") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_partial",
+            modelVersion: "gemini-2.0-flash-001",
+            candidates: [
+              {
+                content: { parts: [{ text: "partial" }] },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 25,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-zero-usage") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_zero",
+            modelVersion: "gemini-zero",
+            candidates: [
+              {
+                content: { parts: [{ text: "zero" }] },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 0,
+              candidatesTokenCount: 0,
+              totalTokenCount: 0,
+            },
+          }),
+        );
+        return;
+      }
+
+      if (prompt === "provenance-invalid-tokens") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            responseId: "gemini_invalid",
+            modelVersion: "gemini-invalid",
+            candidates: [
+              {
+                content: { parts: [{ text: "invalid" }] },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 10,
+              candidatesTokenCount: 5,
+              totalTokenCount: 5,
+            },
+          }),
+        );
+        return;
+      }
+
       if (prompt === "malformed") {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ responseId: "gemini_bad" }));
@@ -181,6 +374,7 @@ export async function startFakeGeminiGenerateContentServer(): Promise<FakeGemini
       res.end(
         JSON.stringify({
           responseId: "gemini_ok",
+          modelVersion: "gemini-2.0-flash-001",
           candidates: [
             {
               content: {

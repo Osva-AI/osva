@@ -40,6 +40,11 @@ describe("OpenAIProviderAdapter", () => {
         totalTokens: 135,
         cachedInputTokens: 8,
       },
+      providerRequestId: "resp_ok",
+      invocation: {
+        configuredProviderModelId: "gpt-test-snapshot",
+        providerReportedModelId: "gpt-5.1-2026-01-15",
+      },
     });
     expect(server.requests).toHaveLength(1);
     expect(server.requests[0]?.url).toBe("/v1/responses");
@@ -61,8 +66,8 @@ describe("OpenAIProviderAdapter", () => {
         },
       ],
     });
-    expect(JSON.stringify(result)).not.toContain("resp_ok");
     expect(result).not.toHaveProperty("output");
+    expect(JSON.stringify(result)).not.toContain("test-key");
     expect(result.usage).toEqual({
       inputTokens: 120,
       outputTokens: 15,

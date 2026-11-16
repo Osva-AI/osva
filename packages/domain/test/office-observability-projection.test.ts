@@ -60,6 +60,7 @@ function usageSummary(
     outputTokens: partial.outputTokens ?? 0,
     totalTokens: partial.totalTokens ?? 0,
     cachedInputTokens: partial.cachedInputTokens ?? 0,
+    cacheWriteInputTokens: partial.cacheWriteInputTokens ?? 0,
     estimatedCostUsdMicros:
       partial.estimatedCostUsdMicros === undefined
         ? null

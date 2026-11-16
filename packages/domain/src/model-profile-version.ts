@@ -122,9 +122,50 @@ function validatePricing(
     );
   }
 
+  const cachedReadInputUsdMicrosPerMillionTokens =
+    pricing.cachedReadInputUsdMicrosPerMillionTokens === undefined
+      ? undefined
+      : requireNonNegativeInteger(
+          pricing.cachedReadInputUsdMicrosPerMillionTokens,
+          "ModelProfileVersion.pricing.cachedReadInputUsdMicrosPerMillionTokens",
+        );
+  const cachedWriteInputUsdMicrosPerMillionTokens =
+    pricing.cachedWriteInputUsdMicrosPerMillionTokens === undefined
+      ? undefined
+      : requireNonNegativeInteger(
+          pricing.cachedWriteInputUsdMicrosPerMillionTokens,
+          "ModelProfileVersion.pricing.cachedWriteInputUsdMicrosPerMillionTokens",
+        );
+
+  if (
+    cachedReadInputUsdMicrosPerMillionTokens !== undefined &&
+    cachedReadInputUsdMicrosPerMillionTokens >
+      MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS
+  ) {
+    throw new DomainInvariantError(
+      "ModelProfileVersion.pricing rates exceed supported bounds.",
+    );
+  }
+
+  if (
+    cachedWriteInputUsdMicrosPerMillionTokens !== undefined &&
+    cachedWriteInputUsdMicrosPerMillionTokens >
+      MODEL_PRICING_MAX_USD_MICROS_PER_MILLION_TOKENS
+  ) {
+    throw new DomainInvariantError(
+      "ModelProfileVersion.pricing rates exceed supported bounds.",
+    );
+  }
+
   return deepFreeze({
     currency: pricing.currency,
     inputUsdMicrosPerMillionTokens,
     outputUsdMicrosPerMillionTokens,
+    ...(cachedReadInputUsdMicrosPerMillionTokens !== undefined
+      ? { cachedReadInputUsdMicrosPerMillionTokens }
+      : {}),
+    ...(cachedWriteInputUsdMicrosPerMillionTokens !== undefined
+      ? { cachedWriteInputUsdMicrosPerMillionTokens }
+      : {}),
   });
 }

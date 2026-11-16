@@ -7,15 +7,19 @@ import {
   ModelGatewayError,
   type ModelGatewayErrorOptions,
   type ModelProviderAdapter,
-  type NormalizedModelUsage,
   type ProviderGenerateTextResult,
   type ResolvedProviderGenerateTextRequest,
 } from "@osva/model-gateway";
 import OpenAI from "openai";
-import type {
-  ResponseCreateParamsNonStreaming,
-  ResponseUsage,
-} from "openai/resources/responses/responses";
+import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
+
+import {
+  buildProviderInvocationMetadata,
+  mapOpenAiChatFinishReason,
+  normalizeOpenAiChatCompletionUsage,
+  normalizeOpenAiResponsesUsage,
+  sanitizeProviderModelId,
+} from "./openai-usage.js";
 
 export const OPENAI_PROVIDER = "openai" as const;
 
@@ -65,10 +69,16 @@ export class OpenAIProviderAdapter implements ModelProviderAdapter {
       const response = await this.client.responses.create(params, {
         signal: request.signal,
       });
+      const reportedModel = sanitizeProviderModelId(response.model);
       return {
         text: normalizeRequiredOutputText(response.output_text),
         finishReason: "stop",
-        usage: normalizeUsage(response.usage),
+        usage: normalizeOpenAiResponsesUsage(response.usage),
+        providerRequestId: sanitizeProviderToken(response.id),
+        invocation: buildProviderInvocationMetadata(
+          request.model,
+          reportedModel,
+        ),
       };
     } catch (error) {
       throw mapOpenAIError(error);
@@ -121,12 +131,10 @@ export class OpenAIProviderAdapter implements ModelProviderAdapter {
 
     const toolCalls = normalizeOpenAiToolCalls(choice.message.tool_calls);
     const text = choice.message.content?.trim();
-    const finishReason =
-      toolCalls.length > 0
-        ? ("tool_call" as const)
-        : choice.finish_reason === "length"
-          ? ("length" as const)
-          : ("stop" as const);
+    const finish = mapOpenAiChatFinishReason({
+      toolCallCount: toolCalls.length,
+      choiceFinishReason: choice.finish_reason,
+    });
 
     if (toolCalls.length === 0 && (text === undefined || text.length === 0)) {
       throw new ModelGatewayError(
@@ -135,13 +143,15 @@ export class OpenAIProviderAdapter implements ModelProviderAdapter {
       );
     }
 
+    const reportedModel = sanitizeProviderModelId(response.model);
     return {
       text: text && text.length > 0 ? text : undefined,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-      finishReason,
-      usage: normalizeChatUsage(response.usage),
-      providerRequestId: response.id,
-      providerFinishReason: choice.finish_reason ?? undefined,
+      finishReason: finish.finishReason,
+      usage: normalizeOpenAiChatCompletionUsage(response.usage),
+      providerRequestId: sanitizeProviderToken(response.id),
+      providerFinishReason: finish.providerFinishReason,
+      invocation: buildProviderInvocationMetadata(request.model, reportedModel),
     };
   }
 }
@@ -235,20 +245,6 @@ function normalizeOpenAiToolCalls(
   return normalized;
 }
 
-function normalizeChatUsage(
-  usage: OpenAI.Completions.CompletionUsage | undefined,
-): NormalizedModelUsage | undefined {
-  if (usage === undefined) {
-    return undefined;
-  }
-
-  return {
-    inputTokens: usage.prompt_tokens,
-    outputTokens: usage.completion_tokens,
-    totalTokens: usage.total_tokens,
-  };
-}
-
 function toResponsesCreateParams(
   request: ResolvedProviderGenerateTextRequest,
 ): ResponseCreateParamsNonStreaming {
@@ -300,24 +296,6 @@ function normalizeRequiredOutputText(
   }
 
   return outputText;
-}
-
-function normalizeUsage(
-  usage: ResponseUsage | undefined,
-): NormalizedModelUsage | undefined {
-  if (usage === undefined) {
-    return undefined;
-  }
-
-  return {
-    inputTokens: usage.input_tokens,
-    outputTokens: usage.output_tokens,
-    totalTokens: usage.total_tokens,
-    cachedInputTokens:
-      usage.input_tokens_details.cached_tokens > 0
-        ? usage.input_tokens_details.cached_tokens
-        : undefined,
-  };
 }
 
 function mapOpenAIError(error: unknown): ModelGatewayError {
