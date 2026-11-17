@@ -13,6 +13,8 @@ import {
   DuplicateWorkflowKeyError,
   EvaluationNotFoundError,
   EvaluationRunNotFoundError,
+  EvaluationComparisonNotFoundError,
+  EvaluationComparisonRequestError,
   EvaluationSuiteNotFoundError,
   EvaluationSuiteVersionNotFoundError,
   MemoryNamespaceNotFoundError,
@@ -218,6 +220,7 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof EvaluationSuiteNotFoundError ||
     error instanceof EvaluationSuiteVersionNotFoundError ||
     error instanceof EvaluationRunNotFoundError ||
+    error instanceof EvaluationComparisonNotFoundError ||
     error instanceof MemoryNamespaceNotFoundError ||
     error instanceof AssignmentNotFoundError ||
     error instanceof GoalNotFoundError ||
@@ -330,6 +333,19 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     sendJson(response, 409, {
       status: "conflict",
       code: APPROVAL_OPERATION_MISMATCH_ERROR_CODE,
+    });
+    return;
+  }
+
+  if (error instanceof EvaluationComparisonRequestError) {
+    const status =
+      error.message === "human_review_supersession_invalid" ||
+      error.message === "human_review_supersession_conflict"
+        ? 409
+        : 400;
+    sendJson(response, status, {
+      status: status === 409 ? "conflict" : "invalid_request",
+      code: error.message,
     });
     return;
   }

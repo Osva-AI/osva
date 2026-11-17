@@ -217,6 +217,24 @@
       "tag": "0035_model_run_step_provenance",
       "file": "0035_model_run_step_provenance.sql",
       "sha256": "b8d797806c8ad339066acdef31c0ffb90227664db9ff301cdb26001073b08349"
+    },
+    {
+      "idx": 36,
+      "tag": "0036_evaluation_judge_slice",
+      "file": "0036_evaluation_judge_slice.sql",
+      "sha256": "a5d4698897b9eb360d37917ad37f71d0bf6e22cfb78eccc47cf0124a6c23e868"
+    },
+    {
+      "idx": 37,
+      "tag": "0037_evaluation_comparison_slice",
+      "file": "0037_evaluation_comparison_slice.sql",
+      "sha256": "0dace5ca4aed4a0133f860f78f8a25c6c622695b2b9f6d9a7f80dd1678425563"
+    },
+    {
+      "idx": 38,
+      "tag": "0038_evaluation_comparison_human_review_supersedes",
+      "file": "0038_evaluation_comparison_human_review_supersedes.sql",
+      "sha256": "6e2f55329637167ffd5dd800b2b92455ac3b0509ca63a18f699450023d18403a"
     }
   ]
 }

@@ -28,6 +28,9 @@ import {
   MemoryWorkflowEventWaitResolutionRepository,
   MemoryWorkflowWaitRepository,
   MemoryEvaluationSuiteRepository,
+  MemoryEvaluationComparisonRepository,
+  MemoryEvaluationComparisonPairwiseTaskRepository,
+  MemoryEvaluationComparisonHumanReviewRepository,
   MemoryMemoryNamespaceRepository,
   MemoryArtifactRepository,
   MemoryOfficeRepository,
@@ -41,6 +44,7 @@ import {
   createConnectorApplication,
   createEvaluationApplication,
   createEvaluationRunApplication,
+  createEvaluationComparisonApplication,
   createEvaluationSuiteApplication,
   createKnowledgeApplication,
   createMemoryApplication,
@@ -114,6 +118,7 @@ export async function createTestWebApplication(options?: {
     event: string,
     fields?: Readonly<Record<string, unknown>>,
   ) => void;
+  readonly securityAuditEvents?: import("@osva/domain").SecurityAuditEventRepository;
 }) {
   const workspaces = new MemoryWorkspaceRepository();
   const agents = new MemoryAgentRepository();
@@ -156,6 +161,11 @@ export async function createTestWebApplication(options?: {
   });
   const artifactBlobStore = createArtifactBlobStore(artifactStorage);
   const evaluationSuites = new MemoryEvaluationSuiteRepository();
+  const evaluationComparisons = new MemoryEvaluationComparisonRepository();
+  const evaluationComparisonPairwiseTasks =
+    new MemoryEvaluationComparisonPairwiseTaskRepository();
+  const evaluationComparisonHumanReviews =
+    new MemoryEvaluationComparisonHumanReviewRepository();
   const officeRepository = new MemoryOfficeRepository();
   const officeCollaborationRepository =
     new MemoryOfficeCollaborationRepository();
@@ -389,6 +399,18 @@ export async function createTestWebApplication(options?: {
         clock,
         ids,
       }),
+      comparisons: createEvaluationComparisonApplication({
+        comparisons: evaluationComparisons,
+        pairwiseTasks: evaluationComparisonPairwiseTasks,
+        humanReviews: evaluationComparisonHumanReviews,
+        evaluationSuites,
+        runs,
+        clock,
+        ids,
+      }),
+      securityAuditEvents: options?.securityAuditEvents,
+      clock,
+      ids,
     },
     runs: runServices,
     runRecovery: {
@@ -533,6 +555,9 @@ export async function createTestWebApplication(options?: {
     memoryNamespaces,
     artifactsRepository,
     evaluationSuites,
+    evaluationComparisons,
+    evaluationComparisonPairwiseTasks,
+    evaluationComparisonHumanReviews,
     office: officeRepository,
     queue,
   };

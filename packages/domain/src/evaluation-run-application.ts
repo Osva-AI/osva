@@ -1,7 +1,6 @@
 import type { JobQueue } from "@osva-ai/contracts";
 import type {
   AgentVersionId,
-  EvaluationCaseId,
   EvaluationCaseOutcome,
   EvaluationQualityGatePolicyV1,
   EvaluationRunId,
@@ -13,12 +12,8 @@ import type {
   RunId,
   WorkspaceId,
 } from "@osva-ai/contracts";
-import {
-  AUTHORIZATION_ACTIONS,
-  isCanonicalJsonValue,
-} from "@osva-ai/contracts";
+import { AUTHORIZATION_ACTIONS } from "@osva-ai/contracts";
 
-import { EffectiveRunBindings } from "./effective-run-bindings.js";
 import {
   controlPlaneWorkspaceId,
   requireControlPlaneAuthorization,
@@ -29,13 +24,23 @@ import { CONTROL_PLANE_RESOURCE_KINDS } from "./control-plane-resource-kinds.js"
 const EVALUATION_RUN_RESOURCE = {
   kind: CONTROL_PLANE_RESOURCE_KINDS.evaluationRun,
 };
+import { evaluateDeterministicEvaluator } from "./deterministic-evaluators/evaluate.js";
+import { assertCanonicalRunOutput } from "./deterministic-evaluators/output.js";
+import { shouldFinalizeEvaluationCaseResult } from "./evaluation-run-case-finalization.js";
+import { ensureJudgeBackedTaskForTerminalRun } from "./evaluation-judge-scheduling.js";
+import { parseJudgeBackedEvaluatorConfig } from "./judge-backed-evaluator.js";
+import { assertLlmJudgeModelAuthorized } from "./llm-judge/authorize.js";
+import {
+  materializeEvaluationChildRun,
+  ensureEvaluationLaunchMaterialized,
+} from "./evaluation-run-launch.js";
+import {
+  reconcileParentTerminalState,
+  recoverEvaluationRunQualityGate,
+} from "./evaluation-run-recovery.js";
 import { EvaluationCaseResult } from "./evaluation-case-result.js";
 import { EvaluationRun } from "./evaluation-run.js";
-import {
-  buildEvaluationRunSummaryForRun,
-  persistTerminalEvaluationRunGateAssessment,
-  resolveEvaluationRunQualityGate,
-} from "./evaluation-run-quality-gate.js";
+import { resolveEvaluationRunQualityGate } from "./evaluation-run-quality-gate.js";
 import { loadEvaluationRunUsageMeasurement } from "./evaluation-run-usage-loader.js";
 import {
   aggregateEvaluationRunSummary,
@@ -51,11 +56,6 @@ import {
   RunAttemptNotFoundError,
   RunNotFoundError,
 } from "./errors.js";
-import { jsonValuesEqual } from "./json-equality.js";
-import { knowledgeIndexBindingsFromManifest } from "./knowledge-index-bindings.js";
-import { memoryNamespaceBindingsFromManifest } from "./memory-bindings.js";
-import { modelProfileVersionBindingsFromManifest } from "./model-bindings.js";
-import { toolVersionBindingsFromManifest } from "./tool-bindings.js";
 import type { AgentRepository } from "./ports/agent-repository.js";
 import type {
   EvaluationSuiteRepository,
@@ -63,9 +63,9 @@ import type {
   ListEvaluationRunsResult,
 } from "./ports/evaluation-suite-repository.js";
 import { MAX_EVALUATION_RUN_LIST_LIMIT } from "./ports/evaluation-suite-repository.js";
+import type { EvaluationJudgeTaskRepository } from "./ports/evaluation-judge-task-repository.js";
+import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
 import type { RunRepository } from "./ports/run-repository.js";
-import { Run } from "./run.js";
-import { RunAttempt } from "./run-attempt.js";
 import { isTerminalRunAttemptState } from "./run-attempt-state-machine.js";
 
 export interface EvaluationRunApplicationClock {
@@ -83,6 +83,8 @@ export interface EvaluationRunApplicationDependencies {
   readonly queue: JobQueue;
   readonly clock: EvaluationRunApplicationClock;
   readonly ids: EvaluationRunApplicationIds;
+  readonly judgeTasks?: EvaluationJudgeTaskRepository;
+  readonly modelProfiles?: ModelProfileRepository;
 }
 
 export interface LaunchEvaluationRunCommand {
@@ -147,26 +149,46 @@ export class LaunchEvaluationRun {
     );
 
     for (const evaluationCase of cases) {
-      await this.createEvaluationChildRun({
+      const judgeBacked = parseJudgeBackedEvaluatorConfig(
+        evaluationCase.evaluator,
+      );
+      if (judgeBacked !== null) {
+        if (this.deps.modelProfiles === undefined) {
+          throw new Error(
+            "Judge-backed evaluation requires model profile repository access at launch.",
+          );
+        }
+        await assertLlmJudgeModelAuthorized(
+          this.deps.modelProfiles,
+          workspaceId,
+          judgeBacked,
+        );
+      }
+
+      await materializeEvaluationChildRun(this.deps, {
         workspaceId,
         agentVersion,
         evaluationRunId: evaluationRun.id,
-        evaluationCaseId: evaluationCase.id,
-        input: evaluationCase.input,
+        evaluationCase,
         now,
       });
     }
 
-    const running = evaluationRun.transitionTo("RUNNING", {
-      updatedAt: now,
-      startedAt: now,
-    });
-    await this.deps.evaluationSuites.transitionEvaluationRun(
-      evaluationRun.status,
-      running,
+    await ensureEvaluationLaunchMaterialized(
+      this.deps,
+      evaluationRun,
+      suiteVersion,
+      agentVersion.id,
+      now,
     );
 
-    return running;
+    const stored = await this.deps.evaluationSuites.findEvaluationRunById(
+      evaluationRun.id,
+    );
+    if (stored === null) {
+      throw new EvaluationRunNotFoundError(evaluationRun.id);
+    }
+    return stored;
   }
 
   private async loadAgentVersion(
@@ -188,59 +210,6 @@ export class LaunchEvaluationRun {
     }
 
     return agentVersion;
-  }
-
-  private async createEvaluationChildRun(options: {
-    readonly workspaceId: WorkspaceId;
-    readonly agentVersion: Awaited<
-      ReturnType<AgentRepository["findAgentVersionById"]>
-    > & {};
-    readonly evaluationRunId: EvaluationRunId;
-    readonly evaluationCaseId: EvaluationCaseId;
-    readonly input: JsonValue;
-    readonly now: Date;
-  }): Promise<void> {
-    const runId = this.deps.ids.createId() as RunId;
-    const runAttemptId = this.deps.ids.createId() as RunAttemptId;
-    const pending = Run.create({
-      id: runId,
-      workspaceId: options.workspaceId,
-      agentId: options.agentVersion.agentId,
-      effectiveBindings: EffectiveRunBindings.create({
-        agentVersionId: options.agentVersion.id,
-        modelProfileVersionBindings: modelProfileVersionBindingsFromManifest(
-          options.agentVersion.manifest,
-        ),
-        toolVersionBindings: toolVersionBindingsFromManifest(
-          options.agentVersion.manifest,
-        ),
-        memoryNamespaceBindings: memoryNamespaceBindingsFromManifest(
-          options.agentVersion.manifest,
-        ),
-        knowledgeIndexBindings: knowledgeIndexBindingsFromManifest(
-          options.agentVersion.manifest,
-        ),
-      }),
-      input: options.input,
-      createdAt: options.now,
-      idempotencyKey: evaluationCaseIdempotencyKey(
-        options.evaluationRunId,
-        options.evaluationCaseId,
-      ),
-      evaluationRunId: options.evaluationRunId,
-      evaluationCaseId: options.evaluationCaseId,
-    });
-    const attempt = RunAttempt.createFirst({
-      id: runAttemptId,
-      runId: pending.id,
-      createdAt: options.now,
-    });
-
-    await this.deps.runs.createRunWithInitialAttempt(pending, attempt);
-
-    const queued = pending.transitionTo("QUEUED", options.now);
-    await this.deps.runs.transitionRun("PENDING", queued);
-    await this.deps.queue.enqueue(attempt.id);
   }
 }
 
@@ -398,15 +367,20 @@ export class ReconcileEvaluationCase {
       return;
     }
 
+    if (!shouldFinalizeEvaluationCaseResult(run, attempt)) {
+      return;
+    }
+
     const existing =
       await this.deps.evaluationSuites.findCaseResultByRunAndCase(
         run.evaluationRunId,
         run.evaluationCaseId,
       );
     if (existing !== null) {
-      await reconcileEvaluationRunStatus(
+      await reconcileParentTerminalState(
         this.deps,
         run.evaluationRunId,
+        await loadSuiteCaseCount(this.deps, run.evaluationRunId),
         this.deps.clock.now(),
       );
       return;
@@ -419,12 +393,54 @@ export class ReconcileEvaluationCase {
       throw new EvaluationCaseNotFoundError(run.evaluationCaseId);
     }
 
+    const evaluationRun =
+      await this.deps.evaluationSuites.findEvaluationRunById(
+        run.evaluationRunId,
+      );
+    const suiteVersion =
+      evaluationRun === null
+        ? null
+        : await this.deps.evaluationSuites.findSuiteVersionById(
+            evaluationRun.evaluationSuiteVersionId,
+          );
+
+    const judgeBackedConfig = parseJudgeBackedEvaluatorConfig(
+      evaluationCase.evaluator,
+    );
     const now = this.deps.clock.now();
+
+    if (
+      judgeBackedConfig !== null &&
+      attempt.status === "SUCCEEDED" &&
+      this.deps.judgeTasks !== undefined &&
+      suiteVersion !== null &&
+      assertCanonicalRunOutput(attempt.output)
+    ) {
+      await ensureJudgeBackedTaskForTerminalRun(
+        this.deps.judgeTasks,
+        this.deps.ids,
+        {
+          run,
+          attempt,
+          evaluationCase,
+          evaluationSuiteVersionId: suiteVersion.id,
+          now,
+        },
+      );
+      await reconcileParentTerminalState(
+        this.deps,
+        run.evaluationRunId,
+        suiteVersion.cases.length,
+        now,
+      );
+      return;
+    }
+
     const { outcome, evaluatorResults } = evaluateTerminalAttempt(
       attempt.status,
       attempt.output,
       evaluationCase.expected,
-      evaluationCase.evaluator,
+      evaluationCase.evaluator as unknown as Readonly<Record<string, unknown>>,
     );
 
     const result = EvaluationCaseResult.create({
@@ -439,7 +455,20 @@ export class ReconcileEvaluationCase {
     });
 
     await this.deps.evaluationSuites.saveCaseResult(result);
-    await reconcileEvaluationRunStatus(this.deps, run.evaluationRunId, now);
+    const totalCases = await loadSuiteCaseCount(this.deps, run.evaluationRunId);
+    await reconcileParentTerminalState(
+      this.deps,
+      run.evaluationRunId,
+      totalCases,
+      now,
+    );
+    await recoverEvaluationRunQualityGate(
+      this.deps,
+      run.workspaceId,
+      run.evaluationRunId,
+      totalCases,
+      now,
+    );
   }
 }
 
@@ -477,18 +506,26 @@ function assertEvaluationRunListLimit(limit: number): void {
   }
 }
 
-function evaluationCaseIdempotencyKey(
+async function loadSuiteCaseCount(
+  deps: EvaluationRunApplicationDependencies,
   evaluationRunId: EvaluationRunId,
-  evaluationCaseId: EvaluationCaseId,
-): string {
-  return `evaluation-run:${evaluationRunId}:case:${evaluationCaseId}`;
+): Promise<number> {
+  const evaluationRun =
+    await deps.evaluationSuites.findEvaluationRunById(evaluationRunId);
+  if (evaluationRun === null) {
+    return 0;
+  }
+  const suiteVersion = await deps.evaluationSuites.findSuiteVersionById(
+    evaluationRun.evaluationSuiteVersionId,
+  );
+  return suiteVersion?.cases.length ?? 0;
 }
 
 function evaluateTerminalAttempt(
   attemptStatus: string,
   output: unknown,
   expected: JsonValue | undefined,
-  evaluator: { readonly type: string; readonly expected?: JsonValue },
+  evaluator: unknown,
 ): {
   readonly outcome: EvaluationCaseOutcome;
   readonly evaluatorResults: Readonly<Record<string, unknown>>;
@@ -503,90 +540,5 @@ function evaluateTerminalAttempt(
     };
   }
 
-  if (!isCanonicalJsonValue(output)) {
-    return {
-      outcome: "ERROR",
-      evaluatorResults: { reason: "invalid_output" },
-    };
-  }
-
-  if (evaluator.type === "JSON_EXACT_MATCH") {
-    const expectedValue = evaluator.expected ?? expected;
-    if (expectedValue === undefined) {
-      return {
-        outcome: "ERROR",
-        evaluatorResults: { reason: "missing_expected_value" },
-      };
-    }
-
-    const passed = jsonValuesEqual(output, expectedValue);
-    return {
-      outcome: passed ? "PASS" : "FAIL",
-      evaluatorResults: {
-        type: "JSON_EXACT_MATCH",
-        passed,
-      },
-    };
-  }
-
-  return {
-    outcome: "ERROR",
-    evaluatorResults: {
-      reason: "unsupported_evaluator",
-      type: evaluator.type,
-    },
-  };
-}
-
-async function reconcileEvaluationRunStatus(
-  deps: EvaluationRunApplicationDependencies,
-  evaluationRunId: EvaluationRunId,
-  now: Date,
-): Promise<void> {
-  const evaluationRun =
-    await deps.evaluationSuites.findEvaluationRunById(evaluationRunId);
-  if (
-    evaluationRun === null ||
-    evaluationRun.status === "COMPLETED" ||
-    evaluationRun.status === "FAILED" ||
-    evaluationRun.status === "CANCELLED"
-  ) {
-    return;
-  }
-
-  const suiteVersion = await deps.evaluationSuites.findSuiteVersionById(
-    evaluationRun.evaluationSuiteVersionId,
-  );
-  if (suiteVersion === null) {
-    return;
-  }
-
-  const caseResults =
-    await deps.evaluationSuites.listCaseResultsByEvaluationRun(evaluationRunId);
-
-  if (caseResults.length < suiteVersion.cases.length) {
-    return;
-  }
-
-  const hasError = caseResults.some((result) => result.outcome === "ERROR");
-  const nextStatus = hasError ? "FAILED" : "COMPLETED";
-  const next = evaluationRun.transitionTo(nextStatus, {
-    updatedAt: now,
-    completedAt: now,
-  });
-
-  await deps.evaluationSuites.transitionEvaluationRun(
-    evaluationRun.status,
-    next,
-  );
-
-  if (next.qualityGatePolicy !== undefined) {
-    const summary = await buildEvaluationRunSummaryForRun(
-      deps,
-      next.workspaceId,
-      next,
-      suiteVersion.cases.length,
-    );
-    await persistTerminalEvaluationRunGateAssessment(deps, next, summary, now);
-  }
+  return evaluateDeterministicEvaluator(evaluator, output, expected);
 }

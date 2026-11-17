@@ -41,10 +41,15 @@ import {
   decodeEvaluationRunListCursor,
   encodeEvaluationRunListCursor,
 } from "./evaluation-run-cursor.js";
+import {
+  handleEvaluationComparisonRequest,
+  V1_EVALUATION_COMPARISON_HTTP_ROUTES,
+  type EvaluationComparisonHttpServices,
+} from "./evaluation-comparison-http.js";
 import { sendHttpError } from "./http-errors.js";
 import { readJsonBody, sendJson } from "./json.js";
 
-export interface EvaluationHttpServices {
+export interface EvaluationHttpServices extends EvaluationComparisonHttpServices {
   readonly suites: EvaluationSuiteApplication;
   readonly runs: EvaluationRunApplication;
 }
@@ -57,6 +62,18 @@ export async function handleEvaluationRegistryRequest(
   searchParams: URLSearchParams,
   services: EvaluationHttpServices,
 ): Promise<boolean> {
+  const handledComparison = await handleEvaluationComparisonRequest(
+    request,
+    response,
+    method,
+    path,
+    searchParams,
+    services,
+  );
+  if (handledComparison) {
+    return true;
+  }
+
   const route = matchEvaluationRoute(path);
   if (route === undefined) {
     return false;
@@ -553,4 +570,5 @@ export const V1_HTTP_ROUTES = [
   { method: "POST", path: "/v1/evaluation-runs" },
   { method: "GET", path: "/v1/evaluation-runs/:evaluationRunId" },
   { method: "GET", path: "/v1/evaluation-runs/:evaluationRunId/case-results" },
+  ...V1_EVALUATION_COMPARISON_HTTP_ROUTES,
 ] as const;

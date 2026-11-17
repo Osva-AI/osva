@@ -26,6 +26,13 @@ function readHandlerSource(module: V1HandlerModule): string {
     );
     return `${primary}\n${collaboration}`;
   }
+  if (module === "evaluation-http") {
+    const comparisons = fs.readFileSync(
+      path.join(webSrc, "evaluation-comparison-http.ts"),
+      "utf8",
+    );
+    return `${primary}\n${comparisons}`;
+  }
   return primary;
 }
 

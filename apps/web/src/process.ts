@@ -50,6 +50,9 @@ import {
   PostgresWorkflowEventWaitResolutionRepository,
   PostgresWorkflowWaitRepository,
   PostgresEvaluationSuiteRepository,
+  PostgresEvaluationComparisonRepository,
+  PostgresEvaluationComparisonPairwiseTaskRepository,
+  PostgresEvaluationComparisonHumanReviewRepository,
   PostgresMemoryNamespaceRepository,
   PostgresArtifactRepository,
   PostgresBuilderPublicationRepository,
@@ -71,6 +74,7 @@ import {
   createConnectorApplication,
   createEvaluationApplication,
   createEvaluationRunApplication,
+  createEvaluationComparisonApplication,
   createEvaluationSuiteApplication,
   createMemoryApplication,
   createModelProfileApplication,
@@ -374,6 +378,13 @@ export function createWebProcess(
     artifactStorage.driver === ARTIFACT_STORAGE_DRIVER_REGISTERED;
 
   const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
+  const evaluationComparisons = new PostgresEvaluationComparisonRepository(
+    database,
+  );
+  const evaluationComparisonPairwiseTasks =
+    new PostgresEvaluationComparisonPairwiseTaskRepository(database);
+  const evaluationComparisonHumanReviews =
+    new PostgresEvaluationComparisonHumanReviewRepository(database);
   const officeRepository = new PostgresOfficeRepository(database);
   const officeCollaborationRepository =
     new PostgresOfficeCollaborationRepository(database);
@@ -495,6 +506,18 @@ export function createWebProcess(
           clock,
           ids,
         }),
+        comparisons: createEvaluationComparisonApplication({
+          comparisons: evaluationComparisons,
+          pairwiseTasks: evaluationComparisonPairwiseTasks,
+          humanReviews: evaluationComparisonHumanReviews,
+          evaluationSuites,
+          runs,
+          clock,
+          ids,
+        }),
+        securityAuditEvents: identitySecurityAuditEvents,
+        clock,
+        ids,
       },
       runs: {
         runs: createRunApplication({ runs }),

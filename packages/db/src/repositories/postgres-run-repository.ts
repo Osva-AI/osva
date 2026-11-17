@@ -142,6 +142,24 @@ export class PostgresRunRepository implements RunRepository {
     return row === undefined ? null : runFromRow(row);
   }
 
+  async listRunsByEvaluationRunId(
+    workspaceId: WorkspaceId,
+    evaluationRunId: import("@osva-ai/contracts").EvaluationRunId,
+  ): Promise<readonly Run[]> {
+    const rows = await this.database.db
+      .select()
+      .from(runs)
+      .where(
+        and(
+          eq(runs.workspaceId, workspaceId),
+          eq(runs.evaluationRunId, evaluationRunId),
+        ),
+      )
+      .orderBy(asc(runs.createdAt), asc(runs.id));
+
+    return rows.map(runFromRow);
+  }
+
   async findRunByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,

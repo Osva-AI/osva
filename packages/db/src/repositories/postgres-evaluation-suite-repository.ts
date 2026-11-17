@@ -23,7 +23,18 @@ import {
   type ListEvaluationRunsQuery,
   type ListEvaluationRunsResult,
 } from "@osva/domain";
-import { and, asc, desc, eq, inArray, lt, or, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  type SQL,
+} from "drizzle-orm";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -43,6 +54,7 @@ import {
   evaluationSuiteVersionToRow,
   isSameEvaluationCase,
   isSameEvaluationCaseResult,
+  isSameEvaluationCaseResultContent,
   isSameEvaluationSuiteVersion,
 } from "../mappers/evaluation-suite-mapper.js";
 import {
@@ -335,6 +347,42 @@ export class PostgresEvaluationSuiteRepository implements EvaluationSuiteReposit
     };
   }
 
+  async listTerminalEvaluationRunsMissingGateAssessment(
+    limit: number,
+  ): Promise<readonly EvaluationRun[]> {
+    const rows = await this.database.db
+      .select({ evaluationRun: evaluationRuns })
+      .from(evaluationRuns)
+      .leftJoin(
+        evaluationRunGateAssessments,
+        eq(evaluationRunGateAssessments.evaluationRunId, evaluationRuns.id),
+      )
+      .where(
+        and(
+          isNotNull(evaluationRuns.qualityGatePolicy),
+          inArray(evaluationRuns.status, ["COMPLETED", "FAILED"]),
+          isNull(evaluationRunGateAssessments.evaluationRunId),
+        ),
+      )
+      .orderBy(asc(evaluationRuns.createdAt), asc(evaluationRuns.id))
+      .limit(limit);
+
+    return rows.map((row) => evaluationRunFromRow(row.evaluationRun));
+  }
+
+  async listEvaluationRunsForRecovery(
+    limit: number,
+  ): Promise<readonly EvaluationRun[]> {
+    const rows = await this.database.db
+      .select()
+      .from(evaluationRuns)
+      .where(inArray(evaluationRuns.status, ["PENDING", "RUNNING"]))
+      .orderBy(asc(evaluationRuns.createdAt), asc(evaluationRuns.id))
+      .limit(limit);
+
+    return rows.map(evaluationRunFromRow);
+  }
+
   async findEvaluationRunById(
     id: EvaluationRunId,
   ): Promise<EvaluationRun | null> {
@@ -408,7 +456,10 @@ export class PostgresEvaluationSuiteRepository implements EvaluationSuiteReposit
     );
 
     if (existing) {
-      if (isSameEvaluationCaseResult(existing, result)) {
+      if (
+        isSameEvaluationCaseResult(existing, result) ||
+        isSameEvaluationCaseResultContent(existing, result)
+      ) {
         return;
       }
 
@@ -417,16 +468,33 @@ export class PostgresEvaluationSuiteRepository implements EvaluationSuiteReposit
       );
     }
 
-    await withMappedDatabaseErrors(
-      () =>
-        this.database.db
-          .insert(evaluationCaseResults)
-          .values(evaluationCaseResultToRow(result)),
-      {
-        evaluation_case_results_pkey: `An EvaluationCaseResult with id '${result.id}' already exists.`,
-        evaluation_case_results_run_id_case_id_unique: `EvaluationCaseResult already exists for run '${result.evaluationRunId}' and case '${result.evaluationCaseId}'.`,
-      },
+    await this.database.db
+      .insert(evaluationCaseResults)
+      .values(evaluationCaseResultToRow(result))
+      .onConflictDoNothing({
+        target: [
+          evaluationCaseResults.evaluationRunId,
+          evaluationCaseResults.evaluationCaseId,
+        ],
+      });
+
+    const stored = await this.findCaseResultByRunAndCase(
+      result.evaluationRunId,
+      result.evaluationCaseId,
     );
+    if (stored === null) {
+      throw new DomainInvariantError(
+        `EvaluationCaseResult insert did not persist for run '${result.evaluationRunId}' and case '${result.evaluationCaseId}'.`,
+      );
+    }
+    if (
+      !isSameEvaluationCaseResult(stored, result) &&
+      !isSameEvaluationCaseResultContent(stored, result)
+    ) {
+      throw new DomainInvariantError(
+        `EvaluationCaseResult for run '${result.evaluationRunId}' and case '${result.evaluationCaseId}' is immutable and cannot be replaced with different content.`,
+      );
+    }
   }
 
   async findCaseResultByRunAndCase(

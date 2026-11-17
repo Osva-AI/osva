@@ -22,6 +22,18 @@ export {
   type ExecutionRecoveryTickLogger,
 } from "./execution-recovery-tick.js";
 export {
+  EvaluationRecoveryTick,
+  type EvaluationRecoveryTickDependencies,
+} from "./evaluation-recovery-tick.js";
+export {
+  JudgeTaskRecoveryCoordinator,
+  type JudgeTaskRecoveryCoordinatorOptions,
+} from "./judge-task-recovery-coordinator.js";
+export {
+  PairwiseTaskRecoveryCoordinator,
+  type PairwiseTaskRecoveryCoordinatorOptions,
+} from "./pairwise-task-recovery-coordinator.js";
+export {
   RecoverInterruptedRun,
   type RecoverInterruptedRunCommand,
   type RecoverInterruptedRunDependencies,

@@ -65,6 +65,8 @@ export {
   InconsistentEvaluationCaseResultsError,
   EvaluationNotFoundError,
   EvaluationRunNotFoundError,
+  EvaluationComparisonNotFoundError,
+  EvaluationComparisonRequestError,
   EvaluationGateAssessmentConflictError,
   EvaluationSuiteNotFoundError,
   EvaluationSuiteVersionNotFoundError,
@@ -648,6 +650,114 @@ export {
 } from "./evaluation-suite-application.js";
 
 export {
+  DEFAULT_EVALUATION_RECOVERY_BATCH_LIMIT,
+  RecoverEvaluationRuns,
+  reconcileParentTerminalState,
+  recoverEvaluationRunQualityGate,
+  type EvaluationRecoveryLogger,
+  type RecoverEvaluationRunsCommand,
+} from "./evaluation-run-recovery.js";
+export {
+  DEFAULT_EVALUATION_JUDGE_LEASE_MS,
+  ProcessEvaluationJudgeTasks,
+  type ProcessEvaluationJudgeTasksDependencies,
+} from "./evaluation-judge-execution.js";
+export {
+  ProcessEvaluationComparisonPairwiseTasks,
+  type ProcessEvaluationComparisonPairwiseTasksDependencies,
+} from "./evaluation-comparison-pairwise-execution.js";
+export { ReconcileEvaluationComparison } from "./evaluation-comparison-reconciliation.js";
+export {
+  EvaluationComparison,
+  type EvaluationComparisonProps,
+} from "./evaluation-comparison.js";
+export {
+  EvaluationComparisonPairwiseTask,
+  type EvaluationComparisonPairwiseTaskSnapshot,
+  type EvaluationComparisonPairwiseTaskTerminalResult,
+} from "./evaluation-comparison-pairwise-task.js";
+export {
+  createEvaluationComparisonApplication,
+  CreateEvaluationComparison,
+  SubmitEvaluationComparisonHumanReview,
+  type EvaluationComparisonApplication,
+  type EvaluationComparisonApplicationDependencies,
+} from "./evaluation-comparison-application.js";
+export {
+  ListEvaluationComparisons,
+  GetEvaluationComparison,
+  ListEvaluationComparisonPairwiseResults,
+  GetEvaluationComparisonAssessment,
+  ListEvaluationComparisonHumanReviews,
+  GetEvaluationComparisonCalibration,
+} from "./evaluation-comparison-query-application.js";
+export { buildEvaluationComparisonHumanReviewSubmittedAuditEvent } from "./control-plane-audit-events.js";
+export {
+  filterNonSupersededHumanReviews,
+  consensusHumanDecisionByCase,
+} from "./comparison/human-review-effective.js";
+export { computeHumanJudgeCalibration } from "./comparison/calibration.js";
+export type {
+  EvaluationComparisonRepository,
+  ListEvaluationComparisonsQuery,
+  ListEvaluationComparisonsResult,
+} from "./ports/evaluation-comparison-repository.js";
+export {
+  DEFAULT_EVALUATION_COMPARISON_LIST_LIMIT,
+  MAX_EVALUATION_COMPARISON_LIST_LIMIT,
+} from "./ports/evaluation-comparison-repository.js";
+export type {
+  EvaluationComparisonPairwiseTaskRepository,
+  ClaimComparisonPairwiseTaskLeaseCommand,
+} from "./ports/evaluation-comparison-pairwise-task-repository.js";
+export type {
+  EvaluationComparisonHumanReviewRepository,
+  EvaluationComparisonHumanReviewRevision,
+} from "./ports/evaluation-comparison-human-review-repository.js";
+export { DEFAULT_EVALUATION_JUDGE_RECOVERY_BATCH_LIMIT } from "@osva-ai/contracts";
+export {
+  ensureJudgeBackedTaskForTerminalRun,
+  ensureLlmJudgeTaskForTerminalRun,
+  parseLlmJudgeEvaluatorConfig,
+} from "./evaluation-judge-scheduling.js";
+export {
+  parseJudgeBackedEvaluatorConfig,
+  type JudgeBackedEvaluatorConfig,
+} from "./judge-backed-evaluator.js";
+export {
+  EvaluationJudgeTask,
+  type EvaluationJudgeTaskSnapshot,
+  type EvaluationJudgeTaskTerminalResult,
+} from "./evaluation-judge-task.js";
+export type {
+  ClaimEvaluationJudgeTaskLeaseCommand,
+  EvaluationJudgeTaskRepository,
+} from "./ports/evaluation-judge-task-repository.js";
+export type {
+  EvaluationJudgeModelInvoker,
+  EvaluationJudgeModelInvokeOptions,
+  EvaluationJudgeModelInvokeResult,
+} from "./ports/evaluation-judge-model-invoker.js";
+export { assertLlmJudgeModelAuthorized } from "./llm-judge/authorize.js";
+export { buildLlmJudgePrompt } from "./llm-judge/prompt.js";
+export {
+  computeLlmJudgeRubricIdentity,
+  resolvedLlmJudgeMaxOutputTokens,
+  resolvedLlmJudgeMinPassingScore,
+} from "./llm-judge/rubric-identity.js";
+export {
+  deriveJudgePassFail,
+  parseJudgeVerdictJson,
+  JUDGE_VERDICT_JSON_SCHEMA,
+  type JudgeVerdict,
+} from "./llm-judge/verdict.js";
+export {
+  evaluationCaseIdempotencyKey,
+  ensureEvaluationLaunchMaterialized,
+  materializeEvaluationChildRun,
+} from "./evaluation-run-launch.js";
+export { shouldFinalizeEvaluationCaseResult } from "./evaluation-run-case-finalization.js";
+export {
   GetEvaluationRun,
   LaunchEvaluationRun,
   ListEvaluationCaseResults,
@@ -1151,6 +1261,7 @@ export {
   type AuthorizationResource,
 } from "./authorization.js";
 export {
+  controlPlaneAuditActor,
   controlPlaneWorkspaceId,
   requireControlPlaneAuthorization,
   runtimeControlPlaneScope,

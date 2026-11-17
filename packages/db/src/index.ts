@@ -67,6 +67,10 @@ export { PostgresWorkflowEventWaitResolutionRepository } from "./repositories/po
 export { PostgresWorkflowTimerWaitResolutionRepository } from "./repositories/postgres-workflow-timer-wait-resolution-repository.js";
 export { PostgresMemoryNamespaceRepository } from "./repositories/postgres-memory-namespace-repository.js";
 export { PostgresEvaluationSuiteRepository } from "./repositories/postgres-evaluation-suite-repository.js";
+export { PostgresEvaluationJudgeTaskRepository } from "./repositories/postgres-evaluation-judge-task-repository.js";
+export { PostgresEvaluationComparisonRepository } from "./repositories/postgres-evaluation-comparison-repository.js";
+export { PostgresEvaluationComparisonPairwiseTaskRepository } from "./repositories/postgres-evaluation-comparison-pairwise-task-repository.js";
+export { PostgresEvaluationComparisonHumanReviewRepository } from "./repositories/postgres-evaluation-comparison-human-review-repository.js";
 export { PostgresOfficeRepository } from "./repositories/postgres-office-repository.js";
 export { PostgresOfficeCollaborationRepository } from "./repositories/postgres-office-collaboration-repository.js";
 export { PostgresArtifactRepository } from "./repositories/postgres-artifact-repository.js";

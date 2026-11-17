@@ -43,6 +43,14 @@ export const evaluationCaseIdSchema = osvaIdSchema<"EvaluationCaseId">();
 export const evaluationRunIdSchema = osvaIdSchema<"EvaluationRunId">();
 export const evaluationCaseResultIdSchema =
   osvaIdSchema<"EvaluationCaseResultId">();
+export const evaluationJudgeTaskIdSchema =
+  osvaIdSchema<"EvaluationJudgeTaskId">();
+export const evaluationComparisonIdSchema =
+  osvaIdSchema<"EvaluationComparisonId">();
+export const evaluationComparisonPairwiseTaskIdSchema =
+  osvaIdSchema<"EvaluationComparisonPairwiseTaskId">();
+export const evaluationComparisonHumanReviewRevisionIdSchema =
+  osvaIdSchema<"EvaluationComparisonHumanReviewRevisionId">();
 export const artifactIdSchema = osvaIdSchema<"ArtifactId">();
 export const eventIdSchema = osvaIdSchema<"EventId">();
 export const officeWorkerIdSchema = osvaIdSchema<"OfficeWorkerId">();

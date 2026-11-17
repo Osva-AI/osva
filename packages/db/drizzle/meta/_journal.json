@@ -253,6 +253,27 @@
       "when": 1790800000000,
       "tag": "0035_model_run_step_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1790900000000,
+      "tag": "0036_evaluation_judge_slice",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791000000000,
+      "tag": "0037_evaluation_comparison_slice",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791000001000,
+      "tag": "0038_evaluation_comparison_human_review_supersedes",
+      "breakpoints": true
     }
   ]
 }

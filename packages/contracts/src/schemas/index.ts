@@ -80,12 +80,20 @@ export {
 export { modelProfileVersionPricingSchema } from "./model-pricing.js";
 
 export {
+  bleuEvaluatorSchema,
   createEvaluationRequestSchema,
   evaluationListResourceSchema,
   evaluationResourceSchema,
   evaluatorConfigSchema,
   evaluatorTypeSchema,
+  forbiddenConceptsEvaluatorSchema,
+  jsonExactMatchEvaluatorConfigSchema,
   jsonExactMatchEvaluatorSchema,
+  jsonValidEvaluatorSchema,
+  requiredConceptsEvaluatorSchema,
+  rougeLEvaluatorSchema,
+  textExactMatchEvaluatorSchema,
+  tokenF1EvaluatorSchema,
 } from "./evaluation.js";
 
 export {
@@ -319,6 +327,21 @@ export {
   evaluationQualityGateRuleSchema,
   evaluationRunQualityGateSchema,
 } from "./evaluation-quality-gate.js";
+
+export {
+  createEvaluationComparisonRequestSchema,
+  evaluationComparisonAssessmentResourceSchema,
+  evaluationComparisonCalibrationResourceSchema,
+  evaluationComparisonHumanReviewListResourceSchema,
+  evaluationComparisonHumanReviewResourceSchema,
+  evaluationComparisonListCursorPayloadSchema,
+  evaluationComparisonListResourceSchema,
+  evaluationComparisonPairwiseResultListResourceSchema,
+  evaluationComparisonPairwiseResultResourceSchema,
+  evaluationComparisonResourceSchema,
+  listEvaluationComparisonsQuerySchema,
+  submitEvaluationComparisonHumanReviewRequestSchema,
+} from "./evaluation-comparison.js";
 
 export {
   createScheduleRequestSchema,

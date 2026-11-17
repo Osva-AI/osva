@@ -41,12 +41,92 @@ export async function loadEvaluationRunUsageMeasurement(
 
   const usageSummary = await runs.aggregateRunAttemptUsageBatch(runAttemptIds);
   const merged = mergeRunAttemptUsageSummaries([usageSummary]);
+  const judgeAccounting = mergeJudgeUsageFromCaseResults(reconciledCaseResults);
   const durationMs = computeEvaluationRunDurationMs(evaluationRun);
 
   return {
-    ...merged,
+    inputTokens: merged.inputTokens + judgeAccounting.inputTokens,
+    outputTokens: merged.outputTokens + judgeAccounting.outputTokens,
+    pricedCostUsdMicros:
+      merged.pricedCostUsdMicros + judgeAccounting.pricedCostUsdMicros,
+    unpricedModelCalls:
+      merged.unpricedModelCalls + judgeAccounting.unpricedModelCalls,
     usageMeasured: true,
     ...(durationMs === undefined ? {} : { durationMs }),
+  };
+}
+
+function mergeJudgeUsageFromCaseResults(
+  caseResults: readonly EvaluationCaseResult[],
+): {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly pricedCostUsdMicros: number;
+  readonly unpricedModelCalls: number;
+  readonly usageMeasured: boolean;
+} {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let pricedCostUsdMicros = 0;
+  let unpricedModelCalls = 0;
+  let usageMeasured = false;
+
+  for (const result of caseResults) {
+    const accounting = result.evaluatorResults.judgeUsageAccounting;
+    if (
+      accounting !== undefined &&
+      typeof accounting === "object" &&
+      accounting !== null
+    ) {
+      const record = accounting as Readonly<Record<string, unknown>>;
+      if (typeof record.inputTokens === "number") {
+        inputTokens += record.inputTokens;
+      }
+      if (typeof record.outputTokens === "number") {
+        outputTokens += record.outputTokens;
+      }
+      if (typeof record.pricedCostUsdMicros === "number") {
+        pricedCostUsdMicros += record.pricedCostUsdMicros;
+      }
+      if (typeof record.unpricedModelCalls === "number") {
+        unpricedModelCalls += record.unpricedModelCalls;
+      }
+      if (record.usageMeasured === true) {
+        usageMeasured = true;
+      }
+      continue;
+    }
+
+    const attempts = result.evaluatorResults.judgeInvocationAttempts;
+    if (!Array.isArray(attempts)) {
+      continue;
+    }
+    for (const attempt of attempts) {
+      if (typeof attempt !== "object" || attempt === null) {
+        continue;
+      }
+      const row = attempt as Readonly<Record<string, unknown>>;
+      if (typeof row.inputTokens === "number") {
+        inputTokens += row.inputTokens;
+      }
+      if (typeof row.outputTokens === "number") {
+        outputTokens += row.outputTokens;
+      }
+      if (typeof row.pricedCostUsdMicros === "number") {
+        pricedCostUsdMicros += row.pricedCostUsdMicros;
+      }
+      if (typeof row.unpricedModelCalls === "number") {
+        unpricedModelCalls += row.unpricedModelCalls;
+      }
+    }
+  }
+
+  return {
+    inputTokens,
+    outputTokens,
+    pricedCostUsdMicros,
+    unpricedModelCalls,
+    usageMeasured,
   };
 }
 

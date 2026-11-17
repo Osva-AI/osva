@@ -243,6 +243,48 @@ export class MemoryEvaluationSuiteRepository implements EvaluationSuiteRepositor
     };
   }
 
+  async listTerminalEvaluationRunsMissingGateAssessment(
+    limit: number,
+  ): Promise<readonly EvaluationRun[]> {
+    return [...this.evaluationRuns.values()]
+      .filter(
+        (evaluationRun) =>
+          evaluationRun.qualityGatePolicy !== undefined &&
+          (evaluationRun.status === "COMPLETED" ||
+            evaluationRun.status === "FAILED") &&
+          !this.gateAssessments.has(evaluationRun.id),
+      )
+      .sort((left, right) => {
+        const createdAtCompare =
+          left.createdAt.getTime() - right.createdAt.getTime();
+        if (createdAtCompare !== 0) {
+          return createdAtCompare;
+        }
+        return left.id.localeCompare(right.id);
+      })
+      .slice(0, limit);
+  }
+
+  async listEvaluationRunsForRecovery(
+    limit: number,
+  ): Promise<readonly EvaluationRun[]> {
+    return [...this.evaluationRuns.values()]
+      .filter(
+        (evaluationRun) =>
+          evaluationRun.status === "PENDING" ||
+          evaluationRun.status === "RUNNING",
+      )
+      .sort((left, right) => {
+        const createdAtCompare =
+          left.createdAt.getTime() - right.createdAt.getTime();
+        if (createdAtCompare !== 0) {
+          return createdAtCompare;
+        }
+        return left.id.localeCompare(right.id);
+      })
+      .slice(0, limit);
+  }
+
   async transitionEvaluationRun(
     expectedStatus: EvaluationRunState,
     next: EvaluationRun,
@@ -266,6 +308,23 @@ export class MemoryEvaluationSuiteRepository implements EvaluationSuiteRepositor
   }
 
   async saveCaseResult(result: EvaluationCaseResult): Promise<void> {
+    const existing = await this.findCaseResultByRunAndCase(
+      result.evaluationRunId,
+      result.evaluationCaseId,
+    );
+    if (existing !== null) {
+      if (
+        existing.id === result.id &&
+        existing.outcome === result.outcome &&
+        JSON.stringify(existing.evaluatorResults) ===
+          JSON.stringify(result.evaluatorResults)
+      ) {
+        return;
+      }
+      throw new DomainInvariantError(
+        `EvaluationCaseResult for run '${result.evaluationRunId}' and case '${result.evaluationCaseId}' is immutable and cannot be replaced with different content.`,
+      );
+    }
     this.caseResults.set(result.id, result);
   }
 

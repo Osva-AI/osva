@@ -99,6 +99,23 @@ describe("ExecutionRecoveryTick", () => {
     expect(queue.pendingRunAttemptIds()).toEqual([runAttemptId]);
   });
 
+  it("invokes evaluation recovery hook when configured", async () => {
+    let calls = 0;
+    const { runs, queue } = await harness();
+    const tick = new ExecutionRecoveryTick({
+      runs,
+      queue,
+      clock: { now: () => LATER },
+      evaluationRecovery: {
+        execute: async () => {
+          calls += 1;
+        },
+      },
+    });
+    await tick.execute();
+    expect(calls).toBe(1);
+  });
+
   it("does not count an already-present enqueue as a transport repair", async () => {
     const telemetry = new RecordingInstrumentation();
     const { queue, tick } = await harness(telemetry);

@@ -29,6 +29,20 @@ describe("inferV1RouteAuthorizationAction", () => {
     );
   });
 
+  it("classifies evaluation comparison create as EXECUTE", () => {
+    const key = structuralRouteKeyFromPathname(
+      "POST",
+      "/v1/evaluation-comparisons",
+    );
+    expect(inferV1RouteAuthorizationAction("POST", key)).toBe(
+      AUTHORIZATION_ACTIONS.EXECUTE,
+    );
+    const access = lookupV1RouteAccess("POST", "/v1/evaluation-comparisons");
+    expect(access?.requiredHumanPermission).toBe(
+      HUMAN_WORKSPACE_PERMISSIONS.EXECUTE,
+    );
+  });
+
   it("classifies builder refine as EXECUTE", () => {
     const key = structuralRouteKeyFromPathname(
       "POST",

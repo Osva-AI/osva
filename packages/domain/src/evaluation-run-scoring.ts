@@ -4,6 +4,7 @@ import type {
   RunId,
 } from "@osva-ai/contracts";
 
+import { scoreFromEvaluatorResults } from "./deterministic-evaluators/scoring.js";
 import { InconsistentEvaluationCaseResultsError } from "./errors.js";
 import type { EvaluationRunUsageMeasurement } from "./evaluation-run-usage.js";
 import { UNMEASURED_EVALUATION_RUN_USAGE } from "./evaluation-run-usage.js";
@@ -14,6 +15,7 @@ export interface EvaluationCaseResultForScoring {
   readonly outcome: EvaluationCaseOutcome;
   readonly runId: RunId;
   readonly completedAt?: Date;
+  readonly evaluatorResults?: Readonly<Record<string, unknown>>;
 }
 
 export interface EvaluationRunSummary {
@@ -134,7 +136,10 @@ export function aggregateEvaluationRunSummary(
 
   const caseScores: number[] = [];
   for (const result of reconciled) {
-    const score = scoreForEvaluationCaseOutcome(result.outcome);
+    const score =
+      result.evaluatorResults === undefined
+        ? scoreForEvaluationCaseOutcome(result.outcome)
+        : scoreFromEvaluatorResults(result.outcome, result.evaluatorResults);
     if (score !== null) {
       caseScores.push(score);
     }

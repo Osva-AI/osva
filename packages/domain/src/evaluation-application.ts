@@ -11,6 +11,7 @@ import {
 } from "@osva-ai/contracts";
 
 import { Evaluation } from "./evaluation.js";
+import { DomainInvariantError } from "./errors.js";
 import {
   controlPlaneWorkspaceId,
   requireControlPlaneAuthorization,
@@ -25,7 +26,7 @@ import {
   RunAttemptNotFoundError,
   RunNotFoundError,
 } from "./errors.js";
-import { jsonValuesEqual } from "./json-equality.js";
+import { evaluateJsonExactMatchOutput } from "./deterministic-evaluators/evaluate.js";
 import type { EvaluationRepository } from "./ports/evaluation-repository.js";
 import type { RunRepository } from "./ports/run-repository.js";
 
@@ -88,6 +89,12 @@ export class CreateEvaluation {
         command.runAttemptId,
         attempt.status,
         "SUCCEEDED",
+      );
+    }
+
+    if (command.evaluator.type !== "JSON_EXACT_MATCH") {
+      throw new DomainInvariantError(
+        "Direct evaluation supports JSON_EXACT_MATCH only.",
       );
     }
 
@@ -234,8 +241,7 @@ function evaluateAttemptOutput(
   actual: JsonValue,
 ): { readonly passed: boolean; readonly score: number } {
   if (evaluator.type === "JSON_EXACT_MATCH") {
-    const passed = jsonValuesEqual(actual, evaluator.expected);
-    return { passed, score: passed ? 1 : 0 };
+    return evaluateJsonExactMatchOutput(evaluator, actual);
   }
 
   return { passed: false, score: 0 };

@@ -1,6 +1,7 @@
 import type {
   AgentId,
   AgentVersionId,
+  EvaluationRunId,
   RunAttemptId,
   RunAttemptState,
   RunId,
@@ -128,6 +129,10 @@ export interface RunRepository {
     workspaceId: WorkspaceId,
     idempotencyKey: string,
   ): Promise<Run | null>;
+  listRunsByEvaluationRunId(
+    workspaceId: WorkspaceId,
+    evaluationRunId: EvaluationRunId,
+  ): Promise<readonly Run[]>;
   listRuns(query: ListRunsQuery): Promise<ListRunsResult>;
   saveRunAttempt(attempt: RunAttempt): Promise<void>;
   findRunAttemptById(id: RunAttemptId): Promise<RunAttempt | null>;

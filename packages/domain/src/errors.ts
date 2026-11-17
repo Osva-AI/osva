@@ -7,6 +7,7 @@ import type {
   ConnectorId,
   ConnectorVersionId,
   EvaluationCaseId,
+  EvaluationComparisonId,
   EvaluationId,
   EvaluationRunId,
   EvaluationRunState,
@@ -359,6 +360,21 @@ export class EvaluationRunNotFoundError extends DomainError {
   constructor(evaluationRunId: EvaluationRunId) {
     super(`EvaluationRun ${evaluationRunId} was not found.`);
     this.evaluationRunId = evaluationRunId;
+  }
+}
+
+export class EvaluationComparisonNotFoundError extends DomainError {
+  readonly evaluationComparisonId: EvaluationComparisonId;
+
+  constructor(evaluationComparisonId: EvaluationComparisonId) {
+    super(`EvaluationComparison ${evaluationComparisonId} was not found.`);
+    this.evaluationComparisonId = evaluationComparisonId;
+  }
+}
+
+export class EvaluationComparisonRequestError extends DomainError {
+  constructor(message: string) {
+    super(message);
   }
 }
 

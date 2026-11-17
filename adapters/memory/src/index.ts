@@ -26,6 +26,10 @@ export { MemoryWorkflowEventWaitResolutionRepository } from "./memory-workflow-e
 export { MemoryWorkflowTimerWaitResolutionRepository } from "./memory-workflow-timer-wait-resolution-repository.js";
 export { MemoryMemoryNamespaceRepository } from "./memory-memory-namespace-repository.js";
 export { MemoryEvaluationSuiteRepository } from "./memory-evaluation-suite-repository.js";
+export { MemoryEvaluationJudgeTaskRepository } from "./memory-evaluation-judge-task-repository.js";
+export { MemoryEvaluationComparisonRepository } from "./memory-evaluation-comparison-repository.js";
+export { MemoryEvaluationComparisonPairwiseTaskRepository } from "./memory-evaluation-comparison-pairwise-task-repository.js";
+export { MemoryEvaluationComparisonHumanReviewRepository } from "./memory-evaluation-comparison-human-review-repository.js";
 export { MemoryOfficeRepository } from "./memory-office-repository.js";
 export { MemoryOfficeCollaborationRepository } from "./memory-office-collaboration-repository.js";
 export { MemoryArtifactRepository } from "./memory-artifact-repository.js";

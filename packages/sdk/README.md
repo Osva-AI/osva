@@ -68,6 +68,10 @@ console.log(attempt.status, attempt.output);
 
 List versions and reuse an existing immutable version by comparing manifests (see `@osva-ai/cli` deploy logic for the same pattern).
 
+### Evaluation comparisons (A5)
+
+`client.evaluationComparisons` supports comparison create, list, get, pairwise results, assessment, human-review **history**, and calibration over API-key authentication. It does **not** expose `submitHumanReview`; human pairwise reviews require a **browser human session** (`POST /v1/evaluation-comparisons/{id}/human-reviews`). See [REST API v1 — Evaluation comparisons](../../docs/contracts/REST_API_V1.md#evaluation-comparisons-a5).
+
 ## Errors
 
 - **`OsvaApiError`** — non-2xx JSON error body (`status`, `code`, `message`, `requestId` when present). Message text includes HTTP status, domain status, code, and message when the API provides them.

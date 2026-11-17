@@ -66,6 +66,8 @@ export const SECURITY_AUDIT_EVENT_TYPES = {
   IDENTITY_BOOTSTRAP_COMPLETED: "identity.bootstrap_completed",
   IDENTITY_RECOVERY_COMPLETED: "identity.recovery_completed",
   BUILDER_PUBLICATION_SUCCEEDED: "builder.publication_succeeded",
+  EVALUATION_COMPARISON_HUMAN_REVIEW_SUBMITTED:
+    "evaluation_comparison.human_review_submitted",
 } as const;
 
 export type SecurityAuditEventType =
