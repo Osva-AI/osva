@@ -47,6 +47,10 @@ import {
   PostgresAgentRepository,
   PostgresConnectorRepository,
   PostgresEvaluationSuiteRepository,
+  PostgresEvaluationJudgeTaskRepository,
+  PostgresEvaluationComparisonRepository,
+  PostgresEvaluationComparisonPairwiseTaskRepository,
+  PostgresEvaluationComparisonHumanReviewRepository,
   PostgresMemoryNamespaceRepository,
   PostgresModelProfileRepository,
   PostgresModelProviderConnectionRepository,
@@ -76,6 +80,8 @@ import {
   createArtifactApplication,
   createEvaluationRunApplication,
   createRuntimeArtifactApplication,
+  ProcessEvaluationJudgeTasks,
+  ProcessEvaluationComparisonPairwiseTasks,
 } from "@osva/domain";
 import {
   DeterministicEmbeddingProviderAdapter,
@@ -90,8 +96,11 @@ import {
 } from "@osva/observability";
 import {
   EvaluationCoordinator,
+  EvaluationRecoveryTick,
   ExecuteRunAttempt,
   ExecutionRecoveryTick,
+  JudgeTaskRecoveryCoordinator,
+  PairwiseTaskRecoveryCoordinator,
 } from "@osva/orchestration";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
@@ -106,6 +115,7 @@ import { loadWorkerConfig, type WorkerConfig } from "./config.js";
 import { createDeclarativeToolMetadataResolver } from "./declarative-tool-metadata.js";
 import { composeRuntimeExecutors } from "./runtime-composition.js";
 import { createExecuteRunAttemptHandler } from "./execute-run-attempt-handler.js";
+import { createEvaluationJudgeModelInvoker } from "./evaluation-judge-model-invoker.js";
 import { logError, logEvent } from "./log.js";
 import {
   createWorkerApplication,
@@ -175,6 +185,8 @@ export function createWorkerProcess(
   let probeServer: ProcessProbeServer | undefined;
   let recoveryStopped = false;
   let recoveryLoop: Promise<void> | undefined;
+  let judgeTaskCoordinator: JudgeTaskRecoveryCoordinator | undefined;
+  let pairwiseTaskCoordinator: PairwiseTaskRecoveryCoordinator | undefined;
   let interruptRecoverySleep: (() => void) | undefined;
 
   const worker: WorkerApplication = createWorkerApplication({
@@ -207,6 +219,16 @@ export function createWorkerProcess(
       const connectors = new PostgresConnectorRepository(database);
       const memoryNamespaces = new PostgresMemoryNamespaceRepository(database);
       const evaluationSuites = new PostgresEvaluationSuiteRepository(database);
+      const evaluationJudgeTasks = new PostgresEvaluationJudgeTaskRepository(
+        database,
+      );
+      const evaluationComparisons = new PostgresEvaluationComparisonRepository(
+        database,
+      );
+      const evaluationPairwiseTasks =
+        new PostgresEvaluationComparisonPairwiseTaskRepository(database);
+      const evaluationComparisonHumanReviews =
+        new PostgresEvaluationComparisonHumanReviewRepository(database);
       mcpClientPool = createMcpClientPool({
         secretResolver: new ProcessEnvSecretResolver(env),
         stdioConnectorsEnabled: config.mcpStdioConnectorsEnabled,
@@ -477,6 +499,70 @@ export function createWorkerProcess(
         leaseTtlMs: config.leaseTtlMs,
         heartbeatIntervalMs: config.heartbeatIntervalMs,
       });
+      const evaluationRunApplication = createEvaluationRunApplication({
+        evaluationSuites,
+        runs: runsRepository,
+        agents,
+        queue,
+        clock,
+        ids: { createId: () => randomUUID() },
+        judgeTasks: evaluationJudgeTasks,
+        modelProfiles,
+      });
+      const judgeTaskProcessor = new ProcessEvaluationJudgeTasks({
+        evaluationSuites,
+        runs: runsRepository,
+        agents,
+        queue,
+        ids: { createId: () => randomUUID() },
+        clock,
+        judgeTasks: evaluationJudgeTasks,
+        judgeModel: createEvaluationJudgeModelInvoker(modelGateway),
+        modelProfiles,
+        executionOwner: `worker:${hostname()}:${String(process.pid)}:judge`,
+      });
+      judgeTaskCoordinator = new JudgeTaskRecoveryCoordinator({
+        processor: judgeTaskProcessor,
+        batchLimit:
+          config.recoveryBatchLimit > 0 ? config.recoveryBatchLimit : 20,
+      });
+      const pairwiseTaskProcessor =
+        new ProcessEvaluationComparisonPairwiseTasks({
+          comparisons: evaluationComparisons,
+          pairwiseTasks: evaluationPairwiseTasks,
+          humanReviews: evaluationComparisonHumanReviews,
+          evaluationSuites,
+          runs: runsRepository,
+          clock,
+          ids: { createId: () => randomUUID() },
+          judgeModel: createEvaluationJudgeModelInvoker(modelGateway),
+          modelProfiles,
+          executionOwner: `worker:${hostname()}:${String(process.pid)}:pairwise`,
+        });
+      pairwiseTaskCoordinator = new PairwiseTaskRecoveryCoordinator({
+        processor: pairwiseTaskProcessor,
+        batchLimit:
+          config.recoveryBatchLimit > 0 ? config.recoveryBatchLimit : 20,
+      });
+      const evaluationRecoveryTick = new EvaluationRecoveryTick({
+        evaluationSuites,
+        runs: runsRepository,
+        agents,
+        queue,
+        clock,
+        ids: { createId: () => randomUUID() },
+        judgeTasks: evaluationJudgeTasks,
+        modelProfiles,
+        reconcileEvaluationCase:
+          evaluationRunApplication.reconcileEvaluationCase,
+        judgeTaskCoordinator,
+        pairwiseTaskCoordinator,
+        instrumentation,
+        logger: {
+          info: logEvent,
+          error: (event, fields) => logEvent(event, fields ?? {}),
+        },
+      });
       const recoveryTick = new ExecutionRecoveryTick({
         runs: runsRepository,
         queue,
@@ -489,20 +575,15 @@ export function createWorkerProcess(
         expiredBatchLimit: config.recoveryBatchLimit,
         transportBatchLimit: config.transportRepairBatchLimit,
         instrumentation,
+        evaluationRecovery: evaluationRecoveryTick,
         logger: {
           info: logEvent,
           error: (event, fields) => logEvent(event, fields ?? {}),
         },
       });
       const evaluationCoordinator = new EvaluationCoordinator({
-        reconcileEvaluationCase: createEvaluationRunApplication({
-          evaluationSuites,
-          runs: runsRepository,
-          agents,
-          queue,
-          clock,
-          ids: { createId: () => randomUUID() },
-        }).reconcileEvaluationCase,
+        reconcileEvaluationCase:
+          evaluationRunApplication.reconcileEvaluationCase,
         instrumentation,
       });
       await queue.consume(
@@ -558,6 +639,12 @@ export function createWorkerProcess(
       interruptRecoverySleep?.();
       if (recoveryLoop !== undefined) {
         await recoveryLoop.catch(() => undefined);
+      }
+      if (judgeTaskCoordinator !== undefined) {
+        await judgeTaskCoordinator.drain();
+      }
+      if (pairwiseTaskCoordinator !== undefined) {
+        await pairwiseTaskCoordinator.drain();
       }
       if (probeServer !== undefined) {
         await probeServer.close();

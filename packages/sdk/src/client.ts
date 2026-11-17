@@ -7,6 +7,7 @@ import {
   EvaluationRunsResource,
   EvaluationSuitesResource,
 } from "./resources/evaluation.js";
+import { EvaluationComparisonsResource } from "./resources/evaluation-comparisons.js";
 import { MemoryNamespacesResource } from "./resources/memory-namespaces.js";
 import { ArtifactsResource } from "./resources/artifacts.js";
 import { KnowledgeResource } from "./resources/knowledge.js";
@@ -49,6 +50,7 @@ export class OsvaClient {
   readonly knowledge: KnowledgeResource;
   readonly evaluationSuites: EvaluationSuitesResource;
   readonly evaluationRuns: EvaluationRunsResource;
+  readonly evaluationComparisons: EvaluationComparisonsResource;
   readonly officeWorkers: OfficeWorkersResource;
   readonly roles: RolesResource;
   readonly teams: TeamsResource;
@@ -81,6 +83,7 @@ export class OsvaClient {
     this.knowledge = new KnowledgeResource(this.http);
     this.evaluationSuites = new EvaluationSuitesResource(this.http);
     this.evaluationRuns = new EvaluationRunsResource(this.http);
+    this.evaluationComparisons = new EvaluationComparisonsResource(this.http);
     this.officeWorkers = new OfficeWorkersResource(this.http);
     this.roles = new RolesResource(this.http);
     this.teams = new TeamsResource(this.http);

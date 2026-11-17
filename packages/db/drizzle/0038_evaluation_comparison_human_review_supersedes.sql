@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "evaluation_comparison_human_review_supersedes_unique" ON "evaluation_comparison_human_review_revisions" ("supersedes_revision_id") WHERE "supersedes_revision_id" IS NOT NULL;

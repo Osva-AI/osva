@@ -35,6 +35,12 @@ export type EvaluationSuiteVersionId = OsvaId<"EvaluationSuiteVersionId">;
 export type EvaluationCaseId = OsvaId<"EvaluationCaseId">;
 export type EvaluationRunId = OsvaId<"EvaluationRunId">;
 export type EvaluationCaseResultId = OsvaId<"EvaluationCaseResultId">;
+export type EvaluationJudgeTaskId = OsvaId<"EvaluationJudgeTaskId">;
+export type EvaluationComparisonId = OsvaId<"EvaluationComparisonId">;
+export type EvaluationComparisonPairwiseTaskId =
+  OsvaId<"EvaluationComparisonPairwiseTaskId">;
+export type EvaluationComparisonHumanReviewRevisionId =
+  OsvaId<"EvaluationComparisonHumanReviewRevisionId">;
 export type ArtifactId = OsvaId<"ArtifactId">;
 export type EventId = OsvaId<"EventId">;
 export type OfficeWorkerId = OsvaId<"OfficeWorkerId">;

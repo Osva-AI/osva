@@ -177,7 +177,7 @@ Request:
 }
 ```
 
-- `evaluator.type` is **`JSON_EXACT_MATCH`** only (see `evaluatorConfigSchema`).
+- `evaluator.type` is one of the deterministic A1 evaluators (see `evaluatorConfigSchema` and `docs/implementation/A1_DETERMINISTIC_EVALUATORS.md`). Direct `POST /v1/evaluations` remains **`JSON_EXACT_MATCH`** only.
 - `input`, `expected`, and evaluator `expected` are JSON values.
 
 Response **201**:
@@ -243,6 +243,33 @@ Policy rules (at most **16**, one rule per metric, no duplicates):
 Invalid policy (unknown metric, duplicate metric, threshold out of range, empty rules) → **400** `invalid_request`.
 
 Response **201**: `evaluationRunDetailResource` (run fields + `summary` + optional `qualityGate`). See below.
+
+### Evaluation comparisons (A5)
+
+Workspace-scoped comparison of two terminal **evaluation runs** on the same immutable suite version. Pairwise judging and regression assessment are advisory; **`PROMOTE` does not deploy or replace agents**.
+
+| Method | Path | Auth | Minimum human permission (session) |
+| --- | --- | --- | --- |
+| `POST` | `/v1/evaluation-comparisons` | API key or human session | `EXECUTE` |
+| `GET` | `/v1/evaluation-comparisons` | API key or human session | `READ` |
+| `GET` | `/v1/evaluation-comparisons/:comparisonId` | API key or human session | `READ` |
+| `GET` | `/v1/evaluation-comparisons/:comparisonId/pairwise-results` | API key or human session | `READ` |
+| `GET` | `/v1/evaluation-comparisons/:comparisonId/assessment` | API key or human session | `READ` |
+| `GET` | `/v1/evaluation-comparisons/:comparisonId/human-reviews` | API key or human session | `READ` |
+| `POST` | `/v1/evaluation-comparisons/:comparisonId/human-reviews` | **Human session only** | `WRITE` |
+| `GET` | `/v1/evaluation-comparisons/:comparisonId/calibration` | API key or human session | `READ` |
+
+**Create (`POST /v1/evaluation-comparisons`)** body: `createEvaluationComparisonRequestSchema` — `baselineEvaluationRunId`, `candidateEvaluationRunId`, `policy` (`evaluationComparisonPolicyV1Schema`), optional `pairwise`. Workspace is taken from the authenticated scope (never from the body). Idempotent on the baseline/candidate run pair (repeated create returns the existing comparison). Invalid policy, non-terminal runs, or suite version mismatch → **400** `invalid_request` with `code` when applicable. Foreign workspace runs → **404** `RESOURCE_NOT_FOUND`.
+
+**Human review (`POST …/human-reviews`)** body: `submitEvaluationComparisonHumanReviewRequestSchema` — `evaluationCaseId`, `decision` (`BASELINE_BETTER` \| `CANDIDATE_BETTER` \| `TIE` \| `UNSURE`), optional `rationale`, optional `supersedesRevisionId`. **Reviewer identity is derived from the human session**; fields such as `reviewerUserId`, `userId`, or `actorUserId` in the body are rejected (**400**). API keys receive **403** `PERMISSION_DENIED`. Mutating human requests require a **trusted browser `Origin`** (same CSRF rules as other human session writes). Reviews are **append-only**; corrections reference `supersedesRevisionId` (conflict **409** when two corrections race on the same revision). Successful submission may append a `evaluation_comparison.human_review_submitted` security audit event (mandatory when audit persistence is wired; failures propagate).
+
+**List comparisons** supports cursor pagination (`limit`, `cursor`, filters: `status`, `evaluationSuiteVersionId`, baseline/candidate run ids). Responses use `evaluationComparisonListResourceSchema` / `evaluationComparisonResourceSchema`.
+
+**Calibration** uses effective human reviews and persisted pairwise preferences; when no eligible labels exist, `unavailableReason` is set (no fabricated agreement).
+
+**TypeScript SDK:** `client.evaluationComparisons` supports create, list, get, listPairwiseResults, getAssessment, listHumanReviews, getCalibration. **No SDK method submits human reviews** (API-key clients cannot impersonate reviewers).
+
+**Console:** No comparison UI in A5.2.
 
 ### Evaluation run lifecycle
 

@@ -14,7 +14,7 @@ Execute an immutable **EvaluationSuiteVersion** by coordinating one ordinary chi
 
 ### 1. Immutable suite version selection
 
-Operators (API or Console) append **EvaluationSuiteVersion** rows with embedded cases. Each case defines `input`, optional `expected`, and a **JSON_EXACT_MATCH** evaluator. Versions are never mutated; new behavior requires a new version number.
+Operators (API or Console) append **EvaluationSuiteVersion** rows with embedded cases. Each case defines `input`, optional `expected`, and a deterministic evaluator (`JSON_EXACT_MATCH`, text metrics, JSON validity, concept checks — see A1 doc). Versions are never mutated; new behavior requires a new version number.
 
 Launch pins exactly one `evaluationSuiteVersionId` on the **EvaluationRun**.
 
@@ -29,14 +29,14 @@ Child Runs inherit evaluation context; persistent memory mutation remains blocke
 
 ### 3. Child Run execution
 
-For each case, **EvaluationRunApplication** calls **CreateRun** with `evaluationRunId` and `evaluationCaseId`. Each child follows [run-execution.md](./run-execution.md) through BullMQ and `apps/worker`.
+For each case, **LaunchEvaluationRun** materializes a child **Run** with a durable per-case idempotency key (`evaluation-run:…:case:…`). Partial launches are completed by **EvaluationRecoveryTick** on the worker recovery loop. Each child follows [run-execution.md](./run-execution.md) through BullMQ and `apps/worker`.
 
 ### 4. Deterministic case scoring
 
-When a child RunAttempt reaches a terminal state, **EvaluationCoordinator** invokes **ReconcileEvaluationCase** (JSON exact match against case expectation).
+When a child RunAttempt reaches a terminal state, **EvaluationCoordinator** invokes **ReconcileEvaluationCase** (deterministic evaluator registry).
 
 - **PASS** / **FAIL** / **ERROR** is stored as an immutable **EvaluationCaseResult** per `(evaluationRunId, evaluationCaseId)`.
-- Per-case score for aggregation: PASS → `1`, FAIL → `0`, ERROR → no score.
+- Per-case score: normalized `evaluatorResults.score` in `[0,1]` when present; legacy binary PASS/FAIL mapping otherwise; **ERROR** → no score.
 
 When all cases are reconciled, the coordinator transitions **EvaluationRun** to terminal **`COMPLETED`** (or **`FAILED`** / **`CANCELLED`** if the coordinator cannot progress).
 
@@ -119,7 +119,7 @@ Migration: **`0029_evaluation_quality_gate_slice`**.
 ## What is NOT in this flow
 
 - Separate evaluation queue or worker type
-- LLM-as-judge or semantic evaluators (only **JSON_EXACT_MATCH** today)
+- LLM-as-judge, semantic, RAG, or pairwise evaluators (A2+)
 - Vector memory or semantic evaluators
 - Memory mutation during evaluation cases (blocked by default)
 - Billing/settlement — usage fields are observability aggregates

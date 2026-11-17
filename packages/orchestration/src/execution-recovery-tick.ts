@@ -30,6 +30,7 @@ export interface ExecutionRecoveryTickLogger {
 export interface ExecutionRecoveryTickDependencies {
   readonly runs: RunRepository;
   readonly queue: JobQueue;
+  readonly evaluationRecovery?: { execute(): Promise<void> };
   readonly checkpoints?: RunCheckpointRepository;
   readonly operationJournal?: RunOperationJournalRepository;
   readonly agents?: AgentRepository;
@@ -74,6 +75,9 @@ export class ExecutionRecoveryTick {
           await this.failExpiredLeases(telemetry);
           await this.dispatchInterruptedRecoveries(telemetry);
           await this.repairQueuedDeliveries(telemetry);
+          if (this.deps.evaluationRecovery !== undefined) {
+            await this.deps.evaluationRecovery.execute();
+          }
         },
       );
     } catch (error) {

@@ -23,9 +23,17 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createDatabase, type Database } from "../../src/database.js";
 import { migrateDatabase } from "../../src/migrate.js";
+import { PostgresAgentRepository } from "../../src/repositories/postgres-agent-repository.js";
 import { PostgresEvaluationSuiteRepository } from "../../src/repositories/postgres-evaluation-suite-repository.js";
+import { PostgresRunRepository } from "../../src/repositories/postgres-run-repository.js";
 import { PostgresWorkspaceRepository } from "../../src/repositories/postgres-workspace-repository.js";
-import { NOW, createIds } from "./fixtures.js";
+import {
+  NOW,
+  RUN_INPUT,
+  createBindings,
+  createIds,
+  createManifest,
+} from "./fixtures.js";
 import {
   resetStage0Tables,
   startPostgresForTests,
@@ -485,6 +493,116 @@ describe("PostgreSQL evaluation suite repository", () => {
       "mike",
       "zulu",
     ]);
+  });
+
+  it("ignores concurrent duplicate case result inserts with identical outcomes", async () => {
+    const ids = createIds("case-result-race");
+    await seedWorkspace(ids.workspaceId);
+    const suite = EvaluationSuite.create({
+      id: "evaluation-suite-race" as EvaluationSuiteId,
+      workspaceId: ids.workspaceId,
+      key: "race",
+      name: "Race Suite",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await suites.saveSuite(suite);
+    const version = await seedVersion({
+      suite,
+      versionNumber: 1,
+      versionId: "evaluation-suite-version-race" as EvaluationSuiteVersionId,
+      caseDefinitions: [
+        {
+          id: "evaluation-case-race" as EvaluationCaseId,
+          key: "only",
+          input: { prompt: "x" },
+          expected: { value: 1 },
+        },
+      ],
+    });
+
+    const evaluationRun = EvaluationRun.create({
+      id: "evaluation-run-race" as EvaluationRunId,
+      workspaceId: ids.workspaceId,
+      evaluationSuiteVersionId: version.id,
+      targetType: "AGENT_VERSION",
+      targetVersionId: "agent-version-race" as AgentVersionId,
+      createdAt: NOW,
+    });
+    await suites.saveEvaluationRun(evaluationRun);
+
+    const agents = new PostgresAgentRepository(database);
+    const runs = new PostgresRunRepository(database);
+    const { Agent } = await import("@osva/domain");
+    const { Run, RunAttempt } = await import("@osva/domain");
+    await agents.saveAgent(
+      Agent.create({
+        id: ids.agentId,
+        workspaceId: ids.workspaceId,
+        key: "race-agent",
+        name: "Race Agent",
+        createdAt: NOW,
+      }),
+    );
+    await agents.saveAgentVersion(
+      (await import("@osva/domain")).AgentVersion.create({
+        id: ids.agentVersionId,
+        agentId: ids.agentId,
+        version: 1,
+        manifest: createManifest(),
+        createdAt: NOW,
+      }),
+    );
+    await runs.createRunWithInitialAttempt(
+      Run.create({
+        id: "run-race" as import("@osva-ai/contracts").RunId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        input: RUN_INPUT,
+        createdAt: NOW,
+      }),
+      RunAttempt.createFirst({
+        id: "run-attempt-race" as import("@osva-ai/contracts").RunAttemptId,
+        runId: "run-race" as import("@osva-ai/contracts").RunId,
+        createdAt: NOW,
+      }),
+    );
+
+    const base = {
+      evaluationRunId: evaluationRun.id,
+      evaluationCaseId: "evaluation-case-race" as EvaluationCaseId,
+      runId: "run-race" as import("@osva-ai/contracts").RunId,
+      outcome: "PASS" as const,
+      evaluatorResults: { type: "JSON_EXACT_MATCH", score: 1, passed: true },
+      createdAt: NOW,
+      completedAt: NOW,
+    };
+
+    const { EvaluationCaseResult } = await import("@osva/domain");
+    const first = EvaluationCaseResult.create({
+      id: "case-result-a" as import("@osva-ai/contracts").EvaluationCaseResultId,
+      ...base,
+    });
+    const second = EvaluationCaseResult.create({
+      id: "case-result-a" as import("@osva-ai/contracts").EvaluationCaseResultId,
+      ...base,
+    });
+
+    await Promise.all([
+      suites.saveCaseResult(first),
+      suites.saveCaseResult(second),
+    ]);
+
+    const stored = await suites.findCaseResultByRunAndCase(
+      evaluationRun.id,
+      "evaluation-case-race" as EvaluationCaseId,
+    );
+    expect(stored).not.toBeNull();
+    expect(stored?.outcome).toBe("PASS");
   });
 
   async function seedWorkspace(id: WorkspaceId, name = "Workspace") {

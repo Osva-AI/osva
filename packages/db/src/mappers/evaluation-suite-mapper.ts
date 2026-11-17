@@ -237,6 +237,26 @@ export function evaluationRunGateAssessmentFromRow(
 
 export { isSameEvaluationRunGateAssessment };
 
+function stableJsonStringify(value: unknown): string {
+  const normalize = (current: unknown): unknown => {
+    if (Array.isArray(current)) {
+      return current.map((entry) => normalize(entry));
+    }
+    if (current !== null && typeof current === "object") {
+      const record = current as Readonly<Record<string, unknown>>;
+      return Object.keys(record)
+        .sort()
+        .reduce<Record<string, unknown>>((acc, key) => {
+          acc[key] = normalize(record[key]);
+          return acc;
+        }, {});
+    }
+    return current;
+  };
+
+  return JSON.stringify(normalize(value));
+}
+
 export function isSameEvaluationCaseResult(
   left: EvaluationCaseResult,
   right: EvaluationCaseResult,
@@ -247,9 +267,24 @@ export function isSameEvaluationCaseResult(
     left.evaluationCaseId === right.evaluationCaseId &&
     left.runId === right.runId &&
     left.outcome === right.outcome &&
-    JSON.stringify(left.evaluatorResults) ===
-      JSON.stringify(right.evaluatorResults) &&
+    stableJsonStringify(left.evaluatorResults) ===
+      stableJsonStringify(right.evaluatorResults) &&
     left.createdAt.getTime() === right.createdAt.getTime() &&
     left.completedAt?.getTime() === right.completedAt?.getTime()
+  );
+}
+
+/** Same durable outcome for a run/case pair (ignores row id and timestamps). */
+export function isSameEvaluationCaseResultContent(
+  left: EvaluationCaseResult,
+  right: EvaluationCaseResult,
+): boolean {
+  return (
+    left.evaluationRunId === right.evaluationRunId &&
+    left.evaluationCaseId === right.evaluationCaseId &&
+    left.runId === right.runId &&
+    left.outcome === right.outcome &&
+    stableJsonStringify(left.evaluatorResults) ===
+      stableJsonStringify(right.evaluatorResults)
   );
 }

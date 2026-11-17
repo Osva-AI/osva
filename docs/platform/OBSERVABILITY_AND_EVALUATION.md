@@ -22,7 +22,12 @@ Stage 1.7.
 
 ## Evaluations (Stage 1.7)
 
-Stage 1.7 implements one deterministic evaluator: **`JSON_EXACT_MATCH`**. It
+Stage 1.7 introduced **`JSON_EXACT_MATCH`**. Advanced Evaluation slice **A1**
+adds a typed deterministic evaluator registry (text match, TOKEN_F1, BLEU,
+ROUGE-L, JSON validity, required/forbidden concepts). See
+[../implementation/A1_DETERMINISTIC_EVALUATORS.md](../implementation/A1_DETERMINISTIC_EVALUATORS.md).
+
+Legacy note: the original Stage 1.7 scope was **`JSON_EXACT_MATCH` only**. It
 compares the persisted successful RunAttempt output to caller-supplied expected
 JSON using structural canonical equality (property order independent). No LLM
 judge, datasets, or automatic evaluation runs yet.

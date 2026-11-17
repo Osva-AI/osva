@@ -17,6 +17,7 @@ import type { EvaluationSuiteVersion } from "../evaluation-suite-version.js";
 
 export const DEFAULT_EVALUATION_RUN_LIST_LIMIT = 50;
 export const MAX_EVALUATION_RUN_LIST_LIMIT = 100;
+export const DEFAULT_EVALUATION_RUN_RECOVERY_LIST_LIMIT = 20;
 
 export interface EvaluationRunListCursor {
   readonly createdAt: Date;
@@ -64,6 +65,12 @@ export interface EvaluationSuiteRepository {
   listEvaluationRuns(
     query: ListEvaluationRunsQuery,
   ): Promise<ListEvaluationRunsResult>;
+  listEvaluationRunsForRecovery(
+    limit: number,
+  ): Promise<readonly EvaluationRun[]>;
+  listTerminalEvaluationRunsMissingGateAssessment(
+    limit: number,
+  ): Promise<readonly EvaluationRun[]>;
   transitionEvaluationRun(
     expectedStatus: EvaluationRunState,
     next: EvaluationRun,

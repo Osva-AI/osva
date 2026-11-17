@@ -46,6 +46,16 @@ export { evaluationCases } from "./evaluation-cases.js";
 export { evaluationRuns } from "./evaluation-runs.js";
 export { evaluationRunGateAssessments } from "./evaluation-run-gate-assessments.js";
 export { evaluationCaseResults } from "./evaluation-case-results.js";
+export {
+  evaluationJudgeTasks,
+  PERSISTED_EVALUATION_JUDGE_TASK_STATES,
+} from "./evaluation-judge-tasks.js";
+export {
+  evaluationComparisons,
+  evaluationComparisonPairwiseTasks,
+  evaluationComparisonHumanReviewRevisions,
+  PERSISTED_EVALUATION_COMPARISON_STATES,
+} from "./evaluation-comparisons.js";
 export { officeWorkers } from "./office-workers.js";
 export { roles } from "./roles.js";
 export { teams } from "./teams.js";

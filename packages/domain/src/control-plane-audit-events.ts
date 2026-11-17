@@ -2,6 +2,9 @@ import type {
   ApiKeyId,
   ApprovalRequestId,
   CommunityEditionRole,
+  EvaluationCaseId,
+  EvaluationComparisonHumanReviewRevisionId,
+  EvaluationComparisonId,
   JsonObject,
   SecurityAuditEventId,
   SecurityAuditEventType,
@@ -81,6 +84,32 @@ export function buildApprovalRequestDecidedAuditEvent(input: {
       decision: input.decision,
       subjectId: input.actorSubjectId,
       ...input.detailsExtension,
+    },
+  });
+}
+
+export function buildEvaluationComparisonHumanReviewSubmittedAuditEvent(input: {
+  readonly id: SecurityAuditEventId;
+  readonly occurredAt: Date;
+  readonly workspaceId: WorkspaceId;
+  readonly actorUserId: UserId;
+  readonly comparisonId: EvaluationComparisonId;
+  readonly evaluationCaseId: EvaluationCaseId;
+  readonly revisionId: EvaluationComparisonHumanReviewRevisionId;
+  readonly decision: string;
+}): SecurityAuditEvent {
+  return SecurityAuditEvent.create({
+    id: input.id,
+    eventType:
+      SECURITY_AUDIT_EVENT_TYPES.EVALUATION_COMPARISON_HUMAN_REVIEW_SUBMITTED,
+    occurredAt: input.occurredAt,
+    workspaceId: input.workspaceId,
+    actorUserId: input.actorUserId,
+    details: {
+      comparisonId: input.comparisonId,
+      evaluationCaseId: input.evaluationCaseId,
+      revisionId: input.revisionId,
+      decision: input.decision,
     },
   });
 }

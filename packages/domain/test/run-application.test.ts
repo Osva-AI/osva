@@ -59,6 +59,10 @@ class FakeRunRepository implements RunRepository {
     return null;
   }
 
+  async listRunsByEvaluationRunId(): Promise<readonly Run[]> {
+    return [];
+  }
+
   async listRuns(query: ListRunsQuery): Promise<ListRunsResult> {
     return {
       runs: [...this.runs.values()]

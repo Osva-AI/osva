@@ -30,6 +30,11 @@ const STATIC_V1_SEGMENTS = new Set([
   "retry",
   "evaluation-suites",
   "evaluation-runs",
+  "evaluation-comparisons",
+  "pairwise-results",
+  "assessment",
+  "human-reviews",
+  "calibration",
   "case-results",
   "tools",
   "runs",
@@ -262,6 +267,15 @@ function enumerateSplitSegmentPaths(matchBody: string): Set<string> {
   if (matchBody.includes('segments[2] === "inbox"')) {
     paths.add("/v1/office/inbox");
     paths.add("/v1/office/inbox/read-state");
+  }
+
+  if (matchBody.includes('"evaluation-comparisons"')) {
+    paths.add("/v1/evaluation-comparisons");
+    paths.add(`/v1/evaluation-comparisons/${PROBE_SEGMENT}`);
+    paths.add(`/v1/evaluation-comparisons/${PROBE_SEGMENT}/pairwise-results`);
+    paths.add(`/v1/evaluation-comparisons/${PROBE_SEGMENT}/assessment`);
+    paths.add(`/v1/evaluation-comparisons/${PROBE_SEGMENT}/human-reviews`);
+    paths.add(`/v1/evaluation-comparisons/${PROBE_SEGMENT}/calibration`);
   }
 
   for (const resource of new Set(resources)) {

@@ -1,4 +1,7 @@
-import type { EvaluationQualityGatePolicyV1 } from "@osva-ai/contracts";
+import type {
+  EvaluationCaseDefinitionV1,
+  EvaluationQualityGatePolicyV1,
+} from "@osva-ai/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -343,16 +346,7 @@ export function useCreateEvaluationSuiteMutation() {
 
 export interface PublishEvaluationSuiteVersionInput {
   readonly evaluationSuiteId: string;
-  readonly cases: readonly {
-    readonly key: string;
-    readonly name?: string;
-    readonly input: unknown;
-    readonly expected?: unknown;
-    readonly evaluator: {
-      readonly type: "JSON_EXACT_MATCH";
-      readonly expected: unknown;
-    };
-  }[];
+  readonly cases: readonly EvaluationCaseDefinitionV1[];
 }
 
 export interface LaunchEvaluationRunInput {

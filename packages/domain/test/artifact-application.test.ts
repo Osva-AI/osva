@@ -369,6 +369,10 @@ class FakeRunRepository implements RunRepository {
     return null;
   }
 
+  async listRunsByEvaluationRunId() {
+    return [];
+  }
+
   async listRuns() {
     return { runs: [] };
   }

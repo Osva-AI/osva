@@ -228,4 +228,32 @@ describe("aggregateEvaluationRunSummary", () => {
 
     expect(summary.passRate).toBe(1 / 3);
   });
+
+  it("uses fractional evaluator scores for quality score while pass rate stays outcome-based", () => {
+    const summary = aggregateEvaluationRunSummary(2, [
+      {
+        ...caseResult("1", "case-a", "FAIL"),
+        evaluatorResults: { score: 0.75, status: "COMPLETED" },
+      },
+      {
+        ...caseResult("2", "case-b", "PASS"),
+        evaluatorResults: { score: 1, status: "COMPLETED" },
+      },
+    ]);
+
+    expect(summary.passRate).toBe(0.5);
+    expect(summary.qualityScore).toBeCloseTo(0.875, 5);
+    expect(summary.validScoredCaseCount).toBe(2);
+  });
+
+  it("ignores evaluator errors for quality scoring", () => {
+    const summary = aggregateEvaluationRunSummary(1, [
+      {
+        ...caseResult("1", "case-a", "ERROR"),
+        evaluatorResults: { status: "ERROR", errorCode: "invalid_output" },
+      },
+    ]);
+    expect(summary.qualityScore).toBeUndefined();
+    expect(summary.validScoredCaseCount).toBe(0);
+  });
 });

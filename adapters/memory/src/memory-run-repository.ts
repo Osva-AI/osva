@@ -101,6 +101,26 @@ export class MemoryRunRepository implements RunRepository {
     return run;
   }
 
+  async listRunsByEvaluationRunId(
+    workspaceId: WorkspaceId,
+    evaluationRunId: import("@osva-ai/contracts").EvaluationRunId,
+  ): Promise<readonly Run[]> {
+    return [...this.runs.values()]
+      .filter(
+        (run) =>
+          run.workspaceId === workspaceId &&
+          run.evaluationRunId === evaluationRunId,
+      )
+      .sort((left, right) => {
+        const createdAtCompare =
+          left.createdAt.getTime() - right.createdAt.getTime();
+        if (createdAtCompare !== 0) {
+          return createdAtCompare;
+        }
+        return left.id.localeCompare(right.id);
+      });
+  }
+
   async findRunByWorkspaceIdempotencyKey(
     workspaceId: WorkspaceId,
     idempotencyKey: string,
