@@ -8,7 +8,7 @@ import {
   PostgresWorkspaceInferenceCachePolicyRepository,
   PostgresWorkspaceRepository,
   type Database,
-} from "@osva/db";
+} from "../../src/index.js";
 import { SecurityAuditEvent, Workspace } from "@osva/domain";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 

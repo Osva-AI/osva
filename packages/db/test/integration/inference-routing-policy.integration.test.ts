@@ -5,7 +5,7 @@ import {
   PostgresInferenceRoutingPolicyRepository,
   PostgresWorkspaceRepository,
   type Database,
-} from "@osva/db";
+} from "../../src/index.js";
 import { Workspace } from "@osva/domain";
 import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
 

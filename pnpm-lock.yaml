@@ -1249,6 +1249,9 @@ importers:
       '@osva/adapters-embedding-openai-compatible':
         specifier: workspace:*
         version: link:../../adapters/embedding-openai-compatible
+      '@osva/adapters-inference-cache-valkey':
+        specifier: workspace:*
+        version: link:../../adapters/inference-cache-valkey
       '@osva/adapters-mcp-client':
         specifier: workspace:*
         version: link:../../adapters/mcp-client
@@ -1325,9 +1328,6 @@ importers:
       '@osva/adapters-artifact-filesystem':
         specifier: workspace:*
         version: link:../../adapters/artifact-filesystem
-      '@osva/adapters-inference-cache-valkey':
-        specifier: workspace:*
-        version: link:../../adapters/inference-cache-valkey
       '@osva/adapters-knowledge-parser':
         specifier: workspace:*
         version: link:../../adapters/knowledge-parser
