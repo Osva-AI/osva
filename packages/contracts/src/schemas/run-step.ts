@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { INFERENCE_MODEL_INVOCATION_SOURCES } from "../inference-cache.js";
 import { RUN_STEP_KINDS, RUN_STEP_STATUSES } from "../run-step.js";
 import {
   modelProfileVersionIdSchema,
@@ -46,6 +47,8 @@ export const runStepResourceSchema = z.strictObject({
   providerReportedModelId: providerReportedModelIdSchema.optional(),
   providerRequestId: providerRequestIdSchema.optional(),
   estimatedCostUsdMicros: z.int().nonnegative().nullable().optional(),
+  modelInvocationSource: z.enum(INFERENCE_MODEL_INVOCATION_SOURCES).optional(),
+  estimatedAvoidedCostUsdMicros: z.int().nonnegative().nullable().optional(),
   errorCode: z.string().min(1).optional(),
 });
 

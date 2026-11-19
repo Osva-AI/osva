@@ -1,14 +1,23 @@
 import type {
   ModelConversationMessage,
+  ModelStreamEvent,
   ModelToolCall,
 } from "@osva-ai/contracts";
-import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
+import {
+  INFERENCE_MODEL_INVOCATION_SOURCES,
+  MODEL_ERROR_CODES,
+  isCanonicalJsonValue,
+} from "@osva-ai/contracts";
+import type { ModelStreamEventSource } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
+  ModelStreamSession,
+  type ModelFinishReason,
   type ModelGatewayErrorOptions,
   type ModelProviderAdapter,
   type ProviderGenerateTextResult,
   type ResolvedProviderGenerateTextRequest,
+  toModelStreamUsage,
 } from "@osva/model-gateway";
 import OpenAI from "openai";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
@@ -57,11 +66,20 @@ export class OpenAIProviderAdapter implements ModelProviderAdapter {
     });
   }
 
+  generateCompletionStream(
+    request: ResolvedProviderGenerateTextRequest,
+  ): ModelStreamEventSource {
+    return {
+      [Symbol.asyncIterator]: () =>
+        iterateOpenAICompletionStream(this.client, request),
+    };
+  }
+
   async generateText(
     request: ResolvedProviderGenerateTextRequest,
   ): Promise<ProviderGenerateTextResult> {
     try {
-      if (requiresChatCompletions(request)) {
+      if (openAIRequiresChatCompletions(request)) {
         return await this.generateChatCompletion(request);
       }
 
@@ -156,7 +174,7 @@ export class OpenAIProviderAdapter implements ModelProviderAdapter {
   }
 }
 
-function requiresChatCompletions(
+export function openAIRequiresChatCompletions(
   request: ResolvedProviderGenerateTextRequest,
 ): boolean {
   if (request.jsonSchema !== undefined) {
@@ -298,7 +316,7 @@ function normalizeRequiredOutputText(
   return outputText;
 }
 
-function mapOpenAIError(error: unknown): ModelGatewayError {
+export function mapOpenAIError(error: unknown): ModelGatewayError {
   if (error instanceof ModelGatewayError) {
     return error;
   }
@@ -395,6 +413,17 @@ function mapOpenAIError(error: unknown): ModelGatewayError {
   }
 
   if (error instanceof OpenAI.APIError) {
+    if (error.status === 429) {
+      return new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_RATE_LIMITED,
+        "The model provider rate-limited the request.",
+        {
+          ...openAiErrorMetadata(error),
+          retryable: true,
+          retryAfterMs: parseRetryAfterMs(error.headers),
+        },
+      );
+    }
     return new ModelGatewayError(
       MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
       "The model provider returned an error.",
@@ -505,4 +534,234 @@ function sanitizeProviderToken(value: string | undefined): string | undefined {
   }
 
   return trimmed;
+}
+
+async function* iterateOpenAICompletionStream(
+  client: OpenAI,
+  request: ResolvedProviderGenerateTextRequest,
+): AsyncGenerator<ModelStreamEvent> {
+  const session = new ModelStreamSession();
+  let yielded = false;
+  try {
+    if (openAIRequiresChatCompletions(request)) {
+      yield* streamOpenAIChat(client, request, session);
+    } else {
+      yield* streamOpenAIResponses(client, request, session);
+    }
+  } catch (error) {
+    if (!yielded) {
+      throw mapOpenAIError(error);
+    }
+    const mapped =
+      error instanceof ModelGatewayError ? error : mapOpenAIError(error);
+    yield session.failed(mapped);
+  }
+
+  async function* streamOpenAIChat(
+    chatClient: OpenAI,
+    chatRequest: ResolvedProviderGenerateTextRequest,
+    chatSession: ModelStreamSession,
+  ): AsyncGenerator<ModelStreamEvent> {
+    const messages = toChatCompletionMessages(chatRequest.messages);
+    const stream = await chatClient.chat.completions.create(
+      {
+        model: chatRequest.model,
+        messages,
+        max_tokens: chatRequest.maxOutputTokens,
+        tools:
+          chatRequest.toolDefinitions === undefined ||
+          chatRequest.toolDefinitions.length === 0
+            ? undefined
+            : chatRequest.toolDefinitions.map((tool) => ({
+                type: "function" as const,
+                function: {
+                  name: tool.name,
+                  description: tool.description,
+                  parameters: tool.inputSchema,
+                },
+              })),
+        response_format:
+          chatRequest.jsonSchema === undefined
+            ? undefined
+            : {
+                type: "json_schema" as const,
+                json_schema: {
+                  name: "agent_output",
+                  schema: chatRequest.jsonSchema,
+                  strict: true,
+                },
+              },
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      { signal: chatRequest.signal },
+    );
+
+    let providerRequestId: string | undefined;
+    let finishReason: ModelFinishReason = "other";
+    const toolStarts = new Set<number>();
+
+    for await (const chunk of stream) {
+      yielded = true;
+      providerRequestId = sanitizeProviderToken(chunk.id) ?? providerRequestId;
+      const choice = chunk.choices[0];
+      if (choice === undefined) {
+        continue;
+      }
+
+      const delta = choice.delta;
+      if (
+        delta?.content !== undefined &&
+        delta.content !== null &&
+        delta.content.length > 0
+      ) {
+        yield chatSession.textDelta(delta.content);
+      }
+
+      if (delta?.tool_calls !== undefined) {
+        for (const toolDelta of delta.tool_calls) {
+          const index = toolDelta.index ?? 0;
+          if (
+            toolDelta.id !== undefined &&
+            toolDelta.function?.name !== undefined &&
+            !toolStarts.has(index)
+          ) {
+            toolStarts.add(index);
+            yield chatSession.toolCallStart(
+              index,
+              toolDelta.id,
+              toolDelta.function.name,
+            );
+          }
+          if (toolDelta.function?.arguments !== undefined) {
+            yield chatSession.toolCallArgumentsDelta(
+              index,
+              toolDelta.function.arguments,
+            );
+          }
+        }
+      }
+
+      if (choice.finish_reason !== undefined && choice.finish_reason !== null) {
+        finishReason = mapOpenAiChatFinishReason({
+          toolCallCount: toolStarts.size,
+          choiceFinishReason: choice.finish_reason,
+        }).finishReason;
+      }
+
+      if (chunk.usage !== undefined && chunk.usage !== null) {
+        const usage = normalizeOpenAiChatCompletionUsage(chunk.usage);
+        if (usage !== undefined && usage.incomplete !== true) {
+          yield chatSession.usageFinal(
+            toModelStreamUsage(usage),
+            INFERENCE_MODEL_INVOCATION_SOURCES[0],
+            providerRequestId,
+          );
+        }
+      }
+    }
+
+    yield chatSession.completed(finishReason, providerRequestId);
+  }
+
+  async function* streamOpenAIResponses(
+    responsesClient: OpenAI,
+    responsesRequest: ResolvedProviderGenerateTextRequest,
+    responsesSession: ModelStreamSession,
+  ): AsyncGenerator<ModelStreamEvent> {
+    const params = {
+      ...toResponsesCreateParams(responsesRequest),
+      stream: true as const,
+    };
+    const stream = await responsesClient.responses.create(params, {
+      signal: responsesRequest.signal,
+    });
+
+    let providerRequestId: string | undefined;
+    const outputIndexToToolIndex = new Map<number, number>();
+    let nextToolIndex = 0;
+
+    for await (const event of stream) {
+      yielded = true;
+      switch (event.type) {
+        case "response.output_text.delta": {
+          if (event.delta.length > 0) {
+            yield responsesSession.textDelta(event.delta);
+          }
+          break;
+        }
+        case "response.output_item.added": {
+          const item = event.item;
+          if (item.type === "function_call") {
+            const toolIndex = nextToolIndex;
+            nextToolIndex += 1;
+            outputIndexToToolIndex.set(event.output_index, toolIndex);
+            yield responsesSession.toolCallStart(
+              toolIndex,
+              item.call_id ?? item.id ?? `call_${String(toolIndex)}`,
+              item.name,
+            );
+          }
+          break;
+        }
+        case "response.function_call_arguments.delta": {
+          const toolIndex = outputIndexToToolIndex.get(event.output_index);
+          if (toolIndex !== undefined) {
+            yield responsesSession.toolCallArgumentsDelta(
+              toolIndex,
+              event.delta,
+            );
+          }
+          break;
+        }
+        case "response.completed": {
+          providerRequestId =
+            sanitizeProviderToken(event.response.id) ?? providerRequestId;
+          if (event.response.status === "failed") {
+            yield responsesSession.failed(
+              new ModelGatewayError(
+                MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+                "The model provider returned an incomplete response.",
+                { retryable: false },
+              ),
+            );
+            return;
+          }
+          const usage = normalizeOpenAiResponsesUsage(event.response.usage);
+          if (usage !== undefined && usage.incomplete !== true) {
+            yield responsesSession.usageFinal(
+              toModelStreamUsage(usage),
+              INFERENCE_MODEL_INVOCATION_SOURCES[0],
+              providerRequestId,
+            );
+          }
+          const finishReason: ModelFinishReason =
+            event.response.status === "incomplete" ? "length" : "stop";
+          yield responsesSession.completed(finishReason, providerRequestId);
+          return;
+        }
+        case "response.failed":
+        case "response.incomplete": {
+          yield responsesSession.failed(
+            new ModelGatewayError(
+              MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+              "The model provider returned an incomplete response.",
+              { retryable: false },
+            ),
+          );
+          return;
+        }
+        default:
+          break;
+      }
+    }
+
+    yield responsesSession.failed(
+      new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider stream ended without a terminal response.",
+        { retryable: false },
+      ),
+    );
+  }
 }

@@ -4688,6 +4688,41 @@ button.agent-studio-v2-progress-link {
   }
 }
 
+.run-live-output {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.run-live-output-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.run-live-output-text {
+  max-height: 16rem;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-elevated);
+}
+
+.run-live-output-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.run-live-output-meta {
+  margin-top: var(--space-2);
+}
+
 /* Workflow Run Detail V2 */
 .workflow-run-detail-v2.page-stack {
   max-width: 72rem;

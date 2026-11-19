@@ -4,3 +4,8 @@ export {
   OpenAIProviderAdapter,
   type OpenAIProviderAdapterOptions,
 } from "./openai-provider-adapter.js";
+export {
+  OpenAIBatchProvider,
+  OPENAI_BATCH_ENDPOINT,
+  type OpenAIBatchProviderOptions,
+} from "./openai-batch-provider.js";

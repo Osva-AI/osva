@@ -10,12 +10,15 @@ import { V1_HTTP_ROUTES as knowledgeHttpRoutes } from "./knowledge-http.js";
 import { V1_HTTP_ROUTES as evaluationHttpRoutes } from "./evaluation-http.js";
 import { V1_HTTP_ROUTES as toolHttpRoutes } from "./tool-http.js";
 import { V1_HTTP_ROUTES as runObservabilityHttpRoutes } from "./run-observability-http.js";
+import { V1_HTTP_ROUTES as runLiveStreamHttpRoutes } from "./run-live-stream-http.js";
 import { V1_HTTP_ROUTES as runHttpRoutes } from "./run-http.js";
 import { V1_HTTP_ROUTES as scheduleHttpRoutes } from "./schedule-http.js";
 import { V1_HTTP_ROUTES as workflowHttpRoutes } from "./workflow-http.js";
 import { V1_HTTP_ROUTES as workflowEventHttpRoutes } from "./workflow-event-http.js";
 import { V1_HTTP_ROUTES as officeHttpRoutes } from "./office-http.js";
 import { V1_HTTP_ROUTES as builderHttpRoutes } from "./builder-http.js";
+import { V1_HTTP_ROUTES as batchInferenceHttpRoutes } from "./batch-inference-http.js";
+import { V1_HTTP_ROUTES as inferenceRoutingHttpRoutes } from "./inference-routing-http.js";
 
 function withModule<const M extends string>(
   module: M,
@@ -41,12 +44,15 @@ export const V1_ROUTE_INVENTORY = [
   ...withModule("evaluation-http", evaluationHttpRoutes),
   ...withModule("tool-http", toolHttpRoutes),
   ...withModule("run-observability-http", runObservabilityHttpRoutes),
+  ...withModule("run-live-stream-http", runLiveStreamHttpRoutes),
   ...withModule("run-http", runHttpRoutes),
   ...withModule("schedule-http", scheduleHttpRoutes),
   ...withModule("workflow-http", workflowHttpRoutes),
   ...withModule("workflow-event-http", workflowEventHttpRoutes),
   ...withModule("office-http", officeHttpRoutes),
   ...withModule("builder-http", builderHttpRoutes),
+  ...withModule("batch-inference-http", batchInferenceHttpRoutes),
+  ...withModule("inference-routing-http", inferenceRoutingHttpRoutes),
 ] as const;
 
 export const V1_HANDLER_MODULES = [
@@ -62,12 +68,15 @@ export const V1_HANDLER_MODULES = [
   "evaluation-http",
   "tool-http",
   "run-observability-http",
+  "run-live-stream-http",
   "run-http",
   "schedule-http",
   "workflow-http",
   "workflow-event-http",
   "office-http",
   "builder-http",
+  "batch-inference-http",
+  "inference-routing-http",
 ] as const;
 
 export type V1HandlerModule = (typeof V1_HANDLER_MODULES)[number];

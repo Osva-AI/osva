@@ -42,6 +42,7 @@ const STATIC_V1_SEGMENTS = new Set([
   "case-results",
   "tools",
   "runs",
+  "stream",
   "attempts",
   "steps",
   "usage",
@@ -88,6 +89,12 @@ const STATIC_V1_SEGMENTS = new Set([
   "validate",
   "publications",
   "prepare",
+  "batch-inference-jobs",
+  "inference-routing-policies",
+  "inference-routing-policy-versions",
+  "inference-routing-decisions",
+  "activate",
+  "items",
 ]);
 
 /** Structural key for an incoming request path (dynamic segments become `*`). */

@@ -1,6 +1,7 @@
 import type {
   AgentId,
   AgentVersionId,
+  BatchInferenceJobId,
   ApprovalRequestId,
   ApprovalRequestState,
   ArtifactId,
@@ -324,6 +325,46 @@ export class DuplicateEvaluationSuiteKeyError extends DomainInvariantError {
     );
     this.workspaceId = workspaceId;
     this.key = key;
+  }
+}
+
+export class BatchInferenceJobNotFoundError extends DomainError {
+  readonly batchInferenceJobId: BatchInferenceJobId;
+
+  constructor(batchInferenceJobId: BatchInferenceJobId) {
+    super(`BatchInferenceJob ${batchInferenceJobId} was not found.`);
+    this.batchInferenceJobId = batchInferenceJobId;
+  }
+}
+
+export class InferenceRoutingPolicyNotFoundError extends DomainError {
+  readonly policyId: import("@osva-ai/contracts").InferenceRoutingPolicyId;
+
+  constructor(policyId: import("@osva-ai/contracts").InferenceRoutingPolicyId) {
+    super(`InferenceRoutingPolicy ${policyId} was not found.`);
+    this.policyId = policyId;
+  }
+}
+
+export class InferenceRoutingPolicyVersionNotFoundError extends DomainError {
+  readonly policyVersionId: import("@osva-ai/contracts").InferenceRoutingPolicyVersionId;
+
+  constructor(
+    policyVersionId: import("@osva-ai/contracts").InferenceRoutingPolicyVersionId,
+  ) {
+    super(`InferenceRoutingPolicyVersion ${policyVersionId} was not found.`);
+    this.policyVersionId = policyVersionId;
+  }
+}
+
+export class InferenceRoutingDecisionNotFoundError extends DomainError {
+  readonly decisionId: import("@osva-ai/contracts").InferenceRoutingDecisionId;
+
+  constructor(
+    decisionId: import("@osva-ai/contracts").InferenceRoutingDecisionId,
+  ) {
+    super(`InferenceRoutingDecision ${decisionId} was not found.`);
+    this.decisionId = decisionId;
   }
 }
 

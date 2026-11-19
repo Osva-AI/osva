@@ -68,6 +68,10 @@ export {
   EvaluationComparisonNotFoundError,
   EvaluationComparisonRequestError,
   EvaluationGateAssessmentConflictError,
+  BatchInferenceJobNotFoundError,
+  InferenceRoutingDecisionNotFoundError,
+  InferenceRoutingPolicyNotFoundError,
+  InferenceRoutingPolicyVersionNotFoundError,
   EvaluationSuiteNotFoundError,
   EvaluationSuiteVersionNotFoundError,
   InvalidApprovalRequestTransitionError,
@@ -240,6 +244,31 @@ export {
   type ModelTokenUsageForCost,
 } from "./model-cost.js";
 export { jsonValuesEqual } from "./json-equality.js";
+export {
+  assertCachePolicyWorkspace,
+  buildInferenceCacheIdentity,
+  evaluateInferenceCacheLookupEligibility,
+  evaluateInferenceCacheStoreEligibility,
+  mergeTrustedInferenceResponseCachePolicy,
+  inferenceCacheFailureLookupResult,
+  isInferenceCacheIdentityDigest,
+  type InferenceCacheIdentityResult,
+} from "./inference-cache/index.js";
+export {
+  InferenceRoutingCircuitBreakerRegistry,
+  InferenceRoutingCircuitBreakerStore,
+  resolveInferenceRoutingCircuitBreakerSettings,
+  InferenceRoutingLatencyStore,
+  InferenceRoutingSelectionError,
+  isNonFallbackRoutingError,
+  isRetryableRoutingFallback,
+  mergeTrustedInferenceRoutingPolicy,
+  providerRoutingCapabilities,
+  satisfiesRoutingCapabilities,
+  selectInferenceRoute,
+  type SelectInferenceRouteInput,
+  type SelectInferenceRouteResult,
+} from "./inference-routing/index.js";
 export {
   Schedule,
   type CreateScheduleProps,
@@ -537,6 +566,19 @@ export type {
   ListSchedulesQuery,
   ListSchedulesResult,
   WorkspaceRepository,
+  WorkspaceInferenceCachePolicyRepository,
+  WorkspaceInferenceCachePolicyUpsertInput,
+  BatchInferenceJobRecord,
+  BatchInferenceJobRepository,
+  BatchInferenceItemRecord,
+  BatchInferenceJobProgressPatch,
+  CreateBatchInferenceJobInput,
+  WorkspaceBatchInferencePolicyRepository,
+  InferenceRoutingPolicyRepository,
+  InferenceRoutingPolicyInsert,
+  InferenceRoutingPolicyVersionInsert,
+  InferenceRoutingDecisionInsert,
+  WorkspaceInferenceRoutingActivationUpsert,
   AppendWorkflowVersionInput,
   WorkflowRepository,
   ListWorkflowRunsQuery,
@@ -1003,6 +1045,23 @@ export {
   type ModelProfileApplicationIds,
   type UpdateModelProfileMetadataCommand,
 } from "./model-profile-application.js";
+export {
+  createBatchInferenceApplication,
+  BATCH_INFERENCE_API_FORMAT_VERSION,
+  type BatchInferenceApplication,
+  type BatchInferenceApplicationClock,
+  type BatchInferenceApplicationDependencies,
+  type BatchInferenceApplicationIds,
+  type CreateBatchInferenceJobCommand,
+} from "./batch-inference-application.js";
+export {
+  createInferenceRoutingApplication,
+  type InferenceRoutingApplication,
+  type InferenceRoutingApplicationClock,
+  type InferenceRoutingApplicationDependencies,
+  type InferenceRoutingApplicationIds,
+  type CreateInferenceRoutingPolicyCommand,
+} from "./inference-routing-application.js";
 
 export {
   AppendToolVersion,

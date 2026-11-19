@@ -34,6 +34,12 @@ import {
   parseConsoleArtifactId,
   pipeArtifactBodyToResponse,
 } from "../artifact-download.js";
+import {
+  buildRunLiveStreamProxyHeaders,
+  pipeRunLiveStreamToResponse,
+  releaseRunLiveStreamSlot,
+  tryAcquireRunLiveStreamSlot,
+} from "../run-live-stream-proxy.js";
 import { ConsoleConfigurationError } from "../config.js";
 import {
   emitConsoleRequestGuardDenial,
@@ -136,11 +142,12 @@ export async function handleConsoleApiRequest(
     }
   }
 
-  const { client } = resolveConsoleClient(request, {
+  const clientResolution = resolveConsoleClient(request, {
     config: deps.config,
     legacyClient: deps.legacyClient,
     testClient: deps.testClient,
   });
+  const { client } = clientResolution;
 
   if (client === undefined) {
     sendJson(
@@ -980,6 +987,111 @@ export async function handleConsoleApiRequest(
         upstreamRequestIdHeaders(listed.requestId),
         deps.security,
       );
+      return true;
+    }
+
+    const runStreamMatch = pathname.match(/^\/api\/v1\/runs\/([^/]+)\/stream$/);
+    if (runStreamMatch !== null) {
+      if (clientResolution.mode === "legacy_api_key") {
+        sendJson(
+          response,
+          503,
+          {
+            error: "Run live stream requires human session.",
+            code: "run_live_stream_unavailable",
+          },
+          {},
+          deps.security,
+        );
+        return true;
+      }
+      if (!tryAcquireRunLiveStreamSlot()) {
+        sendJson(
+          response,
+          503,
+          {
+            error: "Too many live stream connections.",
+            code: "run_live_stream_capacity",
+          },
+          {},
+          deps.security,
+        );
+        return true;
+      }
+      const upstreamAbort = new AbortController();
+      request.once("close", () => {
+        upstreamAbort.abort();
+      });
+      try {
+        const streamed = await client.streamRunLive(
+          runStreamMatch[1] as RunId,
+          upstreamAbort.signal,
+        );
+        if (!streamed.status.toString().startsWith("2")) {
+          releaseRunLiveStreamSlot();
+          let body: Record<string, unknown> = {
+            error: "Live stream request failed.",
+            code: "upstream_error",
+          };
+          if (streamed.body !== null) {
+            const text = await readableStreamToText(streamed.body);
+            try {
+              const parsed = JSON.parse(text) as unknown;
+              if (typeof parsed === "object" && parsed !== null) {
+                body = parsed as Record<string, unknown>;
+              }
+            } catch {
+              // keep default body
+            }
+          }
+          sendJson(
+            response,
+            streamed.status,
+            body,
+            upstreamRequestIdHeaders(streamed.requestId),
+            deps.security,
+          );
+          return true;
+        }
+        if (streamed.body === null) {
+          releaseRunLiveStreamSlot();
+          sendJson(
+            response,
+            503,
+            {
+              error: "Live stream unavailable.",
+              code: "unavailable",
+              requestId: streamed.requestId,
+            },
+            upstreamRequestIdHeaders(streamed.requestId),
+            deps.security,
+          );
+          return true;
+        }
+        response.writeHead(
+          streamed.status,
+          buildRunLiveStreamProxyHeaders({
+            contentType: streamed.headers.get("content-type") ?? undefined,
+            requestId: streamed.requestId,
+          }),
+        );
+        await pipeRunLiveStreamToResponse({
+          body: streamed.body,
+          request,
+          response,
+        });
+      } catch (error) {
+        releaseRunLiveStreamSlot();
+        forwardUpstreamErrorCookies(response, error);
+        const mapped = mapOsvaError(error);
+        sendJson(
+          response,
+          mapped.status,
+          mapped.body,
+          upstreamRequestIdHeaders(mapped.requestId ?? mapped.body.requestId),
+          deps.security,
+        );
+      }
       return true;
     }
 
@@ -2096,4 +2208,22 @@ function headerValue(headers: Headers, name: string): string | undefined {
     return undefined;
   }
   return value;
+}
+
+async function readableStreamToText(
+  body: ReadableStream<Uint8Array>,
+): Promise<string> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    if (value !== undefined) {
+      text += decoder.decode(value, { stream: true });
+    }
+  }
+  return text;
 }

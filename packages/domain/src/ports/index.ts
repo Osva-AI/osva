@@ -84,6 +84,25 @@ export {
   MAX_SCHEDULE_OCCURRENCE_LIST_LIMIT,
 } from "./schedule-repository.js";
 export type { WorkspaceRepository } from "./workspace-repository.js";
+export type {
+  WorkspaceInferenceCachePolicyRepository,
+  WorkspaceInferenceCachePolicyUpsertInput,
+} from "./workspace-inference-cache-policy-repository.js";
+export type {
+  BatchInferenceJobRecord,
+  BatchInferenceJobRepository,
+  BatchInferenceItemRecord,
+  BatchInferenceJobProgressPatch,
+  CreateBatchInferenceJobInput,
+  WorkspaceBatchInferencePolicyRepository,
+} from "./batch-inference-job-repository.js";
+export type {
+  InferenceRoutingPolicyRepository,
+  InferenceRoutingPolicyInsert,
+  InferenceRoutingPolicyVersionInsert,
+  InferenceRoutingDecisionInsert,
+  WorkspaceInferenceRoutingActivationUpsert,
+} from "./inference-routing-repository.js";
 export type { OrganizationRepository } from "./organization-repository.js";
 export type { UserRepository } from "./user-repository.js";
 export type { OrganizationMembershipRepository } from "./organization-membership-repository.js";

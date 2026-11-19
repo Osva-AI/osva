@@ -61,6 +61,8 @@ import {
   AuthenticateApiKey,
   KnowledgeRetriever,
   createApiKeyApplication,
+  createBatchInferenceApplication,
+  createInferenceRoutingApplication,
 } from "@osva/domain";
 import {
   GenerateBuilderProposalFromNaturalLanguage,
@@ -72,6 +74,11 @@ import {
   type BuilderGenerationModelGatewayPort,
 } from "@osva/domain/builder";
 import { MemoryBuilderPublicationRepository } from "./support/memory-builder-publication-repository.js";
+import {
+  MemoryBatchInferenceJobRepository,
+  MemoryWorkspaceBatchInferencePolicyRepository,
+} from "./support/memory-batch-inference-repository.js";
+import { MemoryInferenceRoutingPolicyRepository } from "./support/memory-inference-routing-repository.js";
 import {
   CreateRun,
   IngestWorkflowEvent,
@@ -320,6 +327,14 @@ export async function createTestWebApplication(options?: {
   const getBuilderPublicationReceipt = new GetBuilderPublicationReceipt(
     builderPublications,
   );
+  const batchInferenceJobs = new MemoryBatchInferenceJobRepository();
+  const batchInferencePolicies =
+    new MemoryWorkspaceBatchInferencePolicyRepository();
+  const inferenceRoutingPolicies = new MemoryInferenceRoutingPolicyRepository();
+  let batchJobIdCounter = 0;
+  let batchItemIdCounter = 0;
+  let inferenceRoutingPolicyIdCounter = 0;
+  let inferenceRoutingPolicyVersionIdCounter = 0;
 
   const server = createWebApplication({
     readinessCheck: options?.readinessCheck ?? (async () => true),
@@ -413,6 +428,11 @@ export async function createTestWebApplication(options?: {
       ids,
     },
     runs: runServices,
+    runLiveStream: {
+      enabled: false,
+      valkeyUrl: "redis://127.0.0.1:6379",
+      runs: runServices.runs,
+    },
     runRecovery: {
       recovery: createRunRecoveryApplication({
         runs,
@@ -518,6 +538,63 @@ export async function createTestWebApplication(options?: {
       prepareBuilderPublication,
       publishBuilderProposal,
       getBuilderPublicationReceipt,
+    },
+    batchInference: {
+      batchInference: createBatchInferenceApplication({
+        jobs: batchInferenceJobs,
+        batchPolicies: batchInferencePolicies,
+        modelProfiles,
+        modelProviderConnections,
+        clock,
+        ids: {
+          createJobId: () => {
+            batchJobIdCounter += 1;
+            return `batch-job-${String(batchJobIdCounter)}` as import("@osva-ai/contracts").BatchInferenceJobId;
+          },
+          createItemId: () => {
+            batchItemIdCounter += 1;
+            return `batch-item-${String(batchItemIdCounter)}` as import("@osva-ai/contracts").BatchInferenceItemId;
+          },
+        },
+      }),
+      ids: {
+        createJobId: () => {
+          batchJobIdCounter += 1;
+          return `batch-job-${String(batchJobIdCounter)}` as import("@osva-ai/contracts").BatchInferenceJobId;
+        },
+        createItemId: () => {
+          batchItemIdCounter += 1;
+          return `batch-item-${String(batchItemIdCounter)}` as import("@osva-ai/contracts").BatchInferenceItemId;
+        },
+      },
+    },
+    inferenceRouting: {
+      inferenceRouting: createInferenceRoutingApplication({
+        routing: inferenceRoutingPolicies,
+        clock,
+        ids: {
+          createPolicyId: () => {
+            inferenceRoutingPolicyIdCounter += 1;
+            return `irp-${String(inferenceRoutingPolicyIdCounter)}` as import("@osva-ai/contracts").InferenceRoutingPolicyId;
+          },
+          createPolicyVersionId: () => {
+            inferenceRoutingPolicyVersionIdCounter += 1;
+            return `irpv-${String(inferenceRoutingPolicyVersionIdCounter)}` as import("@osva-ai/contracts").InferenceRoutingPolicyVersionId;
+          },
+          createDecisionId: () =>
+            `ird-test` as import("@osva-ai/contracts").InferenceRoutingDecisionId,
+        },
+      }),
+      ids: {
+        createPolicyId: () => {
+          inferenceRoutingPolicyIdCounter += 1;
+          return `irp-${String(inferenceRoutingPolicyIdCounter)}` as import("@osva-ai/contracts").InferenceRoutingPolicyId;
+        },
+        createPolicyVersionId: () => {
+          inferenceRoutingPolicyVersionIdCounter += 1;
+          return `irpv-${String(inferenceRoutingPolicyVersionIdCounter)}` as import("@osva-ai/contracts").InferenceRoutingPolicyVersionId;
+        },
+      },
     },
     apiKeys: createApiKeyApplication({
       apiKeys,

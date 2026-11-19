@@ -53,6 +53,7 @@ describe("loadWebConfig", () => {
     expect(config.port).toBe(3000);
     expect(config.databaseUrl).toBe("postgres://osva@127.0.0.1:5432/osva");
     expect(config.valkeyUrl).toBe("redis://127.0.0.1:6379");
+    expect(config.runLiveStreamEnabled).toBe(false);
     expect(config.unauthenticatedRateLimitPerMinute).toBe(60);
     expect(config.authenticatedRateLimitPerMinute).toBe(600);
     expect(config.trustedProxies).toEqual([]);
@@ -129,6 +130,17 @@ describe("loadWebConfig", () => {
     expect(config.unauthenticatedRateLimitPerMinute).toBe(5);
     expect(config.authenticatedRateLimitPerMinute).toBe(50);
     expect(config.trustedProxies).toEqual(["10.0.0.0/8", "192.168.1.1"]);
+  });
+
+  it("reads OSVA_RUN_LIVE_STREAM_ENABLED", () => {
+    const enabled = loadWebConfig(
+      withTestAuthEnv({
+        OSVA_DATABASE_URL: "postgres://osva@127.0.0.1:5432/osva",
+        OSVA_VALKEY_URL: "redis://127.0.0.1:6379",
+        OSVA_RUN_LIVE_STREAM_ENABLED: "true",
+      }),
+    );
+    expect(enabled.runLiveStreamEnabled).toBe(true);
   });
 
   it("reads host and port overrides", () => {

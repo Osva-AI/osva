@@ -41,8 +41,95 @@ export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIRespon
         body,
       });
 
+      const record =
+        body !== null && typeof body === "object"
+          ? (body as Record<string, unknown>)
+          : {};
+      const requestedModel =
+        typeof record.model === "string" ? record.model : undefined;
+      if (requestedModel === "gpt-routing-retry-429") {
+        res.writeHead(429, {
+          "content-type": "application/json",
+          "retry-after": "1",
+        });
+        res.end(
+          JSON.stringify({
+            error: {
+              message: "rate limited",
+              type: "rate_limit_error",
+              code: "rate_limit_exceeded",
+            },
+          }),
+        );
+        return;
+      }
+      if (requestedModel === "gpt-routing-response-a") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "resp_a",
+            object: "response",
+            status: "completed",
+            model: requestedModel,
+            output_text: "cached-response-a",
+            output: [
+              {
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "output_text",
+                    text: "cached-response-a",
+                  },
+                ],
+              },
+            ],
+            usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
+          }),
+        );
+        return;
+      }
+      if (requestedModel === "gpt-routing-response-b") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "resp_b",
+            object: "response",
+            status: "completed",
+            model: requestedModel,
+            output_text: "cached-response-b",
+            output: [
+              {
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "output_text",
+                    text: "cached-response-b",
+                  },
+                ],
+              },
+            ],
+            usage: { input_tokens: 12, output_tokens: 6, total_tokens: 18 },
+          }),
+        );
+        return;
+      }
+
       if (url.includes("/chat/completions")) {
         writeChatCompletionResponse(body, res);
+        return;
+      }
+
+      const streamRequested =
+        body !== null &&
+        typeof body === "object" &&
+        (body as Record<string, unknown>).stream === true;
+      if (streamRequested) {
+        req.on("aborted", () => {
+          abortWaiter?.();
+        });
+        writeResponsesApiStream(body, res, req);
         return;
       }
 
@@ -331,15 +418,84 @@ function writeChatCompletionResponse(
   body: unknown,
   res: http.ServerResponse,
 ): void {
-  const userText = extractChatUserText(body);
-  if (writeChatCompletionChatError(userText, res)) {
-    return;
-  }
-
   const record =
     body !== null && typeof body === "object"
       ? (body as Record<string, unknown>)
       : {};
+  if (record.stream === true) {
+    writeChatCompletionSse(body, res);
+    return;
+  }
+
+  const requestedModel =
+    typeof record.model === "string" ? record.model : undefined;
+  if (requestedModel === "gpt-routing-retry-429") {
+    res.writeHead(429, {
+      "content-type": "application/json",
+      "retry-after": "1",
+    });
+    res.end(
+      JSON.stringify({
+        error: {
+          message: "rate limited",
+          type: "rate_limit_error",
+          code: "rate_limit_exceeded",
+        },
+      }),
+    );
+    return;
+  }
+  if (requestedModel === "gpt-routing-response-a") {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        id: "chat_a",
+        object: "chat.completion",
+        model: requestedModel,
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: { role: "assistant", content: "cached-response-a" },
+          },
+        ],
+        usage: {
+          prompt_tokens: 10,
+          completion_tokens: 5,
+          total_tokens: 15,
+        },
+      }),
+    );
+    return;
+  }
+  if (requestedModel === "gpt-routing-response-b") {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        id: "chat_b",
+        object: "chat.completion",
+        model: requestedModel,
+        choices: [
+          {
+            index: 0,
+            finish_reason: "stop",
+            message: { role: "assistant", content: "cached-response-b" },
+          },
+        ],
+        usage: {
+          prompt_tokens: 12,
+          completion_tokens: 6,
+          total_tokens: 18,
+        },
+      }),
+    );
+    return;
+  }
+
+  const userText = extractChatUserText(body);
+  if (writeChatCompletionChatError(userText, res)) {
+    return;
+  }
   const tools = record.tools;
   const hasTools = Array.isArray(tools) && tools.length > 0;
   const scenario = extractChatScenario(body);
@@ -563,6 +719,295 @@ function extractChatScenario(body: unknown): string {
   }
 
   return "";
+}
+
+function writeChatCompletionSse(body: unknown, res: http.ServerResponse): void {
+  const userText = extractChatUserText(body);
+  if (writeChatCompletionChatError(userText, res)) {
+    return;
+  }
+
+  if (userText.includes("stream-mid-fail")) {
+    res.writeHead(200, {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    });
+    res.write(
+      `data: ${JSON.stringify({
+        id: "chat_stream",
+        object: "chat.completion.chunk",
+        choices: [{ index: 0, delta: { content: "partial " } }],
+      })}\n\n`,
+    );
+    res.destroy();
+    return;
+  }
+
+  if (extractChatScenario(body) === "declarative-tool-flow") {
+    res.writeHead(200, {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    });
+    const chunks: Array<Record<string, unknown>> = [
+      {
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "call_declarative_1",
+                  function: { name: "echo", arguments: "" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [{ index: 0, function: { arguments: '{"value":"' } }],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [
+                { index: 0, function: { arguments: "declarative-tool-input" } },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [{ index: 0, function: { arguments: '"}' } }],
+            },
+          },
+        ],
+      },
+      {
+        choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+        usage: {
+          prompt_tokens: 120,
+          completion_tokens: 15,
+          total_tokens: 135,
+          prompt_tokens_details: { cached_tokens: 8 },
+        },
+      },
+    ];
+    for (const chunk of chunks) {
+      res.write(
+        `data: ${JSON.stringify({
+          id: "chat_stream",
+          object: "chat.completion.chunk",
+          ...chunk,
+        })}\n\n`,
+      );
+    }
+    res.write("data: [DONE]\n\n");
+    res.end();
+    return;
+  }
+
+  const text =
+    userText.includes("declarative-ok") || userText.length === 0
+      ? "declarative-ok"
+      : "normalized text from fake openai";
+  res.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+
+  const parts = [
+    text.slice(0, Math.ceil(text.length / 2)),
+    text.slice(Math.ceil(text.length / 2)),
+  ].filter((chunk) => chunk.length > 0);
+  for (const chunk of parts) {
+    res.write(
+      `data: ${JSON.stringify({
+        id: "chat_stream",
+        object: "chat.completion.chunk",
+        choices: [{ index: 0, delta: { content: chunk } }],
+      })}\n\n`,
+    );
+  }
+
+  res.write(
+    `data: ${JSON.stringify({
+      id: "chat_stream",
+      object: "chat.completion.chunk",
+      choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+      usage: {
+        prompt_tokens: 120,
+        completion_tokens: 15,
+        total_tokens: 135,
+        prompt_tokens_details: { cached_tokens: 8 },
+      },
+    })}\n\n`,
+  );
+  res.write("data: [DONE]\n\n");
+  res.end();
+}
+
+function writeResponsesApiStream(
+  body: unknown,
+  res: http.ServerResponse,
+  req: http.IncomingMessage,
+): void {
+  const prompt = extractPrompt(body);
+  if (prompt === "auth-fail") {
+    res.writeHead(401, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        error: { message: "invalid api key", type: "invalid_request_error" },
+      }),
+    );
+    return;
+  }
+
+  if (prompt === "stream-mid-fail") {
+    res.writeHead(200, {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    });
+    res.write(
+      `data: ${JSON.stringify({
+        type: "response.output_text.delta",
+        delta: "partial ",
+        output_index: 0,
+      })}\n\n`,
+    );
+    res.destroy();
+    return;
+  }
+
+  if (prompt === "stream-cancel") {
+    res.writeHead(200, {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    });
+    res.write(
+      `data: ${JSON.stringify({
+        type: "response.output_text.delta",
+        delta: "partial-",
+        output_index: 0,
+      })}\n\n`,
+    );
+    req.on("aborted", () => {
+      if (!res.writableEnded) {
+        res.destroy();
+      }
+    });
+    return;
+  }
+
+  if (prompt === "declarative-tool-flow") {
+    res.writeHead(200, {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    });
+    const emit = (payload: unknown) => {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+    emit({ type: "response.created", response: { id: "resp_tool_stream" } });
+    emit({
+      type: "response.output_item.added",
+      output_index: 0,
+      item: {
+        type: "function_call",
+        id: "fc_1",
+        call_id: "call_declarative_1",
+        name: "echo",
+      },
+    });
+    emit({
+      type: "response.function_call_arguments.delta",
+      output_index: 0,
+      delta: '{"value":"',
+    });
+    emit({
+      type: "response.function_call_arguments.delta",
+      output_index: 0,
+      delta: "declarative-tool-input",
+    });
+    emit({
+      type: "response.function_call_arguments.delta",
+      output_index: 0,
+      delta: '"}',
+    });
+    emit({
+      type: "response.completed",
+      response: {
+        id: "resp_tool_stream",
+        status: "completed",
+        model: "gpt-5.1-2026-01-15",
+        usage: {
+          input_tokens: 120,
+          output_tokens: 15,
+          total_tokens: 135,
+          input_tokens_details: { cached_tokens: 8 },
+        },
+      },
+    });
+    res.end();
+    return;
+  }
+
+  const text = "normalized text from fake openai";
+  res.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+
+  const emit = (payload: unknown) => {
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  emit({ type: "response.created", response: { id: "resp_stream" } });
+  emit({
+    type: "response.output_text.delta",
+    delta: text.slice(0, 12),
+    output_index: 0,
+  });
+  emit({
+    type: "response.output_text.delta",
+    delta: text.slice(12),
+    output_index: 0,
+  });
+  emit({
+    type: "response.completed",
+    response: {
+      id: "resp_stream",
+      status: "completed",
+      model: "gpt-5.1-2026-01-15",
+      usage: {
+        input_tokens: 120,
+        output_tokens: 15,
+        total_tokens: 135,
+        input_tokens_details: { cached_tokens: 8 },
+      },
+    },
+  });
+  res.end();
 }
 
 function extractPrompt(body: unknown): string {

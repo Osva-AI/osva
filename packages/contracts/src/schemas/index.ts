@@ -2,6 +2,11 @@ export {
   agentIdSchema,
   agentVersionIdSchema,
   approvalRequestIdSchema,
+  batchInferenceItemIdSchema,
+  batchInferenceJobIdSchema,
+  inferenceRoutingDecisionIdSchema,
+  inferenceRoutingPolicyIdSchema,
+  inferenceRoutingPolicyVersionIdSchema,
   artifactIdSchema,
   deploymentIdSchema,
   evaluationCaseIdSchema,
@@ -217,6 +222,48 @@ export {
   modelToolCallSchema,
   modelUsageSchema,
 } from "./model-gateway.js";
+
+export {
+  inferenceCacheExecutionPurposeSchema,
+  inferenceCacheRequestMaterialSchema,
+  inferenceResponseCachePolicySchema,
+} from "./inference-cache.js";
+
+export {
+  activateInferenceRoutingPolicyRequestSchema,
+  appendInferenceRoutingPolicyVersionRequestSchema,
+  createInferenceRoutingPolicyRequestSchema,
+  inferenceRoutingCircuitBreakerSchema,
+  inferenceRoutingDecisionResourceSchema,
+  inferenceRoutingPolicyDefinitionSchema,
+  inferenceRoutingPolicyResourceSchema,
+  inferenceRoutingPolicyVersionResourceSchema,
+  inferenceRoutingRuntimePolicySchema,
+  parseInferenceRoutingCircuitBreakerSettings,
+} from "./inference-routing.js";
+
+export {
+  batchInferenceCancelRequestSchema,
+  batchInferenceContractFormatVersionSchema,
+  batchInferenceCreateJobRequestSchema,
+  batchInferenceEligibilityPolicySchema,
+  batchInferenceExecutionModeSchema,
+  batchInferenceItemOutcomeSchema,
+  batchInferenceItemRequestSchema,
+  batchInferenceItemStatusSchema,
+  batchInferenceJobStatusSchema,
+  batchInferenceProviderCorrelationIdSchema,
+  batchInferenceProviderJobStatusSchema,
+  batchInferenceSubmissionFingerprintSchema,
+} from "./batch-inference.js";
+
+export {
+  assembledModelToolCallSchema,
+  modelStreamEventListSchema,
+  modelStreamEventSchema,
+} from "./model-streaming.js";
+
+export { runLiveStreamViewerEnvelopeSchema } from "./run-live-stream.js";
 
 export { toolGrantSchema, toolInvocationSchema } from "./tool.js";
 

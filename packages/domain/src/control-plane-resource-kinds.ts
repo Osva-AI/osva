@@ -19,6 +19,8 @@ export const CONTROL_PLANE_RESOURCE_KINDS = {
   office: "office",
   workflowEvent: "workflow_event",
   apiKey: "api_key",
+  batchInferenceJob: "batch_inference_job",
+  inferenceRoutingPolicy: "inference_routing_policy",
 } as const;
 
 export type ControlPlaneResourceKind =

@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { WorkflowEventId } from "@osva-ai/contracts";
+import type {
+  BatchInferenceItemId,
+  BatchInferenceJobId,
+  WorkflowEventId,
+} from "@osva-ai/contracts";
 import type { Server } from "node:http";
 import {
   BullMqJobQueue,
@@ -60,6 +64,9 @@ import {
   PostgresOfficeRepository,
   PostgresOfficeCollaborationRepository,
   PostgresWorkspaceRepository,
+  PostgresBatchInferenceJobRepository,
+  PostgresWorkspaceBatchInferencePolicyRepository,
+  PostgresInferenceRoutingPolicyRepository,
   PostgresApiKeyRepository,
   PostgresIdentityLifecycleRepository,
   PostgresOrganizationMembershipRepository,
@@ -78,6 +85,8 @@ import {
   createEvaluationSuiteApplication,
   createMemoryApplication,
   createModelProfileApplication,
+  createBatchInferenceApplication,
+  createInferenceRoutingApplication,
   createModelProviderConnectionApplication,
   createRunApplication,
   createRunRecoveryApplication,
@@ -196,6 +205,12 @@ export function createWebProcess(
   const modelProfiles = new PostgresModelProfileRepository(database);
   const modelProviderConnections =
     new PostgresModelProviderConnectionRepository(database);
+  const batchInferenceJobs = new PostgresBatchInferenceJobRepository(database);
+  const batchInferencePolicies =
+    new PostgresWorkspaceBatchInferencePolicyRepository(database);
+  const inferenceRoutingPolicies = new PostgresInferenceRoutingPolicyRepository(
+    database,
+  );
   const legacyModelProviders = composeLegacyModelProviders(env);
   const modelProviderConnectionResolver = new ModelProviderConnectionResolver({
     connections: modelProviderConnections,
@@ -525,6 +540,11 @@ export function createWebProcess(
         clock,
         ids,
       },
+      runLiveStream: {
+        enabled: config.runLiveStreamEnabled,
+        valkeyUrl: config.valkeyUrl,
+        runs: createRunApplication({ runs }),
+      },
       runRecovery: {
         recovery: createRunRecoveryApplication({
           runs,
@@ -606,6 +626,43 @@ export function createWebProcess(
         getBuilderPublicationReceipt,
       },
       apiKeys: apiKeyApplication,
+      batchInference: {
+        batchInference: createBatchInferenceApplication({
+          jobs: batchInferenceJobs,
+          batchPolicies: batchInferencePolicies,
+          modelProfiles,
+          modelProviderConnections,
+          clock,
+          ids: {
+            createJobId: () => randomUUID() as BatchInferenceJobId,
+            createItemId: () => randomUUID() as BatchInferenceItemId,
+          },
+        }),
+        ids: {
+          createJobId: () => randomUUID() as BatchInferenceJobId,
+          createItemId: () => randomUUID() as BatchInferenceItemId,
+        },
+      },
+      inferenceRouting: {
+        inferenceRouting: createInferenceRoutingApplication({
+          routing: inferenceRoutingPolicies,
+          clock,
+          ids: {
+            createPolicyId: () =>
+              randomUUID() as import("@osva-ai/contracts").InferenceRoutingPolicyId,
+            createPolicyVersionId: () =>
+              randomUUID() as import("@osva-ai/contracts").InferenceRoutingPolicyVersionId,
+            createDecisionId: () =>
+              randomUUID() as import("@osva-ai/contracts").InferenceRoutingDecisionId,
+          },
+        }),
+        ids: {
+          createPolicyId: () =>
+            randomUUID() as import("@osva-ai/contracts").InferenceRoutingPolicyId,
+          createPolicyVersionId: () =>
+            randomUUID() as import("@osva-ai/contracts").InferenceRoutingPolicyVersionId,
+        },
+      },
       humanAuth: humanAuthServices,
       security: {
         ...createWebSecurityServices(authenticateApiKey),

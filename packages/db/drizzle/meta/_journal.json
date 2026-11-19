@@ -274,6 +274,41 @@
       "when": 1791000001000,
       "tag": "0038_evaluation_comparison_human_review_supersedes",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791000002000,
+      "tag": "0039_run_step_model_invocation_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791000003000,
+      "tag": "0040_workspace_inference_cache_policy",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791000004000,
+      "tag": "0041_batch_inference_slice",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791000005000,
+      "tag": "0042_batch_inference_completion_b",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791000006000,
+      "tag": "0043_inference_routing_slice",
+      "breakpoints": true
     }
   ]
 }

@@ -33,6 +33,23 @@ export const OSVA_METRIC = {
   RECOVERY_ERRORS: "osva.recovery.errors",
   RECOVERY_DURATION_MS: "osva.recovery.duration_ms",
   SECURITY_EVENTS: "osva.security.events",
+  INFERENCE_RESPONSE_CACHE_EVENTS: "osva.inference_response_cache.events",
+  BATCH_SUBMISSION_ATTEMPTS: "osva.batch.submission_attempts",
+  BATCH_SUBMISSION_SUCCESS: "osva.batch.submission_success",
+  BATCH_SUBMISSION_FAILURE: "osva.batch.submission_failure",
+  BATCH_RECONCILIATION_ATTEMPTS: "osva.batch.reconciliation_attempts",
+  BATCH_RECONCILIATION_FAILURES: "osva.batch.reconciliation_failures",
+  BATCH_JOB_TERMINAL: "osva.batch.job_terminal",
+  BATCH_ITEM_TERMINAL: "osva.batch.item_terminal",
+  BATCH_CORRELATION_ANOMALIES: "osva.batch.correlation_anomalies",
+  BATCH_RECONCILIATION_REQUIRED: "osva.batch.reconciliation_required",
+  BATCH_CANCELLATIONS: "osva.batch.cancellations",
+  BATCH_DURATION_MS: "osva.batch.duration_ms",
+} as const;
+
+/** Bounded cardinality labels for {@link OSVA_METRIC.INFERENCE_RESPONSE_CACHE_EVENTS}. */
+export const INFERENCE_RESPONSE_CACHE_METRIC = {
+  EVENTS: OSVA_METRIC.INFERENCE_RESPONSE_CACHE_EVENTS,
 } as const;
 
 export type OsvaMetricName = (typeof OSVA_METRIC)[keyof typeof OSVA_METRIC];

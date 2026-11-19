@@ -469,4 +469,94 @@ describe("PostgreSQL migration acceptance", () => {
 
     await database.close();
   });
+
+  it("0040 creates workspace inference cache policy table", async () => {
+    const database = createDatabase({
+      connectionString: postgres.connectionString,
+      max: 1,
+    });
+    await migrateDatabase(database);
+
+    const columns = await database.sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'workspace_inference_cache_policies'
+      ORDER BY column_name
+    `;
+    expect(columns.map((row) => row.column_name)).toEqual(
+      expect.arrayContaining([
+        "allow_evaluation_judge_cache",
+        "allow_tool_definitions",
+        "determinism",
+        "enabled",
+        "max_entry_bytes",
+        "revoked_at",
+        "schema_version",
+        "ttl_seconds",
+        "updated_at",
+        "workspace_id",
+      ]),
+    );
+
+    await database.close();
+  });
+
+  it("0043 creates inference routing policy tables", async () => {
+    const database = createDatabase({
+      connectionString: postgres.connectionString,
+      max: 1,
+    });
+    await migrateDatabase(database);
+
+    const tables = await database.sql`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_name IN (
+          'inference_routing_policies',
+          'inference_routing_policy_versions',
+          'workspace_inference_routing_activation',
+          'inference_routing_decisions'
+        )
+      ORDER BY table_name
+    `;
+    expect(tables.map((row) => row.table_name)).toEqual([
+      "inference_routing_decisions",
+      "inference_routing_policies",
+      "inference_routing_policy_versions",
+      "workspace_inference_routing_activation",
+    ]);
+
+    await database.close();
+  });
+
+  it("0039 adds nullable run step model invocation provenance columns", async () => {
+    const database = createDatabase({
+      connectionString: postgres.connectionString,
+      max: 1,
+    });
+    await migrateDatabase(database);
+
+    const columns = await database.sql`
+      SELECT column_name, is_nullable
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'run_steps'
+        AND column_name IN (
+          'model_invocation_source',
+          'estimated_avoided_cost_usd_micros'
+        )
+      ORDER BY column_name
+    `;
+    expect(columns).toEqual([
+      {
+        column_name: "estimated_avoided_cost_usd_micros",
+        is_nullable: "YES",
+      },
+      { column_name: "model_invocation_source", is_nullable: "YES" },
+    ]);
+
+    await database.close();
+  });
 });

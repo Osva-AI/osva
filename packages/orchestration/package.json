@@ -18,7 +18,11 @@
   },
   "dependencies": {
     "@osva-ai/contracts": "workspace:*",
+    "@osva/adapters-model-anthropic": "workspace:*",
+    "@osva/adapters-model-gemini": "workspace:*",
+    "@osva/adapters-model-openai": "workspace:*",
     "@osva/domain": "workspace:*",
+    "@osva/model-gateway": "workspace:*",
     "@osva/observability": "workspace:*",
     "@osva/runtime-core": "workspace:*"
   },

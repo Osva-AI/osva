@@ -1,3 +1,4 @@
+import { INFERENCE_MODEL_INVOCATION_SOURCES } from "@osva-ai/contracts";
 import type { ModelProfileVersion } from "@osva/domain";
 import {
   estimateModelCostUsdMicros,
@@ -12,6 +13,22 @@ export function buildModelRunStepFinalizeProps(input: {
   readonly completedAt: Date;
   readonly errorCode?: string;
 }): FinalizeRunStepProps {
+  const invocationSource = input.outcome?.invocationSource;
+  const osvaCacheHit =
+    invocationSource === INFERENCE_MODEL_INVOCATION_SOURCES[2];
+
+  if (osvaCacheHit && input.status === "SUCCEEDED") {
+    return {
+      status: input.status,
+      completedAt: input.completedAt,
+      errorCode: input.errorCode,
+      modelInvocationSource: invocationSource,
+      estimatedAvoidedCostUsdMicros:
+        input.outcome?.estimatedAvoidedCostUsdMicros ?? null,
+      estimatedCostUsdMicros: null,
+    };
+  }
+
   const usage = input.outcome?.usage;
   const usagePresent = usage !== undefined;
 
@@ -58,5 +75,14 @@ export function buildModelRunStepFinalizeProps(input: {
       ? { providerRequestId: input.outcome.providerRequestId }
       : {}),
     estimatedCostUsdMicros,
+    ...(invocationSource !== undefined
+      ? { modelInvocationSource: invocationSource }
+      : {}),
+    ...(input.outcome?.estimatedAvoidedCostUsdMicros !== undefined
+      ? {
+          estimatedAvoidedCostUsdMicros:
+            input.outcome.estimatedAvoidedCostUsdMicros,
+        }
+      : {}),
   };
 }

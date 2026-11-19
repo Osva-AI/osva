@@ -33,12 +33,15 @@ const MODULE_RESOURCE_FAMILIES: Record<V1HandlerModule, string> = {
   "evaluation-http": "evaluation",
   "tool-http": "tool",
   "run-observability-http": "run_observability",
+  "run-live-stream-http": "run",
   "run-http": "run",
   "schedule-http": "schedule",
   "workflow-http": "workflow",
   "workflow-event-http": "workflow_event",
   "office-http": "office",
   "builder-http": "builder",
+  "batch-inference-http": "batch_inference_job",
+  "inference-routing-http": "inference_routing_policy",
 };
 
 function controlPlaneAccessRecord(

@@ -1,13 +1,21 @@
 import type {
   ModelConversationMessage,
+  ModelStreamEvent,
   ModelToolCall,
 } from "@osva-ai/contracts";
-import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
+import {
+  INFERENCE_MODEL_INVOCATION_SOURCES,
+  MODEL_ERROR_CODES,
+  isCanonicalJsonValue,
+} from "@osva-ai/contracts";
+import type { ModelStreamEventSource } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
+  ModelStreamSession,
   buildProviderInvocationMetadata,
   sanitizeProviderModelId,
   sanitizeProviderRequestId,
+  toModelStreamUsage,
   type ModelGatewayErrorOptions,
   type ModelFinishReason,
   type ModelProviderAdapter,
@@ -46,6 +54,23 @@ export class GeminiProviderAdapter implements ModelProviderAdapter {
     );
     this.fetchImpl = options.fetch ?? fetch;
     this.timeout = options.timeout;
+  }
+
+  generateCompletionStream(
+    request: ResolvedProviderGenerateTextRequest,
+  ): ModelStreamEventSource {
+    return {
+      [Symbol.asyncIterator]: () =>
+        iterateGeminiCompletionStream(
+          {
+            apiKey: this.apiKey,
+            baseURL: this.baseURL,
+            fetchImpl: this.fetchImpl,
+            timeout: this.timeout,
+          },
+          request,
+        ),
+    };
   }
 
   async generateText(
@@ -662,4 +687,212 @@ function isAbortLikeError(error: unknown): boolean {
     (error.name === "AbortError" ||
       error.message.toLowerCase().includes("aborted"))
   );
+}
+
+interface GeminiStreamAdapterConfig {
+  readonly apiKey: string;
+  readonly baseURL: string;
+  readonly fetchImpl: typeof fetch;
+  readonly timeout: number | undefined;
+}
+
+async function* iterateGeminiCompletionStream(
+  config: GeminiStreamAdapterConfig,
+  request: ResolvedProviderGenerateTextRequest,
+): AsyncGenerator<ModelStreamEvent> {
+  const session = new ModelStreamSession();
+  let yielded = false;
+  const body = toGeminiGenerateContentBody(request);
+  const requestBody = JSON.stringify(body);
+  const url = `${config.baseURL}/models/${encodeURIComponent(request.model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(config.apiKey)}`;
+
+  try {
+    const { response } = await fetchWithSignal(
+      config.fetchImpl,
+      url,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: requestBody,
+      },
+      request.signal,
+      config.timeout,
+    );
+
+    if (!response.ok) {
+      throw await mapGeminiHttpErrorResponse(response);
+    }
+
+    const reader = response.body?.getReader();
+    if (reader === undefined) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned no stream body.",
+        { provider: GEMINI_PROVIDER, retryable: false },
+      );
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let cumulativeText = "";
+    let providerRequestId: string | undefined;
+    let finishReason: ModelFinishReason = "stop";
+    const toolIndexes = new Map<string, number>();
+    let nextToolIndex = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const segments = buffer.split(/\r?\n\r?\n/);
+      buffer = segments.pop() ?? "";
+
+      for (const segment of segments) {
+        const dataLine = segment
+          .split(/\r?\n/)
+          .find((line) => line.startsWith("data:"));
+        if (dataLine === undefined) {
+          continue;
+        }
+        const payloadRaw = dataLine.slice("data:".length).trim();
+        if (payloadRaw.length === 0) {
+          continue;
+        }
+
+        let payload: GeminiGenerateContentResponse;
+        try {
+          payload = JSON.parse(payloadRaw) as GeminiGenerateContentResponse;
+        } catch {
+          throw new ModelGatewayError(
+            MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+            "The model provider returned a malformed stream chunk.",
+            { provider: GEMINI_PROVIDER, retryable: false },
+          );
+        }
+
+        yielded = true;
+        providerRequestId =
+          sanitizeProviderRequestId(payload.responseId) ?? providerRequestId;
+
+        const candidate = payload.candidates?.[0];
+        if (candidate?.finishReason !== undefined) {
+          finishReason = normalizeGeminiFinishReason(
+            candidate.finishReason,
+          ).reason;
+        }
+
+        for (const part of candidate?.content?.parts ?? []) {
+          if ("text" in part) {
+            const text = part.text;
+            let delta = text;
+            if (text.startsWith(cumulativeText)) {
+              delta = text.slice(cumulativeText.length);
+              cumulativeText = text;
+            } else if (text.length > 0) {
+              cumulativeText += text;
+            }
+            if (delta.length > 0) {
+              yield session.textDelta(delta);
+            }
+          } else if ("functionCall" in part) {
+            const call = part.functionCall;
+            let toolIndex = toolIndexes.get(call.name);
+            if (toolIndex === undefined) {
+              toolIndex = nextToolIndex;
+              nextToolIndex += 1;
+              toolIndexes.set(call.name, toolIndex);
+              yield session.toolCallStart(
+                toolIndex,
+                `${call.name}_${String(toolIndex)}`,
+                call.name,
+              );
+            }
+            const argsJson = JSON.stringify(call.args ?? {});
+            yield session.toolCallArgumentsDelta(toolIndex, argsJson);
+            if (isCanonicalJsonValue(call.args)) {
+              yield session.toolCallComplete(toolIndex, call.args);
+            }
+          }
+        }
+
+        const usage = normalizeGeminiGenerateContentUsage(
+          payload.usageMetadata,
+        );
+        if (usage !== undefined && usage.incomplete !== true) {
+          yield session.usageFinal(
+            toModelStreamUsage(usage),
+            INFERENCE_MODEL_INVOCATION_SOURCES[0],
+            providerRequestId,
+          );
+        }
+      }
+    }
+
+    if (!yielded) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider returned no stream events.",
+        { provider: GEMINI_PROVIDER, retryable: false },
+      );
+    }
+
+    const toolCount = nextToolIndex;
+    if (toolCount > 0 && finishReason === "stop") {
+      finishReason = "tool_call";
+    }
+    yield session.completed(finishReason, providerRequestId);
+  } catch (error) {
+    if (!yielded) {
+      if (error instanceof ModelGatewayError) {
+        throw error;
+      }
+      if (error instanceof FetchAbortError) {
+        if (error.reason === "timeout") {
+          throw new ModelGatewayError(
+            MODEL_ERROR_CODES.MODEL_REQUEST_TIMEOUT,
+            "The model provider request timed out.",
+            { provider: GEMINI_PROVIDER, retryable: true },
+          );
+        }
+        throw new ModelGatewayError(
+          MODEL_ERROR_CODES.MODEL_CANCELLED,
+          "The model provider request was cancelled.",
+          { provider: GEMINI_PROVIDER, retryable: false },
+        );
+      }
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+        "The model provider request failed.",
+        {
+          provider: GEMINI_PROVIDER,
+          providerTransportErrorCategory:
+            classifyGeminiTransportErrorCategory(error),
+          retryable: true,
+        },
+      );
+    }
+    yield session.failed(
+      error instanceof ModelGatewayError
+        ? error
+        : new ModelGatewayError(
+            MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+            "The model provider request failed.",
+            { provider: GEMINI_PROVIDER, retryable: false },
+          ),
+    );
+  }
+}
+
+async function mapGeminiHttpErrorResponse(
+  response: Response,
+): Promise<ModelGatewayError> {
+  let payload: GeminiGenerateContentResponse = {};
+  try {
+    payload = (await response.json()) as GeminiGenerateContentResponse;
+  } catch {
+    payload = {};
+  }
+  return mapGeminiHttpError(response.status, payload);
 }

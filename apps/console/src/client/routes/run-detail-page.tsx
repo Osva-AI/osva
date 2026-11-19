@@ -6,8 +6,10 @@ import { ErrorState } from "../components/error-state/error-state";
 import { JsonView } from "../components/json-view/json-view";
 import { LoadingBlock } from "../components/loading/loading-block";
 import { OperatorGuidancePanel } from "../components/operator/operator-guidance";
+import { RunLiveOutputPanel } from "../components/run/run-live-output-panel";
 import { RunStepTimeline } from "../components/run/run-step-timeline";
 import { RunUsageSummary } from "../components/run/run-usage-summary";
+import { useRunLiveStream } from "../hooks/use-run-live-stream";
 import { StatusChip } from "../components/status/status-chip";
 import {
   useArtifactsQuery,
@@ -96,6 +98,15 @@ export function RunDetailPage() {
     runAttemptId: selectedAttemptId,
     live: artifactsLive,
   });
+
+  const liveStream = useRunLiveStream({
+    runId,
+    runStatus: runQuery.data?.status,
+  });
+
+  const latestModelStep = stepsQuery.data?.steps
+    ?.filter((step) => step.kind === "MODEL")
+    .at(-1);
 
   const refreshing =
     runQuery.isFetching ||
@@ -403,6 +414,13 @@ export function RunDetailPage() {
 
       {selectedAttemptId !== undefined ? (
         <>
+          <RunLiveOutputPanel
+            live={liveStream}
+            runStatus={run.status}
+            attemptStatus={selectedAttemptMeta?.status}
+            modelStepStatus={latestModelStep?.status}
+          />
+
           <section
             className="run-detail-timeline panel"
             aria-labelledby="run-detail-timeline-title"

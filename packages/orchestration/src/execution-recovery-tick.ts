@@ -13,6 +13,7 @@ import type {
   RunOperationJournalRepository,
   RunRepository,
 } from "@osva/domain";
+import type { BatchInferenceRecoveryCoordinator } from "./batch-inference-recovery-coordinator.js";
 import { RecoverInterruptedRun } from "./recover-interrupted-run.js";
 import {
   elapsedMs,
@@ -41,6 +42,7 @@ export interface ExecutionRecoveryTickDependencies {
   readonly instrumentation?: OsvaInstrumentation;
   readonly logger?: ExecutionRecoveryTickLogger;
   readonly createRunAttemptId?: () => RunAttemptId;
+  readonly batchInferenceCoordinator?: BatchInferenceRecoveryCoordinator;
 }
 
 /**
@@ -78,6 +80,7 @@ export class ExecutionRecoveryTick {
           if (this.deps.evaluationRecovery !== undefined) {
             await this.deps.evaluationRecovery.execute();
           }
+          this.deps.batchInferenceCoordinator?.schedule();
         },
       );
     } catch (error) {

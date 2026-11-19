@@ -48,6 +48,10 @@ export const runSteps = pgTable(
     estimatedCostUsdMicros: bigint("estimated_cost_usd_micros", {
       mode: "number",
     }),
+    modelInvocationSource: text("model_invocation_source"),
+    estimatedAvoidedCostUsdMicros: bigint("estimated_avoided_cost_usd_micros", {
+      mode: "number",
+    }),
     errorCode: text("error_code"),
   },
   (table) => [

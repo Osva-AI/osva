@@ -315,6 +315,10 @@ export async function startM12_3HumanConsoleStack(options: {
   readonly valkeyUrl: string;
   /** Enables fake Gemini for deterministic unpriced model usage in browser tests. */
   readonly unpricedGemini?: boolean;
+  /** Enables B2 run live stream on web and worker (default off for unrelated M12.3 runs). */
+  readonly runLiveStreamEnabled?: boolean;
+  /** Trusted worker flag for viewer text projection (default false / status-only). */
+  readonly runLiveStreamTextVisible?: boolean;
   readonly workerDependencies?: WorkerProcessDependencies;
 }): Promise<M12_3Stack> {
   const { workspaceA, workspaceB } = await bootstrapM12_3Workspaces(
@@ -335,6 +339,11 @@ export async function startM12_3HumanConsoleStack(options: {
   const consoleOrigin = loopbackOrigin(consolePort);
   const webOrigin = loopbackOrigin(webPort);
 
+  const liveStreamEnv =
+    options.runLiveStreamEnabled === true
+      ? { OSVA_RUN_LIVE_STREAM_ENABLED: "true" }
+      : {};
+
   const web = createWebProcess({
     OSVA_DATABASE_URL: options.databaseUrl,
     OSVA_VALKEY_URL: options.valkeyUrl,
@@ -349,6 +358,7 @@ export async function startM12_3HumanConsoleStack(options: {
     OSVA_RATE_LIMIT_UNAUTH_PER_MINUTE: "100000",
     OSVA_RATE_LIMIT_AUTH_PER_MINUTE: "100000",
     OPENAI_API_KEY: SENTINEL_CREDENTIAL,
+    ...liveStreamEnv,
     ...(fakeGemini !== undefined
       ? { GOOGLE_GEMINI_API_KEY: TEST_GEMINI_API_KEY }
       : {}),
@@ -374,6 +384,10 @@ export async function startM12_3HumanConsoleStack(options: {
       OSVA_TRUSTED_RUNTIME_ROOT: trustedRuntimeRoot,
       OSVA_MCP_CONNECTOR_ALLOW_PRIVATE_NETWORKS: "true",
       OPENAI_API_KEY: SENTINEL_CREDENTIAL,
+      ...liveStreamEnv,
+      ...(options.runLiveStreamTextVisible === true
+        ? { OSVA_RUN_LIVE_STREAM_TEXT_VISIBLE: "true" }
+        : {}),
       ...(fakeGemini !== undefined
         ? { GOOGLE_GEMINI_API_KEY: TEST_GEMINI_API_KEY }
         : {}),

@@ -68,6 +68,8 @@ export const SECURITY_AUDIT_EVENT_TYPES = {
   BUILDER_PUBLICATION_SUCCEEDED: "builder.publication_succeeded",
   EVALUATION_COMPARISON_HUMAN_REVIEW_SUBMITTED:
     "evaluation_comparison.human_review_submitted",
+  WORKSPACE_INFERENCE_CACHE_POLICY_UPSERTED:
+    "workspace.inference_cache_policy.upserted",
 } as const;
 
 export type SecurityAuditEventType =

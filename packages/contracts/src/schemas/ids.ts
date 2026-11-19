@@ -51,6 +51,15 @@ export const evaluationComparisonPairwiseTaskIdSchema =
   osvaIdSchema<"EvaluationComparisonPairwiseTaskId">();
 export const evaluationComparisonHumanReviewRevisionIdSchema =
   osvaIdSchema<"EvaluationComparisonHumanReviewRevisionId">();
+export const batchInferenceJobIdSchema = osvaIdSchema<"BatchInferenceJobId">();
+export const batchInferenceItemIdSchema =
+  osvaIdSchema<"BatchInferenceItemId">();
+export const inferenceRoutingPolicyIdSchema =
+  osvaIdSchema<"InferenceRoutingPolicyId">();
+export const inferenceRoutingPolicyVersionIdSchema =
+  osvaIdSchema<"InferenceRoutingPolicyVersionId">();
+export const inferenceRoutingDecisionIdSchema =
+  osvaIdSchema<"InferenceRoutingDecisionId">();
 export const artifactIdSchema = osvaIdSchema<"ArtifactId">();
 export const eventIdSchema = osvaIdSchema<"EventId">();
 export const officeWorkerIdSchema = osvaIdSchema<"OfficeWorkerId">();

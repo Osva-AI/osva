@@ -235,6 +235,36 @@
       "tag": "0038_evaluation_comparison_human_review_supersedes",
       "file": "0038_evaluation_comparison_human_review_supersedes.sql",
       "sha256": "6e2f55329637167ffd5dd800b2b92455ac3b0509ca63a18f699450023d18403a"
+    },
+    {
+      "idx": 39,
+      "tag": "0039_run_step_model_invocation_source",
+      "file": "0039_run_step_model_invocation_source.sql",
+      "sha256": "66b217ddd61952110a923301112d97056b94edd08f2fafa94d0d98ff192640eb"
+    },
+    {
+      "idx": 40,
+      "tag": "0040_workspace_inference_cache_policy",
+      "file": "0040_workspace_inference_cache_policy.sql",
+      "sha256": "1a7819319cb8bb66a24b9e5214899caf3c6ff1566355b5e8385a7b212060eb67"
+    },
+    {
+      "idx": 41,
+      "tag": "0041_batch_inference_slice",
+      "file": "0041_batch_inference_slice.sql",
+      "sha256": "b480664fc0e554927b10e4a1e4037b12b81dba140bfe79ec9a2db8ee3dcf35d5"
+    },
+    {
+      "idx": 42,
+      "tag": "0042_batch_inference_completion_b",
+      "file": "0042_batch_inference_completion_b.sql",
+      "sha256": "4f4b86d5b18901b96ad6457e34066e1d0f50593c984ed35aec07032eef6009a5"
+    },
+    {
+      "idx": 43,
+      "tag": "0043_inference_routing_slice",
+      "file": "0043_inference_routing_slice.sql",
+      "sha256": "b7ae1f61ea0f70054947a2363793d6d374da2f299a30ed6ecc5ff2da564a091d"
     }
   ]
 }
