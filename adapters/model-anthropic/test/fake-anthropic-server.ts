@@ -344,6 +344,15 @@ export async function startFakeAnthropicMessagesServer(): Promise<FakeAnthropicM
         return;
       }
 
+      const streamRequested =
+        body !== null &&
+        typeof body === "object" &&
+        (body as Record<string, unknown>).stream === true;
+      if (streamRequested) {
+        writeAnthropicMessagesStream(res);
+        return;
+      }
+
       res.writeHead(200, { "content-type": "application/json" });
       res.end(
         JSON.stringify({
@@ -394,6 +403,63 @@ export async function startFakeAnthropicMessagesServer(): Promise<FakeAnthropicM
       });
     },
   };
+}
+
+function writeAnthropicMessagesStream(res: http.ServerResponse): void {
+  const text = "normalized text from fake anthropic";
+  res.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+
+  const sse = (event: string, data: unknown) => {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  sse("message_start", {
+    type: "message_start",
+    message: {
+      id: "msg_stream",
+      type: "message",
+      role: "assistant",
+      model: "claude-3-5-sonnet-20241022",
+      content: [],
+      stop_reason: null,
+      usage: { input_tokens: 112, output_tokens: 0 },
+    },
+  });
+  sse("content_block_start", {
+    type: "content_block_start",
+    index: 0,
+    content_block: { type: "text", text: "" },
+  });
+  sse("content_block_delta", {
+    type: "content_block_delta",
+    index: 0,
+    delta: { type: "text_delta", text: text.slice(0, 12) },
+  });
+  sse("content_block_delta", {
+    type: "content_block_delta",
+    index: 0,
+    delta: { type: "text_delta", text: text.slice(12) },
+  });
+  sse("content_block_stop", {
+    type: "content_block_stop",
+    index: 0,
+  });
+  sse("message_delta", {
+    type: "message_delta",
+    delta: { stop_reason: "end_turn" },
+    usage: {
+      input_tokens: 112,
+      output_tokens: 15,
+      cache_read_input_tokens: 8,
+    },
+  });
+  sse("message_stop", { type: "message_stop" });
+  res.end();
 }
 
 function extractPrompt(body: unknown): string {

@@ -5,7 +5,7 @@ import type {
   ExecutionSuccess,
   RuntimeAdapter,
 } from "@osva-ai/contracts";
-import type { RunAttemptId, RunState } from "@osva-ai/contracts";
+import type { RunAttemptId, RunState, WorkspaceId } from "@osva-ai/contracts";
 import {
   DEFAULT_EXECUTION_HEARTBEAT_INTERVAL_MS,
   DEFAULT_EXECUTION_LEASE_TTL_MS,
@@ -83,6 +83,15 @@ export interface ExecuteRunAttemptDependencies {
   readonly leaseTtlMs?: number;
   readonly heartbeatIntervalMs?: number;
   readonly heartbeat?: ExecuteRunAttemptHeartbeat;
+  /** Optional server-trusted policy merged into ExecutionRequest.policyContext. */
+  readonly executionPolicyContext?: Readonly<Record<string, unknown>>;
+  /**
+   * Preferred production path: resolve trusted policy per workspace from OSVA
+   * authority (not runtime input).
+   */
+  readonly resolveExecutionPolicyContext?: (
+    workspaceId: WorkspaceId,
+  ) => Promise<Readonly<Record<string, unknown>> | undefined>;
 }
 
 export interface ExecuteRunAttemptSucceeded {
@@ -293,6 +302,11 @@ export class ExecuteRunAttempt {
     });
     const operationJournalPort = this.buildOperationJournalPort(agentVersion);
 
+    const policyContext =
+      this.deps.resolveExecutionPolicyContext !== undefined
+        ? await this.deps.resolveExecutionPolicyContext(runningRun.workspaceId)
+        : this.deps.executionPolicyContext;
+
     const request = createExecutionRequest({
       run: runningRun,
       runAttempt: runningAttempt,
@@ -303,6 +317,7 @@ export class ExecuteRunAttempt {
         owner: this.executionOwner,
         generation: runningAttempt.executionGeneration,
       },
+      policyContext,
     });
 
     let ownershipLost = false;

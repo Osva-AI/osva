@@ -285,4 +285,43 @@ describe("aggregateRunAttemptUsageBatch", () => {
       outputTokens: 0,
     });
   });
+
+  it("excludes OSVA response cache hits from provider usage aggregates", async () => {
+    const ids = await seedRun("usage_osva_cache_hit");
+    await insertModelStep({
+      id: "step_provider" as RunStepId,
+      runId: ids.runId,
+      runAttemptId: ids.runAttemptId,
+      modelProfileVersionId: ids.modelProfileVersionId,
+      finalize: {
+        status: "SUCCEEDED",
+        completedAt: LATER,
+        inputTokens: 12,
+        outputTokens: 4,
+        totalTokens: 16,
+        estimatedCostUsdMicros: 80,
+      },
+    });
+    await insertModelStep({
+      id: "step_osva_cache" as RunStepId,
+      runId: ids.runId,
+      runAttemptId: ids.runAttemptId,
+      modelProfileVersionId: ids.modelProfileVersionId,
+      finalize: {
+        status: "SUCCEEDED",
+        completedAt: EVEN_LATER,
+        modelInvocationSource: "OSVA_RESPONSE_CACHE_HIT",
+        estimatedAvoidedCostUsdMicros: null,
+        estimatedCostUsdMicros: null,
+      },
+    });
+
+    const summary = await runs.aggregateRunAttemptUsage(ids.runAttemptId);
+    expect(summary).toMatchObject({
+      modelCalls: 1,
+      inputTokens: 12,
+      outputTokens: 4,
+      estimatedCostUsdMicros: 80,
+    });
+  });
 });

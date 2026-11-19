@@ -131,6 +131,20 @@ export function createHumanSessionOsvaClient(
       } satisfies ConsoleArtifactContent;
     },
 
+    streamRunLive: async (runId, clientAbort) => {
+      const downloaded = await upstream.stream(
+        ctx,
+        `/v1/runs/${encodeURIComponent(runId)}/stream`,
+        clientAbort,
+      );
+      return {
+        status: downloaded.status,
+        headers: downloaded.headers,
+        body: downloaded.body,
+        requestId: downloaded.requestId,
+      } satisfies ConsoleArtifactContent;
+    },
+
     listAgents: () =>
       upstream
         .requestJson(ctx, { method: "GET", path: "/v1/agents" })

@@ -8,6 +8,7 @@ import { parseTrustedProxyCidrs } from "./client-ip.js";
 export interface WebConfig {
   readonly databaseUrl: string;
   readonly valkeyUrl: string;
+  readonly runLiveStreamEnabled: boolean;
   readonly host: string;
   readonly port: number;
   readonly unauthenticatedRateLimitPerMinute: number;
@@ -43,6 +44,10 @@ export function loadWebConfig(env: NodeJS.ProcessEnv = process.env): WebConfig {
   return {
     databaseUrl,
     valkeyUrl,
+    runLiveStreamEnabled: readOptionalBoolean(
+      env.OSVA_RUN_LIVE_STREAM_ENABLED,
+      "OSVA_RUN_LIVE_STREAM_ENABLED",
+    ),
     host,
     port,
     authSecret,
@@ -74,6 +79,21 @@ function readRequired(value: string | undefined, name: string): string {
 function readOptional(value: string | undefined): string | undefined {
   const trimmed = value?.trim() ?? "";
   return trimmed.length === 0 ? undefined : trimmed;
+}
+
+function readOptionalBoolean(value: string | undefined, name: string): boolean {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.length === 0) {
+    return false;
+  }
+  const lower = trimmed.toLowerCase();
+  if (lower === "1" || lower === "true" || lower === "yes") {
+    return true;
+  }
+  if (lower === "0" || lower === "false" || lower === "no") {
+    return false;
+  }
+  throw new Error(`${name} must be true or false.`);
 }
 
 function parsePositiveInt(

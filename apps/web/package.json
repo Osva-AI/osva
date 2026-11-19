@@ -21,6 +21,7 @@
     "@osva/embedding-gateway": "workspace:*",
     "@osva/adapters-opentelemetry": "workspace:*",
     "@osva/adapters-mcp-client": "workspace:*",
+    "@osva/adapters-run-live-stream-valkey": "workspace:*",
     "@osva/adapters-runtime-http": "workspace:*",
     "@osva/adapters-model-anthropic": "workspace:*",
     "@osva/adapters-model-gemini": "workspace:*",

@@ -4,6 +4,7 @@ import { RuntimeErrorCode, TRUSTED_AGENT_EXPORT_NAME } from "./constants.js";
 import { deepFreezeChildValue, isChildJsonValue } from "./child-json.js";
 import {
   createTrustedAgentModels,
+  dispatchParentModelMessage,
   ModelCapabilityError,
 } from "./model-capability.js";
 import {
@@ -26,6 +27,7 @@ import { isExecuteChildRequest } from "./protocol.js";
 import { sanitizePublicErrorMessage } from "./public-error.js";
 
 process.on("message", (raw: unknown) => {
+  dispatchParentModelMessage(raw);
   if (isExecuteChildRequest(raw)) {
     void handle(raw);
   }

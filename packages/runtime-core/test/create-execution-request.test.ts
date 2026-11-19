@@ -124,6 +124,27 @@ describe("createExecutionRequest", () => {
     expect(Object.isFrozen(request.effectiveConfig)).toBe(true);
     expect(Object.isFrozen(request.toolGrants)).toBe(true);
     expect(Object.isFrozen(request.policyContext)).toBe(true);
+    expect(request.policyContext).toEqual({});
+  });
+
+  it("merges server-trusted policyContext without mutating the source", () => {
+    const policy = Object.freeze({
+      inferenceResponseCache: {
+        schemaVersion: "1",
+        enabled: true,
+        determinism: "REQUIRED_DETERMINISTIC",
+      },
+    });
+    const request = createExecutionRequest({
+      run: createRun(),
+      runAttempt: createAttempt(),
+      agentVersion: createVersion(),
+      policyContext: policy,
+    });
+
+    expect(request.policyContext).toEqual(policy);
+    expect(Object.isFrozen(request.policyContext)).toBe(true);
+    expect(request.policyContext).not.toBe(policy);
   });
 
   it("rejects a RunAttempt that does not belong to the Run", () => {

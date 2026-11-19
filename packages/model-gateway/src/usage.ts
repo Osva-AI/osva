@@ -1,4 +1,9 @@
-import type { ModelFinishReason, ModelToolCall } from "@osva-ai/contracts";
+import type {
+  InferenceModelInvocationSource,
+  ModelFinishReason,
+  ModelToolCall,
+  ModelUsage,
+} from "@osva-ai/contracts";
 
 /**
  * Provider-normalized token usage for internal gateway outcomes.
@@ -34,6 +39,16 @@ export interface ProviderGenerateTextInvocation {
   readonly providerReportedModelId?: string;
 }
 
+export function toModelStreamUsage(usage: NormalizedModelUsage): ModelUsage {
+  return {
+    inputUnits: usage.inputTokens,
+    outputUnits: usage.outputTokens,
+    ...(usage.cachedInputTokens !== undefined && usage.cachedInputTokens > 0
+      ? { cachedUnits: usage.cachedInputTokens }
+      : {}),
+  };
+}
+
 export interface ProviderGenerateTextResult {
   readonly text?: string;
   readonly toolCalls?: readonly ModelToolCall[];
@@ -42,4 +57,6 @@ export interface ProviderGenerateTextResult {
   readonly providerRequestId?: string;
   readonly providerFinishReason?: string;
   readonly invocation?: ProviderGenerateTextInvocation;
+  readonly invocationSource?: InferenceModelInvocationSource;
+  readonly estimatedAvoidedCostUsdMicros?: number | null;
 }

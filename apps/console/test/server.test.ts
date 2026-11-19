@@ -55,6 +55,9 @@ function createMockClient(
     downloadArtifact: async () => {
       throw new Error("not implemented");
     },
+    streamRunLive: async () => {
+      throw new Error("not implemented");
+    },
     listAgents: async () => ({
       data: { agents: [] },
       requestId: "req-agents-list",

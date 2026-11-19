@@ -31,6 +31,11 @@ export const V1_EXECUTE_ROUTE_KEYS = new Set<string>([
   "POST /v1/builder/proposals/generate",
   /** M20.5 — cost-bearing refinement inference; not publication or execution. */
   "POST /v1/builder/proposals/refine",
+  "POST /v1/batch-inference-jobs",
+  "POST /v1/batch-inference-jobs/*/cancel",
+  "POST /v1/inference-routing-policies",
+  "POST /v1/inference-routing-policies/*/versions",
+  "POST /v1/inference-routing-policies/activate",
 ]);
 
 /** POST routes that remain catalog/read validation only (no side effects). */

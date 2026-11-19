@@ -33,6 +33,7 @@ export {
   type TraceContextCarrier,
 } from "./instrumentation.js";
 export {
+  INFERENCE_RESPONSE_CACHE_METRIC,
   OSVA_METRIC,
   type MetricAttributes,
   type OsvaMetricName,

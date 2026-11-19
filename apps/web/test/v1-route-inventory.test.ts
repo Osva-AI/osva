@@ -12,7 +12,10 @@ import { V1_HTTP_ROUTES as modelProfileHttpRoutes } from "../src/model-profile-h
 import { V1_HTTP_ROUTES as modelProviderConnectionHttpRoutes } from "../src/model-provider-connection-http.js";
 import { V1_HTTP_ROUTES as officeHttpRoutes } from "../src/office-http.js";
 import { V1_HTTP_ROUTES as builderHttpRoutes } from "../src/builder-http.js";
+import { V1_HTTP_ROUTES as batchInferenceHttpRoutes } from "../src/batch-inference-http.js";
+import { V1_HTTP_ROUTES as inferenceRoutingHttpRoutes } from "../src/inference-routing-http.js";
 import { V1_HTTP_ROUTES as runHttpRoutes } from "../src/run-http.js";
+import { V1_HTTP_ROUTES as runLiveStreamHttpRoutes } from "../src/run-live-stream-http.js";
 import { V1_HTTP_ROUTES as runObservabilityHttpRoutes } from "../src/run-observability-http.js";
 import { V1_HTTP_ROUTES as scheduleHttpRoutes } from "../src/schedule-http.js";
 import { V1_HTTP_ROUTES as toolHttpRoutes } from "../src/tool-http.js";
@@ -27,7 +30,9 @@ import {
 import {
   discoverImplementedV1RouteKeys,
   inventoryStructuralRouteKeys,
+  readHandlerSourceForModule,
 } from "./support/probe-implemented-v1-routes.js";
+import { enumerateProbePathsFromHandlerSource } from "./support/v1-http-route-discovery.js";
 import { authorizationHeader, createTestWebApplication } from "./test-web.js";
 
 const HANDLER_ROUTE_EXPORTS: Readonly<
@@ -48,12 +53,15 @@ const HANDLER_ROUTE_EXPORTS: Readonly<
   "evaluation-http": evaluationHttpRoutes,
   "tool-http": toolHttpRoutes,
   "run-observability-http": runObservabilityHttpRoutes,
+  "run-live-stream-http": runLiveStreamHttpRoutes,
   "run-http": runHttpRoutes,
   "schedule-http": scheduleHttpRoutes,
   "workflow-http": workflowHttpRoutes,
   "workflow-event-http": workflowEventHttpRoutes,
   "office-http": officeHttpRoutes,
   "builder-http": builderHttpRoutes,
+  "batch-inference-http": batchInferenceHttpRoutes,
+  "inference-routing-http": inferenceRoutingHttpRoutes,
 };
 
 describe("V1_ROUTE_INVENTORY", () => {
@@ -89,6 +97,26 @@ describe("V1_ROUTE_INVENTORY", () => {
     }
   });
 
+  it("derives batch inference probe paths from handler source", () => {
+    const paths = enumerateProbePathsFromHandlerSource(
+      readHandlerSourceForModule("batch-inference-http"),
+    );
+    expect(paths, paths.join(", ")).toContain(
+      "/v1/batch-inference-jobs/route-probe-id",
+    );
+    expect(paths).toContain("/v1/batch-inference-jobs/route-probe-id/items");
+    expect(paths).toContain("/v1/batch-inference-jobs/route-probe-id/cancel");
+  });
+
+  it("declares batch inference parameterized routes", () => {
+    const declared = inventoryStructuralRouteKeys(
+      V1_ROUTE_INVENTORY.map(({ method, path }) => ({ method, path })),
+    );
+    expect(declared.has("GET /v1/batch-inference-jobs/*")).toBe(true);
+    expect(declared.has("GET /v1/batch-inference-jobs/*/items")).toBe(true);
+    expect(declared.has("POST /v1/batch-inference-jobs/*/cancel")).toBe(true);
+  });
+
   it("matches implemented handler routes discovered from source probes", async () => {
     const ctx = await createTestWebApplication({
       workspaceId: "ws-route-probe" as import("@osva-ai/contracts").WorkspaceId,
@@ -103,7 +131,9 @@ describe("V1_ROUTE_INVENTORY", () => {
       workspaceId: ctx.testApiKey.workspaceId,
       authHeaders,
     });
-    const declared = inventoryStructuralRouteKeys(V1_ROUTE_INVENTORY);
+    const declared = inventoryStructuralRouteKeys(
+      V1_ROUTE_INVENTORY.map(({ method, path }) => ({ method, path })),
+    );
 
     const missingFromInventory = [...implemented].filter(
       (key) => !declared.has(key),

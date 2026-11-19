@@ -1,4 +1,5 @@
 import type {
+  InferenceModelInvocationSource,
   ModelProfileVersionId,
   RunAttemptId,
   RunId,
@@ -8,6 +9,11 @@ import type {
   ToolVersionId,
 } from "@osva-ai/contracts";
 import { isRunStepKind, isRunStepStatus } from "@osva-ai/contracts";
+
+import {
+  isInferenceModelInvocationSource,
+  isOsvaResponseCacheHit,
+} from "./inference-cache/invocation-source.js";
 
 import { DomainInvariantError } from "./errors.js";
 import {
@@ -44,6 +50,8 @@ export interface RunStepProps extends RunStepIdentityProps {
   readonly providerReportedModelId?: string;
   readonly providerRequestId?: string;
   readonly estimatedCostUsdMicros?: number | null;
+  readonly modelInvocationSource?: InferenceModelInvocationSource;
+  readonly estimatedAvoidedCostUsdMicros?: number | null;
   readonly errorCode?: string;
 }
 
@@ -63,6 +71,8 @@ export interface FinalizeRunStepProps {
   readonly providerReportedModelId?: string;
   readonly providerRequestId?: string;
   readonly estimatedCostUsdMicros?: number | null;
+  readonly modelInvocationSource?: InferenceModelInvocationSource;
+  readonly estimatedAvoidedCostUsdMicros?: number | null;
   readonly errorCode?: string;
 }
 
@@ -86,6 +96,8 @@ export class RunStep {
   readonly providerReportedModelId: string | undefined;
   readonly providerRequestId: string | undefined;
   readonly estimatedCostUsdMicros: number | null | undefined;
+  readonly modelInvocationSource: InferenceModelInvocationSource | undefined;
+  readonly estimatedAvoidedCostUsdMicros: number | null | undefined;
   readonly errorCode: string | undefined;
 
   private constructor(props: RunStepProps) {
@@ -108,6 +120,8 @@ export class RunStep {
     this.providerReportedModelId = props.providerReportedModelId;
     this.providerRequestId = props.providerRequestId;
     this.estimatedCostUsdMicros = props.estimatedCostUsdMicros;
+    this.modelInvocationSource = props.modelInvocationSource;
+    this.estimatedAvoidedCostUsdMicros = props.estimatedAvoidedCostUsdMicros;
     this.errorCode = props.errorCode;
   }
 
@@ -175,6 +189,33 @@ export class RunStep {
         cacheWriteInputTokens: props.cacheWriteInputTokens,
         usageIncomplete: props.usageIncomplete,
       });
+
+      if (
+        props.modelInvocationSource !== undefined &&
+        !isInferenceModelInvocationSource(props.modelInvocationSource)
+      ) {
+        throw new DomainInvariantError(
+          "RunStep.modelInvocationSource is invalid.",
+        );
+      }
+
+      if (isOsvaResponseCacheHit(props.modelInvocationSource)) {
+        if (
+          props.inputTokens !== undefined ||
+          props.outputTokens !== undefined ||
+          props.totalTokens !== undefined ||
+          props.cachedInputTokens !== undefined ||
+          props.cacheWriteInputTokens !== undefined ||
+          props.providerRequestId !== undefined ||
+          props.providerReportedModelId !== undefined ||
+          (props.estimatedCostUsdMicros !== undefined &&
+            props.estimatedCostUsdMicros !== null)
+        ) {
+          throw new DomainInvariantError(
+            "OSVA response cache hit RunSteps must not carry provider usage or cost.",
+          );
+        }
+      }
     }
 
     const providerReportedModelId = sanitizePersistedProviderModelId(
@@ -210,6 +251,8 @@ export class RunStep {
         providerReportedModelId,
         providerRequestId,
         estimatedCostUsdMicros: props.estimatedCostUsdMicros,
+        modelInvocationSource: props.modelInvocationSource,
+        estimatedAvoidedCostUsdMicros: props.estimatedAvoidedCostUsdMicros,
         errorCode:
           props.errorCode === undefined
             ? undefined
@@ -243,6 +286,8 @@ export class RunStep {
       providerReportedModelId: props.providerReportedModelId,
       providerRequestId: props.providerRequestId,
       estimatedCostUsdMicros: props.estimatedCostUsdMicros,
+      modelInvocationSource: props.modelInvocationSource,
+      estimatedAvoidedCostUsdMicros: props.estimatedAvoidedCostUsdMicros,
       errorCode: props.errorCode,
     });
   }

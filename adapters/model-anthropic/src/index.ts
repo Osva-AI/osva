@@ -35,3 +35,7 @@ export {
   type AnthropicProviderErrorLocalDisplay,
 } from "./anthropic-provider-error-local-display.js";
 export { anthropicErrorMetadata } from "./anthropic-provider-error-metadata.js";
+export {
+  AnthropicBatchProvider,
+  type AnthropicBatchProviderOptions,
+} from "./anthropic-batch-provider.js";

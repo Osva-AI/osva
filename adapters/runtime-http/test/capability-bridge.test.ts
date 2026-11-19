@@ -373,6 +373,9 @@ describe("RuntimeCapabilityBridge", () => {
         async generateCompletion() {
           return { text: "ok", toolCalls: [], finishReason: "stop" };
         },
+        generateCompletionStream() {
+          return (async function* () {})();
+        },
       }),
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
@@ -509,6 +512,9 @@ describe("RuntimeCapabilityBridge", () => {
         async generateCompletion() {
           return { text: "ok", toolCalls: [], finishReason: "stop" };
         },
+        generateCompletionStream() {
+          return (async function* () {})();
+        },
       }),
       createScopedToolGateway: () => undefined,
       createScopedMemoryGateway: () => undefined,
@@ -607,7 +613,12 @@ describe("RuntimeCapabilityBridge", () => {
         expect.objectContaining({
           modelProfileVersionId,
         }),
-        undefined,
+        expect.objectContaining({
+          boundModelProfileVersionId: modelProfileVersionId,
+          cache: undefined,
+          routing: undefined,
+          signal: undefined,
+        }),
       );
 
       const denied = await invokeModel(

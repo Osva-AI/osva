@@ -93,6 +93,25 @@ export function createHumanSessionUpstream(config: ConsoleConfig) {
         defaultMutationOrigin,
       );
     },
+
+    stream(
+      ctx: HumanSessionUpstreamContext,
+      path: string,
+      clientAbort: AbortSignal,
+      requireWorkspace = true,
+    ): Promise<HumanSessionUpstreamBinaryResult> {
+      return upstreamBinary(
+        baseUrl,
+        ctx,
+        path,
+        requireWorkspace,
+        defaultMutationOrigin,
+        {
+          accept: "text/event-stream",
+          signal: clientAbort,
+        },
+      );
+    },
   };
 }
 
@@ -190,6 +209,10 @@ async function upstreamBinary(
   path: string,
   requireWorkspace: boolean,
   defaultMutationOrigin: string,
+  options?: {
+    readonly accept?: string;
+    readonly signal?: AbortSignal;
+  },
 ): Promise<HumanSessionUpstreamBinaryResult> {
   const url = buildUpstreamUrl(baseUrl, path);
   const headers = buildUpstreamHeaders(
@@ -198,13 +221,16 @@ async function upstreamBinary(
     "GET",
     defaultMutationOrigin,
   );
+  if (options?.accept !== undefined) {
+    headers.accept = options.accept;
+  }
 
   let response: Response;
   try {
     response = await fetch(url, {
       method: "GET",
       headers,
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      signal: options?.signal ?? AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
   } catch (error) {
     throw new OsvaTransportError(

@@ -4,13 +4,16 @@ import fs from "node:fs/promises";
 import type {
   ExecutionRequest,
   ExecutionResult,
+  GenerateCompletionRequest,
   GenerateTextRequest,
   GenerateTextResult,
   JsonValue,
+  ModelStreamEventSource,
   RuntimeAdapter,
   ToolInvokeRequest,
   TrustedTypeScriptRuntime,
 } from "@osva-ai/contracts";
+import { isModelStreamTerminalKind } from "@osva-ai/contracts";
 import type {
   MemoryAuthorization,
   MemoryDeleteRequest,
@@ -37,7 +40,8 @@ import {
   type TrustedRuntimeArtifactApplication,
 } from "./artifact-ipc-parent.js";
 import { createChildEnvironment } from "./child-env.js";
-import { RuntimeErrorCode } from "./constants.js";
+import { MODEL_STREAM_MAX_EVENT_COUNT, RuntimeErrorCode } from "./constants.js";
+import { validateModelStreamEventFrame } from "./model-stream-ipc.js";
 import { createTrustedAgentContext } from "./context.js";
 import { integrityMatches, sha256IntegrityOf } from "./integrity.js";
 import {
@@ -57,6 +61,8 @@ import {
   isMemorySetRequestMessage,
   isKnowledgeSearchRequestMessage,
   isModelGenerateRequestMessage,
+  isModelGenerateStreamCloseMessage,
+  isModelGenerateStreamRequestMessage,
   isToolInvokeRequestMessage,
   type ExecuteChildRequest,
   type MemoryDeleteRequestMessage,
@@ -65,6 +71,7 @@ import {
   type MemorySetRequestMessage,
   type KnowledgeSearchRequestMessage,
   type ModelGenerateRequestMessage,
+  type ModelGenerateStreamRequestMessage,
   type ToolInvokeRequestMessage,
 } from "./protocol.js";
 import {
@@ -148,6 +155,10 @@ export interface RuntimeModelGateway {
     request: GenerateTextRequest,
     options?: { readonly signal?: AbortSignal },
   ): Promise<GenerateTextResult>;
+  generateCompletionStream?(
+    request: GenerateCompletionRequest,
+    options?: { readonly signal?: AbortSignal },
+  ): ModelStreamEventSource;
 }
 
 export interface RuntimeToolGateway {
@@ -402,6 +413,8 @@ function waitForChildResult(options: {
     logger,
   } = options;
 
+  const modelStreamAborters = new Map<string, AbortController>();
+
   return new Promise((resolve) => {
     let settled = false;
     const artifactCreateSessions = new ArtifactCreateIpcSessions();
@@ -440,6 +453,26 @@ function waitForChildResult(options: {
           logger,
           isSettled: () => settled,
         });
+        return;
+      }
+
+      if (isModelGenerateStreamRequestMessage(raw)) {
+        void handleModelGenerateStreamRequest({
+          child,
+          message: raw,
+          abort,
+          modelGateway,
+          bindings: modelBindings,
+          logger,
+          isSettled: () => settled,
+          modelStreamAborters,
+        });
+        return;
+      }
+
+      if (isModelGenerateStreamCloseMessage(raw)) {
+        modelStreamAborters.get(raw.callId)?.abort();
+        modelStreamAborters.delete(raw.callId);
         return;
       }
 
@@ -634,6 +667,142 @@ function waitForChildResult(options: {
       );
     }
   });
+}
+
+async function handleModelGenerateStreamRequest(options: {
+  readonly child: ChildProcess;
+  readonly message: ModelGenerateStreamRequestMessage;
+  readonly abort: AbortController;
+  readonly modelGateway: RuntimeModelGateway | undefined;
+  readonly bindings: ExecutionRequest["modelProfileVersionBindings"];
+  readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
+  readonly isSettled: () => boolean;
+  readonly modelStreamAborters: Map<string, AbortController>;
+}): Promise<void> {
+  const {
+    child,
+    message,
+    abort,
+    modelGateway,
+    bindings,
+    logger,
+    isSettled,
+    modelStreamAborters,
+  } = options;
+
+  const sendFailure = (code: string, errorMessage: string) => {
+    if (isSettled() || child.killed || child.exitCode !== null) {
+      return;
+    }
+    child.send({
+      v: 1,
+      type: "model.generate.failed",
+      callId: message.callId,
+      error: {
+        code,
+        message: sanitizePublicErrorMessage(
+          errorMessage,
+          "Model generation failed.",
+        ),
+      },
+    });
+  };
+
+  const modelProfileVersionId = bindings[message.binding];
+  if (modelProfileVersionId === undefined) {
+    sendFailure(
+      MODEL_ERROR_CODES.MODEL_BINDING_NOT_FOUND,
+      "Model binding was not found.",
+    );
+    return;
+  }
+
+  if (
+    modelGateway === undefined ||
+    modelGateway.generateCompletionStream === undefined
+  ) {
+    sendFailure(
+      MODEL_ERROR_CODES.MODEL_PROVIDER_UNAVAILABLE,
+      "The configured model provider does not support streaming.",
+    );
+    return;
+  }
+
+  const streamAbort = new AbortController();
+  modelStreamAborters.set(message.callId, streamAbort);
+
+  const onParentAbort = () => {
+    streamAbort.abort();
+  };
+  abort.signal.addEventListener("abort", onParentAbort, { once: true });
+
+  const request: GenerateCompletionRequest = {
+    modelProfileVersionId,
+    messages: message.request.messages,
+    maxOutputTokens: message.request.maxOutputTokens,
+    toolDefinitions: message.request.toolDefinitions,
+    jsonSchema: message.request.jsonSchema,
+  };
+
+  let eventCount = 0;
+  try {
+    const source = modelGateway.generateCompletionStream(request, {
+      signal: streamAbort.signal,
+    });
+
+    for await (const rawEvent of source) {
+      if (isSettled() || child.killed || child.exitCode !== null) {
+        streamAbort.abort();
+        return;
+      }
+
+      const event = validateModelStreamEventFrame(rawEvent);
+      if (event === undefined) {
+        streamAbort.abort();
+        sendFailure(
+          MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+          "The model provider returned an invalid stream event.",
+        );
+        return;
+      }
+
+      eventCount += 1;
+      if (eventCount > MODEL_STREAM_MAX_EVENT_COUNT) {
+        streamAbort.abort();
+        sendFailure(
+          MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+          "The model stream exceeded the maximum event count.",
+        );
+        return;
+      }
+
+      const sent = child.send({
+        v: 1,
+        type: "model.generate.stream.event",
+        callId: message.callId,
+        event,
+      });
+      if (!sent) {
+        streamAbort.abort();
+        sendFailure(
+          MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+          "The model stream consumer could not keep up.",
+        );
+        return;
+      }
+
+      if (isModelStreamTerminalKind(event.kind)) {
+        break;
+      }
+    }
+  } catch (error) {
+    logger?.error("runtime.model_generate_stream_failed", error);
+    const mapped = mapModelGatewayFailure(error);
+    sendFailure(mapped.code, mapped.message);
+  } finally {
+    abort.signal.removeEventListener("abort", onParentAbort);
+    modelStreamAborters.delete(message.callId);
+  }
 }
 
 async function handleModelGenerateRequest(options: {

@@ -41,6 +41,12 @@ export type EvaluationComparisonPairwiseTaskId =
   OsvaId<"EvaluationComparisonPairwiseTaskId">;
 export type EvaluationComparisonHumanReviewRevisionId =
   OsvaId<"EvaluationComparisonHumanReviewRevisionId">;
+export type BatchInferenceJobId = OsvaId<"BatchInferenceJobId">;
+export type BatchInferenceItemId = OsvaId<"BatchInferenceItemId">;
+export type InferenceRoutingPolicyId = OsvaId<"InferenceRoutingPolicyId">;
+export type InferenceRoutingPolicyVersionId =
+  OsvaId<"InferenceRoutingPolicyVersionId">;
+export type InferenceRoutingDecisionId = OsvaId<"InferenceRoutingDecisionId">;
 export type ArtifactId = OsvaId<"ArtifactId">;
 export type EventId = OsvaId<"EventId">;
 export type OfficeWorkerId = OsvaId<"OfficeWorkerId">;

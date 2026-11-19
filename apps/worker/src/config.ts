@@ -39,6 +39,13 @@ export interface WorkerConfig {
   readonly containerNetworkMode: string;
   readonly containerCapabilityBaseUrl?: string;
   readonly containerResourcePolicy?: ContainerResourcePolicy;
+  /** Ephemeral live viewer Pub/Sub from model streams (B2.4). */
+  readonly runLiveStreamEnabled: boolean;
+  /**
+   * Trusted opt-in for exposing TEXT_DELTA on the live viewer channel.
+   * Default false (status-only projection).
+   */
+  readonly runLiveStreamTextVisible: boolean;
 }
 
 export function loadWorkerConfig(
@@ -141,6 +148,14 @@ export function loadWorkerConfig(
       env.OSVA_TRANSPORT_REPAIR_BATCH_LIMIT,
       DEFAULT_TRANSPORT_REPAIR_BATCH_LIMIT,
       "OSVA_TRANSPORT_REPAIR_BATCH_LIMIT",
+    ),
+    runLiveStreamEnabled: readOptionalBoolean(
+      env.OSVA_RUN_LIVE_STREAM_ENABLED,
+      "OSVA_RUN_LIVE_STREAM_ENABLED",
+    ),
+    runLiveStreamTextVisible: readOptionalBoolean(
+      env.OSVA_RUN_LIVE_STREAM_TEXT_VISIBLE,
+      "OSVA_RUN_LIVE_STREAM_TEXT_VISIBLE",
     ),
   };
 

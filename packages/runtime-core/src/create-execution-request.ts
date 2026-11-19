@@ -9,6 +9,8 @@ export interface ExecutionRequestSource {
   readonly checkpoint?: ExecutionRequest["checkpoint"];
   readonly executionOwnership?: ExecutionRequest["executionOwnership"];
   readonly operationJournal?: ExecutionRequest["operationJournal"];
+  /** Server-composed policy envelope only; must not originate from run input. */
+  readonly policyContext?: Readonly<Record<string, unknown>>;
 }
 
 /**
@@ -55,7 +57,7 @@ export function createExecutionRequest(
     knowledgeIndexBindings: source.run.effectiveBindings.knowledgeIndexBindings,
     toolGrants: Object.freeze([]),
     timeoutMs: source.agentVersion.manifest.execution.timeoutMs,
-    policyContext: Object.freeze({}),
+    policyContext: Object.freeze({ ...(source.policyContext ?? {}) }),
     evaluationContext:
       source.run.evaluationRunId !== undefined &&
       source.run.evaluationCaseId !== undefined

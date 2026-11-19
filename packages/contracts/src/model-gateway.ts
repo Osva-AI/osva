@@ -55,8 +55,11 @@ export const MODEL_ERROR_CODES = {
   MODEL_REQUEST_TIMEOUT: "MODEL_REQUEST_TIMEOUT",
   MODEL_CONTENT_BLOCKED: "MODEL_CONTENT_BLOCKED",
   MODEL_CANCELLED: "MODEL_CANCELLED",
+  MODEL_CACHE_UNAUTHORIZED: "MODEL_CACHE_UNAUTHORIZED",
   MODEL_PROVIDER_ERROR: "MODEL_PROVIDER_ERROR",
   INVALID_MODEL_RESPONSE: "INVALID_MODEL_RESPONSE",
+  MODEL_ROUTING_NO_ELIGIBLE_CANDIDATE: "MODEL_ROUTING_NO_ELIGIBLE_CANDIDATE",
+  MODEL_ROUTING_BUDGET_EXCEEDED: "MODEL_ROUTING_BUDGET_EXCEEDED",
 } as const;
 
 export type ModelErrorCode =
@@ -179,10 +182,16 @@ export interface ModelResponse {
  * Stage 1 implements `generateText`. Cancellation is not part of this portable
  * request contract. The target `invoke` request/response types remain the
  * destination contract and are not implemented in this slice.
+ *
+ * B2.2 adds {@link generateCompletionStream} for in-process provider-neutral
+ * token streaming. Cancellation remains outside this serialized contract.
  */
 export interface ModelGateway {
   generateText(request: GenerateTextRequest): Promise<GenerateTextResult>;
   generateCompletion(
     request: GenerateCompletionRequest,
   ): Promise<GenerateCompletionResult>;
+  generateCompletionStream(
+    request: GenerateCompletionRequest,
+  ): import("./model-streaming.js").ModelStreamEventSource;
 }

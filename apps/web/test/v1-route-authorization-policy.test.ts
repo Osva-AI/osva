@@ -56,4 +56,14 @@ describe("inferV1RouteAuthorizationAction", () => {
       HUMAN_WORKSPACE_PERMISSIONS.EXECUTE,
     );
   });
+
+  it("resolves run live stream path for human access inventory", () => {
+    expect(
+      structuralRouteKeyFromPathname("GET", "/v1/runs/run-abc/stream"),
+    ).toBe("GET /v1/runs/*/stream");
+    const access = lookupV1RouteAccess("GET", "/v1/runs/run-abc/stream");
+    expect(access?.requiredHumanPermission).toBe(
+      HUMAN_WORKSPACE_PERMISSIONS.READ,
+    );
+  });
 });

@@ -7,6 +7,8 @@ import type {
   GenerateTextRequest,
   GenerateTextResult,
   JsonValue,
+  ModelStreamEvent,
+  ModelStreamEventSource,
   KnowledgeHitV1,
   KnowledgeSearchRequestV1,
   MemoryAuthorization,
@@ -23,8 +25,16 @@ import {
   KNOWLEDGE_ERROR_CODES,
   MEMORY_ERROR_CODES,
   MODEL_ERROR_CODES,
+  RUN_LIVE_STREAM_VIEWER_FORMAT_VERSION,
   TOOL_ERROR_CODES,
+  isModelStreamTerminalKind,
+  projectModelStreamEventToViewer,
 } from "@osva-ai/contracts";
+import type {
+  RunLiveStreamPublisher,
+  RunLiveStreamViewerProjectionPolicy,
+} from "@osva-ai/contracts";
+import { DEFAULT_RUN_LIVE_STREAM_VIEWER_POLICY } from "@osva-ai/contracts";
 import type { MemoryGateway } from "@osva-ai/contracts";
 import {
   RunStep,
@@ -33,11 +43,20 @@ import {
   type RunRepository,
 } from "@osva/domain";
 import type {
-  ModelGateway,
+  ModelGatewayGenerateTextOptions,
   ProviderGenerateTextResult,
 } from "@osva/model-gateway";
 
+import {
+  isOsvaResponseCacheHitOutcome,
+  resolveModelGatewayGenerateOptions,
+} from "./model-gateway-cache-context.js";
+import {
+  attachRoutingProviderAttemptTelemetry,
+  shouldRecordFinalProviderMetrics,
+} from "./routing-provider-attempt-telemetry.js";
 import { buildModelRunStepFinalizeProps } from "./model-run-step-finalize.js";
+import { providerOutcomeFromModelStream } from "./model-stream-outcome.js";
 import type { ToolGateway } from "@osva/tool-gateway";
 
 import { OSVA_ATTR } from "./attributes.js";
@@ -69,6 +88,9 @@ export interface RunStepRecorderDependencies {
   readonly ids: RunStepRecorderIds;
   readonly logger?: RunStepRecorderLogger;
   readonly instrumentation?: OsvaInstrumentation;
+  /** Optional ephemeral viewer fan-out; must not affect model execution. */
+  readonly runLiveStream?: RunLiveStreamPublisher;
+  readonly runLiveStreamPolicy?: RunLiveStreamViewerProjectionPolicy;
 }
 
 export interface RuntimeMemoryGateway {
@@ -106,7 +128,7 @@ export interface KnowledgeGatewayDelegate {
 }
 
 export interface ScopedRunStepRecorder {
-  wrapModelGateway(modelGateway: ModelGateway): RuntimeModelGateway;
+  wrapModelGateway(modelGateway: RecorderModelGateway): RuntimeModelGateway;
   wrapToolGateway(toolGateway: ToolGateway): RuntimeToolGateway;
   wrapMemoryGateway(memoryGateway: MemoryGateway): RuntimeMemoryGateway;
   wrapKnowledgeGateway(
@@ -118,6 +140,22 @@ export interface ScopedRunStepRecorder {
  * Parent-process execution observability seam. Records RunSteps without
  * exposing persistence to the trusted runtime child.
  */
+/** Model gateway surface required by RunStep recording (includes outcome helpers). */
+export interface RecorderModelGateway {
+  generateTextOutcome(
+    request: GenerateTextRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): Promise<ProviderGenerateTextResult>;
+  generateCompletionOutcome(
+    request: GenerateCompletionRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): Promise<ProviderGenerateTextResult>;
+  generateCompletionStream(
+    request: GenerateCompletionRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): ModelStreamEventSource;
+}
+
 export interface RuntimeModelGateway {
   generateText(
     request: GenerateTextRequest,
@@ -127,6 +165,10 @@ export interface RuntimeModelGateway {
     request: GenerateCompletionRequest,
     options?: { readonly signal?: AbortSignal },
   ): Promise<GenerateCompletionResult>;
+  generateCompletionStream(
+    request: GenerateCompletionRequest,
+    options?: { readonly signal?: AbortSignal },
+  ): ModelStreamEventSource;
 }
 
 export interface RuntimeToolGateway {
@@ -158,10 +200,12 @@ export function createRunStepRecorder(
 }
 
 class ObservabilityModelGateway implements RuntimeModelGateway {
+  private liveStreamReceivingHintPublished = false;
+
   constructor(
     private readonly execution: ExecutionRequest,
     private readonly deps: RunStepRecorderDependencies,
-    private readonly inner: ModelGateway,
+    private readonly inner: RecorderModelGateway,
   ) {}
 
   async generateText(
@@ -215,9 +259,24 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
           ReturnType<ModelProfileRepository["findModelProfileVersionById"]>
         > = null;
         let runStepFinalized = false;
+        const baseGenerateOptions = resolveModelGatewayGenerateOptions(
+          this.execution,
+          {
+            ...options,
+            boundModelProfileVersionId: request.modelProfileVersionId,
+          },
+        );
+        const attemptTelemetry = attachRoutingProviderAttemptTelemetry(
+          this.deps,
+          baseGenerateOptions,
+          "unknown",
+        );
 
         try {
-          outcome = await this.inner.generateTextOutcome(request, options);
+          outcome = await this.inner.generateTextOutcome(
+            request,
+            attemptTelemetry.options,
+          );
           version = await this.deps.modelProfiles.findModelProfileVersionById(
             request.modelProfileVersionId,
           );
@@ -248,24 +307,47 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
           runStepFinalized = true;
 
           span.setStatus(true);
-          telemetry.recordCounter(OSVA_METRIC.MODEL_CALLS, 1, {
-            provider: version?.provider ?? "unknown",
-          });
+          const cacheHit = isOsvaResponseCacheHitOutcome(outcome);
+          const providerName = version?.provider ?? "unknown";
           telemetry.recordHistogram(
             OSVA_METRIC.MODEL_DURATION_MS,
             elapsedMs(perfStartedAt, performance.now()),
-            { provider: version?.provider ?? "unknown" },
+            { provider: providerName },
           );
-          if (outcome.usage !== undefined) {
+          if (
+            shouldRecordFinalProviderMetrics({
+              cacheHit,
+              routingEnabled:
+                baseGenerateOptions?.routing?.policy.enabled === true,
+              routingProviderInvocations:
+                attemptTelemetry.providerInvocationCount,
+            })
+          ) {
+            telemetry.recordCounter(OSVA_METRIC.MODEL_CALLS, 1, {
+              provider: providerName,
+            });
+            if (outcome.usage !== undefined) {
+              telemetry.recordHistogram(
+                OSVA_METRIC.MODEL_INPUT_TOKENS,
+                outcome.usage.inputTokens,
+                { provider: providerName },
+              );
+              telemetry.recordHistogram(
+                OSVA_METRIC.MODEL_OUTPUT_TOKENS,
+                outcome.usage.outputTokens,
+                { provider: providerName },
+              );
+            }
+          } else if (!cacheHit && outcome.usage !== undefined) {
             telemetry.recordHistogram(
               OSVA_METRIC.MODEL_INPUT_TOKENS,
               outcome.usage.inputTokens,
-              { provider: version?.provider ?? "unknown" },
+              { provider: providerName },
             );
             telemetry.recordHistogram(
               OSVA_METRIC.MODEL_OUTPUT_TOKENS,
               outcome.usage.outputTokens,
-              { provider: version?.provider ?? "unknown" },
+              { provider: providerName },
             );
           }
 
@@ -294,6 +376,193 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
         }
       },
     );
+  }
+
+  generateCompletionStream(
+    request: GenerateCompletionRequest,
+    options?: { readonly signal?: AbortSignal },
+  ): ModelStreamEventSource {
+    const telemetry = resolveInstrumentation(this.deps.instrumentation);
+    const bindingName = findModelBindingName(
+      this.execution.modelProfileVersionBindings,
+      request.modelProfileVersionId,
+    );
+    const startedAt = this.deps.clock.now();
+    const perfStartedAt = performance.now();
+    const runStepId = this.deps.ids.createId() as RunStepId;
+    this.liveStreamReceivingHintPublished = false;
+
+    const running = RunStep.start({
+      id: runStepId,
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      kind: "MODEL",
+      bindingName,
+      startedAt,
+      modelProfileVersionId: request.modelProfileVersionId,
+    });
+
+    void this.deps.runs.insertRunningRunStep(running).catch((error) => {
+      this.deps.logger?.error("observability.run_step_start_failed", error);
+    });
+
+    this.deps.logger?.info("observability.model_step_started", {
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      runStepId,
+      kind: "MODEL",
+      bindingName,
+    });
+
+    const inner = this.inner.generateCompletionStream(
+      request,
+      resolveModelGatewayGenerateOptions(this.execution, {
+        signal: options?.signal,
+        boundModelProfileVersionId: request.modelProfileVersionId,
+      }),
+    );
+
+    return this.recordedModelCompletionStream({
+      request,
+      inner,
+      runStepId,
+      perfStartedAt,
+      telemetry,
+    });
+  }
+
+  private tryPublishLiveViewerEvent(event: ModelStreamEvent): void {
+    const publisher = this.deps.runLiveStream;
+    if (publisher === undefined) {
+      return;
+    }
+
+    const policy =
+      this.deps.runLiveStreamPolicy ?? DEFAULT_RUN_LIVE_STREAM_VIEWER_POLICY;
+    const viewerEvent = projectModelStreamEventToViewer(event, policy);
+    if (viewerEvent === undefined) {
+      return;
+    }
+
+    if (
+      viewerEvent.kind === "STREAM_STATUS" &&
+      viewerEvent.status === "receiving"
+    ) {
+      if (this.liveStreamReceivingHintPublished) {
+        return;
+      }
+      this.liveStreamReceivingHintPublished = true;
+    }
+
+    publisher.tryPublish({
+      formatVersion: RUN_LIVE_STREAM_VIEWER_FORMAT_VERSION,
+      workspaceId: this.execution.workspaceId,
+      runId: this.execution.runId,
+      runAttemptId: this.execution.runAttemptId,
+      streamId: event.streamId,
+      sequence: event.sequence,
+      emittedAt: this.deps.clock.now().toISOString(),
+      viewerEvent,
+    });
+  }
+
+  private async *recordedModelCompletionStream(options: {
+    readonly request: GenerateCompletionRequest;
+    readonly inner: ModelStreamEventSource;
+    readonly runStepId: RunStepId;
+    readonly perfStartedAt: number;
+    readonly telemetry: ReturnType<typeof resolveInstrumentation>;
+  }): AsyncGenerator<ModelStreamEvent> {
+    const events: ModelStreamEvent[] = [];
+    let version: Awaited<
+      ReturnType<ModelProfileRepository["findModelProfileVersionById"]>
+    > = null;
+    let finalized = false;
+
+    const finalizeFromEvents = async (): Promise<void> => {
+      if (finalized || events.length === 0) {
+        return;
+      }
+
+      version = await this.deps.modelProfiles.findModelProfileVersionById(
+        options.request.modelProfileVersionId,
+      );
+      const verdict = providerOutcomeFromModelStream(events);
+      if (verdict.status === "SUCCEEDED") {
+        await this.finalizeModelRunStep(options.runStepId, {
+          outcome: verdict.outcome,
+          version,
+          status: "SUCCEEDED",
+        });
+        finalized = true;
+        options.telemetry.recordCounter(OSVA_METRIC.MODEL_CALLS, 1, {
+          provider: version?.provider ?? "unknown",
+        });
+        options.telemetry.recordHistogram(
+          OSVA_METRIC.MODEL_DURATION_MS,
+          elapsedMs(options.perfStartedAt, performance.now()),
+          { provider: version?.provider ?? "unknown" },
+        );
+        if (verdict.outcome.usage !== undefined) {
+          options.telemetry.recordHistogram(
+            OSVA_METRIC.MODEL_INPUT_TOKENS,
+            verdict.outcome.usage.inputTokens,
+            { provider: version?.provider ?? "unknown" },
+          );
+          options.telemetry.recordHistogram(
+            OSVA_METRIC.MODEL_OUTPUT_TOKENS,
+            verdict.outcome.usage.outputTokens,
+            { provider: version?.provider ?? "unknown" },
+          );
+        }
+      } else {
+        await this.finalizeModelRunStep(options.runStepId, {
+          outcome: verdict.outcome,
+          version,
+          status: "FAILED",
+          errorCode: verdict.errorCode,
+        });
+        finalized = true;
+      }
+    };
+
+    try {
+      for await (const event of options.inner) {
+        events.push(event);
+        this.tryPublishLiveViewerEvent(event);
+        yield event;
+        if (isModelStreamTerminalKind(event.kind)) {
+          break;
+        }
+      }
+    } catch (error) {
+      const errorCategory = mapModelErrorCode(error);
+      if (!finalized) {
+        if (events.length > 0) {
+          const verdict = providerOutcomeFromModelStream(events);
+          await this.finalizeModelRunStep(options.runStepId, {
+            outcome: verdict.outcome,
+            version,
+            status: "FAILED",
+            errorCode:
+              verdict.status === "FAILED"
+                ? (verdict.errorCode ?? errorCategory)
+                : errorCategory,
+          });
+          finalized = true;
+        } else {
+          await this.finalizeSafely(options.runStepId, {
+            status: "FAILED",
+            completedAt: this.deps.clock.now(),
+            errorCode: errorCategory,
+          });
+          finalized = true;
+        }
+      }
+      throw error;
+    } finally {
+      await finalizeFromEvents();
+    }
   }
 
   async generateCompletion(
@@ -351,7 +620,10 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
         try {
           outcome = await this.inner.generateCompletionOutcome(
             request,
-            options,
+            resolveModelGatewayGenerateOptions(this.execution, {
+              ...options,
+              boundModelProfileVersionId: request.modelProfileVersionId,
+            }),
           );
           version = await this.deps.modelProfiles.findModelProfileVersionById(
             request.modelProfileVersionId,

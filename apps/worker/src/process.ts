@@ -33,6 +33,7 @@ import {
   startRuntimeCapabilityServer,
   type RuntimeCapabilityServer,
 } from "@osva/adapters-runtime-http";
+import { ValkeyRunLiveStreamPublisher } from "@osva/adapters-run-live-stream-valkey";
 import {
   assertTrustedTypeScriptRuntimeReady,
   TrustedTypeScriptRuntimeAdapter,
@@ -61,6 +62,8 @@ import {
   PostgresRunOperationJournalRepository,
   PostgresArtifactRepository,
   PostgresWorkspaceRepository,
+  PostgresWorkspaceInferenceCachePolicyRepository,
+  PostgresInferenceRoutingPolicyRepository,
   type Database,
 } from "@osva/db";
 import { PgVectorStore } from "@osva/adapters-vector-pgvector";
@@ -82,13 +85,28 @@ import {
   createRuntimeArtifactApplication,
   ProcessEvaluationJudgeTasks,
   ProcessEvaluationComparisonPairwiseTasks,
+  mergeTrustedInferenceResponseCachePolicy,
+  mergeTrustedInferenceRoutingPolicy,
+  InferenceRoutingCircuitBreakerStore,
+  InferenceRoutingLatencyStore,
 } from "@osva/domain";
+import { inferenceRoutingRuntimePolicySchema } from "@osva-ai/contracts/schemas";
+import type { InferenceRoutingPolicyVersionId } from "@osva-ai/contracts";
 import {
   DeterministicEmbeddingProviderAdapter,
   EmbeddingGateway,
 } from "@osva/embedding-gateway";
 import { MemoryGateway } from "@osva/memory-gateway";
-import { ModelGateway, type ModelProviderAdapter } from "@osva/model-gateway";
+import {
+  CachingModelGateway,
+  ModelGateway,
+  RoutingModelGateway,
+  type ModelProviderAdapter,
+} from "@osva/model-gateway";
+import type {
+  ExactResponseCachePort,
+  InferenceResponseCachePolicyV1,
+} from "@osva-ai/contracts";
 import { ModelProviderConnectionResolver } from "./model-provider-connection-resolver.js";
 import {
   createInstrumentedRuntimeAdapter,
@@ -102,6 +120,7 @@ import {
   JudgeTaskRecoveryCoordinator,
   PairwiseTaskRecoveryCoordinator,
 } from "@osva/orchestration";
+import { createBatchInferenceWorkerBundle } from "./create-batch-inference-worker.js";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
 
@@ -112,6 +131,7 @@ import {
 } from "@osva/adapters-runtime-container";
 
 import { loadWorkerConfig, type WorkerConfig } from "./config.js";
+import { composeInferenceResponseCache } from "./inference-response-cache.js";
 import { createDeclarativeToolMetadataResolver } from "./declarative-tool-metadata.js";
 import { composeRuntimeExecutors } from "./runtime-composition.js";
 import { createExecuteRunAttemptHandler } from "./execute-run-attempt-handler.js";
@@ -146,6 +166,13 @@ export interface WorkerProcessDependencies {
     readonly apiKey?: string;
   };
   readonly artifactBlobStore?: ArtifactBlobStore;
+  /** Hermetic-test injection for exact-response cache (not enabled in production). */
+  readonly exactResponseCache?: ExactResponseCachePort;
+  /**
+   * Server-trusted cache policy for integration tests only. Ignored unless
+   * {@link exactResponseCache} is also injected.
+   */
+  readonly trustedInferenceResponseCachePolicy?: InferenceResponseCachePolicyV1;
 }
 
 export function createWorkerProcess(
@@ -186,8 +213,12 @@ export function createWorkerProcess(
   let recoveryStopped = false;
   let recoveryLoop: Promise<void> | undefined;
   let judgeTaskCoordinator: JudgeTaskRecoveryCoordinator | undefined;
+  let batchInferenceCoordinator:
+    import("@osva/orchestration").BatchInferenceRecoveryCoordinator | undefined;
   let pairwiseTaskCoordinator: PairwiseTaskRecoveryCoordinator | undefined;
   let interruptRecoverySleep: (() => void) | undefined;
+  let inferenceResponseCacheClose: (() => Promise<void>) | undefined;
+  let runLiveStreamPublisherClose: (() => Promise<void>) | undefined;
 
   const worker: WorkerApplication = createWorkerApplication({
     readinessCheck: async () => {
@@ -206,6 +237,29 @@ export function createWorkerProcess(
       }
     },
     onStart: async () => {
+      const composedInferenceCache =
+        dependencies.exactResponseCache !== undefined
+          ? {
+              port: dependencies.exactResponseCache,
+              close: async () => {
+                const port = dependencies.exactResponseCache;
+                if (
+                  port !== undefined &&
+                  "close" in port &&
+                  typeof port.close === "function"
+                ) {
+                  await port.close();
+                }
+              },
+            }
+          : composeInferenceResponseCache({
+              config,
+              env,
+              instrumentation,
+            });
+      inferenceResponseCacheClose = composedInferenceCache?.close;
+      const exactResponseCache = composedInferenceCache?.port;
+
       const modelProfiles = new PostgresModelProfileRepository(database);
       const modelProviderConnections =
         new PostgresModelProviderConnectionRepository(database);
@@ -252,11 +306,24 @@ export function createWorkerProcess(
             },
           },
         });
-      const modelGateway = new ModelGateway({
+      const modelGatewayBase = new ModelGateway({
         modelProfiles,
         providers: legacyModelProviders,
         connectionResolver: modelProviderConnectionResolver,
       });
+      const inferenceRoutingPolicies =
+        new PostgresInferenceRoutingPolicyRepository(database);
+      const routingCircuitBreakerStore =
+        new InferenceRoutingCircuitBreakerStore();
+      const routingLatencyStore = new InferenceRoutingLatencyStore();
+      const providerExecutionStack =
+        exactResponseCache === undefined
+          ? modelGatewayBase
+          : new CachingModelGateway({
+              inner: modelGatewayBase,
+              modelProfiles,
+              cache: exactResponseCache,
+            });
       const toolsRepository = new PostgresToolRepository(database);
       const toolGateway = new ToolGateway({
         tools: toolsRepository,
@@ -294,6 +361,8 @@ export function createWorkerProcess(
         retriever: knowledgeRetriever,
       });
       const workspaces = new PostgresWorkspaceRepository(database);
+      const workspaceInferenceCachePolicies =
+        new PostgresWorkspaceInferenceCachePolicyRepository(database);
       const artifactsRepository = new PostgresArtifactRepository(database);
       const artifactBlobStore =
         dependencies.artifactBlobStore ??
@@ -313,6 +382,21 @@ export function createWorkerProcess(
       });
       const runtimeArtifactApplication =
         createRuntimeArtifactApplication(artifactApplication);
+
+      let runLiveStreamPublisher: ValkeyRunLiveStreamPublisher | undefined;
+      if (config.runLiveStreamEnabled) {
+        runLiveStreamPublisher = new ValkeyRunLiveStreamPublisher({
+          url: config.valkeyUrl,
+          onPublishError: (error) => {
+            logError("worker.run_live_stream_publish_failed", error);
+          },
+        });
+        await runLiveStreamPublisher.connect();
+        runLiveStreamPublisherClose = async () => {
+          await runLiveStreamPublisher?.close();
+        };
+      }
+
       const recorderDeps = {
         runs: runsRepository,
         modelProfiles,
@@ -323,13 +407,66 @@ export function createWorkerProcess(
           info: logEvent,
           error: logError,
         },
+        ...(runLiveStreamPublisher !== undefined
+          ? {
+              runLiveStream: runLiveStreamPublisher,
+              runLiveStreamPolicy: {
+                textDeltasVisible: config.runLiveStreamTextVisible,
+              },
+            }
+          : {}),
       };
       const scopedModel = (
         execution: Parameters<typeof createRunStepRecorder>[0],
-      ) =>
-        createRunStepRecorder(execution, recorderDeps).wrapModelGateway(
-          modelGateway,
+      ) => {
+        const routingPolicyRaw = execution.policyContext?.inferenceRouting;
+        const routingPolicyParsed =
+          inferenceRoutingRuntimePolicySchema.safeParse(routingPolicyRaw);
+        const routingCircuitBreaker =
+          routingPolicyParsed.success &&
+          routingPolicyParsed.data.enabled === true &&
+          routingPolicyParsed.data.policyVersionId !== undefined
+            ? routingCircuitBreakerStore.resolve({
+                workspaceId: execution.workspaceId,
+                policyVersionId: routingPolicyParsed.data
+                  .policyVersionId as InferenceRoutingPolicyVersionId,
+                circuitBreaker:
+                  routingPolicyParsed.data.definition?.circuitBreaker,
+              })
+            : undefined;
+        const routedProviderStack = new RoutingModelGateway({
+          inner: providerExecutionStack,
+          modelProfiles,
+          connections: modelProviderConnections,
+          circuitBreaker: routingCircuitBreaker,
+          latencyStore: routingLatencyStore,
+          persistDecision: async (decision) => {
+            const decisionId =
+              randomUUID() as import("@osva-ai/contracts").InferenceRoutingDecisionId;
+            try {
+              await inferenceRoutingPolicies.saveRoutingDecision({
+                id: decisionId,
+                workspaceId: execution.workspaceId,
+                policyVersionId: decision.policyVersionId,
+                decision: {
+                  ...decision,
+                  id: decisionId,
+                  runId: execution.runId,
+                },
+                createdAt: clock.now(),
+              });
+            } catch (error) {
+              logError(
+                "worker.inference_routing_decision_persist_failed",
+                error,
+              );
+            }
+          },
+        });
+        return createRunStepRecorder(execution, recorderDeps).wrapModelGateway(
+          routedProviderStack,
         );
+      };
       const scopedTool = (
         execution: Parameters<typeof createRunStepRecorder>[0],
       ) =>
@@ -415,7 +552,7 @@ export function createWorkerProcess(
                   info: logEvent,
                   error: logError,
                 },
-                modelGateway,
+                modelGateway: modelGatewayBase,
                 toolGateway,
                 memoryGateway,
                 createScopedModelGateway: scopedModel,
@@ -498,6 +635,31 @@ export function createWorkerProcess(
         executionOwner: `worker:${hostname()}:${String(process.pid)}:${randomUUID()}`,
         leaseTtlMs: config.leaseTtlMs,
         heartbeatIntervalMs: config.heartbeatIntervalMs,
+        resolveExecutionPolicyContext: async (workspaceId) => {
+          const routingPolicy =
+            await inferenceRoutingPolicies.findRuntimePolicyByWorkspaceId(
+              workspaceId,
+            );
+          const context: Record<string, unknown> = {
+            inferenceRouting: mergeTrustedInferenceRoutingPolicy(routingPolicy),
+          };
+          if (exactResponseCache !== undefined) {
+            if (
+              dependencies.trustedInferenceResponseCachePolicy !== undefined
+            ) {
+              context.inferenceResponseCache =
+                dependencies.trustedInferenceResponseCachePolicy;
+            } else {
+              const cachePolicy =
+                await workspaceInferenceCachePolicies.findRuntimePolicyByWorkspaceId(
+                  workspaceId,
+                );
+              context.inferenceResponseCache =
+                mergeTrustedInferenceResponseCachePolicy(cachePolicy);
+            }
+          }
+          return Object.freeze(context);
+        },
       });
       const evaluationRunApplication = createEvaluationRunApplication({
         evaluationSuites,
@@ -517,7 +679,7 @@ export function createWorkerProcess(
         ids: { createId: () => randomUUID() },
         clock,
         judgeTasks: evaluationJudgeTasks,
-        judgeModel: createEvaluationJudgeModelInvoker(modelGateway),
+        judgeModel: createEvaluationJudgeModelInvoker(modelGatewayBase),
         modelProfiles,
         executionOwner: `worker:${hostname()}:${String(process.pid)}:judge`,
       });
@@ -535,7 +697,7 @@ export function createWorkerProcess(
           runs: runsRepository,
           clock,
           ids: { createId: () => randomUUID() },
-          judgeModel: createEvaluationJudgeModelInvoker(modelGateway),
+          judgeModel: createEvaluationJudgeModelInvoker(modelGatewayBase),
           modelProfiles,
           executionOwner: `worker:${hostname()}:${String(process.pid)}:pairwise`,
         });
@@ -563,6 +725,15 @@ export function createWorkerProcess(
           error: (event, fields) => logEvent(event, fields ?? {}),
         },
       });
+      const batchInferenceBundle = createBatchInferenceWorkerBundle({
+        database,
+        secretResolver: new ProcessEnvSecretResolver(env),
+        clock,
+        batchLimit:
+          config.recoveryBatchLimit > 0 ? config.recoveryBatchLimit : 20,
+        instrumentation,
+      });
+      batchInferenceCoordinator = batchInferenceBundle.coordinator;
       const recoveryTick = new ExecutionRecoveryTick({
         runs: runsRepository,
         queue,
@@ -576,6 +747,7 @@ export function createWorkerProcess(
         transportBatchLimit: config.transportRepairBatchLimit,
         instrumentation,
         evaluationRecovery: evaluationRecoveryTick,
+        batchInferenceCoordinator,
         logger: {
           info: logEvent,
           error: (event, fields) => logEvent(event, fields ?? {}),
@@ -646,6 +818,9 @@ export function createWorkerProcess(
       if (pairwiseTaskCoordinator !== undefined) {
         await pairwiseTaskCoordinator.drain();
       }
+      if (batchInferenceCoordinator !== undefined) {
+        await batchInferenceCoordinator.drain();
+      }
       if (probeServer !== undefined) {
         await probeServer.close();
         probeServer = undefined;
@@ -658,6 +833,12 @@ export function createWorkerProcess(
       }
       if (mcpClientPool !== undefined) {
         await mcpClientPool.close();
+      }
+      if (inferenceResponseCacheClose !== undefined) {
+        await inferenceResponseCacheClose();
+      }
+      if (runLiveStreamPublisherClose !== undefined) {
+        await runLiveStreamPublisherClose();
       }
       await queue.shutdown();
       await database.close();

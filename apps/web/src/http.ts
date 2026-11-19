@@ -43,6 +43,14 @@ import {
 import { sendJson } from "./json.js";
 import { handleMemoryRegistryRequest } from "./memory-http.js";
 import { handleModelProfileRegistryRequest } from "./model-profile-http.js";
+import {
+  handleBatchInferenceRequest,
+  type BatchInferenceHttpServices,
+} from "./batch-inference-http.js";
+import {
+  handleInferenceRoutingRequest,
+  type InferenceRoutingHttpServices,
+} from "./inference-routing-http.js";
 import { handleModelProviderConnectionRegistryRequest } from "./model-provider-connection-http.js";
 import { handleToolRegistryRequest } from "./tool-http.js";
 import {
@@ -50,6 +58,10 @@ import {
   type RunObservabilityHttpServices,
 } from "./run-observability-http.js";
 import { handleRunRequest, type RunHttpServices } from "./run-http.js";
+import {
+  handleRunLiveStreamRequest,
+  type RunLiveStreamHttpServices,
+} from "./run-live-stream-http.js";
 import {
   handleRunRecoveryRequest,
   type RunRecoveryHttpServices,
@@ -120,6 +132,7 @@ export interface CreateWebApplicationOptions {
   readonly modelProviderConnections: ModelProviderConnectionApplication;
   readonly tools: ToolApplication;
   readonly runs: RunHttpServices;
+  readonly runLiveStream: RunLiveStreamHttpServices;
   readonly runRecovery: RunRecoveryHttpServices;
   readonly runObservability: RunObservabilityHttpServices;
   readonly schedules: ScheduleHttpServices;
@@ -131,6 +144,8 @@ export interface CreateWebApplicationOptions {
   readonly security: WebSecurityServices;
   readonly humanAuth?: HumanAuthHttpServices;
   readonly apiKeys: ApiKeyApplication;
+  readonly batchInference?: BatchInferenceHttpServices;
+  readonly inferenceRouting?: InferenceRoutingHttpServices;
   readonly rateLimit?: HttpRateLimitContext;
   readonly instrumentation?: OsvaInstrumentation;
   readonly logEvent?: HttpRequestLog;
@@ -194,6 +209,7 @@ async function handleRequest(
                 options.modelProviderConnections,
                 options.tools,
                 options.runs,
+                options.runLiveStream,
                 options.runRecovery,
                 options.runObservability,
                 options.schedules,
@@ -203,6 +219,8 @@ async function handleRequest(
                 options.knowledge,
                 options.builder,
                 options.apiKeys,
+                options.batchInference,
+                options.inferenceRouting,
                 options.rateLimit,
                 options.humanAuth,
               );
@@ -232,6 +250,7 @@ async function handleRequestWithContext(
   modelProviderConnections: ModelProviderConnectionApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
+  runLiveStream: RunLiveStreamHttpServices,
   runRecovery: RunRecoveryHttpServices,
   runObservability: RunObservabilityHttpServices,
   schedules: ScheduleHttpServices,
@@ -241,6 +260,8 @@ async function handleRequestWithContext(
   knowledge: KnowledgeHttpServices,
   builder: BuilderHttpServices,
   apiKeys: ApiKeyApplication,
+  batchInference: BatchInferenceHttpServices | undefined,
+  inferenceRouting: InferenceRoutingHttpServices | undefined,
   rateLimit: HttpRateLimitContext | undefined,
   humanAuth: HumanAuthHttpServices | undefined,
 ): Promise<void> {
@@ -449,6 +470,7 @@ async function handleRequestWithContext(
               modelProviderConnections,
               tools,
               runs,
+              runLiveStream,
               runRecovery,
               runObservability,
               schedules,
@@ -458,6 +480,8 @@ async function handleRequestWithContext(
               knowledge,
               builder,
               apiKeys,
+              batchInference,
+              inferenceRouting,
             ),
         );
       } catch (error) {
@@ -513,6 +537,7 @@ async function handleRequestWithContext(
     modelProviderConnections,
     tools,
     runs,
+    runLiveStream,
     runRecovery,
     runObservability,
     schedules,
@@ -522,6 +547,8 @@ async function handleRequestWithContext(
     knowledge,
     builder,
     apiKeys,
+    batchInference,
+    inferenceRouting,
   );
 }
 
@@ -541,6 +568,7 @@ async function dispatchV1ControlPlaneRequest(
   modelProviderConnections: ModelProviderConnectionApplication,
   tools: ToolApplication,
   runs: RunHttpServices,
+  runLiveStream: RunLiveStreamHttpServices,
   runRecovery: RunRecoveryHttpServices,
   runObservability: RunObservabilityHttpServices,
   schedules: ScheduleHttpServices,
@@ -550,6 +578,8 @@ async function dispatchV1ControlPlaneRequest(
   knowledge: KnowledgeHttpServices,
   builder: BuilderHttpServices,
   apiKeys: ApiKeyApplication,
+  batchInference: BatchInferenceHttpServices | undefined,
+  inferenceRouting: InferenceRoutingHttpServices | undefined,
 ): Promise<void> {
   const handledAuthContext = await handleAuthContextRequest(
     request,
@@ -603,6 +633,33 @@ async function dispatchV1ControlPlaneRequest(
   );
   if (handledModelProfiles) {
     return;
+  }
+
+  if (batchInference !== undefined) {
+    const handledBatchInference = await handleBatchInferenceRequest(
+      request,
+      response,
+      method,
+      path,
+      url.searchParams,
+      batchInference,
+    );
+    if (handledBatchInference) {
+      return;
+    }
+  }
+
+  if (inferenceRouting !== undefined) {
+    const handledInferenceRouting = await handleInferenceRoutingRequest(
+      request,
+      response,
+      method,
+      path,
+      inferenceRouting,
+    );
+    if (handledInferenceRouting) {
+      return;
+    }
   }
 
   const handledModelProviderConnections =
@@ -708,6 +765,17 @@ async function dispatchV1ControlPlaneRequest(
     runRecovery,
   );
   if (handledRunRecovery) {
+    return;
+  }
+
+  const handledRunStream = await handleRunLiveStreamRequest(
+    request,
+    response,
+    method,
+    path,
+    runLiveStream,
+  );
+  if (handledRunStream) {
     return;
   }
 

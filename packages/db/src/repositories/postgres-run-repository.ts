@@ -339,6 +339,8 @@ export class PostgresRunRepository implements RunRepository {
         providerReportedModelId: row.providerReportedModelId,
         providerRequestId: row.providerRequestId,
         estimatedCostUsdMicros: row.estimatedCostUsdMicros,
+        modelInvocationSource: row.modelInvocationSource,
+        estimatedAvoidedCostUsdMicros: row.estimatedAvoidedCostUsdMicros,
         errorCode: row.errorCode,
       })
       .where(and(eq(runSteps.id, runStepId), eq(runSteps.status, "RUNNING")))
@@ -925,6 +927,10 @@ function runAttemptTransitionWhere(
 function measurableModelRunStepSql(): SQL {
   return sql`(
     ${runSteps.kind} = 'MODEL'
+  AND (
+    ${runSteps.modelInvocationSource} IS NULL
+    OR ${runSteps.modelInvocationSource} <> 'OSVA_RESPONSE_CACHE_HIT'
+  )
     AND (
       ${runSteps.status} = 'SUCCEEDED'
       OR (

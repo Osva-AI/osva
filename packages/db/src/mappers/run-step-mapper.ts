@@ -1,4 +1,5 @@
 import type {
+  InferenceModelInvocationSource,
   ModelProfileVersionId,
   RunAttemptId,
   RunId,
@@ -35,6 +36,8 @@ export function runStepToRow(step: RunStep) {
     providerReportedModelId: step.providerReportedModelId ?? null,
     providerRequestId: step.providerRequestId ?? null,
     estimatedCostUsdMicros: step.estimatedCostUsdMicros ?? null,
+    modelInvocationSource: step.modelInvocationSource ?? null,
+    estimatedAvoidedCostUsdMicros: step.estimatedAvoidedCostUsdMicros ?? null,
     errorCode: step.errorCode ?? null,
   };
 }
@@ -66,6 +69,11 @@ export function runStepFromRow(row: RunStepRow): RunStep {
     providerReportedModelId: row.providerReportedModelId ?? undefined,
     providerRequestId: row.providerRequestId ?? undefined,
     estimatedCostUsdMicros: row.estimatedCostUsdMicros,
+    modelInvocationSource:
+      row.modelInvocationSource === null
+        ? undefined
+        : (row.modelInvocationSource as InferenceModelInvocationSource),
+    estimatedAvoidedCostUsdMicros: row.estimatedAvoidedCostUsdMicros,
     errorCode: row.errorCode ?? undefined,
   });
 }

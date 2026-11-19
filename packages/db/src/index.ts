@@ -49,6 +49,12 @@ export {
   type ReadinessDependency,
 } from "./readiness-result.js";
 export { PostgresWorkspaceRepository } from "./repositories/postgres-workspace-repository.js";
+export { PostgresWorkspaceInferenceCachePolicyRepository } from "./repositories/postgres-workspace-inference-cache-policy-repository.js";
+export { PostgresInferenceRoutingPolicyRepository } from "./repositories/postgres-inference-routing-repository.js";
+export {
+  PostgresBatchInferenceJobRepository,
+  PostgresWorkspaceBatchInferencePolicyRepository,
+} from "./repositories/postgres-batch-inference-repository.js";
 export { PostgresApiKeyRepository } from "./repositories/postgres-api-key-repository.js";
 export { PostgresAgentRepository } from "./repositories/postgres-agent-repository.js";
 export { PostgresModelProfileRepository } from "./repositories/postgres-model-profile-repository.js";

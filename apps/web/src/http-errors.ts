@@ -50,6 +50,10 @@ import {
   WorkflowRunNotFoundError,
   WorkflowVersionNotFoundError,
   WorkflowEventIdempotencyConflictError,
+  BatchInferenceJobNotFoundError,
+  InferenceRoutingDecisionNotFoundError,
+  InferenceRoutingPolicyNotFoundError,
+  InferenceRoutingPolicyVersionNotFoundError,
   ArtifactNotFoundError,
   ArtifactIdempotencyConflictError,
   BuilderPublicationIdempotencyConflictError,
@@ -213,6 +217,10 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof ConnectorVersionNotFoundError ||
     error instanceof ModelProfileNotFoundError ||
     error instanceof ModelProfileVersionNotFoundError ||
+    error instanceof BatchInferenceJobNotFoundError ||
+    error instanceof InferenceRoutingPolicyNotFoundError ||
+    error instanceof InferenceRoutingPolicyVersionNotFoundError ||
+    error instanceof InferenceRoutingDecisionNotFoundError ||
     error instanceof ToolNotFoundError ||
     error instanceof ToolVersionNotFoundError ||
     error instanceof RunStepNotFoundError ||
@@ -360,6 +368,17 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof InvalidApprovalRequestTransitionError
   ) {
     sendJson(response, 400, { status: "invalid_request" });
+    return;
+  }
+
+  if (
+    error instanceof Error &&
+    error.message === "batch idempotency key conflict"
+  ) {
+    sendJson(response, 409, {
+      status: "conflict",
+      code: "batch_idempotency_key_conflict",
+    });
     return;
   }
 

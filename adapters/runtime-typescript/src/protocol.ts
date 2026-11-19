@@ -1,4 +1,5 @@
 import type {
+  GenerateCompletionInput,
   GenerateTextInput,
   GenerateTextResult,
   JsonValue,
@@ -7,6 +8,9 @@ import type {
 import {
   MODEL_MAX_OUTPUT_TOKENS_MAX,
   MODEL_MAX_OUTPUT_TOKENS_MIN,
+  MODEL_STREAM_EVENT_FORMAT_VERSION,
+  MODEL_STREAM_IPC_MAX_FRAME_BYTES,
+  MODEL_STREAM_MAX_TEXT_DELTA_BYTES,
   MODEL_TEXT_CONTENT_MAX_LENGTH,
   MODEL_TEXT_MAX_MESSAGES,
   MODEL_TEXT_ROLES,
@@ -75,8 +79,36 @@ export interface ModelGenerateFailedMessage {
   };
 }
 
+export interface ModelGenerateStreamRequestMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "model.generate.stream.request";
+  readonly callId: string;
+  readonly binding: string;
+  readonly request: GenerateCompletionInput;
+}
+
+export interface ModelGenerateStreamCloseMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "model.generate.stream.close";
+  readonly callId: string;
+}
+
+export interface ModelGenerateStreamEventMessage {
+  readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
+  readonly type: "model.generate.stream.event";
+  readonly callId: string;
+  readonly event: JsonValue;
+}
+
 export type ParentToChildModelMessage =
-  ModelGenerateSucceededMessage | ModelGenerateFailedMessage;
+  | ModelGenerateSucceededMessage
+  | ModelGenerateFailedMessage
+  | ModelGenerateStreamEventMessage;
+
+export type ChildToParentModelMessage =
+  | ModelGenerateRequestMessage
+  | ModelGenerateStreamRequestMessage
+  | ModelGenerateStreamCloseMessage;
 
 export interface ToolInvokeRequestMessage {
   readonly v: typeof TRUSTED_RUNTIME_IPC_VERSION;
@@ -506,12 +538,74 @@ export function isModelGenerateFailedMessage(
   );
 }
 
+export function isModelGenerateStreamRequestMessage(
+  value: unknown,
+): value is ModelGenerateStreamRequestMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    record.type !== "model.generate.stream.request" ||
+    !isNonEmptyString(record.callId) ||
+    typeof record.binding !== "string" ||
+    !isModelBindingName(record.binding)
+  ) {
+    return false;
+  }
+
+  return isGenerateCompletionInput(record.request);
+}
+
+export function isModelGenerateStreamCloseMessage(
+  value: unknown,
+): value is ModelGenerateStreamCloseMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.v === TRUSTED_RUNTIME_IPC_VERSION &&
+    record.type === "model.generate.stream.close" &&
+    isNonEmptyString(record.callId)
+  );
+}
+
+export function isModelGenerateStreamEventMessage(
+  value: unknown,
+): value is ModelGenerateStreamEventMessage {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.v !== TRUSTED_RUNTIME_IPC_VERSION ||
+    record.type !== "model.generate.stream.event" ||
+    !isNonEmptyString(record.callId)
+  ) {
+    return false;
+  }
+
+  for (const key of Object.keys(record)) {
+    if (key !== "v" && key !== "type" && key !== "callId" && key !== "event") {
+      return false;
+    }
+  }
+
+  return validateChildModelStreamEvent(record.event) !== undefined;
+}
+
 export function isParentToChildModelMessage(
   value: unknown,
 ): value is ParentToChildModelMessage {
   return (
     isModelGenerateSucceededMessage(value) ||
-    isModelGenerateFailedMessage(value)
+    isModelGenerateFailedMessage(value) ||
+    isModelGenerateStreamEventMessage(value)
   );
 }
 
@@ -1086,6 +1180,210 @@ function isTrustedAgentContext(value: unknown): value is TrustedAgentContext {
     typeof record.workspaceId === "string" &&
     typeof record.agentId === "string" &&
     typeof record.agentVersionId === "string"
+  );
+}
+
+export function validateChildModelStreamEvent(
+  value: unknown,
+): Record<string, unknown> | undefined {
+  if (!isChildModelStreamEvent(value)) {
+    return undefined;
+  }
+
+  const frameBytes = utf8ByteLength(JSON.stringify(value));
+  if (frameBytes > MODEL_STREAM_IPC_MAX_FRAME_BYTES) {
+    return undefined;
+  }
+
+  return value;
+}
+
+function utf8ByteLength(text: string): number {
+  let bytes = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code <= 0x7f) {
+      bytes += 1;
+    } else if (code <= 0x7ff) {
+      bytes += 2;
+    } else if (code <= 0xffff) {
+      bytes += 3;
+    } else {
+      bytes += 4;
+    }
+  }
+  return bytes;
+}
+
+function isChildModelStreamEvent(
+  value: unknown,
+): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.streamFormatVersion !== MODEL_STREAM_EVENT_FORMAT_VERSION ||
+    typeof record.streamId !== "string" ||
+    record.streamId.length === 0 ||
+    typeof record.sequence !== "number" ||
+    !Number.isInteger(record.sequence) ||
+    record.sequence < 0 ||
+    typeof record.kind !== "string"
+  ) {
+    return false;
+  }
+
+  const allowedKeys = new Set([
+    "streamFormatVersion",
+    "streamId",
+    "sequence",
+    "kind",
+    "textDelta",
+    "toolCallIndex",
+    "toolCallId",
+    "name",
+    "argumentsDelta",
+    "arguments",
+    "usage",
+    "invocationSource",
+    "providerRequestId",
+    "finishReason",
+    "code",
+    "message",
+    "retryable",
+    "reason",
+  ]);
+
+  for (const key of Object.keys(record)) {
+    if (!allowedKeys.has(key)) {
+      return false;
+    }
+  }
+
+  switch (record.kind) {
+    case "TEXT_DELTA":
+      return (
+        typeof record.textDelta === "string" &&
+        record.textDelta.length > 0 &&
+        record.textDelta.length <= MODEL_STREAM_MAX_TEXT_DELTA_BYTES
+      );
+    case "COMPLETED":
+      return typeof record.finishReason === "string";
+    case "FAILED":
+      return (
+        typeof record.code === "string" && typeof record.message === "string"
+      );
+    case "CANCELLED":
+      return true;
+    case "TOOL_CALL_START":
+      return (
+        typeof record.toolCallIndex === "number" &&
+        Number.isInteger(record.toolCallIndex) &&
+        typeof record.toolCallId === "string" &&
+        typeof record.name === "string"
+      );
+    case "TOOL_CALL_ARGUMENTS_DELTA":
+      return (
+        typeof record.toolCallIndex === "number" &&
+        Number.isInteger(record.toolCallIndex) &&
+        typeof record.argumentsDelta === "string"
+      );
+    case "TOOL_CALL_COMPLETE":
+      return (
+        typeof record.toolCallIndex === "number" &&
+        Number.isInteger(record.toolCallIndex)
+      );
+    case "USAGE_FINAL":
+      return record.usage !== null && typeof record.usage === "object";
+    default:
+      return false;
+  }
+}
+
+export function isGenerateCompletionInput(
+  value: unknown,
+): value is GenerateCompletionInput {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (
+      key !== "messages" &&
+      key !== "maxOutputTokens" &&
+      key !== "toolDefinitions" &&
+      key !== "jsonSchema"
+    ) {
+      return false;
+    }
+  }
+
+  if (!Array.isArray(record.messages)) {
+    return false;
+  }
+
+  if (
+    record.messages.length < 1 ||
+    record.messages.length > MODEL_TEXT_MAX_MESSAGES
+  ) {
+    return false;
+  }
+
+  if (!record.messages.every((message) => isModelTextMessage(message))) {
+    return false;
+  }
+
+  if (record.maxOutputTokens !== undefined) {
+    if (
+      typeof record.maxOutputTokens !== "number" ||
+      !Number.isInteger(record.maxOutputTokens) ||
+      record.maxOutputTokens < MODEL_MAX_OUTPUT_TOKENS_MIN ||
+      record.maxOutputTokens > MODEL_MAX_OUTPUT_TOKENS_MAX
+    ) {
+      return false;
+    }
+  }
+
+  if (record.toolDefinitions !== undefined) {
+    if (
+      !Array.isArray(record.toolDefinitions) ||
+      record.toolDefinitions.length === 0
+    ) {
+      return false;
+    }
+    if (!record.toolDefinitions.every((tool) => isChildToolDefinition(tool))) {
+      return false;
+    }
+  }
+
+  if (record.jsonSchema !== undefined) {
+    if (
+      record.jsonSchema === null ||
+      typeof record.jsonSchema !== "object" ||
+      Array.isArray(record.jsonSchema)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isChildToolDefinition(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.name === "string" &&
+    record.name.length > 0 &&
+    record.inputSchema !== null &&
+    typeof record.inputSchema === "object" &&
+    !Array.isArray(record.inputSchema)
   );
 }
 

@@ -29,11 +29,17 @@ export async function startFakeGeminiGenerateContentServer(): Promise<FakeGemini
         body = raw;
       }
 
+      const url = req.url ?? "/";
       requests.push({
         method: req.method ?? "GET",
-        url: req.url ?? "/",
+        url,
         body,
       });
+
+      if (url.includes(":streamGenerateContent")) {
+        writeGeminiStream(res, extractPrompt(body));
+        return;
+      }
 
       const prompt = extractPrompt(body);
       if (prompt === "hang") {
@@ -419,6 +425,58 @@ export async function startFakeGeminiGenerateContentServer(): Promise<FakeGemini
       });
     },
   };
+}
+
+function writeGeminiStream(res: http.ServerResponse, prompt: string): void {
+  if (prompt === "auth-fail") {
+    res.writeHead(401, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        error: {
+          code: 401,
+          message: "API key not valid.",
+          status: "UNAUTHENTICATED",
+        },
+      }),
+    );
+    return;
+  }
+
+  const text = "normalized text from fake gemini";
+  res.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+
+  const first = text.slice(0, 12);
+  const second = text.slice(12);
+  const emit = (payload: unknown) => {
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  emit({
+    responseId: "gemini_stream",
+    candidates: [{ content: { parts: [{ text: first }] } }],
+  });
+  emit({
+    responseId: "gemini_stream",
+    candidates: [
+      {
+        content: { parts: [{ text }] },
+        finishReason: "STOP",
+      },
+    ],
+    usageMetadata: {
+      promptTokenCount: 120,
+      candidatesTokenCount: 15,
+      totalTokenCount: 135,
+    },
+  });
+  if (second.length > 0) {
+    void second;
+  }
+  res.end();
 }
 
 function extractPrompt(body: unknown): string {

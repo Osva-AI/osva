@@ -5,6 +5,7 @@ import type {
   GenerateTextResult,
   ModelGateway as ModelGatewayPort,
   ModelProvider,
+  ModelStreamEventSource,
 } from "@osva-ai/contracts";
 import { MODEL_ERROR_CODES, isModelFinishReason } from "@osva-ai/contracts";
 import {
@@ -18,6 +19,7 @@ import type {
   ModelGatewayGenerateTextOptions,
   ModelProviderAdapter,
 } from "./provider-adapter.js";
+import { wrapModelCompletionStream } from "./model-stream-wrap.js";
 
 export interface ModelProviderConnectionResolverPort {
   resolveForModelProfileVersion(input: {
@@ -112,6 +114,36 @@ export class ModelGateway implements ModelGatewayPort {
     });
   }
 
+  generateCompletionStream(
+    request: GenerateCompletionRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): ModelStreamEventSource {
+    const parsed = generateCompletionInputSchema.safeParse({
+      messages: request.messages,
+      maxOutputTokens: request.maxOutputTokens,
+      toolDefinitions: request.toolDefinitions,
+      jsonSchema: request.jsonSchema,
+    });
+    if (!parsed.success) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROVIDER_ERROR,
+        "Model generateCompletion request is invalid.",
+      );
+    }
+
+    return wrapModelCompletionStream(
+      this.produceProviderCompletionStream({
+        modelProfileVersionId: request.modelProfileVersionId,
+        messages: parsed.data.messages,
+        maxOutputTokens: parsed.data.maxOutputTokens,
+        toolDefinitions: parsed.data.toolDefinitions,
+        jsonSchema: parsed.data.jsonSchema,
+        signal: options?.signal,
+      }),
+      options?.signal,
+    );
+  }
+
   async generateCompletionOutcome(
     request: GenerateCompletionRequest,
     options?: ModelGatewayGenerateTextOptions,
@@ -189,5 +221,81 @@ export class ModelGateway implements ModelGatewayPort {
       jsonSchema: input.jsonSchema,
       signal: input.signal,
     });
+  }
+
+  private produceProviderCompletionStream(input: {
+    readonly modelProfileVersionId: GenerateTextRequest["modelProfileVersionId"];
+    readonly messages: GenerateCompletionRequest["messages"];
+    readonly maxOutputTokens?: number;
+    readonly toolDefinitions?: GenerateCompletionRequest["toolDefinitions"];
+    readonly jsonSchema?: GenerateCompletionRequest["jsonSchema"];
+    readonly signal?: AbortSignal;
+  }): AsyncIterable<import("@osva-ai/contracts").ModelStreamEvent> {
+    return {
+      [Symbol.asyncIterator]: () => this.iterateProviderCompletionStream(input),
+    };
+  }
+
+  private async *iterateProviderCompletionStream(input: {
+    readonly modelProfileVersionId: GenerateTextRequest["modelProfileVersionId"];
+    readonly messages: GenerateCompletionRequest["messages"];
+    readonly maxOutputTokens?: number;
+    readonly toolDefinitions?: GenerateCompletionRequest["toolDefinitions"];
+    readonly jsonSchema?: GenerateCompletionRequest["jsonSchema"];
+    readonly signal?: AbortSignal;
+  }): AsyncGenerator<import("@osva-ai/contracts").ModelStreamEvent> {
+    if (!input.modelProfileVersionId) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROFILE_VERSION_NOT_FOUND,
+        "ModelProfileVersion was not found.",
+      );
+    }
+
+    const version = await this.deps.modelProfiles.findModelProfileVersionById(
+      input.modelProfileVersionId,
+    );
+    if (version === null) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROFILE_VERSION_NOT_FOUND,
+        "ModelProfileVersion was not found.",
+      );
+    }
+
+    const adapter =
+      this.deps.connectionResolver === undefined
+        ? this.deps.providers[version.provider]
+        : await this.deps.connectionResolver.resolveForModelProfileVersion({
+            modelProfileId: version.modelProfileId,
+            modelProviderConnectionVersionId:
+              version.modelProviderConnectionVersionId,
+            provider: version.provider,
+          });
+
+    if (adapter === undefined) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROVIDER_UNAVAILABLE,
+        "The configured model provider is unavailable.",
+      );
+    }
+
+    const stream = adapter.generateCompletionStream?.({
+      model: version.model,
+      messages: input.messages,
+      maxOutputTokens: input.maxOutputTokens,
+      toolDefinitions: input.toolDefinitions,
+      jsonSchema: input.jsonSchema,
+      signal: input.signal,
+    });
+
+    if (stream === undefined) {
+      throw new ModelGatewayError(
+        MODEL_ERROR_CODES.MODEL_PROVIDER_UNAVAILABLE,
+        "The configured model provider does not support streaming.",
+      );
+    }
+
+    for await (const event of stream) {
+      yield event;
+    }
   }
 }

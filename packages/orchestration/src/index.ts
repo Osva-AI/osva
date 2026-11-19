@@ -30,6 +30,17 @@ export {
   type JudgeTaskRecoveryCoordinatorOptions,
 } from "./judge-task-recovery-coordinator.js";
 export {
+  ProcessBatchInferenceJobs,
+  type ProcessBatchInferenceJobsDependencies,
+  type ProcessBatchInferenceJobsOptions,
+} from "./process-batch-inference-jobs.js";
+export {
+  BatchInferenceRecoveryCoordinator,
+  type BatchInferenceRecoveryCoordinatorOptions,
+} from "./batch-inference-recovery-coordinator.js";
+export { createOtelBatchInferenceMetrics } from "./otel-batch-inference-metrics.js";
+export type { BatchInferenceMetrics } from "./batch-inference-metrics.js";
+export {
   PairwiseTaskRecoveryCoordinator,
   type PairwiseTaskRecoveryCoordinatorOptions,
 } from "./pairwise-task-recovery-coordinator.js";

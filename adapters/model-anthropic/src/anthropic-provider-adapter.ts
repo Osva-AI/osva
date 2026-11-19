@@ -1,10 +1,17 @@
-import type { ModelToolCall } from "@osva-ai/contracts";
-import { MODEL_ERROR_CODES, isCanonicalJsonValue } from "@osva-ai/contracts";
+import type { ModelStreamEvent, ModelToolCall } from "@osva-ai/contracts";
+import {
+  INFERENCE_MODEL_INVOCATION_SOURCES,
+  MODEL_ERROR_CODES,
+  isCanonicalJsonValue,
+} from "@osva-ai/contracts";
+import type { ModelStreamEventSource } from "@osva-ai/contracts";
 import {
   ModelGatewayError,
+  ModelStreamSession,
   buildProviderInvocationMetadata,
   sanitizeProviderModelId,
   sanitizeProviderRequestId,
+  toModelStreamUsage,
   type ModelFinishReason,
   type ModelProviderAdapter,
   type ProviderGenerateTextResult,
@@ -60,6 +67,15 @@ export class AnthropicProviderAdapter implements ModelProviderAdapter {
       timeout: options.timeout,
       defaultHeaders,
     });
+  }
+
+  generateCompletionStream(
+    request: ResolvedProviderGenerateTextRequest,
+  ): ModelStreamEventSource {
+    return {
+      [Symbol.asyncIterator]: () =>
+        iterateAnthropicCompletionStream(this.client, request),
+    };
   }
 
   async generateText(
@@ -176,7 +192,7 @@ function normalizeAnthropicFinishReason(
   }
 }
 
-function mapAnthropicError(error: unknown): ModelGatewayError {
+export function mapAnthropicError(error: unknown): ModelGatewayError {
   if (error instanceof ModelGatewayError) {
     return error;
   }
@@ -325,4 +341,90 @@ function parseRetryAfterMs(headers: Headers | undefined): number | undefined {
   }
 
   return undefined;
+}
+
+async function* iterateAnthropicCompletionStream(
+  client: Anthropic,
+  request: ResolvedProviderGenerateTextRequest,
+): AsyncGenerator<ModelStreamEvent> {
+  const session = new ModelStreamSession();
+  const params = buildAnthropicMessagesCreateBody(request);
+  let yielded = false;
+  let providerRequestId: string | undefined;
+  let finishReason: ModelFinishReason = "other";
+
+  try {
+    const stream = client.messages.stream(params, { signal: request.signal });
+    for await (const event of stream) {
+      yielded = true;
+      switch (event.type) {
+        case "message_start":
+          providerRequestId = sanitizeProviderRequestId(event.message.id);
+          break;
+        case "content_block_start":
+          if (event.content_block.type === "tool_use") {
+            yield session.toolCallStart(
+              event.index,
+              event.content_block.id,
+              event.content_block.name,
+            );
+          }
+          break;
+        case "content_block_delta":
+          if (
+            event.delta.type === "text_delta" &&
+            event.delta.text.length > 0
+          ) {
+            yield session.textDelta(event.delta.text);
+          }
+          if (event.delta.type === "input_json_delta") {
+            yield session.toolCallArgumentsDelta(
+              event.index,
+              event.delta.partial_json,
+            );
+          }
+          break;
+        case "message_delta": {
+          const normalizedUsage = normalizeAnthropicMessagesUsage(
+            event.usage as Message["usage"],
+          );
+          if (
+            normalizedUsage !== undefined &&
+            normalizedUsage.incomplete !== true
+          ) {
+            yield session.usageFinal(
+              toModelStreamUsage(normalizedUsage),
+              INFERENCE_MODEL_INVOCATION_SOURCES[0],
+              providerRequestId,
+            );
+          }
+          if (event.delta.stop_reason !== undefined) {
+            finishReason = normalizeAnthropicFinishReason(
+              event.delta.stop_reason,
+            ).reason;
+          }
+          break;
+        }
+        case "message_stop":
+          yield session.completed(finishReason, providerRequestId);
+          return;
+        default:
+          break;
+      }
+    }
+    yield session.failed(
+      new ModelGatewayError(
+        MODEL_ERROR_CODES.INVALID_MODEL_RESPONSE,
+        "The model provider stream ended without a terminal response.",
+        { retryable: false, provider: ANTHROPIC_PROVIDER },
+      ),
+    );
+  } catch (error) {
+    if (!yielded) {
+      throw mapAnthropicError(error);
+    }
+    yield session.failed(
+      error instanceof ModelGatewayError ? error : mapAnthropicError(error),
+    );
+  }
 }

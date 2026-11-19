@@ -38,6 +38,7 @@ const STATIC_V1_SEGMENTS = new Set([
   "case-results",
   "tools",
   "runs",
+  "stream",
   "attempts",
   "steps",
   "usage",
@@ -84,6 +85,12 @@ const STATIC_V1_SEGMENTS = new Set([
   "validate",
   "publications",
   "prepare",
+  "batch-inference-jobs",
+  "items",
+  "inference-routing-policies",
+  "inference-routing-policy-versions",
+  "inference-routing-decisions",
+  "activate",
 ]);
 
 export function stripV1HttpRoutesExport(source: string): string {
@@ -158,6 +165,84 @@ function addExactPathChecks(source: string, paths: Set<string>): void {
       paths.add(normalizeInventoryPath(pathLiteral));
     }
   }
+}
+
+function readPathMatchRegexLiteralBody(
+  source: string,
+  openSlashIndex: number,
+): string | null {
+  let index = openSlashIndex + 1;
+  let inCharacterClass = false;
+  while (index < source.length) {
+    const character = source.charAt(index);
+    if (inCharacterClass) {
+      if (character === "\\") {
+        index += 2;
+        continue;
+      }
+      if (character === "]") {
+        inCharacterClass = false;
+      }
+      index += 1;
+      continue;
+    }
+    if (character === "\\") {
+      index += 2;
+      continue;
+    }
+    if (character === "[") {
+      inCharacterClass = true;
+      index += 1;
+      continue;
+    }
+    if (character === "/") {
+      return source.slice(openSlashIndex + 1, index);
+    }
+    index += 1;
+  }
+  return null;
+}
+
+/** Regex literal bodies from `path.match(/.../)`, including multiline Prettier layouts. */
+export function extractPathMatchRegexPatternBodies(source: string): string[] {
+  const bodies: string[] = [];
+  const anchor = /path\.match\s*\(/g;
+  let found: RegExpExecArray | null;
+  while ((found = anchor.exec(source)) !== null) {
+    let index = found.index + found[0].length;
+    while (index < source.length && /\s/.test(source.charAt(index))) {
+      index += 1;
+    }
+    if (source.charAt(index) !== "/") {
+      continue;
+    }
+    const body = readPathMatchRegexLiteralBody(source, index);
+    if (body !== null) {
+      bodies.push(body);
+    }
+  }
+  return bodies;
+}
+
+function pathMatchPatternBodyToProbePath(patternBody: string): string {
+  let normalized = patternBody
+    .replace(/\\\//g, "/")
+    .replace(/\(\[\^\/\]\+\)/g, PROBE_SEGMENT)
+    .replace(/^\^/, "")
+    .replace(/\$$/, "");
+  normalized = normalized.replace(/^\//, "");
+  if (!normalized.startsWith("v1/")) {
+    normalized = `v1/${normalized}`;
+  }
+  return `/${normalized}`;
+}
+
+function enumeratePathMatchProbePaths(source: string): Set<string> {
+  const paths = new Set<string>();
+  for (const body of extractPathMatchRegexPatternBodies(source)) {
+    paths.add(pathMatchPatternBodyToProbePath(body));
+  }
+  return paths;
 }
 
 function enumerateRegexProbePaths(source: string): Set<string> {
@@ -346,6 +431,10 @@ export function enumerateProbePathsFromHandlerSource(source: string): string[] {
   }
 
   for (const path of enumerateRegexProbePaths(stripped)) {
+    paths.add(path);
+  }
+
+  for (const path of enumeratePathMatchProbePaths(stripped)) {
     paths.add(path);
   }
 

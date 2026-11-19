@@ -2,12 +2,18 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { isCanonicalJsonValue } from "@osva-ai/contracts";
+import {
+  isCanonicalJsonValue,
+  MODEL_STREAM_EVENT_FORMAT_VERSION,
+} from "@osva-ai/contracts";
 import { describe, expect, it } from "vitest";
 
 import { sha256IntegrityOf } from "../src/integrity.js";
 import { RuntimeErrorCode } from "../src/constants.js";
-import { TrustedTypeScriptRuntimeAdapter } from "../src/trusted-typescript-runtime-adapter.js";
+import {
+  TrustedTypeScriptRuntimeAdapter,
+  type RuntimeModelGateway,
+} from "../src/trusted-typescript-runtime-adapter.js";
 import {
   createTrustedRequest,
   modelBindings,
@@ -16,6 +22,23 @@ import {
 import { createTrustedRoot, installFixture } from "./temp-root.js";
 
 const PARENT_PID = process.pid;
+
+function streamingOnlyRuntimeModelGateway(
+  generateCompletionStream: NonNullable<
+    RuntimeModelGateway["generateCompletionStream"]
+  >,
+): RuntimeModelGateway {
+  return {
+    generateText() {
+      return Promise.reject(
+        new Error(
+          "generateText must not be called in this streaming scenario.",
+        ),
+      );
+    },
+    generateCompletionStream,
+  };
+}
 
 async function adapterFor(root: string, entrypoint: string, timeoutMs = 5_000) {
   const artifact = await fs.readFile(path.join(root, entrypoint));
@@ -71,7 +94,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           valkeyUrl: null,
           openaiApiKey: null,
           hasModels: true,
-          modelKeys: ["generateText"],
+          modelKeys: ["generateCompletionStream", "generateText"],
           hasTools: true,
           toolKeys: ["invoke"],
         },
@@ -405,7 +428,7 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           "tools",
           "workspaceId",
         ],
-        modelKeys: ["generateText"],
+        modelKeys: ["generateCompletionStream", "generateText"],
         openaiApiKey: null,
         hasGenerateText: true,
         hasProvider: false,
@@ -777,6 +800,79 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
           ok: true,
         },
       });
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it("forwards generateCompletionStream events over IPC and aborts when the child closes early", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-stream-text-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "model-stream-text-agent.ts"),
+    );
+    let streamAborted = false;
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: streamingOnlyRuntimeModelGateway(
+        async function* generateCompletionStream(_request, options) {
+          const events = [
+            {
+              streamFormatVersion: MODEL_STREAM_EVENT_FORMAT_VERSION,
+              streamId: "ipc-test",
+              sequence: 0,
+              kind: "TEXT_DELTA" as const,
+              textDelta: "hi",
+            },
+            {
+              streamFormatVersion: MODEL_STREAM_EVENT_FORMAT_VERSION,
+              streamId: "ipc-test",
+              sequence: 1,
+              kind: "COMPLETED" as const,
+              finishReason: "stop" as const,
+            },
+          ];
+          for (const event of events) {
+            if (options?.signal?.aborted) {
+              streamAborted = true;
+              return;
+            }
+            yield event;
+          }
+          options?.signal?.addEventListener(
+            "abort",
+            () => {
+              streamAborted = true;
+            },
+            { once: true },
+          );
+        },
+      ),
+    });
+
+    try {
+      const result = await adapter.execute(
+        createTrustedRequest({
+          timeoutMs: 8_000,
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "model-stream-text-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          modelProfileVersionBindings: modelBindings({
+            primary: "mpv-stream",
+          }),
+        }),
+      );
+      expect(result).toEqual({
+        status: "succeeded",
+        output: {
+          deltas: ["hi"],
+          text: "hi",
+          eventKinds: expect.arrayContaining(["TEXT_DELTA", "COMPLETED"]),
+        },
+      });
+      expect(streamAborted).toBe(false);
     } finally {
       await adapter.close();
     }

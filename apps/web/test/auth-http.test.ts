@@ -228,6 +228,7 @@ describe("GET /v1/auth/context", () => {
       modelProviderConnections: {} as never,
       tools: {} as never,
       runs: {} as never,
+      runLiveStream: {} as never,
       runRecovery: {} as never,
       runObservability: {} as never,
       schedules: {} as never,

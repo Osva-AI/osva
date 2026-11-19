@@ -82,6 +82,10 @@ export interface ConsoleOsvaClient {
    * by the Console stream helper (`ARTIFACT_CONTENT_IDLE_TIMEOUT_MS`).
    */
   downloadArtifact(artifactId: ArtifactId): Promise<ConsoleArtifactContent>;
+  streamRunLive(
+    runId: RunId,
+    clientAbort: AbortSignal,
+  ): Promise<ConsoleArtifactContent>;
   listAgents(): Promise<ConsoleUpstreamResponse<unknown>>;
   getAgent(agentId: AgentId): Promise<ConsoleUpstreamResponse<unknown>>;
   createAgent(body: unknown): Promise<ConsoleUpstreamResponse<unknown>>;
@@ -461,6 +465,21 @@ export function createConsoleOsvaClient(
     downloadArtifact: async (artifactId) => {
       const downloaded = await http.download({
         path: `/v1/artifacts/${encodeURIComponent(artifactId)}/content`,
+      });
+      const requestId = downloaded.headers.get("x-osva-request-id")?.trim();
+      return {
+        status: downloaded.status,
+        headers: downloaded.headers,
+        body: downloaded.body,
+        requestId:
+          requestId === undefined || requestId.length === 0
+            ? undefined
+            : requestId,
+      };
+    },
+    streamRunLive: async (runId) => {
+      const downloaded = await http.download({
+        path: `/v1/runs/${encodeURIComponent(runId)}/stream`,
       });
       const requestId = downloaded.headers.get("x-osva-request-id")?.trim();
       return {
