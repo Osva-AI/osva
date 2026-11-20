@@ -14,13 +14,10 @@ import {
   Workspace,
   buildInferenceBudgetActivationChangedAuditEvent,
 } from "@osva/domain";
-import {
-  createDatabase,
-  migrateDatabase,
-  PostgresInferenceBudgetPolicyRepository,
-  PostgresWorkspaceRepository,
-  type Database,
-} from "@osva/db";
+import { createDatabase, type Database } from "../../src/database.js";
+import { migrateDatabase } from "../../src/migrate.js";
+import { PostgresInferenceBudgetPolicyRepository } from "../../src/repositories/postgres-inference-budget-policy-repository.js";
+import { PostgresWorkspaceRepository } from "../../src/repositories/postgres-workspace-repository.js";
 import { securityAuditEventToRow } from "../../src/mappers/identity-mapper.js";
 import { securityAuditEvents } from "../../src/schema/security-audit-events.js";
 
