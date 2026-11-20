@@ -5,6 +5,7 @@ import type {
   EvaluationCaseId,
   EvaluationComparisonHumanReviewRevisionId,
   EvaluationComparisonId,
+  InferenceBudgetPolicyVersionId,
   JsonObject,
   SecurityAuditEventId,
   SecurityAuditEventType,
@@ -110,6 +111,42 @@ export function buildEvaluationComparisonHumanReviewSubmittedAuditEvent(input: {
       evaluationCaseId: input.evaluationCaseId,
       revisionId: input.revisionId,
       decision: input.decision,
+    },
+  });
+}
+
+export function buildInferenceBudgetActivationChangedAuditEvent(input: {
+  readonly id: SecurityAuditEventId;
+  readonly occurredAt: Date;
+  readonly workspaceId: WorkspaceId;
+  readonly actorUserId: UserId | undefined;
+  readonly actorSubjectId: string;
+  readonly correlationId: string;
+  readonly action: "ACTIVATE" | "DISABLE";
+  readonly previousEnabled: boolean;
+  readonly previousPolicyVersionId?: InferenceBudgetPolicyVersionId;
+  readonly newEnabled: boolean;
+  readonly newPolicyVersionId?: InferenceBudgetPolicyVersionId;
+}): SecurityAuditEvent {
+  return SecurityAuditEvent.create({
+    id: input.id,
+    eventType:
+      SECURITY_AUDIT_EVENT_TYPES.WORKSPACE_INFERENCE_BUDGET_ACTIVATION_CHANGED,
+    occurredAt: input.occurredAt,
+    workspaceId: input.workspaceId,
+    actorUserId: input.actorUserId,
+    details: {
+      action: input.action,
+      subjectId: input.actorSubjectId,
+      correlationId: input.correlationId,
+      previousEnabled: input.previousEnabled,
+      ...(input.previousPolicyVersionId === undefined
+        ? {}
+        : { previousPolicyVersionId: input.previousPolicyVersionId }),
+      newEnabled: input.newEnabled,
+      ...(input.newPolicyVersionId === undefined
+        ? {}
+        : { newPolicyVersionId: input.newPolicyVersionId }),
     },
   });
 }

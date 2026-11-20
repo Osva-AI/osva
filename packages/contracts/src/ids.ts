@@ -47,6 +47,12 @@ export type InferenceRoutingPolicyId = OsvaId<"InferenceRoutingPolicyId">;
 export type InferenceRoutingPolicyVersionId =
   OsvaId<"InferenceRoutingPolicyVersionId">;
 export type InferenceRoutingDecisionId = OsvaId<"InferenceRoutingDecisionId">;
+export type InferenceInvocationId = OsvaId<"InferenceInvocationId">;
+export type InferenceBudgetPolicyId = OsvaId<"InferenceBudgetPolicyId">;
+export type InferenceBudgetPolicyVersionId =
+  OsvaId<"InferenceBudgetPolicyVersionId">;
+export type InferenceBudgetReservationId =
+  OsvaId<"InferenceBudgetReservationId">;
 export type ArtifactId = OsvaId<"ArtifactId">;
 export type EventId = OsvaId<"EventId">;
 export type OfficeWorkerId = OsvaId<"OfficeWorkerId">;

@@ -175,3 +175,13 @@ M20.7.1–M20.7.3 landed on **`3f634df`**. M20.7.4 work is on **`feat/m20-7-4-cl
 - ✅ M20.7.2 OpenAI live smoke (natural-language, 2 scenarios) — [`../operations/M20_7_2_CLOSEOUT_SUMMARY.md`](../operations/M20_7_2_CLOSEOUT_SUMMARY.md)
 - ✅ M20.7.3 Gemini live smoke (natural-language, 2 scenarios) — [`../operations/M20_7_3_CLOSEOUT_SUMMARY.md`](../operations/M20_7_3_CLOSEOUT_SUMMARY.md)
 - ✅ M20.7.4 Anthropic live probes — **FUNCTIONAL_ACCEPTANCE_COMPLETE (scoped)**; **not** RELEASE_VERIFICATION_COMPLETE — [`../operations/M20_7_4_CLOSEOUT_SUMMARY.md`](../operations/M20_7_4_CLOSEOUT_SUMMARY.md)
+
+## B5 — Workspace inference budget (ADR-013)
+
+Branch: **`feat/b5-inference-governance`**. See [`../implementation/B5_INFERENCE_BUDGET_ARCHITECTURE.md`](../implementation/B5_INFERENCE_BUDGET_ARCHITECTURE.md) · [`../operations/B5_6B_RELEASE_READINESS.md`](../operations/B5_6B_RELEASE_READINESS.md).
+
+- ✅ B5.1–B5.5 Contracts, DB (`0044`/`0045`), gateway, reconciliation, judge/batch paths — implementation on branch
+- ✅ B5.5C.3 Activation gate (default **off**), console + web control plane
+- ✅ B5.6A Runtime matrix — Trusted TypeScript, Declarative, REMOTE_HTTP (local integration **PASS**)
+- ✅ B5.6B Container K-series — **10/10 PASS** local Docker; K9 streaming **UNSUPPORTED**
+- ⏳ **RC human gates** — `verify:ci:clean`, hosted CI, `db:migrations:integrity`, `docker-image-smoke` — **PENDING** (do not mark PASS until operator confirms)

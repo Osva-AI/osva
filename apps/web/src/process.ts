@@ -67,6 +67,8 @@ import {
   PostgresBatchInferenceJobRepository,
   PostgresWorkspaceBatchInferencePolicyRepository,
   PostgresInferenceRoutingPolicyRepository,
+  PostgresInferenceBudgetPolicyRepository,
+  PostgresInferenceBudgetAdmissionRepository,
   PostgresApiKeyRepository,
   PostgresIdentityLifecycleRepository,
   PostgresOrganizationMembershipRepository,
@@ -87,6 +89,7 @@ import {
   createModelProfileApplication,
   createBatchInferenceApplication,
   createInferenceRoutingApplication,
+  createInferenceBudgetApplication,
   createModelProviderConnectionApplication,
   createRunApplication,
   createRunRecoveryApplication,
@@ -211,6 +214,11 @@ export function createWebProcess(
   const inferenceRoutingPolicies = new PostgresInferenceRoutingPolicyRepository(
     database,
   );
+  const inferenceBudgetPolicies = new PostgresInferenceBudgetPolicyRepository(
+    database,
+  );
+  const inferenceBudgetAdmission =
+    new PostgresInferenceBudgetAdmissionRepository(database);
   const legacyModelProviders = composeLegacyModelProviders(env);
   const modelProviderConnectionResolver = new ModelProviderConnectionResolver({
     connections: modelProviderConnections,
@@ -661,6 +669,30 @@ export function createWebProcess(
             randomUUID() as import("@osva-ai/contracts").InferenceRoutingPolicyId,
           createPolicyVersionId: () =>
             randomUUID() as import("@osva-ai/contracts").InferenceRoutingPolicyVersionId,
+        },
+      },
+      inferenceBudget: {
+        inferenceBudget: createInferenceBudgetApplication({
+          policies: inferenceBudgetPolicies,
+          periodLedger: inferenceBudgetAdmission,
+          clock,
+          ids: {
+            createPolicyId: () =>
+              randomUUID() as import("@osva-ai/contracts").InferenceBudgetPolicyId,
+            createPolicyVersionId: () =>
+              randomUUID() as import("@osva-ai/contracts").InferenceBudgetPolicyVersionId,
+          },
+          activationMutationsEnabled: config.inferenceBudgetActivationEnabled,
+          securityAuditIds: {
+            createId: () =>
+              randomUUID() as import("@osva-ai/contracts").SecurityAuditEventId,
+          },
+        }),
+        ids: {
+          createPolicyId: () =>
+            randomUUID() as import("@osva-ai/contracts").InferenceBudgetPolicyId,
+          createPolicyVersionId: () =>
+            randomUUID() as import("@osva-ai/contracts").InferenceBudgetPolicyVersionId,
         },
       },
       humanAuth: humanAuthServices,

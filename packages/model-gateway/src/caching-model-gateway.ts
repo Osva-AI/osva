@@ -27,12 +27,14 @@ import {
 import type { ModelProfileRepository } from "@osva/domain";
 
 import { ModelGatewayError } from "./errors.js";
-import type { ModelGatewayGenerateTextOptions } from "./provider-adapter.js";
-import { ModelGateway } from "./model-gateway.js";
+import type {
+  ModelGatewayGenerateTextOptions,
+  ModelGatewayInvokePort,
+} from "./provider-adapter.js";
 import type { ProviderGenerateTextResult } from "./usage.js";
 
 export interface CachingModelGatewayDependencies {
-  readonly inner: ModelGateway;
+  readonly inner: ModelGatewayInvokePort;
   readonly modelProfiles: ModelProfileRepository;
   readonly cache?: ExactResponseCachePort;
   readonly defaultTtlSeconds?: number;

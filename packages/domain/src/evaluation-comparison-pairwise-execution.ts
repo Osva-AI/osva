@@ -24,7 +24,10 @@ import {
 import { assertLlmJudgeModelAuthorized } from "./llm-judge/authorize.js";
 import type { EvaluationComparisonPairwiseTaskRepository } from "./ports/evaluation-comparison-pairwise-task-repository.js";
 import type { EvaluationComparisonRepository } from "./ports/evaluation-comparison-repository.js";
-import type { EvaluationJudgeModelInvoker } from "./ports/evaluation-judge-model-invoker.js";
+import type {
+  EvaluationJudgeModelInvoker,
+  EvaluationJudgeModelInvokeOptionsResolver,
+} from "./ports/evaluation-judge-model-invoker.js";
 import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
 
 export interface ProcessEvaluationComparisonPairwiseTasksDependencies extends EvaluationComparisonApplicationDependencies {
@@ -36,6 +39,7 @@ export interface ProcessEvaluationComparisonPairwiseTasksDependencies extends Ev
   readonly leaseTtlMs?: number;
   readonly modelCallTimeoutMs?: number;
   readonly maxConcurrentTasks?: number;
+  readonly judgeInvokeOptions?: EvaluationJudgeModelInvokeOptionsResolver;
 }
 
 function loadPersistedPairwiseInvocationAttempts(
@@ -273,6 +277,17 @@ export class ProcessEvaluationComparisonPairwiseTasks {
     let completionText: string | undefined;
 
     try {
+      const judgeOptions = this.deps.judgeInvokeOptions
+        ? await this.deps.judgeInvokeOptions.resolve({
+            workspaceId: task.workspaceId,
+            evaluationJudgeTaskId: task.id,
+            sequence: invocationAttempts.length + 1,
+            modelProfileVersionId:
+              snapshot.modelProfileVersionId as ModelProfileVersionId,
+            userMessage: prompt,
+            maxOutputTokens: snapshot.maxOutputTokens,
+          })
+        : undefined;
       modelOutcome = await this.deps.judgeModel.generateJudgeCompletion(
         {
           modelProfileVersionId:
@@ -281,7 +296,10 @@ export class ProcessEvaluationComparisonPairwiseTasks {
           maxOutputTokens: snapshot.maxOutputTokens,
           jsonSchema: PAIRWISE_VERDICT_JSON_SCHEMA as JsonSchemaRecord,
         },
-        { signal: invocationAbort.signal },
+        {
+          signal: invocationAbort.signal,
+          ...judgeOptions,
+        },
       );
       completionText = modelOutcome.text;
     } catch (error) {

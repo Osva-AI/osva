@@ -49,6 +49,8 @@ import { ExamplesPage } from "./routes/examples-page";
 import { ActivityPage } from "./routes/activity-page";
 import { OverviewPage } from "./routes/overview-page";
 import { SettingsPage } from "./routes/settings-page";
+import { InferenceBudgetPage } from "./routes/inference-budget-page";
+import { InferenceBudgetPolicyDetailPage } from "./routes/inference-budget-policy-detail-page";
 import { ApiKeysPage } from "./routes/api-keys-page";
 import { KnowledgePage } from "./routes/knowledge-page";
 import { KnowledgeSourcePage } from "./routes/knowledge-source-page";
@@ -111,6 +113,14 @@ export function App() {
                   <Route path="/activity" element={<ActivityPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/settings/api-keys" element={<ApiKeysPage />} />
+                  <Route
+                    path="/settings/inference-budget"
+                    element={<InferenceBudgetPage />}
+                  />
+                  <Route
+                    path="/settings/inference-budget/:policyId"
+                    element={<InferenceBudgetPolicyDetailPage />}
+                  />
                   <Route path="/examples" element={<ExamplesPage />} />
                   <Route
                     path="/examples/:exampleId"

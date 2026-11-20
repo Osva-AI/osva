@@ -14,6 +14,23 @@ export interface EvaluationJudgeModelInvokeResult {
 
 export interface EvaluationJudgeModelInvokeOptions {
   readonly signal?: AbortSignal;
+  /** Worker-resolved model gateway budget binding when enforcement is active. */
+  readonly budget?: unknown;
+}
+
+export interface EvaluationJudgeModelInvokeContextV1 {
+  readonly workspaceId: import("@osva-ai/contracts").WorkspaceId;
+  readonly evaluationJudgeTaskId: string;
+  readonly sequence: number;
+  readonly modelProfileVersionId: import("@osva-ai/contracts").ModelProfileVersionId;
+  readonly userMessage: string;
+  readonly maxOutputTokens?: number;
+}
+
+export interface EvaluationJudgeModelInvokeOptionsResolver {
+  resolve(
+    context: EvaluationJudgeModelInvokeContextV1,
+  ): Promise<EvaluationJudgeModelInvokeOptions | undefined>;
 }
 
 export interface EvaluationJudgeModelInvoker {

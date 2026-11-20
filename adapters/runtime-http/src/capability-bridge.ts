@@ -798,11 +798,21 @@ export class RuntimeCapabilityBridge {
       };
     }
 
+    const owner = attempt.executionOwner?.trim();
+    const executionOwnership =
+      owner !== undefined && owner.length > 0
+        ? Object.freeze({
+            owner,
+            generation: attempt.executionGeneration,
+          })
+        : undefined;
+
     return {
       execution: createExecutionRequest({
         run,
         runAttempt: attempt,
         agentVersion,
+        executionOwnership,
       }),
     };
   }

@@ -60,6 +60,14 @@ export const inferenceRoutingPolicyVersionIdSchema =
   osvaIdSchema<"InferenceRoutingPolicyVersionId">();
 export const inferenceRoutingDecisionIdSchema =
   osvaIdSchema<"InferenceRoutingDecisionId">();
+export const inferenceInvocationIdSchema =
+  osvaIdSchema<"InferenceInvocationId">();
+export const inferenceBudgetPolicyIdSchema =
+  osvaIdSchema<"InferenceBudgetPolicyId">();
+export const inferenceBudgetPolicyVersionIdSchema =
+  osvaIdSchema<"InferenceBudgetPolicyVersionId">();
+export const inferenceBudgetReservationIdSchema =
+  osvaIdSchema<"InferenceBudgetReservationId">();
 export const artifactIdSchema = osvaIdSchema<"ArtifactId">();
 export const eventIdSchema = osvaIdSchema<"EventId">();
 export const officeWorkerIdSchema = osvaIdSchema<"OfficeWorkerId">();

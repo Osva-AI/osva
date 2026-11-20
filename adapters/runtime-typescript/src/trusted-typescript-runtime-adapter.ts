@@ -181,6 +181,23 @@ interface LiveExecution {
   readonly abort: AbortController;
 }
 
+/**
+ * When a scoped model gateway factory is configured, unscoped fallback gateways
+ * must not be used (workspace budget fail-closed for trusted runtime).
+ */
+export function resolveTrustedRuntimeModelGateway(
+  createScopedModelGateway:
+    | ((execution: ExecutionRequest) => RuntimeModelGateway | undefined)
+    | undefined,
+  execution: ExecutionRequest,
+  fallbackModelGateway: RuntimeModelGateway | undefined,
+): RuntimeModelGateway | undefined {
+  if (createScopedModelGateway !== undefined) {
+    return createScopedModelGateway(execution);
+  }
+  return fallbackModelGateway;
+}
+
 export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
   private readonly trustedRuntimeRoot: string;
   private readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
@@ -353,8 +370,11 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
         request: ipcRequest,
         timeoutMs: request.timeoutMs,
         abort,
-        modelGateway:
-          this.createScopedModelGateway?.(request) ?? this.modelGateway,
+        modelGateway: resolveTrustedRuntimeModelGateway(
+          this.createScopedModelGateway,
+          request,
+          this.modelGateway,
+        ),
         toolGateway:
           this.createScopedToolGateway?.(request) ?? this.toolGateway,
         memoryGateway:

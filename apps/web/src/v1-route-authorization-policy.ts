@@ -11,6 +11,10 @@ export const V1_ADMIN_ROUTE_KEYS = new Set<string>([
   "GET /v1/api-keys",
   "POST /v1/api-keys",
   "POST /v1/api-keys/*/revoke",
+  "POST /v1/inference-budget-policies",
+  "POST /v1/inference-budget-policies/*/versions",
+  "POST /v1/workspace-inference-budget/activate",
+  "POST /v1/workspace-inference-budget/disable",
 ]);
 
 export const V1_EXECUTE_ROUTE_KEYS = new Set<string>([

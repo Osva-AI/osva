@@ -31,11 +31,15 @@ import {
 
 import { ModelGatewayError, isModelGatewayError } from "./errors.js";
 import { CachingModelGateway } from "./caching-model-gateway.js";
+import { mergeProviderAttemptBudgetOptions } from "./model-gateway-budget-context.js";
 import { ModelGateway } from "./model-gateway.js";
 import type { ModelGatewayGenerateTextOptions } from "./provider-adapter.js";
 import type { ProviderGenerateTextResult } from "./usage.js";
 
-export type RoutingModelGatewayInner = ModelGateway | CachingModelGateway;
+export type RoutingModelGatewayInner =
+  | ModelGateway
+  | CachingModelGateway
+  | import("./budget-enforcing-model-gateway.js").BudgetEnforcingModelGateway;
 
 export interface RoutingModelGatewayDependencies {
   readonly inner: RoutingModelGatewayInner;
@@ -203,10 +207,10 @@ export class RoutingModelGateway implements ModelGatewayPort {
         hasToolDefinitions: false,
         hasJsonSchema: false,
       },
-      (routed) =>
+      (routed, attemptOptions) =>
         this.deps.inner.generateTextOutcome(
           routed as GenerateTextRequest,
-          options,
+          attemptOptions,
         ),
     );
   }
@@ -227,7 +231,8 @@ export class RoutingModelGateway implements ModelGatewayPort {
         hasToolDefinitions: (request.toolDefinitions?.length ?? 0) > 0,
         hasJsonSchema: request.jsonSchema !== undefined,
       },
-      (routed) => this.deps.inner.generateCompletionOutcome(routed, options),
+      (routed, attemptOptions) =>
+        this.deps.inner.generateCompletionOutcome(routed, attemptOptions),
     );
   }
 
@@ -317,6 +322,7 @@ export class RoutingModelGateway implements ModelGatewayPort {
     },
     invoke: (
       routed: GenerateTextRequest | GenerateCompletionRequest,
+      attemptOptions?: ModelGatewayGenerateTextOptions,
     ) => Promise<ProviderGenerateTextResult>,
   ): Promise<ProviderGenerateTextResult> {
     const routing = options!.routing!;
@@ -353,10 +359,17 @@ export class RoutingModelGateway implements ModelGatewayPort {
 
       const started = this.deps.now?.() ?? Date.now();
       try {
-        const outcome = await invoke({
-          ...request,
-          modelProfileVersionId: candidateId,
+        const attemptOptions = mergeProviderAttemptBudgetOptions(options, {
+          providerAttemptIndex: index,
+          selectedModelProfileVersionId: candidateId,
         });
+        const outcome = await invoke(
+          {
+            ...request,
+            modelProfileVersionId: candidateId,
+          },
+          attemptOptions,
+        );
 
         this.notifyProviderAttempt(options, {
           modelProfileVersionId: candidateId,

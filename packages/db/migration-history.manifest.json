@@ -265,6 +265,18 @@
       "tag": "0043_inference_routing_slice",
       "file": "0043_inference_routing_slice.sql",
       "sha256": "b7ae1f61ea0f70054947a2363793d6d374da2f299a30ed6ecc5ff2da564a091d"
+    },
+    {
+      "idx": 44,
+      "tag": "0044_inference_budget_slice",
+      "file": "0044_inference_budget_slice.sql",
+      "sha256": "53a35add81aba649aa480f750d465b63420b6d252f4556207a9cc215cbfa038c"
+    },
+    {
+      "idx": 45,
+      "tag": "0045_inference_budget_recovery",
+      "file": "0045_inference_budget_recovery.sql",
+      "sha256": "71f8cf21b92ca71979dbd254a6fd4f0eb930c01b858107ad5cc6951e74322f64"
     }
   ]
 }

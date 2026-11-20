@@ -23,6 +23,33 @@ import { estimateBatchItemCostUsdMicros } from "./batch-inference-item-cost.js";
 import type { BatchInferenceMetrics } from "./batch-inference-metrics.js";
 import { noopBatchInferenceMetrics } from "./batch-inference-metrics.js";
 
+export interface BatchInferenceSubmitBudgetPort {
+  admitBeforeSubmit(input: {
+    readonly job: BatchInferenceJobRecord;
+    readonly items: readonly BatchInferenceItemRecord[];
+  }): Promise<
+    | { readonly kind: "BYPASS" }
+    | { readonly kind: "DENIED"; readonly code: string }
+    | {
+        readonly kind: "ADMITTED";
+        markAllProviderStartedBeforeSubmit(): Promise<void>;
+        rollbackNeverSubmitted(): Promise<void>;
+        markSubmitUncertain(): Promise<void>;
+      }
+  >;
+}
+
+export interface BatchInferenceItemBudgetReconcilePort {
+  reconcileTerminalItem(input: {
+    readonly job: BatchInferenceJobRecord;
+    readonly item: BatchInferenceItemRecord;
+    readonly estimatedCostMicros: number | undefined;
+    readonly usageKnown: boolean;
+    readonly billableProviderOutcome: boolean;
+    readonly cancelled: boolean;
+  }): Promise<void>;
+}
+
 export interface ProcessBatchInferenceJobsDependencies {
   readonly jobs: BatchInferenceJobRepository;
   readonly resolveAdapter: (
@@ -39,6 +66,8 @@ export interface ProcessBatchInferenceJobsDependencies {
     submit(jobId: string): void;
   };
   readonly batchMetrics?: BatchInferenceMetrics;
+  readonly submitBudget?: BatchInferenceSubmitBudgetPort;
+  readonly reconcileItemBudget?: BatchInferenceItemBudgetReconcilePort;
 }
 
 export interface ProcessBatchInferenceJobsOptions {
@@ -111,6 +140,33 @@ export class ProcessBatchInferenceJobs {
     const adapter = await this.deps.resolveAdapter(job);
     const items = await this.deps.loadItems(job.id);
 
+    const budgetAdmission = await this.deps.submitBudget?.admitBeforeSubmit({
+      job,
+      items,
+    });
+    if (budgetAdmission?.kind === "DENIED") {
+      await this.deps.jobs.markSubmissionAmbiguous(
+        job.id,
+        `budget_denied:${budgetAdmission.code}`,
+      );
+      return;
+    }
+
+    if (budgetAdmission?.kind === "ADMITTED") {
+      try {
+        await budgetAdmission.markAllProviderStartedBeforeSubmit();
+      } catch (error) {
+        await budgetAdmission.rollbackNeverSubmitted();
+        await this.deps.jobs.markSubmissionAmbiguous(
+          job.id,
+          error instanceof Error
+            ? error.message
+            : "budget_provider_start_fence_failed",
+        );
+        return;
+      }
+    }
+
     try {
       const result = await adapter.submit({
         provider: job.provider,
@@ -127,12 +183,22 @@ export class ProcessBatchInferenceJobs {
         reconcileAfterAt: new Date(this.deps.clock.now().getTime() + 5_000),
       });
       if (!marked) {
+        if (budgetAdmission?.kind === "ADMITTED") {
+          await budgetAdmission.markSubmitUncertain();
+        }
+        await this.deps.jobs.markSubmissionAmbiguous(
+          job.id,
+          "provider_accepted_local_ack_lost",
+        );
         return;
       }
       await this.transition(job.id, "SUBMITTING", "SUBMITTED");
       this.batchMetrics.recordSubmissionSuccess({ provider: job.provider });
     } catch (error) {
       this.batchMetrics.recordSubmissionFailure({ provider: job.provider });
+      if (budgetAdmission?.kind === "ADMITTED") {
+        await budgetAdmission.markSubmitUncertain();
+      }
       await this.deps.jobs.markSubmissionAmbiguous(
         job.id,
         error instanceof Error ? error.message : "submit failed",
@@ -259,6 +325,23 @@ export class ProcessBatchInferenceJobs {
         errorMessage: providerItem.error?.message,
         estimatedCostMicros,
       });
+      if (
+        this.deps.reconcileItemBudget !== undefined &&
+        isTerminalBatchItemStatus(itemStatus)
+      ) {
+        await this.deps.reconcileItemBudget.reconcileTerminalItem({
+          job,
+          item: { ...item, status: itemStatus },
+          estimatedCostMicros,
+          usageKnown: estimatedCostMicros !== undefined,
+          billableProviderOutcome:
+            itemStatus === "SUCCEEDED" ||
+            (estimatedCostMicros !== undefined && estimatedCostMicros > 0),
+          cancelled:
+            itemStatus === "CANCELLED" ||
+            providerItem.error?.code === MODEL_ERROR_CODES.MODEL_CANCELLED,
+        });
+      }
       if (
         itemStatus === "SUCCEEDED" ||
         itemStatus === "FAILED" ||

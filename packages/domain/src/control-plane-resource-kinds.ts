@@ -21,6 +21,7 @@ export const CONTROL_PLANE_RESOURCE_KINDS = {
   apiKey: "api_key",
   batchInferenceJob: "batch_inference_job",
   inferenceRoutingPolicy: "inference_routing_policy",
+  inferenceBudgetPolicy: "inference_budget_policy",
 } as const;
 
 export type ControlPlaneResourceKind =

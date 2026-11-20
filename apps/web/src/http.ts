@@ -51,6 +51,10 @@ import {
   handleInferenceRoutingRequest,
   type InferenceRoutingHttpServices,
 } from "./inference-routing-http.js";
+import {
+  handleInferenceBudgetRequest,
+  type InferenceBudgetHttpServices,
+} from "./inference-budget-http.js";
 import { handleModelProviderConnectionRegistryRequest } from "./model-provider-connection-http.js";
 import { handleToolRegistryRequest } from "./tool-http.js";
 import {
@@ -146,6 +150,7 @@ export interface CreateWebApplicationOptions {
   readonly apiKeys: ApiKeyApplication;
   readonly batchInference?: BatchInferenceHttpServices;
   readonly inferenceRouting?: InferenceRoutingHttpServices;
+  readonly inferenceBudget?: InferenceBudgetHttpServices;
   readonly rateLimit?: HttpRateLimitContext;
   readonly instrumentation?: OsvaInstrumentation;
   readonly logEvent?: HttpRequestLog;
@@ -221,6 +226,7 @@ async function handleRequest(
                 options.apiKeys,
                 options.batchInference,
                 options.inferenceRouting,
+                options.inferenceBudget,
                 options.rateLimit,
                 options.humanAuth,
               );
@@ -262,6 +268,7 @@ async function handleRequestWithContext(
   apiKeys: ApiKeyApplication,
   batchInference: BatchInferenceHttpServices | undefined,
   inferenceRouting: InferenceRoutingHttpServices | undefined,
+  inferenceBudget: InferenceBudgetHttpServices | undefined,
   rateLimit: HttpRateLimitContext | undefined,
   humanAuth: HumanAuthHttpServices | undefined,
 ): Promise<void> {
@@ -482,6 +489,7 @@ async function handleRequestWithContext(
               apiKeys,
               batchInference,
               inferenceRouting,
+              inferenceBudget,
             ),
         );
       } catch (error) {
@@ -549,6 +557,7 @@ async function handleRequestWithContext(
     apiKeys,
     batchInference,
     inferenceRouting,
+    inferenceBudget,
   );
 }
 
@@ -580,6 +589,7 @@ async function dispatchV1ControlPlaneRequest(
   apiKeys: ApiKeyApplication,
   batchInference: BatchInferenceHttpServices | undefined,
   inferenceRouting: InferenceRoutingHttpServices | undefined,
+  inferenceBudget: InferenceBudgetHttpServices | undefined,
 ): Promise<void> {
   const handledAuthContext = await handleAuthContextRequest(
     request,
@@ -658,6 +668,20 @@ async function dispatchV1ControlPlaneRequest(
       inferenceRouting,
     );
     if (handledInferenceRouting) {
+      return;
+    }
+  }
+
+  if (inferenceBudget !== undefined) {
+    const handledInferenceBudget = await handleInferenceBudgetRequest(
+      request,
+      response,
+      method,
+      path,
+      url.searchParams,
+      inferenceBudget,
+    );
+    if (handledInferenceBudget) {
       return;
     }
   }

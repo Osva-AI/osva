@@ -19,6 +19,7 @@ import { V1_HTTP_ROUTES as officeHttpRoutes } from "./office-http.js";
 import { V1_HTTP_ROUTES as builderHttpRoutes } from "./builder-http.js";
 import { V1_HTTP_ROUTES as batchInferenceHttpRoutes } from "./batch-inference-http.js";
 import { V1_HTTP_ROUTES as inferenceRoutingHttpRoutes } from "./inference-routing-http.js";
+import { V1_HTTP_ROUTES as inferenceBudgetHttpRoutes } from "./inference-budget-http.js";
 
 function withModule<const M extends string>(
   module: M,
@@ -53,6 +54,7 @@ export const V1_ROUTE_INVENTORY = [
   ...withModule("builder-http", builderHttpRoutes),
   ...withModule("batch-inference-http", batchInferenceHttpRoutes),
   ...withModule("inference-routing-http", inferenceRoutingHttpRoutes),
+  ...withModule("inference-budget-http", inferenceBudgetHttpRoutes),
 ] as const;
 
 export const V1_HANDLER_MODULES = [
@@ -77,6 +79,7 @@ export const V1_HANDLER_MODULES = [
   "builder-http",
   "batch-inference-http",
   "inference-routing-http",
+  "inference-budget-http",
 ] as const;
 
 export type V1HandlerModule = (typeof V1_HANDLER_MODULES)[number];

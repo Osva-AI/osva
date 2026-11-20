@@ -46,6 +46,68 @@ function routingOptions(
 }
 
 describe("RoutingModelGateway", () => {
+  it("does not fallback when budget is exceeded", async () => {
+    const profiles = new MemoryModelProfileRepository();
+    await profiles.saveModelProfile(
+      ModelProfile.create({
+        id: mp1,
+        workspaceId,
+        key: "p",
+        name: "P",
+        createdAt: NOW,
+      }),
+    );
+    await profiles.appendModelProfileVersion({
+      id: mpvA,
+      modelProfileId: mp1,
+      provider: "OPENAI",
+      model: "a",
+      createdAt: NOW,
+    });
+    await profiles.appendModelProfileVersion({
+      id: mpvB,
+      modelProfileId: mp1,
+      provider: "OPENAI",
+      model: "b",
+      createdAt: NOW,
+    });
+
+    let calls = 0;
+    const inner = {
+      generateTextOutcome: vi.fn(async () => {
+        calls += 1;
+        throw new ModelGatewayError(
+          MODEL_ERROR_CODES.MODEL_INFERENCE_BUDGET_EXCEEDED,
+          "budget",
+          { retryable: false },
+        );
+      }),
+    };
+    const gateway = new RoutingModelGateway({
+      inner: inner as never,
+      modelProfiles: profiles,
+    });
+    const policy = buildPolicy({
+      schemaVersion: "1",
+      strategy: "PRIORITY_WITH_FALLBACK",
+      candidateModelProfileVersionIds: [mpvA, mpvB],
+      allowFallback: true,
+      maxProviderAttempts: 2,
+    });
+    await expect(
+      gateway.generateTextOutcome(
+        {
+          modelProfileVersionId: mpvA,
+          messages: [{ role: "user", content: "hi" }],
+        },
+        routingOptions(policy),
+      ),
+    ).rejects.toMatchObject({
+      code: MODEL_ERROR_CODES.MODEL_INFERENCE_BUDGET_EXCEEDED,
+    });
+    expect(calls).toBe(1);
+  });
+
   it("passes through when routing is disabled", async () => {
     const inner = {
       generateTextOutcome: vi.fn(async () => ({ text: "ok" })),

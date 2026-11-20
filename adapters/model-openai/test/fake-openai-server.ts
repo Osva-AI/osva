@@ -15,6 +15,17 @@ export interface FakeOpenAIRequest {
   readonly body: unknown;
 }
 
+const BUDGET_WORKER_SLOW_MODEL = "gpt-budget-slow";
+const BUDGET_WORKER_SLOW_DELAY_MS = 2_500;
+
+function extractRequestModel(body: unknown): string | undefined {
+  if (body === null || typeof body !== "object" || !("model" in body)) {
+    return undefined;
+  }
+  const model = (body as { model?: string }).model;
+  return typeof model === "string" ? model : undefined;
+}
+
 export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIResponsesServer> {
   const requests: FakeOpenAIRequest[] = [];
   let abortWaiter: (() => void) | undefined;
@@ -35,278 +46,318 @@ export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIRespon
 
       const url = req.url ?? "/";
 
-      requests.push({
-        method: req.method ?? "GET",
-        url,
-        body,
-      });
-
-      const record =
-        body !== null && typeof body === "object"
-          ? (body as Record<string, unknown>)
-          : {};
-      const requestedModel =
-        typeof record.model === "string" ? record.model : undefined;
-      if (requestedModel === "gpt-routing-retry-429") {
-        res.writeHead(429, {
-          "content-type": "application/json",
-          "retry-after": "1",
+      const run = (): void => {
+        requests.push({
+          method: req.method ?? "GET",
+          url,
+          body,
         });
-        res.end(
-          JSON.stringify({
-            error: {
-              message: "rate limited",
-              type: "rate_limit_error",
-              code: "rate_limit_exceeded",
-            },
-          }),
-        );
-        return;
-      }
-      if (requestedModel === "gpt-routing-response-a") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id: "resp_a",
-            object: "response",
-            status: "completed",
-            model: requestedModel,
-            output_text: "cached-response-a",
-            output: [
-              {
-                type: "message",
-                role: "assistant",
-                content: [
-                  {
-                    type: "output_text",
-                    text: "cached-response-a",
-                  },
-                ],
+
+        const record =
+          body !== null && typeof body === "object"
+            ? (body as Record<string, unknown>)
+            : {};
+        const requestedModel =
+          typeof record.model === "string" ? record.model : undefined;
+        if (requestedModel === "gpt-routing-retry-429") {
+          res.writeHead(429, {
+            "content-type": "application/json",
+            "retry-after": "1",
+          });
+          res.end(
+            JSON.stringify({
+              error: {
+                message: "rate limited",
+                type: "rate_limit_error",
+                code: "rate_limit_exceeded",
               },
-            ],
-            usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
-          }),
-        );
-        return;
-      }
-      if (requestedModel === "gpt-routing-response-b") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id: "resp_b",
-            object: "response",
-            status: "completed",
-            model: requestedModel,
-            output_text: "cached-response-b",
-            output: [
-              {
-                type: "message",
-                role: "assistant",
-                content: [
-                  {
-                    type: "output_text",
-                    text: "cached-response-b",
-                  },
-                ],
-              },
-            ],
-            usage: { input_tokens: 12, output_tokens: 6, total_tokens: 18 },
-          }),
-        );
-        return;
-      }
-
-      if (url.includes("/chat/completions")) {
-        writeChatCompletionResponse(body, res);
-        return;
-      }
-
-      const streamRequested =
-        body !== null &&
-        typeof body === "object" &&
-        (body as Record<string, unknown>).stream === true;
-      if (streamRequested) {
-        req.on("aborted", () => {
-          abortWaiter?.();
-        });
-        writeResponsesApiStream(body, res, req);
-        return;
-      }
-
-      const prompt = extractPrompt(body);
-      if (prompt === "hang") {
-        req.on("aborted", () => {
-          abortWaiter?.();
-        });
-        return;
-      }
-
-      if (prompt === "auth-fail") {
-        res.writeHead(401, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            error: {
-              message: "invalid api key",
-              type: "invalid_request_error",
-            },
-          }),
-        );
-        return;
-      }
-
-      if (prompt === "rate-limit") {
-        res.writeHead(429, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            error: { message: "rate limited", type: "rate_limit_error" },
-          }),
-        );
-        return;
-      }
-
-      if (prompt === "empty") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id: "resp_empty",
-            object: "response",
-            status: "completed",
-            output: [],
-            output_text: "",
-          }),
-        );
-        return;
-      }
-
-      if (prompt === "responses-provenance-no-model") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id: "resp_no_model",
-            object: "response",
-            status: "completed",
-            output_text: "text without model field",
-            output: [
-              {
-                type: "message",
-                role: "assistant",
-                content: [
-                  {
-                    type: "output_text",
-                    text: "text without model field",
-                  },
-                ],
-              },
-            ],
-            usage: {
-              input_tokens: 10,
-              output_tokens: 5,
-              total_tokens: 15,
-            },
-          }),
-        );
-        return;
-      }
-
-      if (prompt === "responses-provenance-no-usage") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id: "resp_no_usage",
-            object: "response",
-            status: "completed",
-            model: "gpt-reported-alias",
-            output_text: "text without usage",
-            output: [
-              {
-                type: "message",
-                role: "assistant",
-                content: [
-                  {
-                    type: "output_text",
-                    text: "text without usage",
-                  },
-                ],
-              },
-            ],
-          }),
-        );
-        return;
-      }
-
-      if (prompt === "responses-provenance-zero-usage") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id: "resp_zero_usage",
-            object: "response",
-            status: "completed",
-            model: "gpt-reported-zero",
-            output_text: "zero usage ok",
-            usage: {
-              input_tokens: 0,
-              output_tokens: 0,
-              total_tokens: 0,
-              input_tokens_details: { cached_tokens: 0 },
-            },
-          }),
-        );
-        return;
-      }
-
-      if (prompt === "responses-provenance-no-cached") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id: "resp_no_cached",
-            object: "response",
-            status: "completed",
-            model: "gpt-reported-uncached",
-            output_text: "uncached usage",
-            usage: {
-              input_tokens: 50,
-              output_tokens: 10,
-              total_tokens: 60,
-            },
-          }),
-        );
-        return;
-      }
-
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(
-        JSON.stringify({
-          id: "resp_ok",
-          object: "response",
-          status: "completed",
-          model: "gpt-5.1-2026-01-15",
-          output_text: "normalized text from fake openai",
-          output: [
-            {
-              type: "message",
-              role: "assistant",
-              content: [
+            }),
+          );
+          return;
+        }
+        if (requestedModel === "gpt-routing-response-a") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id: "resp_a",
+              object: "response",
+              status: "completed",
+              model: requestedModel,
+              output_text: "cached-response-a",
+              output: [
                 {
-                  type: "output_text",
-                  text: "normalized text from fake openai",
+                  type: "message",
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "output_text",
+                      text: "cached-response-a",
+                    },
+                  ],
                 },
               ],
+              usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
+            }),
+          );
+          return;
+        }
+        if (requestedModel === "gpt-routing-response-b") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id: "resp_b",
+              object: "response",
+              status: "completed",
+              model: requestedModel,
+              output_text: "cached-response-b",
+              output: [
+                {
+                  type: "message",
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "output_text",
+                      text: "cached-response-b",
+                    },
+                  ],
+                },
+              ],
+              usage: { input_tokens: 12, output_tokens: 6, total_tokens: 18 },
+            }),
+          );
+          return;
+        }
+
+        if (url.includes("/chat/completions")) {
+          writeChatCompletionResponse(body, res);
+          return;
+        }
+
+        const streamRequested =
+          body !== null &&
+          typeof body === "object" &&
+          (body as Record<string, unknown>).stream === true;
+        if (streamRequested) {
+          req.on("aborted", () => {
+            abortWaiter?.();
+          });
+          writeResponsesApiStream(body, res, req);
+          return;
+        }
+
+        const prompt = extractPrompt(body);
+        if (prompt === "hang") {
+          req.on("aborted", () => {
+            abortWaiter?.();
+          });
+          return;
+        }
+
+        if (prompt === "auth-fail") {
+          res.writeHead(401, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              error: {
+                message: "invalid api key",
+                type: "invalid_request_error",
+              },
+            }),
+          );
+          return;
+        }
+
+        if (prompt === "rate-limit") {
+          res.writeHead(429, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              error: { message: "rate limited", type: "rate_limit_error" },
+            }),
+          );
+          return;
+        }
+
+        if (prompt === "empty") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id: "resp_empty",
+              object: "response",
+              status: "completed",
+              output: [],
+              output_text: "",
+            }),
+          );
+          return;
+        }
+
+        if (prompt === "responses-provenance-no-model") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id: "resp_no_model",
+              object: "response",
+              status: "completed",
+              output_text: "text without model field",
+              output: [
+                {
+                  type: "message",
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "output_text",
+                      text: "text without model field",
+                    },
+                  ],
+                },
+              ],
+              usage: {
+                input_tokens: 10,
+                output_tokens: 5,
+                total_tokens: 15,
+              },
+            }),
+          );
+          return;
+        }
+
+        if (prompt === "responses-provenance-no-usage") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id: "resp_no_usage",
+              object: "response",
+              status: "completed",
+              model: "gpt-reported-alias",
+              output_text: "text without usage",
+              output: [
+                {
+                  type: "message",
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "output_text",
+                      text: "text without usage",
+                    },
+                  ],
+                },
+              ],
+            }),
+          );
+          return;
+        }
+
+        if (prompt === "responses-provenance-high-usage") {
+          const reportedModel = extractRequestModel(body) ?? "gpt-high-usage";
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id: "resp_high_usage",
+              object: "response",
+              status: "completed",
+              model: reportedModel,
+              output_text: "high usage text",
+              output: [
+                {
+                  type: "message",
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "output_text",
+                      text: "high usage text",
+                    },
+                  ],
+                },
+              ],
+              usage: {
+                input_tokens: 500_000,
+                output_tokens: 500_000,
+                total_tokens: 1_000_000,
+              },
+            }),
+          );
+          return;
+        }
+
+        if (prompt === "responses-provenance-zero-usage") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id: "resp_zero_usage",
+              object: "response",
+              status: "completed",
+              model: "gpt-reported-zero",
+              output_text: "zero usage ok",
+              usage: {
+                input_tokens: 0,
+                output_tokens: 0,
+                total_tokens: 0,
+                input_tokens_details: { cached_tokens: 0 },
+              },
+            }),
+          );
+          return;
+        }
+
+        if (prompt === "responses-provenance-no-cached") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id: "resp_no_cached",
+              object: "response",
+              status: "completed",
+              model: "gpt-reported-uncached",
+              output_text: "uncached usage",
+              usage: {
+                input_tokens: 50,
+                output_tokens: 10,
+                total_tokens: 60,
+              },
+            }),
+          );
+          return;
+        }
+
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "resp_ok",
+            object: "response",
+            status: "completed",
+            model: "gpt-5.1-2026-01-15",
+            output_text: "normalized text from fake openai",
+            output: [
+              {
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "output_text",
+                    text: "normalized text from fake openai",
+                  },
+                ],
+              },
+            ],
+            usage: {
+              input_tokens: 120,
+              output_tokens: 15,
+              total_tokens: 135,
+              input_tokens_details: {
+                cached_tokens: 8,
+                cache_write_tokens: 0,
+              },
+              output_tokens_details: {
+                reasoning_tokens: 0,
+              },
             },
-          ],
-          usage: {
-            input_tokens: 120,
-            output_tokens: 15,
-            total_tokens: 135,
-            input_tokens_details: {
-              cached_tokens: 8,
-              cache_write_tokens: 0,
-            },
-            output_tokens_details: {
-              reasoning_tokens: 0,
-            },
-          },
-        }),
-      );
+          }),
+        );
+      };
+      const slowModel = extractRequestModel(body);
+      if (slowModel === BUDGET_WORKER_SLOW_MODEL) {
+        setTimeout(run, BUDGET_WORKER_SLOW_DELAY_MS);
+      } else {
+        run();
+      }
     });
   });
 
@@ -512,6 +563,19 @@ function writeChatCompletionResponse(
   }
   if (userText.includes("chat-provenance-no-usage")) {
     usage = {};
+  }
+  if (
+    userText.includes("chat-provenance-high-usage") ||
+    userText.includes("responses-provenance-high-usage")
+  ) {
+    usage = {
+      prompt_tokens: 500_000,
+      completion_tokens: 500_000,
+      total_tokens: 1_000_000,
+    };
+    if (typeof record.model === "string" && record.model.length > 0) {
+      reportedModel = record.model;
+    }
   }
   if (userText.includes("chat-provenance-zero-usage")) {
     usage = {

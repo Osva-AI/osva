@@ -121,6 +121,56 @@ function createMockClient(
     appendModelProfileVersion: async () => {
       throw new Error("not implemented");
     },
+    listInferenceBudgetPolicies: async () => ({ data: { policies: [] } }),
+    createInferenceBudgetPolicy: async () => {
+      throw new Error("not implemented");
+    },
+    listInferenceBudgetPolicyVersions: async () => ({ data: { versions: [] } }),
+    appendInferenceBudgetPolicyVersion: async () => {
+      throw new Error("not implemented");
+    },
+    getInferenceBudgetPolicyVersion: async () => {
+      throw new Error("not implemented");
+    },
+    getWorkspaceInferenceBudgetConfiguration: async () => ({
+      data: {
+        activation: {
+          enabled: false,
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+        runtimePolicy: { enabled: false },
+        activationMutationsPermitted: false,
+      },
+    }),
+    getWorkspaceInferenceBudgetActivation: async () => ({
+      data: {
+        activation: {
+          enabled: false,
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+        runtimePolicy: { enabled: false },
+        activationMutationsPermitted: false,
+      },
+    }),
+    activateWorkspaceInferenceBudget: async () => {
+      throw new Error("not implemented");
+    },
+    disableWorkspaceInferenceBudget: async () => {
+      throw new Error("not implemented");
+    },
+    getInferenceBudgetPeriodUsage: async () => ({
+      data: {
+        period: {
+          periodKind: "CALENDAR_MONTH_UTC",
+          periodKey: "2026-03",
+          periodStartUtc: "2026-03-01T00:00:00.000Z",
+          periodEndExclusiveUtc: "2026-04-01T00:00:00.000Z",
+        },
+        ledger: null,
+        availableReservationCapacityUsdMicros: null,
+        liabilityAccountingKind: "ESTIMATED_RESERVATION_LIABILITY",
+      },
+    }),
     listModelProviderConnections: async () => ({ data: { connections: [] } }),
     listModelProviderConnectionVersions: async () => ({
       data: { versions: [] },

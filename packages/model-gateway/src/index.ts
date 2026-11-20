@@ -17,10 +17,22 @@ export {
   type RoutingModelGatewayDependencies,
   type RoutingModelGatewayInner,
 } from "./routing-model-gateway.js";
+export {
+  BudgetEnforcingModelGateway,
+  type BudgetEnforcingModelGatewayDependencies,
+} from "./budget-enforcing-model-gateway.js";
+export {
+  isModelGatewayBudgetEnforced,
+  isModelGatewayBudgetFailClosed,
+  mergeProviderAttemptBudgetOptions,
+  type ModelGatewayBudgetContext,
+  type TrustedModelGatewayBudgetBindingV1,
+} from "./model-gateway-budget-context.js";
 export type { ModelProviderConnectionResolverPort } from "./model-gateway.js";
 export type {
   ModelGatewayCacheContext,
   ModelGatewayGenerateTextOptions,
+  ModelGatewayInvokePort,
   ModelGatewayRoutingContext,
   ModelProviderAdapter,
   ResolvedProviderGenerateTextRequest,

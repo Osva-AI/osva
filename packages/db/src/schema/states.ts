@@ -5,6 +5,26 @@
  * They are duplicated here so Drizzle Kit can load the schema without
  * resolving workspace package exports.
  */
+export const PERSISTED_INFERENCE_BUDGET_RESERVATION_STATUSES = [
+  "ADMITTED",
+  "PROVIDER_STARTED",
+  "COMMITTED",
+  "RELEASED",
+  "RECONCILIATION_REQUIRED",
+  "EXPIRED",
+] as const;
+
+export const PERSISTED_INFERENCE_INVOCATION_KINDS = [
+  "SYNC",
+  "STREAM",
+  "JUDGE",
+  "BATCH",
+] as const;
+
+export const PERSISTED_INFERENCE_BUDGET_PERIOD_KINDS = [
+  "CALENDAR_MONTH_UTC",
+] as const;
+
 export const PERSISTED_RUN_STATES = [
   "PENDING",
   "QUEUED",

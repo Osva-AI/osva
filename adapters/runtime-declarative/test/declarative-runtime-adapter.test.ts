@@ -2,10 +2,12 @@ import type {
   ExecutionRequest,
   GenerateCompletionRequest,
   GenerateCompletionResult,
+  InferenceBudgetPolicyVersionId,
   JsonSchemaRecord,
   JsonValue,
   ToolInvokeRequest,
 } from "@osva-ai/contracts";
+import { createDefaultInferenceBudgetRuntimePolicy } from "@osva-ai/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -376,6 +378,36 @@ describe("DeclarativeRuntimeAdapter", () => {
     );
 
     expect(search).not.toHaveBeenCalled();
+  });
+
+  it("D3: fails closed when budget enforcement is active but scoped model gateway is unavailable", async () => {
+    const unscopedGateway = createModelGateway(async () => ({
+      text: JSON.stringify({ answer: "ok" }),
+      toolCalls: [],
+      finishReason: "stop",
+    }));
+    const adapter = new DeclarativeRuntimeAdapter({
+      modelGateway: unscopedGateway,
+      createScopedModelGateway: () => undefined,
+      resolveToolMetadata: vi.fn(),
+    });
+    const request = baseRequest({
+      policyContext: {
+        inferenceBudget: {
+          ...createDefaultInferenceBudgetRuntimePolicy(),
+          enabled: true,
+          policyVersionId: "ibpv-d3" as InferenceBudgetPolicyVersionId,
+        },
+      },
+    });
+    await expect(adapter.execute(request)).resolves.toMatchObject({
+      status: "failed",
+      error: {
+        code: "MODEL_PROVIDER_UNAVAILABLE",
+        message: expect.stringContaining("scoped model gateway"),
+      },
+    });
+    expect(unscopedGateway.generateCompletion).not.toHaveBeenCalled();
   });
 
   it("supports cooperative cancellation", async () => {

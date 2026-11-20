@@ -70,6 +70,8 @@ export const SECURITY_AUDIT_EVENT_TYPES = {
     "evaluation_comparison.human_review_submitted",
   WORKSPACE_INFERENCE_CACHE_POLICY_UPSERTED:
     "workspace.inference_cache_policy.upserted",
+  WORKSPACE_INFERENCE_BUDGET_ACTIVATION_CHANGED:
+    "workspace.inference_budget.activation_changed",
 } as const;
 
 export type SecurityAuditEventType =

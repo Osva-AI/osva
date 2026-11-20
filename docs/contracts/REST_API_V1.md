@@ -444,6 +444,20 @@ Request:
 
 - Returns persisted publication receipt for the workspace (**READ** on workflow resource).
 
+### Workspace inference budget (B5.5C.3 — activation)
+
+Policy CRUD and usage endpoints remain **READ**/**ADMIN** as documented in the control-plane inference-budget HTTP module. Activation mutations are additionally gated server-side by **`OSVA_INFERENCE_BUDGET_ACTIVATION_ENABLED`** (default **false**). When the gate is off, **GET** configuration/usage/activation still succeed; **POST** activate/disable return **403**.
+
+| Route | Method | Minimum action | Body |
+| --- | --- | --- | --- |
+| `/v1/workspace-inference-budget/configuration` | GET | READ | — |
+| `/v1/workspace-inference-budget/activation` | GET | READ | — |
+| `/v1/workspace-inference-budget/period-usage` | GET | READ | Optional `periodKey` query |
+| `/v1/workspace-inference-budget/activate` | POST | ADMIN | `{ "policyVersionId": "…" }` — explicit immutable version; idempotent when already active |
+| `/v1/workspace-inference-budget/disable` | POST | ADMIN | `{}` — idempotent when already disabled |
+
+Successful activate/disable responses return the workspace configuration envelope including `activation`, `runtimePolicy`, and `activationMutationsPermitted`. Disabling does not erase ledger liability or in-flight reservations.
+
 ### Execution lifecycle (not exposed as separate endpoints)
 
 After **POST /v1/evaluation-runs**, the control plane enqueues one child **Run** per case. Progress is observed via run status, **`case-results`**, and **`summary`** on the evaluation run detail. There is no cancel/patch evaluation-run endpoint in V1 HTTP today.

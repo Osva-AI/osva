@@ -26,7 +26,8 @@ export function isDockerAvailable(): boolean {
 }
 
 const EXAMPLE_LOCAL_DOCKER_IMAGE = "osva-container-runtime-python:build";
-const EXAMPLE_RUNTIME_REPOSITORY = "local.test/osva-container-runtime-python";
+/** Local-only repository name; digest must match built image ID so `docker inspect` resolves without registry pull. */
+const EXAMPLE_RUNTIME_REPOSITORY = "osva-container-runtime-python";
 
 export interface ExampleContainerImageFixture {
   /**

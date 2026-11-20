@@ -219,6 +219,93 @@ export function createHumanSessionOsvaClient(
         })
         .then(toDataOnly),
 
+    listInferenceBudgetPolicies: () =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: "/v1/inference-budget-policies",
+        })
+        .then(toDataOnly),
+
+    createInferenceBudgetPolicy: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/inference-budget-policies",
+          body,
+        })
+        .then(toDataOnly),
+
+    listInferenceBudgetPolicyVersions: (policyId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/inference-budget-policies/${encodeURIComponent(policyId)}/versions`,
+        })
+        .then(toDataOnly),
+
+    appendInferenceBudgetPolicyVersion: (policyId, body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: `/v1/inference-budget-policies/${encodeURIComponent(policyId)}/versions`,
+          body,
+        })
+        .then(toDataOnly),
+
+    getInferenceBudgetPolicyVersion: (policyVersionId) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: `/v1/inference-budget-policy-versions/${encodeURIComponent(policyVersionId)}`,
+        })
+        .then(toDataOnly),
+
+    getWorkspaceInferenceBudgetConfiguration: () =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: "/v1/workspace-inference-budget/configuration",
+        })
+        .then(toDataOnly),
+
+    getWorkspaceInferenceBudgetActivation: () =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path: "/v1/workspace-inference-budget/activation",
+        })
+        .then(toDataOnly),
+
+    activateWorkspaceInferenceBudget: (body) =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/workspace-inference-budget/activate",
+          body,
+        })
+        .then(toDataOnly),
+
+    disableWorkspaceInferenceBudget: () =>
+      upstream
+        .requestJson(ctx, {
+          method: "POST",
+          path: "/v1/workspace-inference-budget/disable",
+          body: {},
+        })
+        .then(toDataOnly),
+
+    getInferenceBudgetPeriodUsage: (periodKey) =>
+      upstream
+        .requestJson(ctx, {
+          method: "GET",
+          path:
+            periodKey === undefined
+              ? "/v1/workspace-inference-budget/period-usage"
+              : `/v1/workspace-inference-budget/period-usage?periodKey=${encodeURIComponent(periodKey)}`,
+        })
+        .then(toDataOnly),
+
     listModelProviderConnections: () =>
       upstream
         .requestJson(ctx, {
