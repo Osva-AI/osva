@@ -1,6 +1,6 @@
 # B5 — Workspace inference budget operator runbook
 
-**Scope:** Production operation of workspace-scoped inference budgets (ADR-013).  
+**Scope:** Production operation of workspace-scoped inference budgets (ADR-013).
 **Related:** `docs/implementation/B5_INFERENCE_BUDGET_ARCHITECTURE.md`, `docs/operations/B5_INFERENCE_BUDGET_ACCEPTANCE_MATRIX.md`
 
 ---

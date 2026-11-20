@@ -1,7 +1,7 @@
 # B5 — Inference budget release candidate (RC) readiness
 
-**Branch:** `feat/b5-inference-governance` (local verification; human owns Git/GitHub)  
-**Migrations:** `0044_inference_budget_slice`, `0045_inference_budget_recovery`  
+**Branch:** `feat/b5-inference-governance` (local verification; human owns Git/GitHub)
+**Migrations:** `0044_inference_budget_slice`, `0045_inference_budget_recovery`
 **Handoff date:** 2026-11-21 (B5 RC documentation)
 
 ---

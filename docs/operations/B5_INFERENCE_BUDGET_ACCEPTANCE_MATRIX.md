@@ -2,8 +2,8 @@
 
 **Status:** Design acceptance (tests to be implemented in B5.3+). B5.0R final corrections applied.
 
-**Architecture:** `docs/implementation/B5_INFERENCE_BUDGET_ARCHITECTURE.md`  
-**ADR:** `docs/adr/ADR-013-workspace-inference-budget-authority.md`  
+**Architecture:** `docs/implementation/B5_INFERENCE_BUDGET_ARCHITECTURE.md`
+**ADR:** `docs/adr/ADR-013-workspace-inference-budget-authority.md`
 **Verification gate:** `docs/engineering/OSVA_VERIFICATION_STRATEGY.md` at slice completion.
 
 ---
