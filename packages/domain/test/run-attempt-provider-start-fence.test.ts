@@ -1,5 +1,5 @@
 import { InferenceBudgetProviderStartFenceError } from "@osva-ai/contracts";
-import { assertRunAttemptExecutionLeaseForProviderStart } from "@osva/domain";
+import { assertRunAttemptExecutionLeaseForProviderStart } from "../src/inference-budget/run-attempt-provider-start-fence.js";
 import { describe, expect, it } from "vitest";
 
 describe("assertRunAttemptExecutionLeaseForProviderStart", () => {
