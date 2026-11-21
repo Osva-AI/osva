@@ -3,12 +3,28 @@ import {
   MODEL_STREAM_EVENT_FORMAT_VERSION,
 } from "@osva-ai/contracts";
 import { describe, expect, it, vi } from "vitest";
-import type { ExecutionRequest, GenerateTextRequest } from "@osva-ai/contracts";
+import type {
+  AgentId,
+  AgentVersionId,
+  ExecutionRequest,
+  GenerateTextRequest,
+  KnowledgeIndexId,
+  ModelProfileVersionId,
+  RunAttemptId,
+  RunId,
+  WorkspaceId,
+} from "@osva-ai/contracts";
 import {
   MemoryModelProfileRepository,
   MemoryRunRepository,
 } from "@osva/adapters-memory";
-import { ModelProfile, ModelProfileVersion } from "@osva/domain";
+import {
+  EffectiveRunBindings,
+  ModelProfile,
+  ModelProfileVersion,
+  Run,
+  RunAttempt,
+} from "@osva/domain";
 import { ModelGateway } from "@osva/model-gateway";
 
 import { NO_OP_INSTRUMENTATION } from "../src/instrumentation.js";
@@ -16,13 +32,63 @@ import { OSVA_METRIC } from "../src/metrics.js";
 import { createRunStepRecorder } from "../src/run-step-recorder.js";
 
 const NOW = new Date("2026-01-15T12:00:00.000Z");
+const LATER = new Date("2026-01-15T12:00:01.000Z");
+
+const workspaceId = "ws-1" as WorkspaceId;
+const agentId = "agent-1" as AgentId;
+const agentVersionId = "av-1" as AgentVersionId;
+const runId = "run-1" as RunId;
+const runAttemptId = "attempt-1" as RunAttemptId;
+
+async function seedRunningRunAndAttempt(
+  runs: MemoryRunRepository,
+  bindings?: {
+    readonly modelProfileVersionBindings?: Readonly<
+      Record<string, ModelProfileVersionId>
+    >;
+    readonly knowledgeIndexBindings?: Readonly<
+      Record<string, readonly KnowledgeIndexId[]>
+    >;
+  },
+): Promise<void> {
+  const pending = Run.create({
+    id: runId,
+    workspaceId,
+    agentId,
+    effectiveBindings: EffectiveRunBindings.create({
+      agentVersionId,
+      modelProfileVersionBindings: bindings?.modelProfileVersionBindings ?? {},
+      toolVersionBindings: {},
+      memoryNamespaceBindings: {},
+      knowledgeIndexBindings: bindings?.knowledgeIndexBindings ?? {},
+    }),
+    input: { prompt: "hello" },
+    createdAt: NOW,
+  });
+  const attempt = RunAttempt.createFirst({
+    id: runAttemptId,
+    runId,
+    createdAt: NOW,
+  });
+
+  await runs.createRunWithInitialAttempt(pending, attempt);
+  const queuedRun = pending.transitionTo("QUEUED", LATER);
+  await runs.transitionRun("PENDING", queuedRun);
+  const runningRun = queuedRun.transitionTo("RUNNING", LATER);
+  const runningAttempt = attempt.transitionTo("RUNNING", LATER);
+  await runs.transitionRunAndAttempt(
+    "QUEUED",
+    runningRun,
+    "PENDING",
+    runningAttempt,
+  );
+}
 
 describe("RunStepRecorder", () => {
   it("records a succeeded model step with usage metadata only", async () => {
     const runs = new MemoryRunRepository();
     const modelProfiles = new MemoryModelProfileRepository();
-    const modelProfileVersionId =
-      "mpv-1" as import("@osva-ai/contracts").ModelProfileVersionId;
+    const modelProfileVersionId = "mpv-1" as ModelProfileVersionId;
 
     await modelProfiles.saveModelProfile(
       ModelProfile.create({
@@ -48,13 +114,16 @@ describe("RunStepRecorder", () => {
         createdAt: NOW,
       }),
     );
+    await seedRunningRunAndAttempt(runs, {
+      modelProfileVersionBindings: { default: modelProfileVersionId },
+    });
 
     const execution: ExecutionRequest = {
-      runId: "run-1" as import("@osva-ai/contracts").RunId,
-      runAttemptId: "attempt-1" as import("@osva-ai/contracts").RunAttemptId,
-      workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
-      agentId: "agent-1" as import("@osva-ai/contracts").AgentId,
-      agentVersionId: "av-1" as import("@osva-ai/contracts").AgentVersionId,
+      runId,
+      runAttemptId,
+      workspaceId,
+      agentId,
+      agentVersionId,
       timeoutMs: 30_000,
       input: { prompt: "hello" },
       effectiveConfig: {},
@@ -141,13 +210,16 @@ describe("RunStepRecorder", () => {
         createdAt: NOW,
       }),
     );
+    await seedRunningRunAndAttempt(runs, {
+      modelProfileVersionBindings: { default: modelProfileVersionId },
+    });
 
     const execution: ExecutionRequest = {
-      runId: "run-1" as import("@osva-ai/contracts").RunId,
-      runAttemptId: "attempt-1" as import("@osva-ai/contracts").RunAttemptId,
-      workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
-      agentId: "agent-1" as import("@osva-ai/contracts").AgentId,
-      agentVersionId: "av-1" as import("@osva-ai/contracts").AgentVersionId,
+      runId,
+      runAttemptId,
+      workspaceId,
+      agentId,
+      agentVersionId,
       timeoutMs: 30_000,
       input: { prompt: "hello" },
       effectiveConfig: {},
@@ -246,13 +318,16 @@ describe("RunStepRecorder", () => {
         createdAt: NOW,
       }),
     );
+    await seedRunningRunAndAttempt(runs, {
+      modelProfileVersionBindings: { default: modelProfileVersionId },
+    });
 
     const execution: ExecutionRequest = {
-      runId: "run-1" as import("@osva-ai/contracts").RunId,
-      runAttemptId: "attempt-1" as import("@osva-ai/contracts").RunAttemptId,
-      workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
-      agentId: "agent-1" as import("@osva-ai/contracts").AgentId,
-      agentVersionId: "av-1" as import("@osva-ai/contracts").AgentVersionId,
+      runId,
+      runAttemptId,
+      workspaceId,
+      agentId,
+      agentVersionId,
       timeoutMs: 30_000,
       input: { prompt: "hello" },
       effectiveConfig: {},
@@ -341,13 +416,16 @@ describe("RunStepRecorder", () => {
         createdAt: NOW,
       }),
     );
+    await seedRunningRunAndAttempt(runs, {
+      modelProfileVersionBindings: { default: modelProfileVersionId },
+    });
 
     const execution: ExecutionRequest = {
-      runId: "run-1" as import("@osva-ai/contracts").RunId,
-      runAttemptId: "attempt-1" as import("@osva-ai/contracts").RunAttemptId,
-      workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
-      agentId: "agent-1" as import("@osva-ai/contracts").AgentId,
-      agentVersionId: "av-1" as import("@osva-ai/contracts").AgentVersionId,
+      runId,
+      runAttemptId,
+      workspaceId,
+      agentId,
+      agentVersionId,
       timeoutMs: 30_000,
       input: { prompt: "hello" },
       effectiveConfig: {},
@@ -437,12 +515,17 @@ describe("RunStepRecorder", () => {
 
   it("records a succeeded knowledge step without query text", async () => {
     const runs = new MemoryRunRepository();
+    const knowledgeIndexBindings = {
+      docs: ["idx-1" as KnowledgeIndexId],
+    };
+    await seedRunningRunAndAttempt(runs, { knowledgeIndexBindings });
+
     const execution: ExecutionRequest = {
-      runId: "run-1" as import("@osva-ai/contracts").RunId,
-      runAttemptId: "attempt-1" as import("@osva-ai/contracts").RunAttemptId,
-      workspaceId: "ws-1" as import("@osva-ai/contracts").WorkspaceId,
-      agentId: "agent-1" as import("@osva-ai/contracts").AgentId,
-      agentVersionId: "av-1" as import("@osva-ai/contracts").AgentVersionId,
+      runId,
+      runAttemptId,
+      workspaceId,
+      agentId,
+      agentVersionId,
       timeoutMs: 30_000,
       input: { prompt: "hello" },
       effectiveConfig: {},
@@ -454,9 +537,7 @@ describe("RunStepRecorder", () => {
       modelProfileVersionBindings: {},
       toolVersionBindings: {},
       memoryNamespaceBindings: {},
-      knowledgeIndexBindings: {
-        docs: ["idx-1" as import("@osva-ai/contracts").KnowledgeIndexId],
-      },
+      knowledgeIndexBindings,
       toolGrants: [],
       policyContext: {},
     };
