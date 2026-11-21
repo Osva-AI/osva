@@ -1109,6 +1109,108 @@ describe("inference routing worker acceptance", () => {
     }
   }, 90_000);
 
+  it("R7b: streaming pre-output retryable failure falls back to the second model", async () => {
+    const fakeOpenAI = await startFakeOpenAIResponsesServer();
+    const stack = await seedStreamStack(fakeOpenAI.origin);
+    try {
+      const failProfile = await fetchJson(`${stack.origin}/v1/model-profiles`, {
+        method: "POST",
+        body: { key: "stream-retry-fail", name: "Stream Retry Fail" },
+      });
+      const failModelProfileVersionId = (
+        await fetchJson(
+          `${stack.origin}/v1/model-profiles/${(failProfile.body as { id: string }).id}/versions`,
+          {
+            method: "POST",
+            body: {
+              provider: "OPENAI",
+              model: "gpt-routing-retry-429",
+              modelProviderConnectionVersionId: stack.connectionVersionId,
+            },
+          },
+        )
+      ).body as { id: string };
+
+      const cheapProfile = await fetchJson(
+        `${stack.origin}/v1/model-profiles`,
+        {
+          method: "POST",
+          body: { key: "stream-retry-cheap", name: "Stream Retry Cheap" },
+        },
+      );
+      const cheapModelProfileVersionId = (
+        await fetchJson(
+          `${stack.origin}/v1/model-profiles/${(cheapProfile.body as { id: string }).id}/versions`,
+          {
+            method: "POST",
+            body: {
+              provider: "OPENAI",
+              model: "gpt-routing-cheap",
+              modelProviderConnectionVersionId: stack.connectionVersionId,
+            },
+          },
+        )
+      ).body as { id: string };
+
+      await activatePolicy(stack.origin, {
+        key: "stream-pre-fallback",
+        definition: {
+          schemaVersion: "1",
+          strategy: "PRIORITY_WITH_FALLBACK",
+          candidateModelProfileVersionIds: [
+            failModelProfileVersionId.id,
+            cheapModelProfileVersionId.id,
+          ],
+          allowFallback: true,
+          maxProviderAttempts: 2,
+        },
+      });
+
+      const created = await fetchJson(`${stack.origin}/v1/runs`, {
+        method: "POST",
+        body: {
+          agentId: stack.agentId,
+          agentVersionId: stack.agentVersionId,
+          input: { prompt: "routing-stream-r7b" },
+        },
+      });
+      const runId = (created.body as { run: { id: string } }).run.id;
+
+      await waitUntil(async () => {
+        const run = await fetchJson(`${stack.origin}/v1/runs/${runId}`);
+        return (
+          run.status === 200 &&
+          (run.body as { status?: string }).status === "SUCCEEDED"
+        );
+      });
+
+      const counts = providerModelCounts(fakeOpenAI);
+      expect(counts.get("gpt-routing-retry-429")).toBe(1);
+      expect(counts.get("gpt-routing-cheap")).toBe(1);
+
+      await waitUntil(async () => (await decisionCount()) > 0);
+      const decision = (
+        await database.sql`
+          SELECT decision_json FROM inference_routing_decisions
+          ORDER BY created_at DESC
+          LIMIT 1
+        `
+      )[0] as {
+        decision_json: {
+          providerAttemptCount: number;
+          selectedModelProfileVersionId: string;
+        };
+      };
+      expect(decision.decision_json.providerAttemptCount).toBe(2);
+      expect(decision.decision_json.selectedModelProfileVersionId).toBe(
+        cheapModelProfileVersionId.id,
+      );
+    } finally {
+      await stack.shutdown();
+      await fakeOpenAI.close();
+    }
+  }, 90_000);
+
   it("R8: mid-stream failure does not invoke fallback or fabricate completion", async () => {
     const fakeOpenAI = await startFakeOpenAIResponsesServer();
     const stack = await seedStreamFailStack(fakeOpenAI.origin);

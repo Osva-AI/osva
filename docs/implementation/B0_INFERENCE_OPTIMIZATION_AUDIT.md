@@ -46,7 +46,7 @@ OSVA has a **production-grade synchronous ModelGateway** with OpenAI, Anthropic,
 - Workspace-scoped connection + version validation
 - `createPinnedOutboundFetch` + `evaluateRemoteHttpDestination` for SSRF policy
 - Test timeout 15s; generate timeout 120s on connections
-- LiteLLM-style: custom `baseURL` on OpenAI connection (`apps/worker/test/integration/model-gateway.integration.test.ts`)
+- LiteLLM-style: custom `baseURL` on OpenAI connection (`apps/worker/test/integration/model-gateway.integration.test.ts`); operator guide: [`docs/operations/LITELLM_OPENAI_COMPATIBLE_GATEWAY.md`](../operations/LITELLM_OPENAI_COMPATIBLE_GATEWAY.md)
 
 ### 2.4 Execution plane
 

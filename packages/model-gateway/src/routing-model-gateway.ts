@@ -4,8 +4,10 @@ import type {
   GenerateTextRequest,
   GenerateTextResult,
   InferenceRoutingAttemptRecord,
+  InferenceRoutingCostEstimate,
   InferenceRoutingDecisionRecordV1,
   ModelGateway as ModelGatewayPort,
+  ModelStreamEvent,
   ModelStreamEventSource,
 } from "@osva-ai/contracts";
 import type { ModelProfileVersionId } from "@osva-ai/contracts";
@@ -13,6 +15,8 @@ import {
   INFERENCE_MODEL_INVOCATION_SOURCES,
   INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
   MODEL_ERROR_CODES,
+  estimateRoutingInputTokens,
+  estimateRoutingPreflightCostUsdMicros,
   isModelFinishReason,
 } from "@osva-ai/contracts";
 import { generateTextInputSchema } from "@osva-ai/contracts/schemas";
@@ -115,11 +119,7 @@ export class RoutingModelGateway implements ModelGatewayPort {
   private async *iterateRoutedCompletionStream(
     request: GenerateCompletionRequest,
     options?: ModelGatewayGenerateTextOptions,
-  ): AsyncGenerator<
-    import("@osva-ai/contracts").ModelStreamEvent,
-    void,
-    undefined
-  > {
+  ): AsyncGenerator<ModelStreamEvent, void, undefined> {
     const routing = options!.routing!;
     const policy = routing.policy.definition!;
     const policyVersionId = routing.policy.policyVersionId!;
@@ -130,50 +130,370 @@ export class RoutingModelGateway implements ModelGatewayPort {
       hasJsonSchema: request.jsonSchema !== undefined,
     });
 
-    const stream = this.deps.inner.generateCompletionStream(
-      {
-        ...request,
-        modelProfileVersionId: selection.primary.modelProfileVersionId,
-      },
-      options,
+    const maxAttempts = Math.min(
+      policy.maxProviderAttempts ?? selection.orderedCandidateIds.length,
+      selection.orderedCandidateIds.length,
     );
+    const allowFallback = policy.allowFallback === true;
 
-    let finalOutcome: "SUCCEEDED" | "FAILED" = "SUCCEEDED";
-    try {
-      for await (const event of stream) {
-        if (event.kind === "FAILED") {
-          finalOutcome = "FAILED";
-        }
-        yield event;
+    const attempts: InferenceRoutingAttemptRecord[] = [];
+    let fallbackCount = 0;
+    let lastError: unknown;
+
+    attemptLoop: for (let index = 0; index < maxAttempts; index += 1) {
+      const candidateId = selection.orderedCandidateIds[index];
+      if (candidateId === undefined) {
+        break;
       }
-    } catch (error) {
-      finalOutcome = "FAILED";
-      throw error;
-    } finally {
-      const decision: InferenceRoutingDecisionRecordV1 = {
-        schemaVersion: INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
-        workspaceId: routing.workspaceId,
-        policyVersionId,
-        strategy: policy.strategy,
-        selectedModelProfileVersionId: selection.primary.modelProfileVersionId,
-        selectionReason: selection.primary.reason,
-        eligibleCandidateCount: selection.eligibleCount,
-        fallbackCount: 0,
-        providerAttemptCount: 1,
-        estimatedCost: selection.primary.estimatedCost,
-        attempts: [
+      if (index > 0) {
+        if (!allowFallback) {
+          break;
+        }
+        fallbackCount += 1;
+      }
+
+      const started = this.deps.now?.() ?? Date.now();
+      const attemptOptions = mergeProviderAttemptBudgetOptions(options, {
+        providerAttemptIndex: index,
+        selectedModelProfileVersionId: candidateId,
+      });
+      const candidateCost = await this.estimateCandidatePreflightCost(
+        request,
+        candidateId,
+      );
+
+      let consumerOutputEmitted = false;
+      let forwardedToConsumer = false;
+      let providerEventsSeen = 0;
+
+      try {
+        const stream = this.deps.inner.generateCompletionStream(
           {
-            modelProfileVersionId: selection.primary.modelProfileVersionId,
-            outcome: finalOutcome,
-            estimatedCostUsdMicros:
-              selection.primary.estimatedCost.estimatedCostUsdMicros,
+            ...request,
+            modelProfileVersionId: candidateId,
           },
-        ],
-        runId: options?.routing?.runId,
-        finalOutcome,
-      };
-      await this.persistRoutingDecision({ decision });
+          attemptOptions,
+        );
+
+        for await (const event of stream) {
+          providerEventsSeen += 1;
+          if (event.kind === "FAILED" && !consumerOutputEmitted) {
+            const failure = modelStreamFailedEventToError(event);
+            lastError = failure;
+            this.notifyProviderAttempt(options, {
+              modelProfileVersionId: candidateId,
+              outcome: "FAILED",
+              osvaResponseCacheHit: false,
+            });
+            const failureConnectionVersionId =
+              await this.resolveConnectionVersionId(candidateId);
+            const retryable = isStreamingPreOutputFallbackEligible(failure);
+            if (isNonFallbackRoutingError(failure)) {
+              attempts.push({
+                modelProfileVersionId: candidateId,
+                outcome: "FAILED",
+                failureCode: failure.code,
+                retryable: false,
+                estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
+              });
+              await this.persistRoutingDecision({
+                decision: {
+                  schemaVersion: INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
+                  workspaceId: routing.workspaceId,
+                  policyVersionId,
+                  strategy: policy.strategy,
+                  selectedModelProfileVersionId: candidateId,
+                  selectionReason: selection.primary.reason,
+                  eligibleCandidateCount: selection.eligibleCount,
+                  fallbackCount,
+                  providerAttemptCount: attempts.length,
+                  estimatedCost: candidateCost,
+                  attempts,
+                  runId: options?.routing?.runId,
+                  finalOutcome: "FAILED",
+                },
+              });
+              throw failure;
+            }
+            this.deps.circuitBreaker?.observe({
+              workspaceId: routing.workspaceId,
+              modelProfileVersionId: candidateId,
+              connectionVersionId: failureConnectionVersionId,
+              success: false,
+              retryable,
+              atMs: this.deps.now?.() ?? Date.now(),
+            });
+            attempts.push({
+              modelProfileVersionId: candidateId,
+              outcome: "FAILED",
+              failureCode: failure.code,
+              retryable,
+              estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
+            });
+            if (!allowFallback || !retryable) {
+              break attemptLoop;
+            }
+            continue attemptLoop;
+          }
+
+          if (event.kind === "CANCELLED") {
+            forwardedToConsumer = true;
+            yield event;
+            this.notifyProviderAttempt(options, {
+              modelProfileVersionId: candidateId,
+              outcome: "FAILED",
+              osvaResponseCacheHit: false,
+            });
+            const latencyMs = (this.deps.now?.() ?? Date.now()) - started;
+            attempts.push({
+              modelProfileVersionId: candidateId,
+              outcome: "FAILED",
+              completionLatencyMs: latencyMs,
+              failureCode: MODEL_ERROR_CODES.MODEL_CANCELLED,
+              retryable: false,
+              estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
+            });
+            await this.persistRoutingDecision({
+              decision: {
+                schemaVersion: INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
+                workspaceId: routing.workspaceId,
+                policyVersionId,
+                strategy: policy.strategy,
+                selectedModelProfileVersionId: candidateId,
+                selectionReason:
+                  index === 0
+                    ? selection.primary.reason
+                    : "FALLBACK_AFTER_RETRYABLE_FAILURE",
+                eligibleCandidateCount: selection.eligibleCount,
+                fallbackCount,
+                providerAttemptCount: attempts.length,
+                estimatedCost: candidateCost,
+                attempts,
+                runId: options?.routing?.runId,
+                finalOutcome: "FAILED",
+              },
+            });
+            return;
+          }
+
+          if (isConsumerVisibleStreamOutput(event)) {
+            consumerOutputEmitted = true;
+          }
+
+          if (event.kind === "COMPLETED") {
+            this.notifyProviderAttempt(options, {
+              modelProfileVersionId: candidateId,
+              outcome: "SUCCEEDED",
+              osvaResponseCacheHit: false,
+            });
+
+            const latencyMs = (this.deps.now?.() ?? Date.now()) - started;
+            const successConnectionVersionId =
+              await this.resolveConnectionVersionId(candidateId);
+            this.deps.circuitBreaker?.observe({
+              workspaceId: routing.workspaceId,
+              modelProfileVersionId: candidateId,
+              connectionVersionId: successConnectionVersionId,
+              success: true,
+              retryable: false,
+              atMs: this.deps.now?.() ?? Date.now(),
+            });
+            this.deps.latencyStore?.record({
+              workspaceId: routing.workspaceId,
+              modelProfileVersionId: candidateId,
+              completionMs: latencyMs,
+              atMs: this.deps.now?.() ?? Date.now(),
+            });
+
+            attempts.push({
+              modelProfileVersionId: candidateId,
+              outcome: "SUCCEEDED",
+              completionLatencyMs: latencyMs,
+              estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
+            });
+
+            await this.persistRoutingDecision({
+              decision: {
+                schemaVersion: INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
+                workspaceId: routing.workspaceId,
+                policyVersionId,
+                strategy: policy.strategy,
+                selectedModelProfileVersionId: candidateId,
+                selectionReason:
+                  index === 0
+                    ? selection.primary.reason
+                    : "FALLBACK_AFTER_RETRYABLE_FAILURE",
+                eligibleCandidateCount: selection.eligibleCount,
+                fallbackCount,
+                providerAttemptCount: attempts.length,
+                estimatedCost: candidateCost,
+                attempts,
+                runId: options?.routing?.runId,
+                finalOutcome: "SUCCEEDED",
+              },
+            });
+
+            forwardedToConsumer = true;
+            yield event;
+            return;
+          }
+
+          forwardedToConsumer = true;
+          yield event;
+
+          if (event.kind === "FAILED") {
+            const failure = modelStreamFailedEventToError(event);
+            this.notifyProviderAttempt(options, {
+              modelProfileVersionId: candidateId,
+              outcome: "FAILED",
+              osvaResponseCacheHit: false,
+            });
+            const failureConnectionVersionId =
+              await this.resolveConnectionVersionId(candidateId);
+            const retryable =
+              failure.retryable === true
+                ? true
+                : isRetryableRoutingFallback(failure);
+            this.deps.circuitBreaker?.observe({
+              workspaceId: routing.workspaceId,
+              modelProfileVersionId: candidateId,
+              connectionVersionId: failureConnectionVersionId,
+              success: false,
+              retryable,
+              atMs: this.deps.now?.() ?? Date.now(),
+            });
+            const latencyMs = (this.deps.now?.() ?? Date.now()) - started;
+            attempts.push({
+              modelProfileVersionId: candidateId,
+              outcome: "FAILED",
+              completionLatencyMs: latencyMs,
+              failureCode: failure.code,
+              retryable,
+              estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
+            });
+            await this.persistRoutingDecision({
+              decision: {
+                schemaVersion: INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
+                workspaceId: routing.workspaceId,
+                policyVersionId,
+                strategy: policy.strategy,
+                selectedModelProfileVersionId: candidateId,
+                selectionReason:
+                  index === 0
+                    ? selection.primary.reason
+                    : "FALLBACK_AFTER_RETRYABLE_FAILURE",
+                eligibleCandidateCount: selection.eligibleCount,
+                fallbackCount,
+                providerAttemptCount: attempts.length,
+                estimatedCost: candidateCost,
+                attempts,
+                runId: options?.routing?.runId,
+                finalOutcome: "FAILED",
+              },
+            });
+            throw failure;
+          }
+        }
+
+        return;
+      } catch (error) {
+        if (
+          consumerOutputEmitted ||
+          forwardedToConsumer ||
+          providerEventsSeen > 0
+        ) {
+          throw error;
+        }
+        lastError = error;
+        this.notifyProviderAttempt(options, {
+          modelProfileVersionId: candidateId,
+          outcome: "FAILED",
+          osvaResponseCacheHit: false,
+        });
+        if (isNonFallbackRoutingError(error)) {
+          attempts.push({
+            modelProfileVersionId: candidateId,
+            outcome: "FAILED",
+            failureCode: isModelGatewayError(error) ? error.code : undefined,
+            retryable: false,
+            estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
+          });
+          await this.persistRoutingDecision({
+            decision: {
+              schemaVersion: INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
+              workspaceId: routing.workspaceId,
+              policyVersionId,
+              strategy: policy.strategy,
+              selectedModelProfileVersionId: candidateId,
+              selectionReason: selection.primary.reason,
+              eligibleCandidateCount: selection.eligibleCount,
+              fallbackCount,
+              providerAttemptCount: attempts.length,
+              estimatedCost: candidateCost,
+              attempts,
+              runId: options?.routing?.runId,
+              finalOutcome: "FAILED",
+            },
+          });
+          throw error;
+        }
+
+        const retryable = isStreamingPreOutputFallbackEligible(error);
+        const failureConnectionVersionId =
+          await this.resolveConnectionVersionId(candidateId);
+        this.deps.circuitBreaker?.observe({
+          workspaceId: routing.workspaceId,
+          modelProfileVersionId: candidateId,
+          connectionVersionId: failureConnectionVersionId,
+          success: false,
+          retryable,
+          atMs: this.deps.now?.() ?? Date.now(),
+        });
+
+        attempts.push({
+          modelProfileVersionId: candidateId,
+          outcome: "FAILED",
+          failureCode: isModelGatewayError(error) ? error.code : undefined,
+          retryable,
+          estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
+        });
+
+        if (!allowFallback || !retryable) {
+          break attemptLoop;
+        }
+      }
     }
+
+    const primaryCost = await this.estimateCandidatePreflightCost(
+      request,
+      selection.primary.modelProfileVersionId,
+    );
+    const decision: InferenceRoutingDecisionRecordV1 = {
+      schemaVersion: INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
+      workspaceId: routing.workspaceId,
+      policyVersionId,
+      strategy: policy.strategy,
+      selectedModelProfileVersionId: selection.primary.modelProfileVersionId,
+      selectionReason: selection.primary.reason,
+      eligibleCandidateCount: selection.eligibleCount,
+      fallbackCount,
+      providerAttemptCount: attempts.length,
+      estimatedCost: primaryCost,
+      attempts,
+      runId: options?.routing?.runId,
+      finalOutcome: "FAILED",
+    };
+    await this.persistRoutingDecision({ decision });
+
+    if (lastError !== undefined) {
+      throw lastError;
+    }
+
+    throw new ModelGatewayError(
+      MODEL_ERROR_CODES.MODEL_ROUTING_NO_ELIGIBLE_CANDIDATE,
+      "Routing candidates were exhausted.",
+      { retryable: false },
+    );
   }
 
   async generateTextOutcome(
@@ -358,6 +678,10 @@ export class RoutingModelGateway implements ModelGatewayPort {
       }
 
       const started = this.deps.now?.() ?? Date.now();
+      const candidateCost = await this.estimateCandidatePreflightCost(
+        request,
+        candidateId,
+      );
       try {
         const attemptOptions = mergeProviderAttemptBudgetOptions(options, {
           providerAttemptIndex: index,
@@ -400,8 +724,7 @@ export class RoutingModelGateway implements ModelGatewayPort {
           outcome: "SUCCEEDED",
           completionLatencyMs: latencyMs,
           providerRequestId: outcome.providerRequestId,
-          estimatedCostUsdMicros:
-            selection.primary.estimatedCost.estimatedCostUsdMicros,
+          estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
         });
 
         const decision: InferenceRoutingDecisionRecordV1 = {
@@ -417,7 +740,7 @@ export class RoutingModelGateway implements ModelGatewayPort {
           eligibleCandidateCount: selection.eligibleCount,
           fallbackCount,
           providerAttemptCount: attempts.length,
-          estimatedCost: selection.primary.estimatedCost,
+          estimatedCost: candidateCost,
           attempts,
           runId: options?.routing?.runId,
           finalOutcome: "SUCCEEDED",
@@ -433,16 +756,14 @@ export class RoutingModelGateway implements ModelGatewayPort {
           outcome: "FAILED",
           osvaResponseCacheHit: false,
         });
-        const retryable =
-          isModelGatewayError(error) && error.retryable === true
-            ? true
-            : isRetryableRoutingFallback(error);
-        if (isNonFallbackRoutingError(error)) {
+        const { retryable, nonFallback } = classifyRoutingAttemptFailure(error);
+        if (nonFallback) {
           attempts.push({
             modelProfileVersionId: candidateId,
             outcome: "FAILED",
             failureCode: isModelGatewayError(error) ? error.code : undefined,
             retryable: false,
+            estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
           });
           await this.persistRoutingDecision({
             decision: {
@@ -455,7 +776,7 @@ export class RoutingModelGateway implements ModelGatewayPort {
               eligibleCandidateCount: selection.eligibleCount,
               fallbackCount,
               providerAttemptCount: attempts.length,
-              estimatedCost: selection.primary.estimatedCost,
+              estimatedCost: candidateCost,
               attempts,
               runId: options?.routing?.runId,
               finalOutcome: "FAILED",
@@ -480,6 +801,7 @@ export class RoutingModelGateway implements ModelGatewayPort {
           outcome: "FAILED",
           failureCode: isModelGatewayError(error) ? error.code : undefined,
           retryable,
+          estimatedCostUsdMicros: candidateCost.estimatedCostUsdMicros,
         });
 
         if (!allowFallback || !retryable) {
@@ -488,6 +810,10 @@ export class RoutingModelGateway implements ModelGatewayPort {
       }
     }
 
+    const primaryCost = await this.estimateCandidatePreflightCost(
+      request,
+      selection.primary.modelProfileVersionId,
+    );
     const decision: InferenceRoutingDecisionRecordV1 = {
       schemaVersion: INFERENCE_ROUTING_POLICY_SCHEMA_VERSION,
       workspaceId: routing.workspaceId,
@@ -498,7 +824,7 @@ export class RoutingModelGateway implements ModelGatewayPort {
       eligibleCandidateCount: selection.eligibleCount,
       fallbackCount,
       providerAttemptCount: attempts.length,
-      estimatedCost: selection.primary.estimatedCost,
+      estimatedCost: primaryCost,
       attempts,
       runId: options?.routing?.runId,
       finalOutcome: "FAILED",
@@ -514,6 +840,20 @@ export class RoutingModelGateway implements ModelGatewayPort {
       "Routing candidates were exhausted.",
       { retryable: false },
     );
+  }
+
+  private async estimateCandidatePreflightCost(
+    request: GenerateTextRequest | GenerateCompletionRequest,
+    candidateId: ModelProfileVersionId,
+  ): Promise<InferenceRoutingCostEstimate> {
+    const version =
+      await this.deps.modelProfiles.findModelProfileVersionById(candidateId);
+    const inputTokens = estimateRoutingInputTokens(request.messages);
+    return estimateRoutingPreflightCostUsdMicros({
+      estimatedInputTokens: inputTokens,
+      maxOutputTokens: request.maxOutputTokens,
+      pricing: version?.pricing,
+    });
   }
 
   private async resolveConnectionVersionId(
@@ -561,4 +901,53 @@ function isRoutingActive(options?: ModelGatewayGenerateTextOptions): boolean {
     routing.policy.enabled === true &&
     routing.policy.definition !== undefined
   );
+}
+
+function isConsumerVisibleStreamOutput(event: ModelStreamEvent): boolean {
+  switch (event.kind) {
+    case "TEXT_DELTA":
+      return event.textDelta.length > 0;
+    case "TOOL_CALL_START":
+    case "TOOL_CALL_ARGUMENTS_DELTA":
+    case "TOOL_CALL_COMPLETE":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function modelStreamFailedEventToError(
+  event: Extract<ModelStreamEvent, { kind: "FAILED" }>,
+): ModelGatewayError {
+  return new ModelGatewayError(event.code, event.message, {
+    retryable: event.retryable,
+  });
+}
+
+function classifyRoutingAttemptFailure(error: unknown): {
+  readonly retryable: boolean;
+  readonly nonFallback: boolean;
+} {
+  if (isNonFallbackRoutingError(error)) {
+    return { retryable: false, nonFallback: true };
+  }
+  const retryable =
+    isModelGatewayError(error) && error.retryable === true
+      ? true
+      : isRetryableRoutingFallback(error);
+  return { retryable, nonFallback: false };
+}
+
+function isStreamingPreOutputFallbackEligible(error: unknown): boolean {
+  if (isNonFallbackRoutingError(error)) {
+    return false;
+  }
+  if (isModelGatewayError(error)) {
+    return (
+      error.code === MODEL_ERROR_CODES.MODEL_RATE_LIMITED ||
+      error.code === MODEL_ERROR_CODES.MODEL_REQUEST_TIMEOUT ||
+      error.code === MODEL_ERROR_CODES.MODEL_PROVIDER_UNAVAILABLE
+    );
+  }
+  return false;
 }

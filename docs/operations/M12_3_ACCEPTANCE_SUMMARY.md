@@ -55,7 +55,7 @@ Command: `pnpm acceptance:m12-3` — exitCode 0, wrapper ~200s local.
 | --- | --- |
 | CI deterministic fake OpenAI-compatible server | **PASS** (core gate) |
 | Optional Ollama/real inference | **NOT EXECUTED** — set `OSVA_M12_3_OLLAMA_BASE_URL`; see `scripts/acceptance/m12-3/README.md` |
-| LiteLLM Proxy deployment | **NOT EXECUTED** — protocol compatibility covered by fake server + worker integration |
+| LiteLLM Proxy deployment | **NOT EXECUTED** — protocol compatibility covered by fake server + worker integration; see [LITELLM_OPENAI_COMPATIBLE_GATEWAY.md](./LITELLM_OPENAI_COMPATIBLE_GATEWAY.md) |
 
 ## Security notes
 
