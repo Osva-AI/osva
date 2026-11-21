@@ -1,0 +1,52 @@
+# OSVA deterministic LiteLLM acceptance — routes to a host fake OpenAI upstream.
+# Generated at runtime: __FAKE_UPSTREAM_V1__ is replaced with e.g. http://host.docker.internal:PORT/v1
+model_list:
+  - model_name: osva-litellm-primary
+    litellm_params:
+      model: openai/osva-litellm-primary
+      api_key: osva-fake-upstream-key
+      api_base: __FAKE_UPSTREAM_V1__
+      num_retries: 0
+  - model_name: gpt-routing-test
+    litellm_params:
+      model: openai/gpt-routing-test
+      api_key: osva-fake-upstream-key
+      api_base: __FAKE_UPSTREAM_V1__
+      num_retries: 0
+  - model_name: gpt-routing-cheap
+    litellm_params:
+      model: openai/gpt-routing-cheap
+      api_key: osva-fake-upstream-key
+      api_base: __FAKE_UPSTREAM_V1__
+      num_retries: 0
+  - model_name: gpt-routing-retry-429
+    litellm_params:
+      model: openai/gpt-routing-retry-429
+      api_key: osva-fake-upstream-key
+      api_base: __FAKE_UPSTREAM_V1__
+      num_retries: 0
+  - model_name: gpt-test-snapshot
+    litellm_params:
+      model: openai/gpt-test-snapshot
+      api_key: osva-fake-upstream-key
+      api_base: __FAKE_UPSTREAM_V1__
+      num_retries: 0
+  - model_name: litellm-proxy-retry-risk
+    litellm_params:
+      model: openai/gpt-routing-retry-429
+      api_key: osva-fake-upstream-key
+      api_base: __FAKE_UPSTREAM_V1__
+      num_retries: 12
+
+litellm_settings:
+  num_retries: 0
+  drop_params: true
+  telemetry: false
+  set_verbose: false
+
+router_settings:
+  num_retries: 0
+  allowed_fails: 0
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

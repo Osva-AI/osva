@@ -18,6 +18,44 @@ export interface FakeOpenAIRequest {
 const BUDGET_WORKER_SLOW_MODEL = "gpt-budget-slow";
 const BUDGET_WORKER_SLOW_DELAY_MS = 2_500;
 
+/** Usage shape required by LiteLLM proxy Responses stream pydantic models. */
+const LITELLM_COMPATIBLE_RESPONSE_USAGE = {
+  input_tokens: 120,
+  output_tokens: 15,
+  total_tokens: 135,
+  input_tokens_details: {
+    cached_tokens: 8,
+    cache_write_tokens: 0,
+  },
+  output_tokens_details: {
+    reasoning_tokens: 0,
+  },
+} as const;
+
+/** Extra fields so self-hosted LiteLLM proxy passthrough can parse upstream /v1/responses. */
+function withLiteLlmProxyResponsesWire<T extends Record<string, unknown>>(
+  body: T,
+): T & Record<string, unknown> {
+  return {
+    incomplete_details: null,
+    instructions: null,
+    metadata: {},
+    parallel_tool_calls: true,
+    temperature: 1,
+    tool_choice: "auto",
+    tools: [],
+    top_p: 1,
+    max_output_tokens: null,
+    previous_response_id: null,
+    reasoning: { effort: null, summary: null },
+    store: true,
+    truncation: "disabled",
+    user: null,
+    text: { format: { type: "text" } },
+    ...body,
+  };
+}
+
 function extractRequestModel(body: unknown): string | undefined {
   if (body === null || typeof body !== "object" || !("model" in body)) {
     return undefined;
@@ -319,37 +357,33 @@ export async function startFakeOpenAIResponsesServer(): Promise<FakeOpenAIRespon
 
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
-          JSON.stringify({
-            id: "resp_ok",
-            object: "response",
-            status: "completed",
-            model: "gpt-5.1-2026-01-15",
-            output_text: "normalized text from fake openai",
-            output: [
-              {
-                type: "message",
-                role: "assistant",
-                content: [
-                  {
-                    type: "output_text",
-                    text: "normalized text from fake openai",
-                  },
-                ],
-              },
-            ],
-            usage: {
-              input_tokens: 120,
-              output_tokens: 15,
-              total_tokens: 135,
-              input_tokens_details: {
-                cached_tokens: 8,
-                cache_write_tokens: 0,
-              },
-              output_tokens_details: {
-                reasoning_tokens: 0,
-              },
-            },
-          }),
+          JSON.stringify(
+            withLiteLlmProxyResponsesWire({
+              id: "resp_ok",
+              object: "response",
+              created_at: Math.floor(Date.now() / 1000),
+              error: null,
+              status: "completed",
+              model: "gpt-5.1-2026-01-15",
+              output_text: "normalized text from fake openai",
+              output: [
+                {
+                  id: "msg_ok",
+                  type: "message",
+                  role: "assistant",
+                  status: "completed",
+                  content: [
+                    {
+                      type: "output_text",
+                      text: "normalized text from fake openai",
+                      annotations: [],
+                    },
+                  ],
+                },
+              ],
+              usage: LITELLM_COMPATIBLE_RESPONSE_USAGE,
+            }),
+          ),
         );
       };
       const slowModel = extractRequestModel(body);
@@ -953,8 +987,10 @@ function writeResponsesApiStream(
     res.write(
       `data: ${JSON.stringify({
         type: "response.output_text.delta",
+        item_id: "msg_stream_mid_fail",
         delta: "partial ",
         output_index: 0,
+        content_index: 0,
       })}\n\n`,
     );
     res.destroy();
@@ -970,8 +1006,10 @@ function writeResponsesApiStream(
     res.write(
       `data: ${JSON.stringify({
         type: "response.output_text.delta",
+        item_id: "msg_stream_cancel",
         delta: "partial-",
         output_index: 0,
+        content_index: 0,
       })}\n\n`,
     );
     req.on("aborted", () => {
@@ -1023,12 +1061,7 @@ function writeResponsesApiStream(
         id: "resp_tool_stream",
         status: "completed",
         model: "gpt-5.1-2026-01-15",
-        usage: {
-          input_tokens: 120,
-          output_tokens: 15,
-          total_tokens: 135,
-          input_tokens_details: { cached_tokens: 8 },
-        },
+        usage: LITELLM_COMPATIBLE_RESPONSE_USAGE,
       },
     });
     res.end();
@@ -1036,6 +1069,8 @@ function writeResponsesApiStream(
   }
 
   const text = "normalized text from fake openai";
+  const messageItemId = "msg_stream";
+  const requestedModel = extractRequestModel(body) ?? "gpt-5.1-2026-01-15";
   res.writeHead(200, {
     "content-type": "text/event-stream; charset=utf-8",
     "cache-control": "no-cache",
@@ -1046,30 +1081,71 @@ function writeResponsesApiStream(
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
-  emit({ type: "response.created", response: { id: "resp_stream" } });
   emit({
-    type: "response.output_text.delta",
-    delta: text.slice(0, 12),
+    type: "response.created",
+    response: withLiteLlmProxyResponsesWire({
+      id: "resp_stream",
+      object: "response",
+      created_at: Math.floor(Date.now() / 1000),
+      error: null,
+      status: "in_progress",
+      model: requestedModel,
+      output: [],
+      output_text: "",
+      usage: null,
+    }),
+  });
+  emit({
+    type: "response.output_item.added",
     output_index: 0,
+    item: {
+      id: messageItemId,
+      type: "message",
+      role: "assistant",
+      status: "in_progress",
+    },
   });
   emit({
     type: "response.output_text.delta",
+    item_id: messageItemId,
+    delta: text.slice(0, 12),
+    output_index: 0,
+    content_index: 0,
+  });
+  emit({
+    type: "response.output_text.delta",
+    item_id: messageItemId,
     delta: text.slice(12),
     output_index: 0,
+    content_index: 0,
   });
   emit({
     type: "response.completed",
-    response: {
+    response: withLiteLlmProxyResponsesWire({
       id: "resp_stream",
+      object: "response",
+      created_at: Math.floor(Date.now() / 1000),
+      error: null,
       status: "completed",
-      model: "gpt-5.1-2026-01-15",
-      usage: {
-        input_tokens: 120,
-        output_tokens: 15,
-        total_tokens: 135,
-        input_tokens_details: { cached_tokens: 8 },
-      },
-    },
+      model: requestedModel,
+      output_text: text,
+      output: [
+        {
+          id: "msg_stream",
+          type: "message",
+          role: "assistant",
+          status: "completed",
+          content: [
+            {
+              type: "output_text",
+              text,
+              annotations: [],
+            },
+          ],
+        },
+      ],
+      usage: LITELLM_COMPATIBLE_RESPONSE_USAGE,
+    }),
   });
   res.end();
 }

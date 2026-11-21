@@ -40,7 +40,13 @@ Record PASS/FAIL in `docs/operations/M12_3_ACCEPTANCE_SUMMARY.md` operator evide
 
 ### LiteLLM Proxy
 
-Optional operator-only validation against a real LiteLLM process. Not executed in default CI. Protocol compatibility is covered by `apps/worker/test/integration/model-gateway.integration.test.ts` (fake OpenAI server). Procedure and authority boundaries: [`docs/operations/LITELLM_OPENAI_COMPATIBLE_GATEWAY.md`](../../docs/operations/LITELLM_OPENAI_COMPATIBLE_GATEWAY.md).
+Optional live-proxy acceptance (real LiteLLM container + fake upstream). Not default CI.
+
+```bash
+pnpm acceptance:litellm
+```
+
+Protocol-only CI: `apps/worker/test/integration/model-gateway.integration.test.ts`. Operator guide: [`docs/operations/LITELLM_OPENAI_COMPATIBLE_GATEWAY.md`](../../docs/operations/LITELLM_OPENAI_COMPATIBLE_GATEWAY.md).
 
 ## Evidence
 
