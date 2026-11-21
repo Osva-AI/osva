@@ -40,7 +40,7 @@ Record PASS/FAIL in `docs/operations/M12_3_ACCEPTANCE_SUMMARY.md` operator evide
 
 ### LiteLLM Proxy
 
-Optional operator-only validation against a real LiteLLM process with a deterministic upstream fake. Not executed in default CI.
+Optional operator-only validation against a real LiteLLM process. Not executed in default CI. Protocol compatibility is covered by `apps/worker/test/integration/model-gateway.integration.test.ts` (fake OpenAI server). Procedure and authority boundaries: [`docs/operations/LITELLM_OPENAI_COMPATIBLE_GATEWAY.md`](../../docs/operations/LITELLM_OPENAI_COMPATIBLE_GATEWAY.md).
 
 ## Evidence
 

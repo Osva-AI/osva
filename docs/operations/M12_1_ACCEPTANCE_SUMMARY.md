@@ -21,7 +21,7 @@ Status: **PASS** (automated + M12.3 real-stack/browser acceptance; Compose-only 
 
 - Direct integration: `pnpm --filter @osva/worker exec vitest run --config vitest.integration.config.ts test/integration/model-gateway.integration.test.ts` — **12/12 PASS** including legacy OpenAI, connection-bound OpenAI/Anthropic/Gemini, LiteLLM-style OpenAI-compatible fake, missing credentials, foreign-workspace binding rejection, connection-bound hang/timeout (cancelled model step, single provider request, no credential leakage).
 
-LiteLLM acceptance is **protocol compatibility** via fake OpenAI server, not a deployed LiteLLM process.
+LiteLLM acceptance is **protocol compatibility** via fake OpenAI server, not a deployed LiteLLM process. Operator configuration and Slice C authority boundaries: [LITELLM_OPENAI_COMPATIBLE_GATEWAY.md](./LITELLM_OPENAI_COMPATIBLE_GATEWAY.md).
 
 ## Security evidence
 

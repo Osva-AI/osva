@@ -518,6 +518,63 @@ describe("B5.5B.1 inference budget worker acceptance", () => {
     }
   }, 90_000);
 
+  it("W10b: streaming routing fallback uses distinct reservation identities", async () => {
+    await seedInferenceBudgetPolicy(database, {
+      workspaceId: BUDGET_WORKSPACE,
+      enabled: true,
+      periodLimitUsdMicros: 50_000_000,
+      now: NOW,
+    });
+    const fake = await startFakeOpenAIResponsesServer();
+    const stack = await createBudgetWorkerStack({
+      postgres,
+      valkey,
+      fakeOrigin: fake.origin,
+      modelName: "gpt-routing-retry-429",
+      fixtureName: "model-stream-text-agent.ts",
+      agentKey: "model-stream-text-agent",
+    });
+    try {
+      await activateRoutingPolicy(stack.origin, {
+        key: "w10b-stream-fallback",
+        definition: {
+          schemaVersion: "1",
+          strategy: "PRIORITY_WITH_FALLBACK",
+          candidateModelProfileVersionIds: [
+            stack.modelProfileVersionId,
+            stack.cheapModelProfileVersionId,
+          ],
+          allowFallback: true,
+          maxProviderAttempts: 2,
+        },
+      });
+      const outcome = await runAgentOnce(
+        stack.origin,
+        stack.agentId,
+        stack.agentVersionId,
+        "w10b-stream-fallback",
+      );
+      expect(outcome.terminal).toBe("SUCCEEDED");
+      expect(providerModelCounts(fake.requests).get("gpt-routing-cheap")).toBe(
+        1,
+      );
+      expect(fake.requests.length).toBe(2);
+      const rows = await listReservations(database, BUDGET_WORKSPACE);
+      expect(rows.length).toBeGreaterThanOrEqual(2);
+      const reservationKeys = new Set(rows.map((r) => r.reservation_key));
+      expect(reservationKeys.size).toBe(2);
+      const byAttempt = new Map(
+        rows.map((r) => [r.provider_attempt_index ?? -1, r]),
+      );
+      expect(byAttempt.get(0)?.selected_model_profile_version_id).not.toBe(
+        byAttempt.get(1)?.selected_model_profile_version_id,
+      );
+    } finally {
+      await stack.shutdown();
+      await fake.close();
+    }
+  }, 90_000);
+
   it("W12: budget exceeded on routing — no fallback provider calls", async () => {
     await seedInferenceBudgetPolicy(database, {
       workspaceId: BUDGET_WORKSPACE,
