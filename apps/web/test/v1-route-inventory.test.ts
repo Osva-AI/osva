@@ -14,6 +14,7 @@ import { V1_HTTP_ROUTES as officeHttpRoutes } from "../src/office-http.js";
 import { V1_HTTP_ROUTES as builderHttpRoutes } from "../src/builder-http.js";
 import { V1_HTTP_ROUTES as batchInferenceHttpRoutes } from "../src/batch-inference-http.js";
 import { V1_HTTP_ROUTES as inferenceRoutingHttpRoutes } from "../src/inference-routing-http.js";
+import { V1_HTTP_ROUTES as inferenceBudgetHttpRoutes } from "../src/inference-budget-http.js";
 import { V1_HTTP_ROUTES as runHttpRoutes } from "../src/run-http.js";
 import { V1_HTTP_ROUTES as runLiveStreamHttpRoutes } from "../src/run-live-stream-http.js";
 import { V1_HTTP_ROUTES as runObservabilityHttpRoutes } from "../src/run-observability-http.js";
@@ -62,6 +63,7 @@ const HANDLER_ROUTE_EXPORTS: Readonly<
   "builder-http": builderHttpRoutes,
   "batch-inference-http": batchInferenceHttpRoutes,
   "inference-routing-http": inferenceRoutingHttpRoutes,
+  "inference-budget-http": inferenceBudgetHttpRoutes,
 };
 
 describe("V1_ROUTE_INVENTORY", () => {

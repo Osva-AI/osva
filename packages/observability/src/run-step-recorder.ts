@@ -43,6 +43,7 @@ import {
   type RunRepository,
 } from "@osva/domain";
 import type {
+  ModelGatewayBudgetContext,
   ModelGatewayGenerateTextOptions,
   ProviderGenerateTextResult,
 } from "@osva/model-gateway";
@@ -51,6 +52,14 @@ import {
   isOsvaResponseCacheHitOutcome,
   resolveModelGatewayGenerateOptions,
 } from "./model-gateway-cache-context.js";
+import {
+  type InferenceBudgetOrdinalAllocator,
+  resolveModelGatewayBudgetContextAsync,
+} from "./model-gateway-budget-context.js";
+import type {
+  InferenceBudgetAdmissionPort,
+  InferenceBudgetInvocationOrdinalPort,
+} from "@osva-ai/contracts";
 import {
   attachRoutingProviderAttemptTelemetry,
   shouldRecordFinalProviderMetrics,
@@ -91,6 +100,10 @@ export interface RunStepRecorderDependencies {
   /** Optional ephemeral viewer fan-out; must not affect model execution. */
   readonly runLiveStream?: RunLiveStreamPublisher;
   readonly runLiveStreamPolicy?: RunLiveStreamViewerProjectionPolicy;
+  readonly inferenceBudgetAdmission?: InferenceBudgetAdmissionPort;
+  readonly inferenceBudgetOrdinals?: InferenceBudgetOrdinalAllocator;
+  readonly inferenceBudgetOrdinalPort?: InferenceBudgetInvocationOrdinalPort;
+  readonly resolveTrustedWorkspaceInferenceBudgetPolicy?: import("./model-gateway-budget-context.js").TrustedWorkspaceInferenceBudgetPolicyResolver;
 }
 
 export interface RuntimeMemoryGateway {
@@ -259,11 +272,24 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
           ReturnType<ModelProfileRepository["findModelProfileVersionById"]>
         > = null;
         let runStepFinalized = false;
+        const budget = await resolveModelGatewayBudgetContextAsync({
+          execution: this.execution,
+          admission: this.deps.inferenceBudgetAdmission,
+          bindingName,
+          modelProfileVersionId: request.modelProfileVersionId,
+          runStepId,
+          invocationKind: "SYNC",
+          ordinals: this.deps.inferenceBudgetOrdinals,
+          ordinalPort: this.deps.inferenceBudgetOrdinalPort,
+          resolveTrustedWorkspacePolicy:
+            this.deps.resolveTrustedWorkspaceInferenceBudgetPolicy,
+        });
         const baseGenerateOptions = resolveModelGatewayGenerateOptions(
           this.execution,
           {
             ...options,
             boundModelProfileVersionId: request.modelProfileVersionId,
+            budget,
           },
         );
         const attemptTelemetry = attachRoutingProviderAttemptTelemetry(
@@ -414,17 +440,23 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
       bindingName,
     });
 
-    const inner = this.inner.generateCompletionStream(
-      request,
-      resolveModelGatewayGenerateOptions(this.execution, {
-        signal: options?.signal,
-        boundModelProfileVersionId: request.modelProfileVersionId,
-      }),
-    );
+    const budgetPromise = resolveModelGatewayBudgetContextAsync({
+      execution: this.execution,
+      admission: this.deps.inferenceBudgetAdmission,
+      bindingName,
+      modelProfileVersionId: request.modelProfileVersionId,
+      runStepId,
+      invocationKind: "STREAM",
+      ordinals: this.deps.inferenceBudgetOrdinals,
+      ordinalPort: this.deps.inferenceBudgetOrdinalPort,
+      resolveTrustedWorkspacePolicy:
+        this.deps.resolveTrustedWorkspaceInferenceBudgetPolicy,
+    });
 
     return this.recordedModelCompletionStream({
       request,
-      inner,
+      budgetPromise,
+      signal: options?.signal,
       runStepId,
       perfStartedAt,
       telemetry,
@@ -468,11 +500,21 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
 
   private async *recordedModelCompletionStream(options: {
     readonly request: GenerateCompletionRequest;
-    readonly inner: ModelStreamEventSource;
+    readonly budgetPromise: Promise<ModelGatewayBudgetContext | undefined>;
+    readonly signal: AbortSignal | undefined;
     readonly runStepId: RunStepId;
     readonly perfStartedAt: number;
     readonly telemetry: ReturnType<typeof resolveInstrumentation>;
   }): AsyncGenerator<ModelStreamEvent> {
+    const budget = await options.budgetPromise;
+    const inner = this.inner.generateCompletionStream(
+      options.request,
+      resolveModelGatewayGenerateOptions(this.execution, {
+        signal: options.signal,
+        boundModelProfileVersionId: options.request.modelProfileVersionId,
+        budget,
+      }),
+    );
     const events: ModelStreamEvent[] = [];
     let version: Awaited<
       ReturnType<ModelProfileRepository["findModelProfileVersionById"]>
@@ -527,7 +569,7 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
     };
 
     try {
-      for await (const event of options.inner) {
+      for await (const event of inner) {
         events.push(event);
         this.tryPublishLiveViewerEvent(event);
         yield event;
@@ -617,12 +659,25 @@ class ObservabilityModelGateway implements RuntimeModelGateway {
         > = null;
         let runStepFinalized = false;
 
+        const budget = await resolveModelGatewayBudgetContextAsync({
+          execution: this.execution,
+          admission: this.deps.inferenceBudgetAdmission,
+          bindingName,
+          modelProfileVersionId: request.modelProfileVersionId,
+          runStepId,
+          invocationKind: "SYNC",
+          ordinals: this.deps.inferenceBudgetOrdinals,
+          ordinalPort: this.deps.inferenceBudgetOrdinalPort,
+          resolveTrustedWorkspacePolicy:
+            this.deps.resolveTrustedWorkspaceInferenceBudgetPolicy,
+        });
         try {
           outcome = await this.inner.generateCompletionOutcome(
             request,
             resolveModelGatewayGenerateOptions(this.execution, {
               ...options,
               boundModelProfileVersionId: request.modelProfileVersionId,
+              budget,
             }),
           );
           version = await this.deps.modelProfiles.findModelProfileVersionById(

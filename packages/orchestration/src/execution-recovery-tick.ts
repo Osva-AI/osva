@@ -14,6 +14,7 @@ import type {
   RunRepository,
 } from "@osva/domain";
 import type { BatchInferenceRecoveryCoordinator } from "./batch-inference-recovery-coordinator.js";
+import type { InferenceBudgetReconciliationCoordinator } from "./inference-budget-reconciliation-coordinator.js";
 import { RecoverInterruptedRun } from "./recover-interrupted-run.js";
 import {
   elapsedMs,
@@ -43,6 +44,7 @@ export interface ExecutionRecoveryTickDependencies {
   readonly logger?: ExecutionRecoveryTickLogger;
   readonly createRunAttemptId?: () => RunAttemptId;
   readonly batchInferenceCoordinator?: BatchInferenceRecoveryCoordinator;
+  readonly inferenceBudgetReconciliationCoordinator?: InferenceBudgetReconciliationCoordinator;
 }
 
 /**
@@ -81,6 +83,7 @@ export class ExecutionRecoveryTick {
             await this.deps.evaluationRecovery.execute();
           }
           this.deps.batchInferenceCoordinator?.schedule();
+          this.deps.inferenceBudgetReconciliationCoordinator?.schedule();
         },
       );
     } catch (error) {

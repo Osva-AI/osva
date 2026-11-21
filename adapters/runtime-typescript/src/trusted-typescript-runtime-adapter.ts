@@ -181,6 +181,23 @@ interface LiveExecution {
   readonly abort: AbortController;
 }
 
+/**
+ * When a scoped model gateway factory is configured, unscoped fallback gateways
+ * must not be used (workspace budget fail-closed for trusted runtime).
+ */
+export function resolveTrustedRuntimeModelGateway(
+  createScopedModelGateway:
+    | ((execution: ExecutionRequest) => RuntimeModelGateway | undefined)
+    | undefined,
+  execution: ExecutionRequest,
+  fallbackModelGateway: RuntimeModelGateway | undefined,
+): RuntimeModelGateway | undefined {
+  if (createScopedModelGateway !== undefined) {
+    return createScopedModelGateway(execution);
+  }
+  return fallbackModelGateway;
+}
+
 export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
   private readonly trustedRuntimeRoot: string;
   private readonly logger: TrustedTypeScriptRuntimeLogger | undefined;
@@ -353,8 +370,11 @@ export class TrustedTypeScriptRuntimeAdapter implements RuntimeAdapter {
         request: ipcRequest,
         timeoutMs: request.timeoutMs,
         abort,
-        modelGateway:
-          this.createScopedModelGateway?.(request) ?? this.modelGateway,
+        modelGateway: resolveTrustedRuntimeModelGateway(
+          this.createScopedModelGateway,
+          request,
+          this.modelGateway,
+        ),
         toolGateway:
           this.createScopedToolGateway?.(request) ?? this.toolGateway,
         memoryGateway:
@@ -379,6 +399,136 @@ function isTrustedTypeScriptRuntime(
   runtime: ExecutionRequest["runtime"],
 ): runtime is TrustedTypeScriptRuntime {
   return runtime.type === "TRUSTED_TYPESCRIPT";
+}
+
+export function executionResultIsExecutionTimeout(
+  result: ExecutionResult,
+): boolean {
+  return (
+    result.status === "failed" && result.error.code === RuntimeErrorCode.TIMEOUT
+  );
+}
+
+/** Merge a second terminal candidate while a drain is in flight (e.g. timer). */
+export function preferTerminalExecutionResult(
+  current: ExecutionResult,
+  incoming: ExecutionResult,
+): ExecutionResult {
+  if (executionResultIsExecutionTimeout(incoming)) {
+    if (
+      current.status === "failed" &&
+      !executionResultIsExecutionTimeout(current)
+    ) {
+      return current;
+    }
+    return incoming;
+  }
+  return current;
+}
+
+/** After a bounded drain, upgrade success to execution timeout when handlers remain. */
+export function applyExecutionDeadlineToResult(
+  pending: ExecutionResult,
+  drainStatus: "complete" | "deadline_exceeded",
+  inFlightHandlerCount: number,
+): ExecutionResult {
+  if (drainStatus === "complete" || inFlightHandlerCount === 0) {
+    return pending;
+  }
+  if (
+    pending.status === "failed" &&
+    !executionResultIsExecutionTimeout(pending)
+  ) {
+    return pending;
+  }
+  return executionFailure(
+    RuntimeErrorCode.TIMEOUT,
+    "Trusted runtime execution timed out.",
+  );
+}
+
+export interface DrainCapabilityHandlersUntilDeadlineOptions {
+  readonly handlers: ReadonlySet<Promise<void>>;
+  readonly deadlineAt: number;
+  readonly logger?: TrustedTypeScriptRuntimeLogger;
+  readonly now?: () => number;
+  readonly sleep?: (ms: number) => Promise<void>;
+}
+
+/**
+ * Waits for tracked capability handlers until `deadlineAt`.
+ * The underlying `allSettled` promise is always observed (no floating rejections).
+ *
+ * @internal Tested directly; not part of the public runtime adapter contract.
+ */
+export async function drainCapabilityHandlersUntilDeadline(
+  options: DrainCapabilityHandlersUntilDeadlineOptions,
+): Promise<{
+  readonly status: "complete" | "deadline_exceeded";
+  readonly outcomes: PromiseSettledResult<void>[];
+  readonly handlersRemaining: number;
+}> {
+  const handlers = [...options.handlers];
+  if (handlers.length === 0) {
+    return { status: "complete", outcomes: [], handlersRemaining: 0 };
+  }
+
+  const now = options.now ?? (() => Date.now());
+  const sleep =
+    options.sleep ??
+    ((ms: number) =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, ms);
+      }));
+
+  const outcomesPromise = Promise.allSettled(handlers).then((outcomes) => {
+    for (const outcome of outcomes) {
+      if (outcome.status === "rejected") {
+        options.logger?.error(
+          "runtime.capability_handler_drain_rejected",
+          outcome.reason,
+        );
+      }
+    }
+    return outcomes;
+  });
+
+  void outcomesPromise;
+
+  const remainingMs = Math.max(0, options.deadlineAt - now());
+  if (remainingMs === 0) {
+    return {
+      status: "deadline_exceeded",
+      outcomes: [],
+      handlersRemaining: options.handlers.size,
+    };
+  }
+
+  let settled = false;
+  void outcomesPromise.then(() => {
+    settled = true;
+  });
+
+  const deadline = now() + remainingMs;
+  const pollIntervalMs = 25;
+  while (!settled && now() < deadline) {
+    await sleep(Math.min(pollIntervalMs, Math.max(0, deadline - now())));
+  }
+
+  if (settled) {
+    const outcomes = await outcomesPromise;
+    return {
+      status: "complete",
+      outcomes,
+      handlersRemaining: options.handlers.size,
+    };
+  }
+
+  return {
+    status: "deadline_exceeded",
+    outcomes: [],
+    handlersRemaining: options.handlers.size,
+  };
 }
 
 function waitForChildResult(options: {
@@ -414,22 +564,74 @@ function waitForChildResult(options: {
   } = options;
 
   const modelStreamAborters = new Map<string, AbortController>();
+  const inFlightCapabilityHandlers = new Set<Promise<void>>();
+
+  const trackCapabilityHandler = (handler: Promise<void>): void => {
+    inFlightCapabilityHandlers.add(handler);
+    void handler.finally(() => {
+      inFlightCapabilityHandlers.delete(handler);
+    });
+  };
+
+  const executionDeadlineAt = Date.now() + timeoutMs;
 
   return new Promise((resolve) => {
     let settled = false;
+    let settlingExecution = false;
+    let pendingResult: ExecutionResult | undefined;
     const artifactCreateSessions = new ArtifactCreateIpcSessions();
 
     const finish = (result: ExecutionResult) => {
       if (settled) {
         return;
       }
-      settled = true;
-      abort.abort();
-      clearTimeout(timer);
-      child.off("message", onMessage);
-      child.off("exit", onExit);
-      child.off("error", onError);
-      resolve(result);
+
+      pendingResult =
+        pendingResult === undefined
+          ? result
+          : preferTerminalExecutionResult(pendingResult, result);
+
+      if (settlingExecution) {
+        return;
+      }
+      settlingExecution = true;
+
+      void (async () => {
+        const drain = await drainCapabilityHandlersUntilDeadline({
+          handlers: inFlightCapabilityHandlers,
+          deadlineAt: executionDeadlineAt,
+          logger,
+        });
+
+        if (settled) {
+          return;
+        }
+
+        const handlersRemaining = inFlightCapabilityHandlers.size;
+        const finalResult = applyExecutionDeadlineToResult(
+          pendingResult!,
+          drain.status,
+          handlersRemaining,
+        );
+
+        if (drain.status === "deadline_exceeded" && handlersRemaining > 0) {
+          logger?.info("runtime.capability_handler_drain_deadline_exceeded", {
+            inFlightHandlers: handlersRemaining,
+          });
+          abort.abort();
+          for (const streamAbort of modelStreamAborters.values()) {
+            streamAbort.abort();
+          }
+        }
+
+        settled = true;
+        abort.abort();
+        clearTimeout(timer);
+        child.off("message", onMessage);
+        child.off("exit", onExit);
+        child.off("error", onError);
+        resolve(finalResult);
+      })();
     };
 
     const timer = setTimeout(() => {
@@ -457,16 +659,18 @@ function waitForChildResult(options: {
       }
 
       if (isModelGenerateStreamRequestMessage(raw)) {
-        void handleModelGenerateStreamRequest({
-          child,
-          message: raw,
-          abort,
-          modelGateway,
-          bindings: modelBindings,
-          logger,
-          isSettled: () => settled,
-          modelStreamAborters,
-        });
+        trackCapabilityHandler(
+          handleModelGenerateStreamRequest({
+            child,
+            message: raw,
+            abort,
+            modelGateway,
+            bindings: modelBindings,
+            logger,
+            isSettled: () => settled,
+            modelStreamAborters,
+          }),
+        );
         return;
       }
 

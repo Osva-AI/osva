@@ -72,6 +72,9 @@ export {
   InferenceRoutingDecisionNotFoundError,
   InferenceRoutingPolicyNotFoundError,
   InferenceRoutingPolicyVersionNotFoundError,
+  InferenceBudgetPolicyNotFoundError,
+  InferenceBudgetPolicyVersionNotFoundError,
+  InferenceBudgetActivationMutationsDisabledError,
   EvaluationSuiteNotFoundError,
   EvaluationSuiteVersionNotFoundError,
   InvalidApprovalRequestTransitionError,
@@ -209,6 +212,12 @@ export {
   type RunStepIdentityProps,
   type RunStepProps,
 } from "./run-step.js";
+export {
+  RUN_ATTEMPT_TERMINAL_ERROR_CODE,
+  RUN_STEP_NOT_FINALIZED_ERROR_CODE,
+  reconciledRunStepFailureForOrphanedStep,
+  shouldReconcileRunStepsForTerminalAttempt,
+} from "./reconcile-run-steps-on-terminal-attempt.js";
 export { Evaluation, type EvaluationProps } from "./evaluation.js";
 export {
   EvaluationSuite,
@@ -269,6 +278,44 @@ export {
   type SelectInferenceRouteInput,
   type SelectInferenceRouteResult,
 } from "./inference-routing/index.js";
+export {
+  InvalidUsdMicrosError,
+  InferenceBudgetWorkspaceMismatchError,
+  addUsdMicros,
+  assertInferenceBudgetWorkspaceScope,
+  assertRunAttemptExecutionLeaseForProviderStart,
+  assertInstantBelongsToPeriodKey,
+  assertInvocationAnchorWorkspace,
+  assertSafeUsdMicros,
+  applyPeriodLedgerDelta,
+  buildInferenceInvocationAnchorString,
+  calculateInferenceBudgetAvailableUsdMicros,
+  computeOverageUsdMicros,
+  createEmptyInferenceBudgetPeriodLedger,
+  deriveInferenceBudgetReservationKey,
+  evaluateInferenceBudgetAdmission,
+  evaluateInferenceBudgetReconciliation,
+  evaluateInferenceBudgetRecoveryDisposition,
+  shouldReleaseStaleAdmittedReservation,
+  hasInferenceBudgetAdmissionCapacity,
+  isDistinctLogicalInvocationAnchor,
+  markInferenceBudgetProviderStarted,
+  markInferenceBudgetReconciliationRequired,
+  mergeTrustedInferenceBudgetRuntimePolicy,
+  refundHeldReservationCapacity,
+  releaseInferenceBudgetReservation,
+  reservationHeldUsdMicros,
+  reservationUncertainUsdMicros,
+  resolveInferenceBudgetAdmitCeilingUsdMicros,
+  resolveInferenceBudgetUtcPeriodIdentity,
+  parseInferenceBudgetPeriodKey,
+  simulateSequentialInferenceBudgetAdmissions,
+  subtractUsdMicros,
+  transitionInferenceBudgetReservationStatus,
+  type InferenceBudgetReservationKeyMaterialV1,
+  type InferenceBudgetRecoveryReservationDispositionV1,
+  type RunAttemptExecutionLeaseSnapshotV1,
+} from "./inference-budget/index.js";
 export {
   Schedule,
   type CreateScheduleProps,
@@ -777,6 +824,8 @@ export type {
 } from "./ports/evaluation-judge-task-repository.js";
 export type {
   EvaluationJudgeModelInvoker,
+  EvaluationJudgeModelInvokeOptionsResolver,
+  EvaluationJudgeModelInvokeContextV1,
   EvaluationJudgeModelInvokeOptions,
   EvaluationJudgeModelInvokeResult,
 } from "./ports/evaluation-judge-model-invoker.js";
@@ -1062,6 +1111,27 @@ export {
   type InferenceRoutingApplicationIds,
   type CreateInferenceRoutingPolicyCommand,
 } from "./inference-routing-application.js";
+export {
+  createInferenceBudgetApplication,
+  type InferenceBudgetApplication,
+  type InferenceBudgetApplicationClock,
+  type InferenceBudgetApplicationDependencies,
+  type InferenceBudgetApplicationIds,
+  type InferenceBudgetSecurityAuditIds,
+  type InferenceBudgetPeriodLedgerReadPort,
+  type CreateInferenceBudgetPolicyCommand,
+  type ActivateWorkspaceInferenceBudgetCommand,
+  type DisableWorkspaceInferenceBudgetCommand,
+  type WorkspaceInferenceBudgetConfigurationV1,
+  type InferenceBudgetPeriodUsageV1,
+} from "./inference-budget-application.js";
+export type {
+  InferenceBudgetPolicyRepository,
+  InferenceBudgetPolicyInsert,
+  InferenceBudgetPolicyVersionInsert,
+  InferenceBudgetPolicyVersionAppend,
+  WorkspaceInferenceBudgetActivationUpsertInput,
+} from "./ports/inference-budget-policy-repository.js";
 
 export {
   AppendToolVersion,
@@ -1362,6 +1432,7 @@ export {
   buildApiKeyCreatedAuditEvent,
   buildApiKeyRevokedAuditEvent,
   buildApprovalRequestDecidedAuditEvent,
+  buildInferenceBudgetActivationChangedAuditEvent,
 } from "./control-plane-audit-events.js";
 export {
   IdentityApplication,

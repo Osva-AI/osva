@@ -7,6 +7,8 @@ import type {
   ModelToolDefinition,
   WorkspaceId,
 } from "@osva-ai/contracts";
+export type { ModelGatewayBudgetContext } from "./model-gateway-budget-context.js";
+import type { ModelGatewayBudgetContext } from "./model-gateway-budget-context.js";
 import type {
   InferenceCacheExecutionPurpose,
   ModelStreamEventSource,
@@ -59,6 +61,23 @@ export interface ModelGatewayGenerateTextOptions {
   readonly signal?: AbortSignal;
   readonly cache?: ModelGatewayCacheContext;
   readonly routing?: ModelGatewayRoutingContext;
+  readonly budget?: ModelGatewayBudgetContext;
+}
+
+/** Internal outcome-level port used by caching, routing, and budget decorators. */
+export interface ModelGatewayInvokePort {
+  generateTextOutcome(
+    request: import("@osva-ai/contracts").GenerateTextRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): Promise<import("./usage.js").ProviderGenerateTextResult>;
+  generateCompletionOutcome(
+    request: import("@osva-ai/contracts").GenerateCompletionRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): Promise<import("./usage.js").ProviderGenerateTextResult>;
+  generateCompletionStream(
+    request: import("@osva-ai/contracts").GenerateCompletionRequest,
+    options?: ModelGatewayGenerateTextOptions,
+  ): import("@osva-ai/contracts").ModelStreamEventSource;
 }
 
 export interface ModelProviderAdapter {

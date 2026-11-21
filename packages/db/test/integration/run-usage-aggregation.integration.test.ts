@@ -92,25 +92,31 @@ describe("aggregateRunAttemptUsageBatch", () => {
 
   async function seedRun(label: string) {
     const ids = await seedAgentGraph(label);
-    await runs.saveRun(
-      Run.create({
-        id: ids.runId,
-        workspaceId: ids.workspaceId,
-        agentId: ids.agentId,
-        effectiveBindings: createBindings(
-          ids.agentVersionId,
-          ids.modelProfileVersionId,
-        ),
-        input: RUN_INPUT,
-        createdAt: NOW,
-      }),
-    );
-    await runs.saveRunAttempt(
-      RunAttempt.createFirst({
-        id: ids.runAttemptId,
-        runId: ids.runId,
-        createdAt: NOW,
-      }),
+    const pending = Run.create({
+      id: ids.runId,
+      workspaceId: ids.workspaceId,
+      agentId: ids.agentId,
+      effectiveBindings: createBindings(
+        ids.agentVersionId,
+        ids.modelProfileVersionId,
+      ),
+      input: RUN_INPUT,
+      createdAt: NOW,
+    });
+    await runs.saveRun(pending);
+    const attempt = RunAttempt.createFirst({
+      id: ids.runAttemptId,
+      runId: ids.runId,
+      createdAt: NOW,
+    });
+    await runs.saveRunAttempt(attempt);
+    const queuedRun = pending.transitionTo("QUEUED", LATER);
+    await runs.transitionRun("PENDING", queuedRun);
+    await runs.transitionRunAndAttempt(
+      "QUEUED",
+      queuedRun.transitionTo("RUNNING", EVEN_LATER),
+      "PENDING",
+      attempt.transitionTo("RUNNING", EVEN_LATER),
     );
     return ids;
   }
@@ -171,19 +177,19 @@ describe("aggregateRunAttemptUsageBatch", () => {
     if (attemptOne === null) {
       throw new Error("Expected first RunAttempt to exist.");
     }
-    const runningAttemptOne = await runs.transitionRunAttempt(
-      "PENDING",
-      attemptOne.transitionTo("RUNNING", LATER),
-    );
     const failedAttemptOne = await runs.transitionRunAttempt(
       "RUNNING",
-      runningAttemptOne.transitionTo("FAILED", LATER),
+      attemptOne.transitionTo("FAILED", EVEN_LATER),
     );
     const retryAttempt = RunAttempt.createSubsequent(failedAttemptOne, {
       id: first.secondAttemptId,
-      createdAt: LATER,
+      createdAt: EVEN_LATER,
     });
     await runs.saveRunAttempt(retryAttempt);
+    await runs.transitionRunAttempt(
+      "PENDING",
+      retryAttempt.transitionTo("RUNNING", EVEN_LATER),
+    );
 
     await insertModelStep({
       id: "step_a_retry" as RunStepId,

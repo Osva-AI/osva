@@ -390,6 +390,64 @@ export async function handleConsoleApiRequest(
         return true;
       }
 
+      if (pathname === "/api/v1/inference-budget-policies") {
+        const body = await readJsonBody(request);
+        const created = await client.createInferenceBudgetPolicy(body);
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/workspace-inference-budget/activate") {
+        const body = await readJsonBody(request);
+        const activated = await client.activateWorkspaceInferenceBudget(body);
+        sendJson(
+          response,
+          200,
+          activated.data,
+          upstreamRequestIdHeaders(activated.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      if (pathname === "/api/v1/workspace-inference-budget/disable") {
+        await readJsonBody(request);
+        const disabled = await client.disableWorkspaceInferenceBudget();
+        sendJson(
+          response,
+          200,
+          disabled.data,
+          upstreamRequestIdHeaders(disabled.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
+      const inferenceBudgetVersionPostMatch = pathname.match(
+        /^\/api\/v1\/inference-budget-policies\/([^/]+)\/versions$/,
+      );
+      if (inferenceBudgetVersionPostMatch !== null) {
+        const body = await readJsonBody(request);
+        const created = await client.appendInferenceBudgetPolicyVersion(
+          inferenceBudgetVersionPostMatch[1] ?? "",
+          body,
+        );
+        sendJson(
+          response,
+          201,
+          created.data,
+          upstreamRequestIdHeaders(created.requestId),
+          deps.security,
+        );
+        return true;
+      }
+
       const modelProfileVersionPostMatch = pathname.match(
         /^\/api\/v1\/model-profiles\/([^/]+)\/versions$/,
       );
@@ -1351,6 +1409,90 @@ export async function handleConsoleApiRequest(
         200,
         listed.data,
         upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/inference-budget-policies") {
+      const listed = await client.listInferenceBudgetPolicies();
+      sendJson(
+        response,
+        200,
+        listed.data,
+        upstreamRequestIdHeaders(listed.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/workspace-inference-budget/configuration") {
+      const configuration =
+        await client.getWorkspaceInferenceBudgetConfiguration();
+      sendJson(
+        response,
+        200,
+        configuration.data,
+        upstreamRequestIdHeaders(configuration.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/workspace-inference-budget/activation") {
+      const activation = await client.getWorkspaceInferenceBudgetActivation();
+      sendJson(
+        response,
+        200,
+        activation.data,
+        upstreamRequestIdHeaders(activation.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    if (pathname === "/api/v1/workspace-inference-budget/period-usage") {
+      const periodKey = searchParams.get("periodKey") ?? undefined;
+      const usage = await client.getInferenceBudgetPeriodUsage(periodKey);
+      sendJson(
+        response,
+        200,
+        usage.data,
+        upstreamRequestIdHeaders(usage.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const inferenceBudgetVersionsMatch = pathname.match(
+      /^\/api\/v1\/inference-budget-policies\/([^/]+)\/versions$/,
+    );
+    if (inferenceBudgetVersionsMatch !== null) {
+      const versions = await client.listInferenceBudgetPolicyVersions(
+        inferenceBudgetVersionsMatch[1] ?? "",
+      );
+      sendJson(
+        response,
+        200,
+        versions.data,
+        upstreamRequestIdHeaders(versions.requestId),
+        deps.security,
+      );
+      return true;
+    }
+
+    const inferenceBudgetPolicyVersionMatch = pathname.match(
+      /^\/api\/v1\/inference-budget-policy-versions\/([^/]+)$/,
+    );
+    if (inferenceBudgetPolicyVersionMatch !== null) {
+      const version = await client.getInferenceBudgetPolicyVersion(
+        inferenceBudgetPolicyVersionMatch[1] ?? "",
+      );
+      sendJson(
+        response,
+        200,
+        version.data,
+        upstreamRequestIdHeaders(version.requestId),
         deps.security,
       );
       return true;

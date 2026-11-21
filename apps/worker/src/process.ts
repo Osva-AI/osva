@@ -64,6 +64,10 @@ import {
   PostgresWorkspaceRepository,
   PostgresWorkspaceInferenceCachePolicyRepository,
   PostgresInferenceRoutingPolicyRepository,
+  PostgresInferenceBudgetAdmissionRepository,
+  PostgresInferenceBudgetOrdinalRepository,
+  PostgresInferenceBudgetPolicyRepository,
+  PostgresInferenceBudgetRecoveryRepository,
   type Database,
 } from "@osva/db";
 import { PgVectorStore } from "@osva/adapters-vector-pgvector";
@@ -87,6 +91,7 @@ import {
   ProcessEvaluationComparisonPairwiseTasks,
   mergeTrustedInferenceResponseCachePolicy,
   mergeTrustedInferenceRoutingPolicy,
+  mergeTrustedInferenceBudgetRuntimePolicy,
   InferenceRoutingCircuitBreakerStore,
   InferenceRoutingLatencyStore,
 } from "@osva/domain";
@@ -98,6 +103,7 @@ import {
 } from "@osva/embedding-gateway";
 import { MemoryGateway } from "@osva/memory-gateway";
 import {
+  BudgetEnforcingModelGateway,
   CachingModelGateway,
   ModelGateway,
   RoutingModelGateway,
@@ -117,10 +123,14 @@ import {
   EvaluationRecoveryTick,
   ExecuteRunAttempt,
   ExecutionRecoveryTick,
+  InferenceBudgetReconciliationCoordinator,
+  InferenceBudgetReconciliationTick,
   JudgeTaskRecoveryCoordinator,
   PairwiseTaskRecoveryCoordinator,
 } from "@osva/orchestration";
 import { createBatchInferenceWorkerBundle } from "./create-batch-inference-worker.js";
+import { createEvaluationJudgeInvokeOptionsResolver } from "./evaluation-judge-budget-invoke-options.js";
+import { createEvaluationJudgeModelInvoker } from "./evaluation-judge-model-invoker.js";
 import { RuntimeDispatcher } from "@osva/runtime-core";
 import { DefaultToolPolicy, ToolGateway } from "@osva/tool-gateway";
 
@@ -135,7 +145,6 @@ import { composeInferenceResponseCache } from "./inference-response-cache.js";
 import { createDeclarativeToolMetadataResolver } from "./declarative-tool-metadata.js";
 import { composeRuntimeExecutors } from "./runtime-composition.js";
 import { createExecuteRunAttemptHandler } from "./execute-run-attempt-handler.js";
-import { createEvaluationJudgeModelInvoker } from "./evaluation-judge-model-invoker.js";
 import { logError, logEvent } from "./log.js";
 import {
   createWorkerApplication,
@@ -215,6 +224,8 @@ export function createWorkerProcess(
   let judgeTaskCoordinator: JudgeTaskRecoveryCoordinator | undefined;
   let batchInferenceCoordinator:
     import("@osva/orchestration").BatchInferenceRecoveryCoordinator | undefined;
+  let inferenceBudgetReconciliationCoordinator:
+    InferenceBudgetReconciliationCoordinator | undefined;
   let pairwiseTaskCoordinator: PairwiseTaskRecoveryCoordinator | undefined;
   let interruptRecoverySleep: (() => void) | undefined;
   let inferenceResponseCacheClose: (() => Promise<void>) | undefined;
@@ -311,6 +322,19 @@ export function createWorkerProcess(
         providers: legacyModelProviders,
         connectionResolver: modelProviderConnectionResolver,
       });
+      const inferenceBudgetPolicies =
+        new PostgresInferenceBudgetPolicyRepository(database);
+      const inferenceBudgetAdmission =
+        new PostgresInferenceBudgetAdmissionRepository(database);
+      const inferenceBudgetOrdinalPort =
+        new PostgresInferenceBudgetOrdinalRepository(database);
+      const inferenceBudgetRecovery =
+        new PostgresInferenceBudgetRecoveryRepository(database);
+      const budgetEnforcingModelGateway = new BudgetEnforcingModelGateway({
+        inner: modelGatewayBase,
+        modelProfiles,
+        admission: inferenceBudgetAdmission,
+      });
       const inferenceRoutingPolicies =
         new PostgresInferenceRoutingPolicyRepository(database);
       const routingCircuitBreakerStore =
@@ -318,9 +342,9 @@ export function createWorkerProcess(
       const routingLatencyStore = new InferenceRoutingLatencyStore();
       const providerExecutionStack =
         exactResponseCache === undefined
-          ? modelGatewayBase
+          ? budgetEnforcingModelGateway
           : new CachingModelGateway({
-              inner: modelGatewayBase,
+              inner: budgetEnforcingModelGateway,
               modelProfiles,
               cache: exactResponseCache,
             });
@@ -407,6 +431,11 @@ export function createWorkerProcess(
           info: logEvent,
           error: logError,
         },
+        inferenceBudgetAdmission,
+        resolveTrustedWorkspaceInferenceBudgetPolicy: (
+          workspaceId: import("@osva-ai/contracts").WorkspaceId,
+        ) =>
+          inferenceBudgetPolicies.findRuntimePolicyByWorkspaceId(workspaceId),
         ...(runLiveStreamPublisher !== undefined
           ? {
               runLiveStream: runLiveStreamPublisher,
@@ -463,9 +492,10 @@ export function createWorkerProcess(
             }
           },
         });
-        return createRunStepRecorder(execution, recorderDeps).wrapModelGateway(
-          routedProviderStack,
-        );
+        return createRunStepRecorder(execution, {
+          ...recorderDeps,
+          inferenceBudgetOrdinalPort,
+        }).wrapModelGateway(routedProviderStack);
       };
       const scopedTool = (
         execution: Parameters<typeof createRunStepRecorder>[0],
@@ -552,7 +582,6 @@ export function createWorkerProcess(
                   info: logEvent,
                   error: logError,
                 },
-                modelGateway: modelGatewayBase,
                 toolGateway,
                 memoryGateway,
                 createScopedModelGateway: scopedModel,
@@ -640,8 +669,14 @@ export function createWorkerProcess(
             await inferenceRoutingPolicies.findRuntimePolicyByWorkspaceId(
               workspaceId,
             );
+          const budgetPolicy =
+            await inferenceBudgetPolicies.findRuntimePolicyByWorkspaceId(
+              workspaceId,
+            );
           const context: Record<string, unknown> = {
             inferenceRouting: mergeTrustedInferenceRoutingPolicy(routingPolicy),
+            inferenceBudget:
+              mergeTrustedInferenceBudgetRuntimePolicy(budgetPolicy),
           };
           if (exactResponseCache !== undefined) {
             if (
@@ -671,6 +706,11 @@ export function createWorkerProcess(
         judgeTasks: evaluationJudgeTasks,
         modelProfiles,
       });
+      const judgeInvokeOptions = createEvaluationJudgeInvokeOptionsResolver({
+        policies: inferenceBudgetPolicies,
+        admission: inferenceBudgetAdmission,
+        modelProfiles,
+      });
       const judgeTaskProcessor = new ProcessEvaluationJudgeTasks({
         evaluationSuites,
         runs: runsRepository,
@@ -679,9 +719,12 @@ export function createWorkerProcess(
         ids: { createId: () => randomUUID() },
         clock,
         judgeTasks: evaluationJudgeTasks,
-        judgeModel: createEvaluationJudgeModelInvoker(modelGatewayBase),
+        judgeModel: createEvaluationJudgeModelInvoker(
+          budgetEnforcingModelGateway,
+        ),
         modelProfiles,
         executionOwner: `worker:${hostname()}:${String(process.pid)}:judge`,
+        judgeInvokeOptions,
       });
       judgeTaskCoordinator = new JudgeTaskRecoveryCoordinator({
         processor: judgeTaskProcessor,
@@ -697,9 +740,12 @@ export function createWorkerProcess(
           runs: runsRepository,
           clock,
           ids: { createId: () => randomUUID() },
-          judgeModel: createEvaluationJudgeModelInvoker(modelGatewayBase),
+          judgeModel: createEvaluationJudgeModelInvoker(
+            budgetEnforcingModelGateway,
+          ),
           modelProfiles,
           executionOwner: `worker:${hostname()}:${String(process.pid)}:pairwise`,
+          judgeInvokeOptions,
         });
       pairwiseTaskCoordinator = new PairwiseTaskRecoveryCoordinator({
         processor: pairwiseTaskProcessor,
@@ -732,8 +778,29 @@ export function createWorkerProcess(
         batchLimit:
           config.recoveryBatchLimit > 0 ? config.recoveryBatchLimit : 20,
         instrumentation,
+        inferenceBudgetPolicies,
+        inferenceBudgetAdmission,
       });
       batchInferenceCoordinator = batchInferenceBundle.coordinator;
+      const inferenceBudgetReconciliationTick =
+        new InferenceBudgetReconciliationTick({
+          recovery: inferenceBudgetRecovery,
+          admission: inferenceBudgetAdmission,
+          policies: inferenceBudgetPolicies,
+          clock,
+          batchLimit:
+            config.recoveryBatchLimit > 0 ? config.recoveryBatchLimit : 20,
+          logger: {
+            info: logEvent,
+            error: (event, fields) => logEvent(event, fields ?? {}),
+          },
+        });
+      inferenceBudgetReconciliationCoordinator =
+        new InferenceBudgetReconciliationCoordinator({
+          tick: inferenceBudgetReconciliationTick,
+          batchLimit:
+            config.recoveryBatchLimit > 0 ? config.recoveryBatchLimit : 20,
+        });
       const recoveryTick = new ExecutionRecoveryTick({
         runs: runsRepository,
         queue,
@@ -748,6 +815,7 @@ export function createWorkerProcess(
         instrumentation,
         evaluationRecovery: evaluationRecoveryTick,
         batchInferenceCoordinator,
+        inferenceBudgetReconciliationCoordinator,
         logger: {
           info: logEvent,
           error: (event, fields) => logEvent(event, fields ?? {}),
@@ -820,6 +888,9 @@ export function createWorkerProcess(
       }
       if (batchInferenceCoordinator !== undefined) {
         await batchInferenceCoordinator.drain();
+      }
+      if (inferenceBudgetReconciliationCoordinator !== undefined) {
+        await inferenceBudgetReconciliationCoordinator.drain();
       }
       if (probeServer !== undefined) {
         await probeServer.close();

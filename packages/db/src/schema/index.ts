@@ -12,6 +12,13 @@ export { inferenceRoutingPolicies } from "./inference-routing-policies.js";
 export { inferenceRoutingPolicyVersions } from "./inference-routing-policy-versions.js";
 export { workspaceInferenceRoutingActivation } from "./workspace-inference-routing-activation.js";
 export { inferenceRoutingDecisions } from "./inference-routing-decisions.js";
+export { inferenceBudgetPolicies } from "./inference-budget-policies.js";
+export { inferenceBudgetPolicyVersions } from "./inference-budget-policy-versions.js";
+export { workspaceInferenceBudgetActivation } from "./workspace-inference-budget-activation.js";
+export { workspaceInferenceBudgetPeriods } from "./workspace-inference-budget-periods.js";
+export { inferenceInvocations } from "./inference-invocations.js";
+export { inferenceModelInvocationSlots } from "./inference-model-invocation-slots.js";
+export { inferenceBudgetReservations } from "./inference-budget-reservations.js";
 export { workspaceBatchInferencePolicies } from "./workspace-batch-inference-policies.js";
 export { batchInferenceJobs } from "./batch-inference-jobs.js";
 export { batchInferenceItems } from "./batch-inference-items.js";
@@ -100,4 +107,7 @@ export {
   PERSISTED_HUMAN_WORKSPACE_ROLES,
   PERSISTED_ORGANIZATION_MEMBERSHIP_ROLES,
   PERSISTED_USER_STATUSES,
+  PERSISTED_INFERENCE_BUDGET_RESERVATION_STATUSES,
+  PERSISTED_INFERENCE_INVOCATION_KINDS,
+  PERSISTED_INFERENCE_BUDGET_PERIOD_KINDS,
 } from "./states.js";

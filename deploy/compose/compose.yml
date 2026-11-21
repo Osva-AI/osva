@@ -86,6 +86,8 @@ services:
       OSVA_AUTH_SECRET: ${OSVA_AUTH_SECRET:?OSVA_AUTH_SECRET is required}
       OSVA_AUTH_BASE_URL: ${OSVA_AUTH_BASE_URL:-http://127.0.0.1:8080}
       OSVA_AUTH_TRUSTED_ORIGINS: ${OSVA_AUTH_TRUSTED_ORIGINS:-http://127.0.0.1:8080}
+      # Workspace inference-budget activate/disable HTTP (default false in apps/web). Worker enforcement is independent.
+      # OSVA_INFERENCE_BUDGET_ACTIVATION_ENABLED: "false"
     ports:
       - "${OSVA_PUBLISH_WEB_PORT:-8080}:3000"
     volumes:

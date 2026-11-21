@@ -62,3 +62,7 @@ export function roleCanTransferOwnership(role: string): boolean {
 export function roleCanManageApiKeys(role: string): boolean {
   return rolePermitsAuthorizationAction(role, AUTHORIZATION_ACTIONS.ADMIN);
 }
+
+export function roleCanAdminControlPlaneResources(role: string): boolean {
+  return rolePermitsAuthorizationAction(role, AUTHORIZATION_ACTIONS.ADMIN);
+}

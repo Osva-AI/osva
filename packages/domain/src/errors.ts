@@ -368,6 +368,34 @@ export class InferenceRoutingDecisionNotFoundError extends DomainError {
   }
 }
 
+export class InferenceBudgetPolicyNotFoundError extends DomainError {
+  readonly policyId: import("@osva-ai/contracts").InferenceBudgetPolicyId;
+
+  constructor(policyId: import("@osva-ai/contracts").InferenceBudgetPolicyId) {
+    super(`InferenceBudgetPolicy ${policyId} was not found.`);
+    this.policyId = policyId;
+  }
+}
+
+export class InferenceBudgetPolicyVersionNotFoundError extends DomainError {
+  readonly policyVersionId: import("@osva-ai/contracts").InferenceBudgetPolicyVersionId;
+
+  constructor(
+    policyVersionId: import("@osva-ai/contracts").InferenceBudgetPolicyVersionId,
+  ) {
+    super(`InferenceBudgetPolicyVersion ${policyVersionId} was not found.`);
+    this.policyVersionId = policyVersionId;
+  }
+}
+
+export class InferenceBudgetActivationMutationsDisabledError extends DomainError {
+  constructor() {
+    super(
+      "Workspace inference budget activation mutations are disabled by server policy.",
+    );
+  }
+}
+
 export class EvaluationSuiteNotFoundError extends DomainError {
   readonly evaluationSuiteId: EvaluationSuiteId;
 

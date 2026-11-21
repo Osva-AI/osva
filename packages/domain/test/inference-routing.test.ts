@@ -3,7 +3,7 @@ import type {
   ModelProfileVersionId,
   WorkspaceId,
 } from "@osva-ai/contracts";
-import { ModelProfileVersion } from "@osva/domain";
+import { ModelProfileVersion } from "../src/model-profile-version.js";
 import { describe, expect, it } from "vitest";
 
 import {

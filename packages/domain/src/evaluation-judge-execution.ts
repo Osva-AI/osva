@@ -28,7 +28,10 @@ import {
   promptTemplateVersionForJudgeBacked,
 } from "./rag-judge/rubric-identity.js";
 import type { EvaluationJudgeTaskRepository } from "./ports/evaluation-judge-task-repository.js";
-import type { EvaluationJudgeModelInvoker } from "./ports/evaluation-judge-model-invoker.js";
+import type {
+  EvaluationJudgeModelInvoker,
+  EvaluationJudgeModelInvokeOptionsResolver,
+} from "./ports/evaluation-judge-model-invoker.js";
 import type { ModelProfileRepository } from "./ports/model-profile-repository.js";
 
 export { DEFAULT_EVALUATION_JUDGE_LEASE_MS };
@@ -106,6 +109,7 @@ export interface ProcessEvaluationJudgeTasksDependencies extends EvaluationRunAp
   readonly leaseTtlMs?: number;
   readonly modelCallTimeoutMs?: number;
   readonly maxConcurrentTasks?: number;
+  readonly judgeInvokeOptions?: EvaluationJudgeModelInvokeOptionsResolver;
 }
 
 export class ProcessEvaluationJudgeTasks {
@@ -284,6 +288,16 @@ export class ProcessEvaluationJudgeTasks {
     }, this.modelCallTimeoutMs);
 
     try {
+      const judgeOptions = this.deps.judgeInvokeOptions
+        ? await this.deps.judgeInvokeOptions.resolve({
+            workspaceId: task.workspaceId,
+            evaluationJudgeTaskId: task.id,
+            sequence: invocationAttempts.length + 1,
+            modelProfileVersionId: config.modelProfileVersionId,
+            userMessage: metricPlan.prompt,
+            maxOutputTokens: task.snapshot.maxOutputTokens,
+          })
+        : undefined;
       modelOutcome = await this.deps.judgeModel.generateJudgeCompletion(
         {
           modelProfileVersionId: config.modelProfileVersionId,
@@ -292,7 +306,10 @@ export class ProcessEvaluationJudgeTasks {
           jsonSchema:
             metricPlan.jsonSchema as import("@osva-ai/contracts").JsonSchemaRecord,
         },
-        { signal: invocationAbort.signal },
+        {
+          signal: invocationAbort.signal,
+          ...judgeOptions,
+        },
       );
       completionText = modelOutcome.text;
     } catch (error) {

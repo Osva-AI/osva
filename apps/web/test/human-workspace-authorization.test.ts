@@ -70,6 +70,24 @@ describe("human workspace authorization", () => {
     expect(connectivityTest?.requiredHumanPermission).toBe("EXECUTE");
   });
 
+  it("maps inference budget routes for human workspace access", () => {
+    const create = lookupV1RouteAccess("POST", "/v1/inference-budget-policies");
+    expect(create?.requiredHumanPermission).toBe("ADMINISTER_WORKSPACE");
+    expect(create?.resourceFamily).toBe("inference_budget_policy");
+
+    const usage = lookupV1RouteAccess(
+      "GET",
+      "/v1/workspace-inference-budget/period-usage",
+    );
+    expect(usage?.requiredHumanPermission).toBe("READ");
+
+    const append = lookupV1RouteAccess(
+      "POST",
+      "/v1/inference-budget-policies/ibp-1/versions",
+    );
+    expect(append?.requiredHumanPermission).toBe("ADMINISTER_WORKSPACE");
+  });
+
   it("maps office collaboration structural keys for human route access", () => {
     expect(structuralRouteKeyFromPathname("POST", "/v1/office/threads")).toBe(
       "POST /v1/office/threads",

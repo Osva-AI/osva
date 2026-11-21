@@ -54,6 +54,8 @@ import {
   InferenceRoutingDecisionNotFoundError,
   InferenceRoutingPolicyNotFoundError,
   InferenceRoutingPolicyVersionNotFoundError,
+  InferenceBudgetPolicyNotFoundError,
+  InferenceBudgetPolicyVersionNotFoundError,
   ArtifactNotFoundError,
   ArtifactIdempotencyConflictError,
   BuilderPublicationIdempotencyConflictError,
@@ -74,6 +76,7 @@ import {
   InvalidHumanCredentialsError,
   PermissionDeniedError,
   StdioConnectorsDisabledError,
+  InferenceBudgetActivationMutationsDisabledError,
 } from "@osva/domain";
 import {
   AgentNotFoundError as OrchestrationAgentNotFoundError,
@@ -221,6 +224,8 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
     error instanceof InferenceRoutingPolicyNotFoundError ||
     error instanceof InferenceRoutingPolicyVersionNotFoundError ||
     error instanceof InferenceRoutingDecisionNotFoundError ||
+    error instanceof InferenceBudgetPolicyNotFoundError ||
+    error instanceof InferenceBudgetPolicyVersionNotFoundError ||
     error instanceof ToolNotFoundError ||
     error instanceof ToolVersionNotFoundError ||
     error instanceof RunStepNotFoundError ||
@@ -295,6 +300,16 @@ export function sendHttpError(response: ServerResponse, error: unknown): void {
       outcome: "DENIED",
       reasonCode: "stdio_disabled",
     });
+    sendV1Error(
+      response,
+      403,
+      PUBLIC_API_ERROR_CODES.PERMISSION_DENIED,
+      requestId,
+    );
+    return;
+  }
+
+  if (error instanceof InferenceBudgetActivationMutationsDisabledError) {
     sendV1Error(
       response,
       403,

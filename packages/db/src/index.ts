@@ -52,6 +52,18 @@ export { PostgresWorkspaceRepository } from "./repositories/postgres-workspace-r
 export { PostgresWorkspaceInferenceCachePolicyRepository } from "./repositories/postgres-workspace-inference-cache-policy-repository.js";
 export { PostgresInferenceRoutingPolicyRepository } from "./repositories/postgres-inference-routing-repository.js";
 export {
+  PostgresInferenceBudgetPolicyRepository,
+  type InferenceBudgetPolicyInsert,
+  type InferenceBudgetPolicyVersionInsert,
+  type WorkspaceInferenceBudgetActivationUpsert,
+} from "./repositories/postgres-inference-budget-policy-repository.js";
+export {
+  InferenceBudgetReservationTransitionError,
+  PostgresInferenceBudgetAdmissionRepository,
+} from "./repositories/postgres-inference-budget-admission-repository.js";
+export { PostgresInferenceBudgetOrdinalRepository } from "./repositories/postgres-inference-budget-ordinal-repository.js";
+export { PostgresInferenceBudgetRecoveryRepository } from "./repositories/postgres-inference-budget-recovery-repository.js";
+export {
   PostgresBatchInferenceJobRepository,
   PostgresWorkspaceBatchInferencePolicyRepository,
 } from "./repositories/postgres-batch-inference-repository.js";

@@ -75,6 +75,18 @@ export function SettingsPage() {
           </p>
           <WorkspaceManagementPanel />
         </SectionPanel>
+        <SectionPanel title="Inference budget">
+          <p className="panel-description muted">
+            Define workspace inference budget policies and review estimated
+            reservation liability. Enforcement activation is not available in
+            the Console yet.
+          </p>
+          <div className="panel-header-actions">
+            <LinkButton variant="primary" to="/settings/inference-budget">
+              Manage inference budget
+            </LinkButton>
+          </div>
+        </SectionPanel>
         <SectionPanel title="Guided setup">
           <p className="panel-description muted">
             Step through first-time workspace setup when you need a structured

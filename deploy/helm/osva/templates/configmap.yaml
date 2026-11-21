@@ -29,6 +29,7 @@ data:
   OSVA_CONTAINER_ENABLED: {{ .Values.worker.containerEnabled | toString | quote }}
   OSVA_WEB_HOST: {{ .Values.web.host | quote }}
   OSVA_WEB_PORT: {{ .Values.web.port | toString | quote }}
+  OSVA_INFERENCE_BUDGET_ACTIVATION_ENABLED: {{ (.Values.web.inferenceBudgetActivationEnabled | default false) | toString | quote }}
   OSVA_HEALTH_HOST: "0.0.0.0"
   OSVA_HEALTH_PORT: {{ (.Values.health).port | default 8081 | toString | quote }}
   OSVA_SCHEDULER_POLL_MS: {{ .Values.scheduler.pollMs | toString | quote }}

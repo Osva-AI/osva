@@ -109,6 +109,33 @@ export interface ConsoleOsvaClient {
     modelProfileId: string,
     body: unknown,
   ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listInferenceBudgetPolicies(): Promise<ConsoleUpstreamResponse<unknown>>;
+  createInferenceBudgetPolicy(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  listInferenceBudgetPolicyVersions(
+    policyId: string,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  appendInferenceBudgetPolicyVersion(
+    policyId: string,
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getInferenceBudgetPolicyVersion(
+    policyVersionId: string,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  getWorkspaceInferenceBudgetConfiguration(): Promise<
+    ConsoleUpstreamResponse<unknown>
+  >;
+  getWorkspaceInferenceBudgetActivation(): Promise<
+    ConsoleUpstreamResponse<unknown>
+  >;
+  activateWorkspaceInferenceBudget(
+    body: unknown,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
+  disableWorkspaceInferenceBudget(): Promise<ConsoleUpstreamResponse<unknown>>;
+  getInferenceBudgetPeriodUsage(
+    periodKey?: string,
+  ): Promise<ConsoleUpstreamResponse<unknown>>;
   listModelProviderConnections(): Promise<ConsoleUpstreamResponse<unknown>>;
   listModelProviderConnectionVersions(
     connectionId: string,
@@ -545,6 +572,63 @@ export function createConsoleOsvaClient(
         method: "POST",
         path: `/v1/model-profiles/${encodeURIComponent(modelProfileId)}/versions`,
         body,
+      }),
+    listInferenceBudgetPolicies: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/inference-budget-policies",
+      }),
+    createInferenceBudgetPolicy: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/inference-budget-policies",
+        body,
+      }),
+    listInferenceBudgetPolicyVersions: (policyId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/inference-budget-policies/${encodeURIComponent(policyId)}/versions`,
+      }),
+    appendInferenceBudgetPolicyVersion: (policyId, body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: `/v1/inference-budget-policies/${encodeURIComponent(policyId)}/versions`,
+        body,
+      }),
+    getInferenceBudgetPolicyVersion: (policyVersionId) =>
+      http.requestWithMeta({
+        method: "GET",
+        path: `/v1/inference-budget-policy-versions/${encodeURIComponent(policyVersionId)}`,
+      }),
+    getWorkspaceInferenceBudgetConfiguration: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/workspace-inference-budget/configuration",
+      }),
+    getWorkspaceInferenceBudgetActivation: () =>
+      http.requestWithMeta({
+        method: "GET",
+        path: "/v1/workspace-inference-budget/activation",
+      }),
+    activateWorkspaceInferenceBudget: (body) =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/workspace-inference-budget/activate",
+        body,
+      }),
+    disableWorkspaceInferenceBudget: () =>
+      http.requestWithMeta({
+        method: "POST",
+        path: "/v1/workspace-inference-budget/disable",
+        body: {},
+      }),
+    getInferenceBudgetPeriodUsage: (periodKey) =>
+      http.requestWithMeta({
+        method: "GET",
+        path:
+          periodKey === undefined
+            ? "/v1/workspace-inference-budget/period-usage"
+            : `/v1/workspace-inference-budget/period-usage?periodKey=${encodeURIComponent(periodKey)}`,
       }),
     listModelProviderConnections: () =>
       http.requestWithMeta({

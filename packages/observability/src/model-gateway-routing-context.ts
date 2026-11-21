@@ -59,5 +59,6 @@ export function mergeModelGatewayGenerateOptions(
     cache: cacheOptions?.cache ?? routingOptions?.cache,
     routing: routingOptions?.routing ?? cacheOptions?.routing,
     signal: cacheOptions?.signal ?? routingOptions?.signal,
+    budget: routingOptions?.budget ?? cacheOptions?.budget,
   };
 }

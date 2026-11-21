@@ -22,6 +22,16 @@ export {
   type ExecutionRecoveryTickLogger,
 } from "./execution-recovery-tick.js";
 export {
+  InferenceBudgetReconciliationTick,
+  type InferenceBudgetReconciliationTickDependencies,
+  type InferenceBudgetReconciliationTickLogger,
+  type InferenceBudgetReconciliationTickResultV1,
+} from "./inference-budget-reconciliation-tick.js";
+export {
+  InferenceBudgetReconciliationCoordinator,
+  type InferenceBudgetReconciliationCoordinatorOptions,
+} from "./inference-budget-reconciliation-coordinator.js";
+export {
   EvaluationRecoveryTick,
   type EvaluationRecoveryTickDependencies,
 } from "./evaluation-recovery-tick.js";
@@ -31,6 +41,8 @@ export {
 } from "./judge-task-recovery-coordinator.js";
 export {
   ProcessBatchInferenceJobs,
+  type BatchInferenceItemBudgetReconcilePort,
+  type BatchInferenceSubmitBudgetPort,
   type ProcessBatchInferenceJobsDependencies,
   type ProcessBatchInferenceJobsOptions,
 } from "./process-batch-inference-jobs.js";

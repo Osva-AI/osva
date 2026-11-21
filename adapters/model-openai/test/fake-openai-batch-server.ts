@@ -1,6 +1,10 @@
 import http from "node:http";
 
 export interface FakeOpenAiBatchServerOptions {
+  /** Delay HTTP handling of batch POST (submit) for ordering tests. */
+  readonly submitDelayMs?: number;
+  /** When true, batch POST returns 503 (no batch id assigned). */
+  readonly failBatchSubmit?: boolean;
   /** When true, new batches stay in_progress until cancelled or advanced. */
   readonly deferCompletion?: boolean;
   /** Fail batch GET this many times before succeeding. */
@@ -11,6 +15,12 @@ export interface FakeOpenAiBatchServerOptions {
   readonly failItemCorrelationIds?: readonly string[];
   /** Add successful rows for unknown correlation ids (not in input). */
   readonly extraOutputCorrelationIds?: readonly string[];
+  /** Omit successful output rows for these correlation ids (missing provider items). */
+  readonly omitOutputCorrelationIds?: readonly string[];
+  /** When true, successful rows omit usage (uncertain reconciliation). */
+  readonly omitUsageInOutput?: boolean;
+  /** Fixed completion_tokens for successful rows (overage scenarios). */
+  readonly outputCompletionTokens?: number;
 }
 
 export interface FakeOpenAiBatchServer {
@@ -40,9 +50,16 @@ export async function startFakeOpenAiBatchServer(
   let statusPollFailuresRemaining = options.statusPollFailuresRemaining ?? 0;
   let resultsFetchFailuresRemaining =
     options.resultsFetchFailuresRemaining ?? 0;
+  const submitDelayMs = options.submitDelayMs ?? 0;
+  const failBatchSubmit = options.failBatchSubmit === true;
   const deferCompletion = options.deferCompletion === true;
   const failItemCorrelationIds = new Set(options.failItemCorrelationIds ?? []);
   const extraOutputCorrelationIds = options.extraOutputCorrelationIds ?? [];
+  const omitOutputCorrelationIds = new Set(
+    options.omitOutputCorrelationIds ?? [],
+  );
+  const omitUsageInOutput = options.omitUsageInOutput === true;
+  const outputCompletionTokens = options.outputCompletionTokens;
 
   const server = http.createServer((req, res) => {
     const url = req.url ?? "/";
@@ -78,48 +95,70 @@ export async function startFakeOpenAiBatchServer(
         const content = files.get(fileId) ?? "";
         res.writeHead(200, { "content-type": "application/jsonl" });
         res.end(
-          content || buildBatchOutput(jsonlIds([]), failItemCorrelationIds),
+          content ||
+            buildBatchOutput(jsonlIds([]), failItemCorrelationIds, {
+              omitUsageInOutput,
+              outputCompletionTokens,
+            }),
         );
         return;
       }
 
       if (normalizedUrl === "/v1/batches" && req.method === "POST") {
-        batchCreates += 1;
-        const input = body as { input_file_id?: string };
-        const inputFileId = input.input_file_id ?? "file_0";
-        const jsonl = files.get(inputFileId) ?? "";
-        const correlationIds = parseCustomIdsFromJsonl(jsonl);
-        const id = `batch_${++batchCounter}`;
-        const outputFileId = `file_out_${id}`;
-        const initialStatus = deferCompletion ? "in_progress" : "completed";
-        const allOutputIds = [...correlationIds, ...extraOutputCorrelationIds];
-        batches.set(id, {
-          status: initialStatus,
-          input_file_id: inputFileId,
-          output_file_id: deferCompletion ? undefined : outputFileId,
-          correlation_ids: correlationIds,
-        });
-        if (!deferCompletion) {
-          files.set(
-            outputFileId,
-            buildBatchOutput(allOutputIds, failItemCorrelationIds),
-          );
-        }
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            id,
-            object: "batch",
+        const handleBatchCreate = (): void => {
+          if (failBatchSubmit) {
+            res.writeHead(503, { "content-type": "application/json" });
+            res.end(JSON.stringify({ error: "batch_submit_failed" }));
+            return;
+          }
+          batchCreates += 1;
+          const input = body as { input_file_id?: string };
+          const inputFileId = input.input_file_id ?? "file_0";
+          const jsonl = files.get(inputFileId) ?? "";
+          const correlationIds = parseCustomIdsFromJsonl(jsonl);
+          const id = `batch_${++batchCounter}`;
+          const outputFileId = `file_out_${id}`;
+          const initialStatus = deferCompletion ? "in_progress" : "completed";
+          const allOutputIds = [
+            ...correlationIds.filter((id) => !omitOutputCorrelationIds.has(id)),
+            ...extraOutputCorrelationIds,
+          ];
+          batches.set(id, {
             status: initialStatus,
             input_file_id: inputFileId,
             output_file_id: deferCompletion ? undefined : outputFileId,
-            request_counts: {
-              total: correlationIds.length,
-              completed: deferCompletion ? 0 : correlationIds.length,
-              failed: 0,
-            },
-          }),
-        );
+            correlation_ids: correlationIds,
+          });
+          if (!deferCompletion) {
+            files.set(
+              outputFileId,
+              buildBatchOutput(allOutputIds, failItemCorrelationIds, {
+                omitUsageInOutput,
+                outputCompletionTokens,
+              }),
+            );
+          }
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({
+              id,
+              object: "batch",
+              status: initialStatus,
+              input_file_id: inputFileId,
+              output_file_id: deferCompletion ? undefined : outputFileId,
+              request_counts: {
+                total: correlationIds.length,
+                completed: deferCompletion ? 0 : correlationIds.length,
+                failed: 0,
+              },
+            }),
+          );
+        };
+        if (submitDelayMs > 0) {
+          setTimeout(handleBatchCreate, submitDelayMs);
+        } else {
+          handleBatchCreate();
+        }
         return;
       }
 
@@ -169,7 +208,10 @@ export async function startFakeOpenAiBatchServer(
               : [];
           files.set(
             outputFileId,
-            buildBatchOutput(partialIds, failItemCorrelationIds),
+            buildBatchOutput(partialIds, failItemCorrelationIds, {
+              omitUsageInOutput,
+              outputCompletionTokens,
+            }),
           );
         }
         res.writeHead(200, { "content-type": "application/json" });
@@ -233,6 +275,10 @@ function jsonlIds(ids: string[]): string[] {
 function buildBatchOutput(
   correlationIds: readonly string[],
   failIds: ReadonlySet<string>,
+  options: {
+    readonly omitUsageInOutput?: boolean;
+    readonly outputCompletionTokens?: number;
+  } = {},
 ): string {
   if (correlationIds.length === 0) {
     return "";
@@ -249,22 +295,26 @@ function buildBatchOutput(
           },
         });
       }
+      const completionTokens = options.outputCompletionTokens ?? 2 + index;
+      const body: Record<string, unknown> = {
+        choices: [
+          {
+            message: { content: `result-${customId}` },
+            finish_reason: "stop",
+          },
+        ],
+      };
+      if (!options.omitUsageInOutput) {
+        body.usage = {
+          prompt_tokens: 3 + index,
+          completion_tokens: completionTokens,
+          total_tokens: 3 + index + completionTokens,
+        };
+      }
       return JSON.stringify({
         custom_id: customId,
         response: {
-          body: {
-            choices: [
-              {
-                message: { content: `result-${customId}` },
-                finish_reason: "stop",
-              },
-            ],
-            usage: {
-              prompt_tokens: 3 + index,
-              completion_tokens: 2,
-              total_tokens: 5 + index,
-            },
-          },
+          body,
           status_code: 200,
         },
       });

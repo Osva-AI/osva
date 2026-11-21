@@ -44,6 +44,7 @@ export function resolveModelGatewayGenerateOptions(
   options?: {
     readonly signal?: AbortSignal;
     readonly boundModelProfileVersionId?: ModelProfileVersionId;
+    readonly budget?: import("@osva/model-gateway").ModelGatewayBudgetContext;
   },
 ): ModelGatewayGenerateTextOptions | undefined {
   const policy = readInferenceResponseCachePolicy(execution);
@@ -65,7 +66,14 @@ export function resolveModelGatewayGenerateOptions(
     options,
   );
 
-  return mergeModelGatewayGenerateOptions(cacheOptions, routingOptions);
+  const merged = mergeModelGatewayGenerateOptions(cacheOptions, routingOptions);
+  if (options?.budget === undefined) {
+    return merged;
+  }
+  return {
+    ...merged,
+    budget: options.budget,
+  };
 }
 
 export function isOsvaResponseCacheHitOutcome(

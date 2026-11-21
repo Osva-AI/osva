@@ -26,6 +26,20 @@ async def execute(input: Any, context: RuntimeContext) -> Any:
         await asyncio.sleep(float(input.get("seconds", 60)))
         return {"slept": True}
 
+    if isinstance(input, dict) and input.get("mode") == "model":
+        binding = str(input.get("binding", "primary"))
+        result = await context.models.generate_text(
+            binding=binding,
+            messages=[
+                {
+                    "role": "user",
+                    "content": str(input.get("prompt", "container-model")),
+                }
+            ],
+            max_output_tokens=int(input.get("maxOutputTokens", 64)),
+        )
+        return {"text": result["text"]}
+
     if isinstance(input, dict) and input.get("mode") == "tool":
         output = await context.tools.invoke(
             binding=str(input.get("binding", "echo")),

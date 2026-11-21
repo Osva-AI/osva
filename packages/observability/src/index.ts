@@ -69,3 +69,12 @@ export {
   type RecordedMetric,
   type RecordedSpan,
 } from "./recording-instrumentation.js";
+export {
+  createInferenceBudgetOrdinalAllocator,
+  resolveModelGatewayBudgetContextAsync,
+  type InferenceBudgetOrdinalAllocator,
+} from "./model-gateway-budget-context.js";
+export {
+  resolveEvaluationJudgeBudgetContext,
+  parseTrustedInferenceBudgetRuntimePolicy,
+} from "./evaluation-judge-budget-context.js";

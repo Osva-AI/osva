@@ -9,6 +9,7 @@ export interface WebConfig {
   readonly databaseUrl: string;
   readonly valkeyUrl: string;
   readonly runLiveStreamEnabled: boolean;
+  readonly inferenceBudgetActivationEnabled: boolean;
   readonly host: string;
   readonly port: number;
   readonly unauthenticatedRateLimitPerMinute: number;
@@ -47,6 +48,10 @@ export function loadWebConfig(env: NodeJS.ProcessEnv = process.env): WebConfig {
     runLiveStreamEnabled: readOptionalBoolean(
       env.OSVA_RUN_LIVE_STREAM_ENABLED,
       "OSVA_RUN_LIVE_STREAM_ENABLED",
+    ),
+    inferenceBudgetActivationEnabled: readOptionalBoolean(
+      env.OSVA_INFERENCE_BUDGET_ACTIVATION_ENABLED,
+      "OSVA_INFERENCE_BUDGET_ACTIVATION_ENABLED",
     ),
     host,
     port,

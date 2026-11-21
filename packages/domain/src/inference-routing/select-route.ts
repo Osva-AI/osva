@@ -326,6 +326,8 @@ export function isNonFallbackRoutingError(error: unknown): boolean {
     code === "MODEL_BINDING_NOT_FOUND" ||
     code === "MODEL_CONTENT_BLOCKED" ||
     code === "MODEL_ROUTING_BUDGET_EXCEEDED" ||
+    code === "MODEL_INFERENCE_BUDGET_EXCEEDED" ||
+    code === "MODEL_INFERENCE_BUDGET_UNAVAILABLE" ||
     code === "MODEL_ROUTING_NO_ELIGIBLE_CANDIDATE" ||
     code === "MODEL_CANCELLED"
   );

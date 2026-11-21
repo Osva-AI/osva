@@ -2,6 +2,7 @@ import type {
   DeclarativeAgentRuntime,
   ExecutionRequest,
   ExecutionResult,
+  InferenceBudgetRuntimePolicyV1,
   GenerateCompletionRequest,
   GenerateCompletionResult,
   JsonSchemaRecord,
@@ -163,8 +164,21 @@ export class DeclarativeRuntimeAdapter implements RuntimeAdapter {
       );
     }
 
+    const scopedGateway = this.createScopedModelGateway?.(request);
     const modelGateway =
-      this.createScopedModelGateway?.(request) ?? this.modelGateway;
+      scopedGateway ??
+      (this.createScopedModelGateway === undefined
+        ? this.modelGateway
+        : undefined);
+    if (
+      modelGateway === undefined &&
+      isWorkspaceInferenceBudgetEnforcementActive(request)
+    ) {
+      return executionFailure(
+        DeclarativeRuntimeErrorCode.MODEL_UNAVAILABLE,
+        "Workspace inference budget enforcement requires a scoped model gateway.",
+      );
+    }
     if (modelGateway === undefined) {
       return executionFailure(
         DeclarativeRuntimeErrorCode.MODEL_UNAVAILABLE,
@@ -341,6 +355,17 @@ function mapThrownError(error: unknown): { code: string; message: string } {
       "Declarative runtime execution failed.",
     ),
   };
+}
+
+function isWorkspaceInferenceBudgetEnforcementActive(
+  request: ExecutionRequest,
+): boolean {
+  const raw = request.policyContext.inferenceBudget;
+  if (raw === null || typeof raw !== "object") {
+    return false;
+  }
+  const policy = raw as InferenceBudgetRuntimePolicyV1;
+  return policy.enabled === true && policy.policyVersionId !== undefined;
 }
 
 function mapModelGatewayFailure(

@@ -42,6 +42,7 @@ const MODULE_RESOURCE_FAMILIES: Record<V1HandlerModule, string> = {
   "builder-http": "builder",
   "batch-inference-http": "batch_inference_job",
   "inference-routing-http": "inference_routing_policy",
+  "inference-budget-http": "inference_budget_policy",
 };
 
 function controlPlaneAccessRecord(

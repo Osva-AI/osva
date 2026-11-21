@@ -27,6 +27,22 @@ export function suggestContainerCapabilityBaseUrl(
   return `http://${DEFAULT_LINUX_BRIDGE_GATEWAY}:${String(port)}`;
 }
 
+function isWildcardBindCapabilityUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === "0.0.0.0";
+  } catch {
+    return false;
+  }
+}
+
+/** URLs a bridge-network container cannot use to reach the worker capability server. */
+export function isUnreachableFromBridgeContainerCapabilityUrl(
+  url: string,
+): boolean {
+  return isLoopbackCapabilityUrl(url) || isWildcardBindCapabilityUrl(url);
+}
+
 export function isLoopbackCapabilityUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -73,6 +89,15 @@ export function resolveContainerCapabilityBaseUrl(options: {
 
   const runtime = options.runtimeCapabilityBaseUrl?.replace(/\/$/, "");
   if (runtime !== undefined && runtime.length > 0) {
+    const suggested = options.suggestedBaseUrl?.replace(/\/$/, "");
+    if (
+      suggested !== undefined &&
+      suggested.length > 0 &&
+      isUnreachableFromBridgeContainerCapabilityUrl(runtime)
+    ) {
+      return suggested;
+    }
+
     return runtime;
   }
 

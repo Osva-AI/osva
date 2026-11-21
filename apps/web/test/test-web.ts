@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type {
   SecretResolver,
   WorkflowEventId,
@@ -63,6 +64,7 @@ import {
   createApiKeyApplication,
   createBatchInferenceApplication,
   createInferenceRoutingApplication,
+  createInferenceBudgetApplication,
 } from "@osva/domain";
 import {
   GenerateBuilderProposalFromNaturalLanguage,
@@ -79,6 +81,8 @@ import {
   MemoryWorkspaceBatchInferencePolicyRepository,
 } from "./support/memory-batch-inference-repository.js";
 import { MemoryInferenceRoutingPolicyRepository } from "./support/memory-inference-routing-repository.js";
+import { MemoryInferenceBudgetPolicyRepository } from "./support/memory-inference-budget-policy-repository.js";
+import { MemoryInferenceBudgetPeriodLedgerRepository } from "./support/memory-inference-budget-period-ledger.js";
 import {
   CreateRun,
   IngestWorkflowEvent,
@@ -331,10 +335,15 @@ export async function createTestWebApplication(options?: {
   const batchInferencePolicies =
     new MemoryWorkspaceBatchInferencePolicyRepository();
   const inferenceRoutingPolicies = new MemoryInferenceRoutingPolicyRepository();
+  const inferenceBudgetPolicies = new MemoryInferenceBudgetPolicyRepository();
+  const inferenceBudgetPeriodLedgers =
+    new MemoryInferenceBudgetPeriodLedgerRepository();
   let batchJobIdCounter = 0;
   let batchItemIdCounter = 0;
   let inferenceRoutingPolicyIdCounter = 0;
   let inferenceRoutingPolicyVersionIdCounter = 0;
+  let inferenceBudgetPolicyIdCounter = 0;
+  let inferenceBudgetPolicyVersionIdCounter = 0;
 
   const server = createWebApplication({
     readinessCheck: options?.readinessCheck ?? (async () => true),
@@ -593,6 +602,38 @@ export async function createTestWebApplication(options?: {
         createPolicyVersionId: () => {
           inferenceRoutingPolicyVersionIdCounter += 1;
           return `irpv-${String(inferenceRoutingPolicyVersionIdCounter)}` as import("@osva-ai/contracts").InferenceRoutingPolicyVersionId;
+        },
+      },
+    },
+    inferenceBudget: {
+      inferenceBudget: createInferenceBudgetApplication({
+        policies: inferenceBudgetPolicies,
+        periodLedger: inferenceBudgetPeriodLedgers,
+        clock,
+        ids: {
+          createPolicyId: () => {
+            inferenceBudgetPolicyIdCounter += 1;
+            return `ibp-${String(inferenceBudgetPolicyIdCounter)}` as import("@osva-ai/contracts").InferenceBudgetPolicyId;
+          },
+          createPolicyVersionId: () => {
+            inferenceBudgetPolicyVersionIdCounter += 1;
+            return `ibpv-${String(inferenceBudgetPolicyVersionIdCounter)}` as import("@osva-ai/contracts").InferenceBudgetPolicyVersionId;
+          },
+        },
+        activationMutationsEnabled: false,
+        securityAuditIds: {
+          createId: () =>
+            randomUUID() as import("@osva-ai/contracts").SecurityAuditEventId,
+        },
+      }),
+      ids: {
+        createPolicyId: () => {
+          inferenceBudgetPolicyIdCounter += 1;
+          return `ibp-${String(inferenceBudgetPolicyIdCounter)}` as import("@osva-ai/contracts").InferenceBudgetPolicyId;
+        },
+        createPolicyVersionId: () => {
+          inferenceBudgetPolicyVersionIdCounter += 1;
+          return `ibpv-${String(inferenceBudgetPolicyVersionIdCounter)}` as import("@osva-ai/contracts").InferenceBudgetPolicyVersionId;
         },
       },
     },

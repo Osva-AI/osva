@@ -7,6 +7,10 @@ export {
   inferenceRoutingDecisionIdSchema,
   inferenceRoutingPolicyIdSchema,
   inferenceRoutingPolicyVersionIdSchema,
+  inferenceInvocationIdSchema,
+  inferenceBudgetPolicyIdSchema,
+  inferenceBudgetPolicyVersionIdSchema,
+  inferenceBudgetReservationIdSchema,
   artifactIdSchema,
   deploymentIdSchema,
   evaluationCaseIdSchema,
@@ -241,6 +245,30 @@ export {
   inferenceRoutingRuntimePolicySchema,
   parseInferenceRoutingCircuitBreakerSettings,
 } from "./inference-routing.js";
+
+export {
+  appendInferenceBudgetPolicyVersionRequestSchema,
+  createInferenceBudgetPolicyRequestSchema,
+  inferenceBudgetPeriodLedgerSchema,
+  inferenceBudgetPeriodUsageQuerySchema,
+  inferenceBudgetPeriodUsageResponseSchema,
+  inferenceBudgetPolicyDefinitionSchema,
+  inferenceBudgetPolicyRecordSchema,
+  inferenceBudgetRuntimePolicySchema,
+  inferenceBudgetPolicyVersionRecordSchema,
+  inferenceBudgetProviderAttemptContextSchema,
+  inferenceBudgetReservationKeySchema,
+  inferenceBudgetReservationSnapshotSchema,
+  inferenceBudgetUtcPeriodIdentitySchema,
+  inferenceInvocationAnchorContractSchema,
+  inferenceInvocationAnchorMaterialSchema,
+  inferenceInvocationRecordSchema,
+  parseInferenceBudgetPolicyDefinition,
+  activateWorkspaceInferenceBudgetRequestSchema,
+  workspaceInferenceBudgetActivationSchema,
+  workspaceInferenceBudgetActivationStatusResponseSchema,
+  workspaceInferenceBudgetConfigurationResponseSchema,
+} from "./inference-budget.js";
 
 export {
   batchInferenceCancelRequestSchema,

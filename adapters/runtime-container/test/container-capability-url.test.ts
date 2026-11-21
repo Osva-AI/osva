@@ -40,4 +40,31 @@ describe("container capability URL helpers", () => {
       }),
     ).toBe("http://host.docker.internal:8080");
   });
+
+  it("uses suggested URL when runtime capability listens on loopback", () => {
+    expect(
+      resolveContainerCapabilityBaseUrl({
+        runtimeCapabilityBaseUrl: "http://127.0.0.1:8080",
+        suggestedBaseUrl: "http://host.docker.internal:8080",
+      }),
+    ).toBe("http://host.docker.internal:8080");
+  });
+
+  it("uses suggested URL when runtime capability advertises 0.0.0.0", () => {
+    expect(
+      resolveContainerCapabilityBaseUrl({
+        runtimeCapabilityBaseUrl: "http://0.0.0.0:8080",
+        suggestedBaseUrl: "http://host.docker.internal:8080",
+      }),
+    ).toBe("http://host.docker.internal:8080");
+  });
+
+  it("keeps non-loopback runtime capability URLs", () => {
+    expect(
+      resolveContainerCapabilityBaseUrl({
+        runtimeCapabilityBaseUrl: "http://10.0.0.5:8080",
+        suggestedBaseUrl: "http://host.docker.internal:8080",
+      }),
+    ).toBe("http://10.0.0.5:8080");
+  });
 });

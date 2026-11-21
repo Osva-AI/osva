@@ -90,7 +90,14 @@ const STATIC_V1_SEGMENTS = new Set([
   "inference-routing-policies",
   "inference-routing-policy-versions",
   "inference-routing-decisions",
+  "inference-budget-policies",
+  "inference-budget-policy-versions",
+  "workspace-inference-budget",
+  "configuration",
+  "period-usage",
+  "activation",
   "activate",
+  "disable",
 ]);
 
 export function stripV1HttpRoutesExport(source: string): string {
