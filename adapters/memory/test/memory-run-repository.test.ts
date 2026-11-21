@@ -356,4 +356,101 @@ describe("MemoryRunRepository", () => {
     }).toThrow(TypeError);
     expect(repository.snapshotRunSteps()).toHaveLength(1);
   });
+
+  it("rejects RunStep finalization when the parent RunAttempt is no longer RUNNING", async () => {
+    const repository = new MemoryRunRepository();
+    const port: RunRepository = repository;
+    const pending = createPendingRun();
+    const attempt = createPendingAttempt();
+    await repository.createRunWithInitialAttempt(pending, attempt);
+
+    const queuedRun = pending.transitionTo("QUEUED", LATER);
+    await port.transitionRun("PENDING", queuedRun);
+    const runningRun = queuedRun.transitionTo("RUNNING", LATER);
+    const runningAttempt = attempt.transitionTo("RUNNING", LATER);
+    await port.transitionRunAndAttempt(
+      "QUEUED",
+      runningRun,
+      "PENDING",
+      runningAttempt,
+    );
+
+    await port.insertRunningRunStep(
+      RunStep.start({
+        id: runStepId,
+        runId,
+        runAttemptId,
+        kind: "MODEL",
+        bindingName: "default",
+        startedAt: LATER,
+        modelProfileVersionId:
+          "model-profile-version-1" as import("@osva-ai/contracts").ModelProfileVersionId,
+      }),
+    );
+
+    const failedAttempt = runningAttempt.transitionTo("FAILED", LATER, {
+      error: { code: "EXECUTION_TIMEOUT", message: "timeout" },
+    });
+    const failedRun = runningRun.transitionTo("FAILED", LATER);
+    await port.transitionRunAndAttempt(
+      "RUNNING",
+      failedRun,
+      "RUNNING",
+      failedAttempt,
+    );
+
+    const step = await port.findRunStepById(runStepId);
+    expect(step?.status).toBe("FAILED");
+    expect(step?.errorCode).toBe("EXECUTION_TIMEOUT");
+
+    await expect(
+      port.finalizeRunStep(runStepId, {
+        status: "SUCCEEDED",
+        completedAt: LATER,
+      }),
+    ).rejects.toBeInstanceOf(LifecycleConflictError);
+  });
+
+  it("reconciles unfinished RunSteps on transitionRunAndAttempt failure", async () => {
+    const repository = new MemoryRunRepository();
+    const port: RunRepository = repository;
+    const pending = createPendingRun();
+    const attempt = createPendingAttempt();
+    await repository.createRunWithInitialAttempt(pending, attempt);
+    const queuedRun = pending.transitionTo("QUEUED", LATER);
+    await port.transitionRun("PENDING", queuedRun);
+    const runningRun = queuedRun.transitionTo("RUNNING", LATER);
+    const runningAttempt = attempt.transitionTo("RUNNING", LATER);
+    await port.transitionRunAndAttempt(
+      "QUEUED",
+      runningRun,
+      "PENDING",
+      runningAttempt,
+    );
+    await port.insertRunningRunStep(
+      RunStep.start({
+        id: runStepId,
+        runId,
+        runAttemptId,
+        kind: "MODEL",
+        bindingName: "default",
+        startedAt: LATER,
+        modelProfileVersionId:
+          "model-profile-version-1" as import("@osva-ai/contracts").ModelProfileVersionId,
+      }),
+    );
+
+    const failedAttempt = runningAttempt.transitionTo("FAILED", LATER, {
+      error: { code: "AGENT_ERROR", message: "boom" },
+    });
+    const failedRun = runningRun.transitionTo("FAILED", LATER);
+    await port.transitionRunAndAttempt(
+      "RUNNING",
+      failedRun,
+      "RUNNING",
+      failedAttempt,
+    );
+
+    expect((await port.findRunStepById(runStepId))?.status).toBe("FAILED");
+  });
 });

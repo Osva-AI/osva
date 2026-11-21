@@ -54,6 +54,7 @@ const V2_ID = "ibpv-worker-v2" as InferenceBudgetPolicyVersionId;
 async function waitUntilBudget(
   check: () => Promise<boolean>,
   timeoutMs = 120_000,
+  context?: () => Promise<string>,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -62,7 +63,42 @@ async function waitUntilBudget(
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  throw new Error("waitUntilBudget timed out");
+  const detail = context !== undefined ? await context() : "";
+  throw new Error(
+    detail.length > 0
+      ? `waitUntilBudget timed out: ${detail}`
+      : "waitUntilBudget timed out",
+  );
+}
+
+function formatBudgetDiagnostics(options: {
+  readonly runId?: string;
+  readonly runStatus?: string;
+  readonly fakeRequestCount: number;
+  readonly reservations: Awaited<ReturnType<typeof listReservations>>;
+}): string {
+  return JSON.stringify({
+    runId: options.runId,
+    runStatus: options.runStatus,
+    fakeRequestCount: options.fakeRequestCount,
+    reservations: options.reservations.map((r) => ({
+      status: r.status,
+      provider_started_at: r.provider_started_at,
+      reserved_usd_micros: r.reserved_usd_micros,
+    })),
+  });
+}
+
+/** In-flight model work: provider has started but the run may still be RUNNING. */
+function reservationProviderHasStarted(
+  rows: Awaited<ReturnType<typeof listReservations>>,
+): boolean {
+  return rows.some(
+    (r) =>
+      r.provider_started_at !== null ||
+      r.status === "PROVIDER_STARTED" ||
+      r.status === "COMMITTED",
+  );
 }
 
 async function listReservationAttribution(database: Database): Promise<
@@ -82,6 +118,30 @@ async function listReservationAttribution(database: Database): Promise<
   `;
   return rows as typeof rows;
 }
+
+describe("ACT17 reservation checkpoint helpers", () => {
+  it("accepts durable provider_started_at without simultaneous PROVIDER_STARTED status", () => {
+    expect(
+      reservationProviderHasStarted([
+        {
+          status: "ADMITTED",
+          provider_started_at: new Date("2026-02-15T12:00:01.000Z"),
+        } as Awaited<ReturnType<typeof listReservations>>[number],
+      ]),
+    ).toBe(true);
+  });
+
+  it("does not treat admitted-only reservations as provider-started", () => {
+    expect(
+      reservationProviderHasStarted([
+        {
+          status: "ADMITTED",
+          provider_started_at: null,
+        } as Awaited<ReturnType<typeof listReservations>>[number],
+      ]),
+    ).toBe(false);
+  });
+});
 
 describe("B5.6A ACT17 — in-flight version switch", () => {
   let postgres: PostgresTestContext;
@@ -167,13 +227,42 @@ describe("B5.6A ACT17 — in-flight version switch", () => {
         "act17-slow",
       );
 
-      await waitUntilBudget(async () => {
-        const rows = await listReservations(database, BUDGET_WORKSPACE);
-        return (
-          fake.requests.length === 1 &&
-          rows.some((r) => r.status === "PROVIDER_STARTED")
-        );
-      });
+      await waitUntilBudget(
+        async () => {
+          const run = await fetchJson(`${stack.origin}/v1/runs/${runId}`);
+          const runStatus = (run.body as { status?: string }).status ?? "";
+          if (runStatus === "FAILED") {
+            const rows = await listReservations(database, BUDGET_WORKSPACE);
+            throw new Error(
+              `ACT17 first run failed before in-flight checkpoint: ${formatBudgetDiagnostics(
+                {
+                  runId,
+                  runStatus,
+                  fakeRequestCount: fake.requests.length,
+                  reservations: rows,
+                },
+              )}`,
+            );
+          }
+          const rows = await listReservations(database, BUDGET_WORKSPACE);
+          return (
+            rows.length >= 1 &&
+            reservationProviderHasStarted(rows) &&
+            !["SUCCEEDED", "FAILED"].includes(runStatus)
+          );
+        },
+        120_000,
+        async () => {
+          const run = await fetchJson(`${stack.origin}/v1/runs/${runId}`);
+          const rows = await listReservations(database, BUDGET_WORKSPACE);
+          return formatBudgetDiagnostics({
+            runId,
+            runStatus: (run.body as { status?: string }).status,
+            fakeRequestCount: fake.requests.length,
+            reservations: rows,
+          });
+        },
+      );
 
       const inFlight = await listReservationAttribution(database);
       expect(inFlight.length).toBe(1);
@@ -302,20 +391,53 @@ describe("B5.6A ACT17 — in-flight version switch", () => {
         BUDGET_POLICY_VERSION_ID,
       );
 
-      await createRun(
+      const hangRun = await createRun(
         stack.origin,
         stack.agentId,
         stack.agentVersionId,
-        "ignored-hang-fixture",
+        "act17b-hang",
       );
 
-      await waitUntilBudget(async () => {
-        const rows = await listReservations(database, BUDGET_WORKSPACE);
-        return (
-          fake.requests.length === 1 &&
-          rows.some((r) => r.status === "PROVIDER_STARTED")
-        );
-      });
+      await waitUntilBudget(
+        async () => {
+          const run = await fetchJson(
+            `${stack.origin}/v1/runs/${hangRun.runId}`,
+          );
+          const runStatus = (run.body as { status?: string }).status ?? "";
+          if (runStatus === "FAILED") {
+            const rows = await listReservations(database, BUDGET_WORKSPACE);
+            throw new Error(
+              `ACT17b run failed before disable checkpoint: ${formatBudgetDiagnostics(
+                {
+                  runId: hangRun.runId,
+                  runStatus,
+                  fakeRequestCount: fake.requests.length,
+                  reservations: rows,
+                },
+              )}`,
+            );
+          }
+          const rows = await listReservations(database, BUDGET_WORKSPACE);
+          return (
+            rows.length >= 1 &&
+            reservationProviderHasStarted(rows) &&
+            !["SUCCEEDED", "FAILED"].includes(runStatus)
+          );
+        },
+        120_000,
+        async () => {
+          const run = await fetchJson(
+            `${stack.origin}/v1/runs/${hangRun.runId}`,
+          );
+          const rows = await listReservations(database, BUDGET_WORKSPACE);
+          return formatBudgetDiagnostics({
+            runId: hangRun.runId,
+            runStatus: (run.body as { status?: string }).status,
+            fakeRequestCount: fake.requests.length,
+            reservations: rows,
+          });
+        },
+      );
 
       const beforeDisable = await listReservations(database, BUDGET_WORKSPACE);
       const heldBefore = beforeDisable.reduce(

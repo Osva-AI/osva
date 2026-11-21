@@ -12,6 +12,7 @@ import { sha256IntegrityOf } from "../src/integrity.js";
 import { RuntimeErrorCode } from "../src/constants.js";
 import {
   TrustedTypeScriptRuntimeAdapter,
+  executionResultIsExecutionTimeout,
   type RuntimeModelGateway,
 } from "../src/trusted-typescript-runtime-adapter.js";
 import {
@@ -38,6 +39,56 @@ function streamingOnlyRuntimeModelGateway(
     },
     generateCompletionStream,
   };
+}
+
+function createStreamCleanupGate(): {
+  readonly gate: Promise<void>;
+  readonly release: () => void;
+} {
+  let release: (() => void) | undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    gate,
+    release: () => {
+      release?.();
+    },
+  };
+}
+
+function streamCompletedSuccessEvents(): [
+  {
+    streamFormatVersion: typeof MODEL_STREAM_EVENT_FORMAT_VERSION;
+    streamId: string;
+    sequence: number;
+    kind: "TEXT_DELTA";
+    textDelta: string;
+  },
+  {
+    streamFormatVersion: typeof MODEL_STREAM_EVENT_FORMAT_VERSION;
+    streamId: string;
+    sequence: number;
+    kind: "COMPLETED";
+    finishReason: "stop";
+  },
+] {
+  return [
+    {
+      streamFormatVersion: MODEL_STREAM_EVENT_FORMAT_VERSION,
+      streamId: "lifecycle-test",
+      sequence: 0,
+      kind: "TEXT_DELTA",
+      textDelta: "hi",
+    },
+    {
+      streamFormatVersion: MODEL_STREAM_EVENT_FORMAT_VERSION,
+      streamId: "lifecycle-test",
+      sequence: 1,
+      kind: "COMPLETED",
+      finishReason: "stop",
+    },
+  ];
 }
 
 async function adapterFor(root: string, entrypoint: string, timeoutMs = 5_000) {
@@ -804,6 +855,389 @@ describe("TrustedTypeScriptRuntimeAdapter", () => {
       await adapter.close();
     }
   });
+
+  it("waits for parent stream consumer cleanup before resolving child success", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-stream-text-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "model-stream-text-agent.ts"),
+    );
+    const { gate, release } = createStreamCleanupGate();
+    let generatorFinallyEntered = false;
+    let executionResolved = false;
+
+    const baseGateway = streamingOnlyRuntimeModelGateway(
+      async function* generateCompletionStream() {
+        for (const event of streamCompletedSuccessEvents()) {
+          yield event;
+        }
+      },
+    );
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: {
+        generateText: baseGateway.generateText,
+        generateCompletionStream(request, options) {
+          const source = baseGateway.generateCompletionStream!(
+            request,
+            options,
+          );
+          return (async function* () {
+            try {
+              yield* source;
+            } finally {
+              generatorFinallyEntered = true;
+              await gate;
+            }
+          })();
+        },
+      },
+    });
+
+    try {
+      const pending = adapter
+        .execute(
+          createTrustedRequest({
+            timeoutMs: 30_000,
+            runtime: {
+              type: "TRUSTED_TYPESCRIPT",
+              entrypoint: "model-stream-text-agent.ts",
+              integrity: sha256IntegrityOf(artifact),
+            },
+            modelProfileVersionBindings: modelBindings({
+              primary: "mpv-stream",
+            }),
+          }),
+        )
+        .then((result) => {
+          executionResolved = true;
+          return result;
+        });
+
+      const deadline = Date.now() + 30_000;
+      while (!generatorFinallyEntered && Date.now() < deadline) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 50);
+        });
+      }
+      expect(generatorFinallyEntered).toBe(true);
+      expect(executionResolved).toBe(false);
+
+      release();
+      const result = await pending;
+      expect(result).toMatchObject({
+        status: "succeeded",
+        output: { text: "hi", deltas: ["hi"] },
+      });
+      expect(executionResolved).toBe(true);
+    } finally {
+      await adapter.close();
+    }
+  }, 60_000);
+
+  it("waits for parent stream consumer cleanup before resolving child failure after a FAILED terminal event", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-stream-fail-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "model-stream-fail-agent.ts"),
+    );
+    const { gate, release } = createStreamCleanupGate();
+    let generatorFinallyEntered = false;
+    let executionResolved = false;
+
+    const baseGateway = streamingOnlyRuntimeModelGateway(
+      async function* generateCompletionStream() {
+        yield {
+          streamFormatVersion: MODEL_STREAM_EVENT_FORMAT_VERSION,
+          streamId: "lifecycle-fail",
+          sequence: 0,
+          kind: "TEXT_DELTA" as const,
+          textDelta: "partial",
+        };
+        yield {
+          streamFormatVersion: MODEL_STREAM_EVENT_FORMAT_VERSION,
+          streamId: "lifecycle-fail",
+          sequence: 1,
+          kind: "FAILED" as const,
+          code: "MODEL_PROVIDER_ERROR",
+          message: "synthetic stream failure",
+        };
+      },
+    );
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: {
+        generateText: baseGateway.generateText,
+        generateCompletionStream(request, options) {
+          const source = baseGateway.generateCompletionStream!(
+            request,
+            options,
+          );
+          return (async function* () {
+            try {
+              yield* source;
+            } finally {
+              generatorFinallyEntered = true;
+              await gate;
+            }
+          })();
+        },
+      },
+    });
+
+    try {
+      const pending = adapter
+        .execute(
+          createTrustedRequest({
+            timeoutMs: 30_000,
+            runtime: {
+              type: "TRUSTED_TYPESCRIPT",
+              entrypoint: "model-stream-fail-agent.ts",
+              integrity: sha256IntegrityOf(artifact),
+            },
+            modelProfileVersionBindings: modelBindings({
+              primary: "mpv-stream-fail",
+            }),
+          }),
+        )
+        .then((result) => {
+          executionResolved = true;
+          return result;
+        });
+
+      const deadline = Date.now() + 30_000;
+      while (!generatorFinallyEntered && Date.now() < deadline) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 50);
+        });
+      }
+      expect(generatorFinallyEntered).toBe(true);
+      expect(executionResolved).toBe(false);
+
+      release();
+      const result = await pending;
+      expect(result.status).toBe("failed");
+      if (result.status === "failed") {
+        expect(result.error.code).toBe(RuntimeErrorCode.AGENT_ERROR);
+      }
+      expect(executionResolved).toBe(true);
+    } finally {
+      await adapter.close();
+    }
+  }, 60_000);
+
+  it("waits for parent stream consumer cleanup when the child closes the stream early", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-stream-cancel-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "model-stream-cancel-agent.ts"),
+    );
+    const { gate, release } = createStreamCleanupGate();
+    let generatorFinallyEntered = false;
+    let executionResolved = false;
+
+    const baseGateway = streamingOnlyRuntimeModelGateway(
+      async function* generateCompletionStream() {
+        yield {
+          streamFormatVersion: MODEL_STREAM_EVENT_FORMAT_VERSION,
+          streamId: "lifecycle-cancel",
+          sequence: 0,
+          kind: "TEXT_DELTA" as const,
+          textDelta: "partial-",
+        };
+        yield {
+          streamFormatVersion: MODEL_STREAM_EVENT_FORMAT_VERSION,
+          streamId: "lifecycle-cancel",
+          sequence: 1,
+          kind: "TEXT_DELTA" as const,
+          textDelta: "unused",
+        };
+      },
+    );
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: {
+        generateText: baseGateway.generateText,
+        generateCompletionStream(request, options) {
+          const source = baseGateway.generateCompletionStream!(
+            request,
+            options,
+          );
+          return (async function* () {
+            try {
+              yield* source;
+            } finally {
+              generatorFinallyEntered = true;
+              await gate;
+            }
+          })();
+        },
+      },
+    });
+
+    try {
+      const pending = adapter
+        .execute(
+          createTrustedRequest({
+            timeoutMs: 30_000,
+            runtime: {
+              type: "TRUSTED_TYPESCRIPT",
+              entrypoint: "model-stream-cancel-agent.ts",
+              integrity: sha256IntegrityOf(artifact),
+            },
+            modelProfileVersionBindings: modelBindings({
+              primary: "mpv-stream-cancel",
+            }),
+          }),
+        )
+        .then((result) => {
+          executionResolved = true;
+          return result;
+        });
+
+      const deadline = Date.now() + 30_000;
+      while (!generatorFinallyEntered && Date.now() < deadline) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 50);
+        });
+      }
+      expect(generatorFinallyEntered).toBe(true);
+      expect(executionResolved).toBe(false);
+
+      release();
+      const result = await pending;
+      expect(result).toMatchObject({
+        status: "succeeded",
+        output: { deltas: ["partial-"], stoppedEarly: true },
+      });
+      expect(executionResolved).toBe(true);
+    } finally {
+      await adapter.close();
+    }
+  }, 60_000);
+
+  it("returns execution timeout when stream cleanup exceeds the execution deadline", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-stream-text-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "model-stream-text-agent.ts"),
+    );
+    const { gate } = createStreamCleanupGate();
+    let executionResolved = false;
+
+    const baseGateway = streamingOnlyRuntimeModelGateway(
+      async function* generateCompletionStream() {
+        for (const event of streamCompletedSuccessEvents()) {
+          yield event;
+        }
+      },
+    );
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: {
+        generateText: baseGateway.generateText,
+        generateCompletionStream(request, options) {
+          const source = baseGateway.generateCompletionStream!(
+            request,
+            options,
+          );
+          return (async function* () {
+            try {
+              yield* source;
+            } finally {
+              await gate;
+            }
+          })();
+        },
+      },
+    });
+
+    const timeoutMs = 2_500;
+    const startedAt = Date.now();
+
+    try {
+      const result = await adapter.execute(
+        createTrustedRequest({
+          timeoutMs,
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "model-stream-text-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          modelProfileVersionBindings: modelBindings({
+            primary: "mpv-stream-hung",
+          }),
+        }),
+      );
+      executionResolved = true;
+      expect(executionResultIsExecutionTimeout(result)).toBe(true);
+      expect(Date.now() - startedAt).toBeLessThan(timeoutMs + 2_000);
+    } finally {
+      await adapter.close();
+    }
+    expect(executionResolved).toBe(true);
+  }, 15_000);
+
+  it("does not change the execution result when a timed-out stream handler settles later", async () => {
+    const root = await createTrustedRoot();
+    await installFixture(root, "model-stream-text-agent.ts");
+    const artifact = await fs.readFile(
+      path.join(root, "model-stream-text-agent.ts"),
+    );
+    const { gate, release } = createStreamCleanupGate();
+
+    const baseGateway = streamingOnlyRuntimeModelGateway(
+      async function* generateCompletionStream() {
+        for (const event of streamCompletedSuccessEvents()) {
+          yield event;
+        }
+      },
+    );
+    const adapter = new TrustedTypeScriptRuntimeAdapter({
+      trustedRuntimeRoot: root,
+      modelGateway: {
+        generateText: baseGateway.generateText,
+        generateCompletionStream(request, options) {
+          const source = baseGateway.generateCompletionStream!(
+            request,
+            options,
+          );
+          return (async function* () {
+            try {
+              yield* source;
+            } finally {
+              await gate;
+            }
+          })();
+        },
+      },
+    });
+
+    try {
+      const timeoutMs = 2_000;
+      const terminal = await adapter.execute(
+        createTrustedRequest({
+          timeoutMs,
+          runtime: {
+            type: "TRUSTED_TYPESCRIPT",
+            entrypoint: "model-stream-text-agent.ts",
+            integrity: sha256IntegrityOf(artifact),
+          },
+          modelProfileVersionBindings: modelBindings({
+            primary: "mpv-stream-late",
+          }),
+        }),
+      );
+
+      expect(executionResultIsExecutionTimeout(terminal)).toBe(true);
+      const frozen = terminal;
+      release();
+      expect(terminal).toEqual(frozen);
+      expect(terminal.status).toBe("failed");
+    } finally {
+      await adapter.close();
+    }
+  }, 15_000);
 
   it("forwards generateCompletionStream events over IPC and aborts when the child closes early", async () => {
     const root = await createTrustedRoot();

@@ -212,6 +212,12 @@ export {
   type RunStepIdentityProps,
   type RunStepProps,
 } from "./run-step.js";
+export {
+  RUN_ATTEMPT_TERMINAL_ERROR_CODE,
+  RUN_STEP_NOT_FINALIZED_ERROR_CODE,
+  reconciledRunStepFailureForOrphanedStep,
+  shouldReconcileRunStepsForTerminalAttempt,
+} from "./reconcile-run-steps-on-terminal-attempt.js";
 export { Evaluation, type EvaluationProps } from "./evaluation.js";
 export {
   EvaluationSuite,

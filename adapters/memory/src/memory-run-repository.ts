@@ -17,7 +17,10 @@ import {
   assertLegalRunAttemptTransition,
   assertLegalRunTransition,
   isMeasurableModelRunStep,
+  isTerminalRunAttemptState,
+  reconciledRunStepFailureForOrphanedStep,
   selectCapabilityEligibleRunAttempt,
+  shouldReconcileRunStepsForTerminalAttempt,
 } from "@osva/domain";
 import type {
   FailExpiredLeasedAttemptCommand,
@@ -252,6 +255,11 @@ export class MemoryRunRepository implements RunRepository {
       throw new LifecycleConflictError("runStep", runStepId, "RUNNING");
     }
 
+    const attempt = this.attempts.get(existing.runAttemptId);
+    if (attempt === undefined || attempt.status !== "RUNNING") {
+      throw new LifecycleConflictError("runStep", runStepId, "RUNNING");
+    }
+
     const finalized = existing.finalize(finalize);
     this.steps.set(runStepId, finalized);
     return finalized;
@@ -410,6 +418,9 @@ export class MemoryRunRepository implements RunRepository {
 
     const persisted = applyRunAttemptLifecycle(current, next);
     this.attempts.set(persisted.id, persisted);
+    if (isTerminalRunAttemptState(persisted.status)) {
+      this.reconcileUnfinishedRunStepsForTerminalAttempt(persisted);
+    }
     return persisted;
   }
 
@@ -433,21 +444,32 @@ export class MemoryRunRepository implements RunRepository {
       nextAttempt,
       this.clock.now(),
     );
+    assertLegalRunAttemptTransition(expectedAttemptStatus, nextAttempt.status);
+    assertLegalRunTransition(expectedRunStatus, nextRun.status);
+
+    if (previousAttempt === undefined) {
+      throw new RunAttemptNotFoundError(nextAttempt.id);
+    }
+    if (previousAttempt.status !== expectedAttemptStatus) {
+      throw new LifecycleConflictError(
+        "runAttempt",
+        nextAttempt.id,
+        expectedAttemptStatus,
+      );
+    }
+
     const leasedAttempt = applyLeaseTtl(nextAttempt, options?.leaseTtlMs);
-    const runAttempt = await this.transitionRunAttempt(
-      expectedAttemptStatus,
-      leasedAttempt,
-    );
+    const runAttempt = applyRunAttemptLifecycle(previousAttempt, leasedAttempt);
+    this.attempts.set(runAttempt.id, runAttempt);
 
     try {
       const run = await this.transitionRun(expectedRunStatus, nextRun);
+      if (isTerminalRunAttemptState(runAttempt.status)) {
+        this.reconcileUnfinishedRunStepsForTerminalAttempt(runAttempt);
+      }
       return { run, runAttempt };
     } catch (error) {
-      if (previousAttempt !== undefined) {
-        this.attempts.set(previousAttempt.id, previousAttempt);
-      } else {
-        this.attempts.delete(nextAttempt.id);
-      }
+      this.attempts.set(previousAttempt.id, previousAttempt);
       throw error;
     }
   }
@@ -506,6 +528,7 @@ export class MemoryRunRepository implements RunRepository {
     const failedRun = run.transitionTo("FAILED", command.now);
     this.attempts.set(failedAttempt.id, failedAttempt);
     this.runs.set(failedRun.id, failedRun);
+    this.reconcileUnfinishedRunStepsForTerminalAttempt(failedAttempt);
     return { run: failedRun, runAttempt: failedAttempt };
   }
 
@@ -535,7 +558,29 @@ export class MemoryRunRepository implements RunRepository {
       .withRecoveryMetadata(command.recoveryMetadata, command.now);
     this.attempts.set(failedAttempt.id, failedAttempt);
     this.runs.set(interruptedRun.id, interruptedRun);
+    this.reconcileUnfinishedRunStepsForTerminalAttempt(failedAttempt);
     return { run: interruptedRun, runAttempt: failedAttempt };
+  }
+
+  private reconcileUnfinishedRunStepsForTerminalAttempt(
+    attempt: RunAttempt,
+  ): void {
+    if (!shouldReconcileRunStepsForTerminalAttempt(attempt)) {
+      return;
+    }
+
+    const completedAt = attempt.completedAt ?? this.clock.now();
+    const failure = reconciledRunStepFailureForOrphanedStep(
+      attempt,
+      completedAt,
+    );
+
+    for (const [stepId, step] of this.steps) {
+      if (step.runAttemptId !== attempt.id || step.status !== "RUNNING") {
+        continue;
+      }
+      this.steps.set(stepId, step.finalize(failure));
+    }
   }
 
   async listInterruptedRuns(limit: number): Promise<readonly Run[]> {

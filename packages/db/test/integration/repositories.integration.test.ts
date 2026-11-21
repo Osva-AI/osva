@@ -1,9 +1,11 @@
-import type {
-  AgentVersionId,
-  ModelProfileId,
-  ModelProfileVersionId,
-  RunAttemptId,
-  RunId,
+import {
+  EXECUTION_INTERRUPTED_ERROR_CODE,
+  type AgentVersionId,
+  type ModelProfileId,
+  type ModelProfileVersionId,
+  type RunAttemptId,
+  type RunId,
+  type RunStepId,
 } from "@osva-ai/contracts";
 import {
   Agent,
@@ -21,6 +23,7 @@ import {
   Run,
   RunAttempt,
   RunNotFoundError,
+  RUN_STEP_NOT_FINALIZED_ERROR_CODE,
   RunStep,
   Workspace,
 } from "@osva/domain";
@@ -45,6 +48,8 @@ import { PostgresModelProfileRepository } from "../../src/repositories/postgres-
 import { PostgresRunRepository } from "../../src/repositories/postgres-run-repository.js";
 import { PostgresWorkspaceRepository } from "../../src/repositories/postgres-workspace-repository.js";
 import { deployments } from "../../src/schema/deployments.js";
+import { runAttempts } from "../../src/schema/run-attempts.js";
+import { runs as runsTable } from "../../src/schema/runs.js";
 import { runSteps } from "../../src/schema/run-steps.js";
 import {
   EVEN_LATER,
@@ -736,25 +741,31 @@ describe("PostgreSQL Stage 0 repositories", () => {
   describe("RunStep", () => {
     it("saves a RunStep that retains Run and RunAttempt identity", async () => {
       const { ids } = await seedAgentGraph();
-      await runs.saveRun(
-        Run.create({
-          input: RUN_INPUT,
-          id: ids.runId,
-          workspaceId: ids.workspaceId,
-          agentId: ids.agentId,
-          effectiveBindings: createBindings(
-            ids.agentVersionId,
-            ids.modelProfileVersionId,
-          ),
-          createdAt: NOW,
-        }),
-      );
-      await runs.saveRunAttempt(
-        RunAttempt.createFirst({
-          id: ids.runAttemptId,
-          runId: ids.runId,
-          createdAt: NOW,
-        }),
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+      const attempt = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attempt);
+      const queuedRun = pending.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedRun);
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        queuedRun.transitionTo("RUNNING", EVEN_LATER),
+        "PENDING",
+        attempt.transitionTo("RUNNING", EVEN_LATER),
       );
 
       const step = RunStep.start({
@@ -763,13 +774,13 @@ describe("PostgreSQL Stage 0 repositories", () => {
         runAttemptId: ids.runAttemptId,
         kind: "MODEL",
         bindingName: "default",
-        startedAt: NOW,
+        startedAt: EVEN_LATER,
         modelProfileVersionId: ids.modelProfileVersionId,
       });
       await runs.insertRunningRunStep(step);
       await runs.finalizeRunStep(ids.runStepId, {
         status: "SUCCEEDED",
-        completedAt: LATER,
+        completedAt: EVEN_LATER,
         inputTokens: 10,
         outputTokens: 2,
         totalTokens: 12,
@@ -788,7 +799,595 @@ describe("PostgreSQL Stage 0 repositories", () => {
       expect(loaded.runId).toBe(ids.runId);
       expect(loaded.runAttemptId).toBe(ids.runAttemptId);
       expect(loaded.inputTokens).toBe(10);
-      expect(loaded.completedAt).toEqual(LATER);
+      expect(loaded.completedAt).toEqual(EVEN_LATER);
+    });
+
+    it("reconciles unfinished RunSteps when the RunAttempt transitions to FAILED", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+      const attempt = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attempt);
+      const queuedRun = pending.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedRun);
+      const runningRun = queuedRun.transitionTo("RUNNING", EVEN_LATER);
+      const runningAttempt = attempt.transitionTo("RUNNING", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        runningRun,
+        "PENDING",
+        runningAttempt,
+      );
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: ids.runStepId,
+          runId: ids.runId,
+          runAttemptId: ids.runAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: EVEN_LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+
+      const timeoutError = {
+        code: "EXECUTION_TIMEOUT",
+        message: "Trusted runtime execution timed out.",
+      };
+      const failedAttempt = runningAttempt.transitionTo("FAILED", EVEN_LATER, {
+        error: timeoutError,
+      });
+      const failedRun = runningRun.transitionTo("FAILED", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "RUNNING",
+        failedRun,
+        "RUNNING",
+        failedAttempt,
+      );
+
+      const step = await runs.findRunStepById(ids.runStepId);
+      expect(step?.status).toBe("FAILED");
+      expect(step?.errorCode).toBe("EXECUTION_TIMEOUT");
+      expect(step?.usageIncomplete).toBe(true);
+    });
+
+    it("rejects RunStep finalization after the parent RunAttempt has left RUNNING", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+      const attempt = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attempt);
+
+      const queuedRun = pending.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedRun);
+      const runningRun = queuedRun.transitionTo("RUNNING", EVEN_LATER);
+      const runningAttempt = attempt.transitionTo("RUNNING", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        runningRun,
+        "PENDING",
+        runningAttempt,
+      );
+
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: ids.runStepId,
+          runId: ids.runId,
+          runAttemptId: ids.runAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+
+      const failedAttempt = runningAttempt.transitionTo("FAILED", EVEN_LATER, {
+        error: {
+          code: "EXECUTION_TIMEOUT",
+          message: "Trusted runtime execution timed out.",
+        },
+      });
+      const failedRun = runningRun.transitionTo("FAILED", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "RUNNING",
+        failedRun,
+        "RUNNING",
+        failedAttempt,
+      );
+
+      await expect(
+        runs.finalizeRunStep(ids.runStepId, {
+          status: "SUCCEEDED",
+          completedAt: EVEN_LATER,
+          inputTokens: 10,
+          outputTokens: 2,
+          totalTokens: 12,
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+
+      const step = await runs.findRunStepById(ids.runStepId);
+      expect(step?.status).toBe("FAILED");
+      expect(step?.errorCode).toBe("EXECUTION_TIMEOUT");
+
+      await expect(
+        runs.finalizeRunStep(ids.runStepId, {
+          status: "SUCCEEDED",
+          completedAt: EVEN_LATER,
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+    });
+
+    it("does not reconcile RunSteps belonging to another RunAttempt", async () => {
+      const { ids } = await seedAgentGraph();
+      const bindings = createBindings(
+        ids.agentVersionId,
+        ids.modelProfileVersionId,
+      );
+      const runA = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: bindings,
+        createdAt: NOW,
+      });
+      const runB = Run.create({
+        input: RUN_INPUT,
+        id: ids.otherRunId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: bindings,
+        createdAt: NOW,
+      });
+      await runs.saveRun(runA);
+      await runs.saveRun(runB);
+      const attemptA = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      const attemptB = RunAttempt.createFirst({
+        id: ids.otherAttemptId,
+        runId: ids.otherRunId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attemptA);
+      await runs.saveRunAttempt(attemptB);
+
+      const otherStepId =
+        "run_step_isolated_b" as import("@osva-ai/contracts").RunStepId;
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: otherStepId,
+          runId: ids.otherRunId,
+          runAttemptId: ids.otherAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+
+      const queuedA = runA.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedA);
+      const runningRunA = queuedA.transitionTo("RUNNING", EVEN_LATER);
+      const runningA = attemptA.transitionTo("RUNNING", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        runningRunA,
+        "PENDING",
+        runningA,
+      );
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: ids.runStepId,
+          runId: ids.runId,
+          runAttemptId: ids.runAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: EVEN_LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+
+      const failedA = runningA.transitionTo("FAILED", EVEN_LATER, {
+        error: { code: "AGENT_ERROR", message: "boom" },
+      });
+      const failedRunA = runningRunA.transitionTo("FAILED", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "RUNNING",
+        failedRunA,
+        "RUNNING",
+        failedA,
+      );
+
+      const stepA = await runs.findRunStepById(ids.runStepId);
+      const stepB = await runs.findRunStepById(otherStepId);
+      expect(stepA?.status).toBe("FAILED");
+      expect(stepB?.status).toBe("RUNNING");
+    });
+
+    it("leaves already terminal RunSteps unchanged when reconciling", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+      const attempt = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attempt);
+      const queuedRun = pending.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedRun);
+      const runningRun = queuedRun.transitionTo("RUNNING", EVEN_LATER);
+      const runningAttempt = attempt.transitionTo("RUNNING", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        runningRun,
+        "PENDING",
+        runningAttempt,
+      );
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: ids.runStepId,
+          runId: ids.runId,
+          runAttemptId: ids.runAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: EVEN_LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+      await runs.finalizeRunStep(ids.runStepId, {
+        status: "SUCCEEDED",
+        completedAt: EVEN_LATER,
+        inputTokens: 1,
+        outputTokens: 1,
+        totalTokens: 2,
+      });
+
+      const failedAttempt = runningAttempt.transitionTo("FAILED", EVEN_LATER, {
+        error: { code: "LATE_FAIL", message: "late" },
+      });
+      const failedRun = runningRun.transitionTo("FAILED", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "RUNNING",
+        failedRun,
+        "RUNNING",
+        failedAttempt,
+      );
+
+      const step = await runs.findRunStepById(ids.runStepId);
+      expect(step?.status).toBe("SUCCEEDED");
+      expect(step?.inputTokens).toBe(1);
+    });
+
+    it("reconciles unfinished RunSteps when the RunAttempt transitions to SUCCEEDED", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+      const attempt = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attempt);
+      const queuedRun = pending.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedRun);
+      const runningRun = queuedRun.transitionTo("RUNNING", EVEN_LATER);
+      const runningAttempt = attempt.transitionTo("RUNNING", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        runningRun,
+        "PENDING",
+        runningAttempt,
+      );
+
+      const finalizedStepId = ids.runStepId;
+      const orphanStepId = "run_step_orphan_success" as RunStepId;
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: finalizedStepId,
+          runId: ids.runId,
+          runAttemptId: ids.runAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: EVEN_LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+      await runs.finalizeRunStep(finalizedStepId, {
+        status: "SUCCEEDED",
+        completedAt: EVEN_LATER,
+        inputTokens: 3,
+        outputTokens: 1,
+        totalTokens: 4,
+      });
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: orphanStepId,
+          runId: ids.runId,
+          runAttemptId: ids.runAttemptId,
+          kind: "MODEL",
+          bindingName: "tool.summarize",
+          startedAt: EVEN_LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+
+      const succeededAttempt = runningAttempt.transitionTo(
+        "SUCCEEDED",
+        EVEN_LATER,
+        {
+          output: { ok: true },
+        },
+      );
+      const succeededRun = runningRun.transitionTo("SUCCEEDED", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "RUNNING",
+        succeededRun,
+        "RUNNING",
+        succeededAttempt,
+      );
+
+      const loadedAttempt = await runs.findRunAttemptById(ids.runAttemptId);
+      expect(loadedAttempt?.status).toBe("SUCCEEDED");
+
+      const finalized = await runs.findRunStepById(finalizedStepId);
+      expect(finalized?.status).toBe("SUCCEEDED");
+      expect(finalized?.inputTokens).toBe(3);
+
+      const orphan = await runs.findRunStepById(orphanStepId);
+      expect(orphan?.status).toBe("FAILED");
+      expect(orphan?.errorCode).toBe(RUN_STEP_NOT_FINALIZED_ERROR_CODE);
+      expect(orphan?.usageIncomplete).toBe(true);
+    });
+
+    it("leaves RunSteps RUNNING when paired run transition rolls back the transaction", async () => {
+      const { ids } = await seedAgentGraph();
+      const pending = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: createBindings(
+          ids.agentVersionId,
+          ids.modelProfileVersionId,
+        ),
+        createdAt: NOW,
+      });
+      await runs.saveRun(pending);
+      const attempt = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attempt);
+      const queuedRun = pending.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedRun);
+      const runningRun = queuedRun.transitionTo("RUNNING", EVEN_LATER);
+      const runningAttempt = attempt.transitionTo("RUNNING", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        runningRun,
+        "PENDING",
+        runningAttempt,
+      );
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: ids.runStepId,
+          runId: ids.runId,
+          runAttemptId: ids.runAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: EVEN_LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+
+      const failedAttempt = runningAttempt.transitionTo("FAILED", EVEN_LATER, {
+        error: { code: "AGENT_ERROR", message: "boom" },
+      });
+      const failedRun = runningRun.transitionTo("FAILED", EVEN_LATER);
+
+      await database.db
+        .update(runsTable)
+        .set({ status: "FAILED", updatedAt: EVEN_LATER })
+        .where(eq(runsTable.id, ids.runId));
+
+      await expect(
+        runs.transitionRunAndAttempt(
+          "RUNNING",
+          failedRun,
+          "RUNNING",
+          failedAttempt,
+        ),
+      ).rejects.toBeInstanceOf(LifecycleConflictError);
+
+      expect((await runs.findRunAttemptById(ids.runAttemptId))?.status).toBe(
+        "RUNNING",
+      );
+      expect((await runs.findRunById(ids.runId))?.status).toBe("FAILED");
+      const step = await runs.findRunStepById(ids.runStepId);
+      expect(step?.status).toBe("RUNNING");
+      expect(step?.errorCode).toBeUndefined();
+
+      await database.db
+        .update(runsTable)
+        .set({ status: "RUNNING", updatedAt: EVEN_LATER })
+        .where(eq(runsTable.id, ids.runId));
+      expect((await runs.findRunById(ids.runId))?.status).toBe("RUNNING");
+    });
+
+    it("reconciles unfinished RunSteps when an expired lease fails the RunAttempt", async () => {
+      const { ids } = await seedAgentGraph();
+      const bindings = createBindings(
+        ids.agentVersionId,
+        ids.modelProfileVersionId,
+      );
+      const runA = Run.create({
+        input: RUN_INPUT,
+        id: ids.runId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: bindings,
+        createdAt: NOW,
+      });
+      const runB = Run.create({
+        input: RUN_INPUT,
+        id: ids.otherRunId,
+        workspaceId: ids.workspaceId,
+        agentId: ids.agentId,
+        effectiveBindings: bindings,
+        createdAt: NOW,
+      });
+      await runs.saveRun(runA);
+      await runs.saveRun(runB);
+      const attemptA = RunAttempt.createFirst({
+        id: ids.runAttemptId,
+        runId: ids.runId,
+        createdAt: NOW,
+      });
+      const attemptB = RunAttempt.createFirst({
+        id: ids.otherAttemptId,
+        runId: ids.otherRunId,
+        createdAt: NOW,
+      });
+      await runs.saveRunAttempt(attemptA);
+      await runs.saveRunAttempt(attemptB);
+
+      const otherStepId = "run_step_lease_other" as RunStepId;
+
+      const queuedA = runA.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedA);
+      const runningRunA = queuedA.transitionTo("RUNNING", EVEN_LATER);
+      const runningA = attemptA
+        .transitionTo("RUNNING", EVEN_LATER)
+        .withExecutionLease({
+          owner: "worker-lease",
+          generation: 1,
+          expiresAt: EVEN_LATER,
+        });
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        runningRunA,
+        "PENDING",
+        runningA,
+        { leaseTtlMs: 30_000 },
+      );
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: ids.runStepId,
+          runId: ids.runId,
+          runAttemptId: ids.runAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: EVEN_LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+
+      const queuedB = runB.transitionTo("QUEUED", LATER);
+      await runs.transitionRun("PENDING", queuedB);
+      const runningRunB = queuedB.transitionTo("RUNNING", EVEN_LATER);
+      const runningB = attemptB.transitionTo("RUNNING", EVEN_LATER);
+      await runs.transitionRunAndAttempt(
+        "QUEUED",
+        runningRunB,
+        "PENDING",
+        runningB,
+      );
+      await runs.insertRunningRunStep(
+        RunStep.start({
+          id: otherStepId,
+          runId: ids.otherRunId,
+          runAttemptId: ids.otherAttemptId,
+          kind: "MODEL",
+          bindingName: "default",
+          startedAt: EVEN_LATER,
+          modelProfileVersionId: ids.modelProfileVersionId,
+        }),
+      );
+
+      await database.db
+        .update(runAttempts)
+        .set({ leaseExpiresAt: new Date(Date.now() - 5_000) })
+        .where(eq(runAttempts.id, ids.runAttemptId));
+
+      const leaseError = {
+        code: EXECUTION_INTERRUPTED_ERROR_CODE,
+        message: "Execution lease expired.",
+      };
+      const failed = await runs.failExpiredLeasedAttempt({
+        runAttemptId: ids.runAttemptId,
+        generation: 1,
+        now: new Date(),
+        error: leaseError,
+      });
+      expect(failed?.runAttempt.status).toBe("FAILED");
+      expect(failed?.runAttempt.error?.code).toBe(
+        EXECUTION_INTERRUPTED_ERROR_CODE,
+      );
+      expect(failed?.run.status).toBe("FAILED");
+
+      const stepA = await runs.findRunStepById(ids.runStepId);
+      expect(stepA?.status).toBe("FAILED");
+      expect(stepA?.errorCode).toBe(EXECUTION_INTERRUPTED_ERROR_CODE);
+      expect(stepA?.usageIncomplete).toBe(true);
+
+      const stepB = await runs.findRunStepById(otherStepId);
+      expect(stepB?.status).toBe("RUNNING");
+      expect((await runs.findRunAttemptById(ids.otherAttemptId))?.status).toBe(
+        "RUNNING",
+      );
     });
 
     it("rejects a RunStep whose RunAttempt does not belong to the same Run", async () => {

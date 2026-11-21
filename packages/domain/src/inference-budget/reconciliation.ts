@@ -181,24 +181,30 @@ export function evaluateInferenceBudgetReconciliation(
     readonly policy?: InferenceBudgetPolicyDefinitionV1;
   },
 ): InferenceBudgetReconcileOutcomeV1 {
-  if (
-    input.reservation.status === "COMMITTED" &&
-    input.committedUsdMicros !== null &&
-    input.committedUsdMicros !== undefined &&
-    input.reservation.committedUsdMicros === input.committedUsdMicros
-  ) {
-    return {
-      nextStatus: "COMMITTED",
-      periodDelta: zeroDelta(),
-      refundHeldUsdMicros: 0,
-      overageUsdMicros: computeOverageUsdMicros({
-        reservedUsdMicros: input.reservation.reservedUsdMicros,
-        committedUsdMicros: input.committedUsdMicros,
-      }),
-      committedUsdMicros: input.committedUsdMicros,
-      periodLedgerAfter: input.periodLedger,
-      reservationAfter: input.reservation,
-    };
+  if (input.reservation.status === "COMMITTED") {
+    const requested = input.committedUsdMicros;
+    const existing = input.reservation.committedUsdMicros;
+    if (
+      requested !== null &&
+      requested !== undefined &&
+      existing === requested
+    ) {
+      return {
+        nextStatus: "COMMITTED",
+        periodDelta: zeroDelta(),
+        refundHeldUsdMicros: 0,
+        overageUsdMicros: computeOverageUsdMicros({
+          reservedUsdMicros: input.reservation.reservedUsdMicros,
+          committedUsdMicros: requested,
+        }),
+        committedUsdMicros: requested,
+        periodLedgerAfter: input.periodLedger,
+        reservationAfter: input.reservation,
+      };
+    }
+    throw new Error(
+      "Inference budget reservation is already committed; conflicting settlement is not permitted.",
+    );
   }
 
   assertInferenceBudgetWorkspaceScope({

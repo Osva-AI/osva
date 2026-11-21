@@ -14,8 +14,11 @@ import {
   RunStepNotFoundError,
   assertLegalRunAttemptTransition,
   assertLegalRunTransition,
+  isTerminalRunAttemptState,
   isTerminalRunState,
+  reconciledRunStepFailureForOrphanedStep,
   RunAttempt,
+  shouldReconcileRunStepsForTerminalAttempt,
 } from "@osva/domain";
 import type {
   FailExpiredLeasedAttemptCommand,
@@ -40,6 +43,7 @@ import {
   asc,
   desc,
   eq,
+  exists,
   gt,
   inArray,
   isNotNull,
@@ -343,7 +347,23 @@ export class PostgresRunRepository implements RunRepository {
         estimatedAvoidedCostUsdMicros: row.estimatedAvoidedCostUsdMicros,
         errorCode: row.errorCode,
       })
-      .where(and(eq(runSteps.id, runStepId), eq(runSteps.status, "RUNNING")))
+      .where(
+        and(
+          eq(runSteps.id, runStepId),
+          eq(runSteps.status, "RUNNING"),
+          exists(
+            this.database.db
+              .select({ one: sql`1` })
+              .from(runAttempts)
+              .where(
+                and(
+                  eq(runAttempts.id, existing.runAttemptId),
+                  eq(runAttempts.status, "RUNNING"),
+                ),
+              ),
+          ),
+        ),
+      )
       .returning();
 
     if (updated !== undefined) {
@@ -484,6 +504,33 @@ export class PostgresRunRepository implements RunRepository {
   ): Promise<RunAttempt> {
     assertLegalRunAttemptTransition(expectedStatus, next.status);
 
+    if (isTerminalRunAttemptState(next.status)) {
+      return this.database.db.transaction(async (tx) => {
+        const [row] = await tx
+          .update(runAttempts)
+          .set(runAttemptUpdateSet(next))
+          .where(runAttemptTransitionWhere(next, expectedStatus))
+          .returning();
+
+        if (row === undefined) {
+          const existing = await this.findRunAttemptById(next.id);
+          if (existing === null) {
+            throw new RunAttemptNotFoundError(next.id);
+          }
+
+          throw new LifecycleConflictError(
+            "runAttempt",
+            next.id,
+            expectedStatus,
+          );
+        }
+
+        const attempt = runAttemptFromRow(row);
+        await reconcileUnfinishedRunStepsForTerminalAttemptInTx(tx, attempt);
+        return attempt;
+      });
+    }
+
     const [row] = await this.database.db
       .update(runAttempts)
       .set(runAttemptUpdateSet(next))
@@ -564,9 +611,12 @@ export class PostgresRunRepository implements RunRepository {
         throw new LifecycleConflictError("run", nextRun.id, expectedRunStatus);
       }
 
+      const runAttempt = runAttemptFromRow(attemptRow);
+      await reconcileUnfinishedRunStepsForTerminalAttemptInTx(tx, runAttempt);
+
       return {
         run: runFromRow(runRow),
-        runAttempt: runAttemptFromRow(attemptRow),
+        runAttempt,
       };
     });
   }
@@ -641,9 +691,14 @@ export class PostgresRunRepository implements RunRepository {
           existingRun !== undefined &&
           isTerminalRunState(existingRun.status as RunState)
         ) {
+          const runAttempt = runAttemptFromRow(attemptRow);
+          await reconcileUnfinishedRunStepsForTerminalAttemptInTx(
+            tx,
+            runAttempt,
+          );
           return {
             run: runFromRow(existingRun),
-            runAttempt: runAttemptFromRow(attemptRow),
+            runAttempt,
           };
         }
 
@@ -654,9 +709,12 @@ export class PostgresRunRepository implements RunRepository {
         );
       }
 
+      const runAttempt = runAttemptFromRow(attemptRow);
+      await reconcileUnfinishedRunStepsForTerminalAttemptInTx(tx, runAttempt);
+
       return {
         run: runFromRow(runRow),
-        runAttempt: runAttemptFromRow(attemptRow),
+        runAttempt,
       };
     });
   }
@@ -708,9 +766,12 @@ export class PostgresRunRepository implements RunRepository {
         );
       }
 
+      const runAttempt = runAttemptFromRow(attemptRow);
+      await reconcileUnfinishedRunStepsForTerminalAttemptInTx(tx, runAttempt);
+
       return {
         run: runFromRow(runRow),
-        runAttempt: runAttemptFromRow(attemptRow),
+        runAttempt,
       };
     });
   }
@@ -977,6 +1038,37 @@ function runAttemptUsageSummaryFromRow(
     pricedModelCalls: Number(row?.pricedModelCalls ?? 0),
     unpricedModelCalls: Number(row?.unpricedModelCalls ?? 0),
   };
+}
+
+type PostgresRunRepositoryTransaction = Parameters<
+  Parameters<Database["db"]["transaction"]>[0]
+>[0];
+
+async function reconcileUnfinishedRunStepsForTerminalAttemptInTx(
+  tx: PostgresRunRepositoryTransaction,
+  attempt: RunAttempt,
+): Promise<void> {
+  if (!shouldReconcileRunStepsForTerminalAttempt(attempt)) {
+    return;
+  }
+
+  const completedAt = attempt.completedAt ?? new Date();
+  const failure = reconciledRunStepFailureForOrphanedStep(attempt, completedAt);
+
+  await tx
+    .update(runSteps)
+    .set({
+      status: failure.status,
+      completedAt: failure.completedAt,
+      errorCode: failure.errorCode ?? null,
+      usageIncomplete: failure.usageIncomplete ?? null,
+    })
+    .where(
+      and(
+        eq(runSteps.runAttemptId, attempt.id),
+        eq(runSteps.status, "RUNNING"),
+      ),
+    );
 }
 
 function runInsertMessages(run: Run): Record<string, string> {

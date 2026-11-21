@@ -953,6 +953,43 @@ describe("inference budget PostgreSQL authority (0044)", () => {
     await connB.close();
   });
 
+  it("DB19b: rejects conflicting settlement once committed", async () => {
+    await enableBudget(WORKSPACE_A, 1_000_000);
+    const invocation = await allocateInvocation(WORKSPACE_A, 16);
+    const admitted = await admit(WORKSPACE_A, invocation, 350_000);
+    if (admitted.outcome !== "ADMITTED") throw new Error("admit");
+    await budget.markProviderStarted({
+      workspaceId: WORKSPACE_A,
+      reservationId: admitted.reservation.id,
+    });
+    const committed = await budget.reconcile({
+      workspaceId: WORKSPACE_A,
+      reservation: { ...admitted.reservation, status: "PROVIDER_STARTED" },
+      periodLedger: admitted.periodLedgerAfter,
+      committedUsdMicros: 200_000,
+      usageKnown: true,
+      providerAccepted: true,
+      billableProviderOutcome: true,
+    });
+    await expect(
+      budget.reconcile({
+        workspaceId: WORKSPACE_A,
+        reservation: committed.reservationAfter,
+        periodLedger: committed.periodLedgerAfter,
+        committedUsdMicros: 250_000,
+        usageKnown: true,
+        providerAccepted: true,
+        billableProviderOutcome: true,
+      }),
+    ).rejects.toThrow(/already committed/);
+
+    const periods = await database.db
+      .select()
+      .from(workspaceInferenceBudgetPeriods)
+      .where(eq(workspaceInferenceBudgetPeriods.workspaceId, WORKSPACE_A));
+    expect(periods[0]?.committedLiabilityUsdMicros).toBe(200_000);
+  });
+
   it("DB20: database failure does not grant admission", async () => {
     await enableBudget(WORKSPACE_A, 1_000_000);
     const key = reservationKey("inv-missing" as InferenceInvocationId);

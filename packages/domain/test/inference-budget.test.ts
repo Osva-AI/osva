@@ -374,6 +374,43 @@ describe("inference budget domain", () => {
     expect(second.periodLedgerAfter).toEqual(workingLedger);
   });
 
+  it("C9b: rejects conflicting settlement once committed", () => {
+    const { periodKey, ledger } = periodJanuary();
+    const reservation: InferenceBudgetReservationSnapshotV1 = {
+      ...draftReservation({
+        inferenceInvocationId: INVOCATION_A,
+        reservationKey: reservationKeyFor({
+          inferenceInvocationId: INVOCATION_A,
+          providerAttemptIndex: 0,
+        }),
+        periodKey,
+      }),
+      id: RESERVATION_ID,
+      status: "PROVIDER_STARTED",
+      reservedUsdMicros: 500_000,
+    };
+    const first = evaluateInferenceBudgetReconciliation({
+      workspaceId: WORKSPACE_A,
+      reservation,
+      periodLedger: { ...ledger, heldReservationsUsdMicros: 500_000 },
+      committedUsdMicros: 300_000,
+      usageKnown: true,
+      providerAccepted: true,
+      billableProviderOutcome: true,
+    });
+    expect(() =>
+      evaluateInferenceBudgetReconciliation({
+        workspaceId: WORKSPACE_A,
+        reservation: first.reservationAfter,
+        periodLedger: first.periodLedgerAfter,
+        committedUsdMicros: 400_000,
+        usageKnown: true,
+        providerAccepted: true,
+        billableProviderOutcome: true,
+      }),
+    ).toThrow(/already committed/);
+  });
+
   it("C11: unknown actual cost", () => {
     const { periodKey, ledger } = periodJanuary();
     const reservation: InferenceBudgetReservationSnapshotV1 = {
