@@ -62,9 +62,34 @@ When a profile uses a proxy endpoint, the worker stack is unchanged:
 
 **Slice C1 streaming:** Retryable pre-output failures (e.g. HTTP 429 before stream bytes) may trigger OSVA routing fallback to another authorized profile. Mid-stream failure after consumer-visible output does **not** switch models (R8). Proxy streams must speak the same OpenAI-compatible streaming wire OSVA already supports (Responses / Chat Completions via `OpenAIProviderAdapter`).
 
+## Version-pinned acceptance deployment (deterministic)
+
+OSVA ships an **optional** live-proxy profile (not default CI). It runs a real LiteLLM process against a **host fake OpenAI upstream**—no production DB in LiteLLM, no paid inference, loopback-only publish.
+
+| Item | Value |
+| --- | --- |
+| Image | `docker.litellm.ai/berriai/litellm:main-v1.63.11-stable` |
+| Digest | `sha256:27c487bc6b4e15f0c09016679c65cbe82d533e42c613c951de743d658f41485d` |
+| Master key (acceptance only) | `sk-osva-litellm-acceptance` via `LITELLM_MASTER_KEY` |
+| Upstream | `host.docker.internal` → in-process fake OpenAI (`fake-openai-server.ts`) |
+| Proxy retries / fallbacks | `num_retries: 0`; no `router_settings.fallbacks` in acceptance config |
+| Virtual key | Acceptance uses master key as OpenAI wire credential (document threat model for production) |
+
+```bash
+pnpm acceptance:litellm:preflight   # Docker + pinned image pull
+pnpm acceptance:litellm             # L1–L10 live-proxy matrix
+pnpm acceptance:litellm:test        # config/script unit checks
+```
+
+Config template: `scripts/acceptance/litellm/fixtures/litellm-acceptance-config.yaml`. Implementation: `scripts/acceptance/litellm/run.mjs`, `apps/worker/test/integration/litellm-live-proxy.integration.test.ts`.
+
+**Minimum proxy version:** OSVA uses the OpenAI **Responses API** (`/v1/responses`). LiteLLM Proxy **v1.63.8+** (acceptance pins `main-v1.63.11-stable`) is required; older proxies return 404 on `/v1/responses`.
+
+**Production** operators should pin their own image digest, use LiteLLM virtual keys, private networking, and mirror `ModelProfileVersion.pricing`—do not reuse the acceptance master key.
+
 ## Wire compatibility (what CI proves)
 
-Automated tests use a **deterministic fake OpenAI server**, not a running LiteLLM process. They establish:
+Default CI automated tests use a **deterministic fake OpenAI server**, not a running LiteLLM process. They establish:
 
 - Custom `baseUrl` on connection versions
 - Model string forwarded on the wire
@@ -110,17 +135,24 @@ Configure LiteLLM (or equivalent) so it does not fight OSVA:
 | Streaming works in curl but not OSVA | Wrong API surface (non-OpenAI path) | Point `baseUrl` at OpenAI-compatible `/v1` root LiteLLM documents |
 | Budget `RECONCILIATION_REQUIRED` | Provider usage missing after stream | Upstream must return usage on completion when possible |
 
-## Optional live LiteLLM acceptance (operator)
+## Live-proxy scenario matrix (L1–L10)
 
-Not part of CI. Prerequisites: running LiteLLM, network path from worker to proxy, secrets configured.
+Executed by `pnpm acceptance:litellm` when Docker is available:
 
-1. Deploy LiteLLM with a single test model route (e.g. cheap OpenAI or a mock upstream).
-2. In OSVA, create OPENAI connection version: `baseUrl` = LiteLLM `/v1`, `allowPrivateNetworks` as needed, `credentialRef` = virtual key.
-3. Run connectivity test in Console or `POST /v1/model-provider-connections/{id}/test` with the LiteLLM model name.
-4. Create `ModelProfileVersion` bound to that connection; run a **non-production** agent Run (sync and one streaming agent if routing is enabled).
-5. Verify: one MODEL RunStep per logical call (modulo B4 fallback), no plaintext keys in logs, budget rows if B5 enabled.
+| ID | Assertion |
+| --- | --- |
+| L0/L1 | Connection create/version/test + non-stream Run via proxy; upstream fake receives traffic |
+| L2 | Full OSVA streaming path: SUCCEEDED Run, attempt output with streamed text, one upstream `stream: true` request, MODEL RunStep SUCCEEDED with usage metadata |
+| L3 | Invalid proxy credential rejected; no secret in JSON |
+| L4 | Unknown LiteLLM alias → classified HTTP failure |
+| L5 | `inputTokens` / `estimatedCostUsdMicros` on RunStep |
+| L6 | Immutable routing policy selects LiteLLM-backed `ModelProfileVersion` |
+| L7 | Pre-output 429 fallback → two upstream models |
+| L8 | Mid-stream failure → no fallback model calls |
+| L9 | B5 enabled → ≥2 budget reservations with terminal states |
+| L10 | `litellm-proxy-retry-risk` route (`num_retries: 12`) → logs upstream `gpt-routing-retry-429` call count, exactly 1 OSVA MODEL step; proxy-internal retries classified **NOT VERIFIED** unless multiple upstream calls are observed |
 
-Record PASS/FAIL in your operator runbook (optional appendix to [M12.3 summary](./M12_3_ACCEPTANCE_SUMMARY.md)). For protocol-only regression, rely on `model-gateway.integration.test.ts` (fake server).
+For protocol-only regression without Docker, use `model-gateway.integration.test.ts` (fake server only).
 
 ## C3 integration stance
 
