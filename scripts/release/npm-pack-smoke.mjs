@@ -68,6 +68,24 @@ function main() {
       if (!cliPkg.dependencies?.ajv) {
         throw new Error("@osva-ai/cli package.json missing ajv dependency");
       }
+      const distribution = JSON.parse(
+        fs.readFileSync(
+          path.join(
+            REPO_ROOT,
+            "packages",
+            "cli",
+            "templates",
+            "compose-install",
+            "distribution.json",
+          ),
+          "utf8",
+        ),
+      );
+      if (typeof distribution.migrationHead !== "string") {
+        throw new Error(
+          "CLI bundled distribution.json missing migrationHead release metadata",
+        );
+      }
     }
     const entry = artifacts.get(name);
     console.log(`packed ${name} -> ${entry.fileName} (sha256=${entry.sha256})`);

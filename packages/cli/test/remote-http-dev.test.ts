@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { loadComposeDistribution } from "../src/setup/distribution.js";
 import { composeBaseArgs } from "../src/setup/compose-exec.js";
 import {
   buildInstallEnvValues,
@@ -38,9 +39,10 @@ describe("remote-http-dev installation profile", () => {
     ).toThrow(/distinct|8787/i);
   });
 
-  it("does not enable private-network flags in default install env rendering", () => {
+  it("does not enable private-network flags in default install env rendering", async () => {
+    const distribution = await loadComposeDistribution();
     const values = buildInstallEnvValues({
-      imageRef: "ghcr.io/osva-ai/osva:1.1.1",
+      imageRef: distribution.manifest.imageRef,
       composeProjectName: "osva-test",
       webPort: 8080,
       mcpPort: 3100,
@@ -56,9 +58,10 @@ describe("remote-http-dev installation profile", () => {
     expect(rendered).not.toMatch(/OSVA_RUNTIME_CAPABILITY_SECRET=[0-9a-f]/);
   });
 
-  it("generates capability wiring when the profile is enabled", () => {
+  it("generates capability wiring when the profile is enabled", async () => {
+    const distribution = await loadComposeDistribution();
     const values = buildInstallEnvValues({
-      imageRef: "ghcr.io/osva-ai/osva:1.1.1",
+      imageRef: distribution.manifest.imageRef,
       composeProjectName: "osva-test",
       webPort: 8080,
       mcpPort: 3100,

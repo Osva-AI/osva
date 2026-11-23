@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { resolveUpgradeTarget } from "../src/platform/upgrade/catalog.js";
 import { runPlatformCommand } from "../src/platform/index.js";
 import { materializeInstallation } from "../src/setup/index.js";
 import { loadComposeDistribution } from "../src/setup/distribution.js";
@@ -17,6 +18,17 @@ afterEach(async () => {
 });
 
 describe("platform upgrade", () => {
+  it("requires migrations for supported 1.1.1 to 1.2.0 upgrade path", async () => {
+    const resolved = await resolveUpgradeTarget({
+      fromPlatformVersion: "1.1.1",
+      toPlatformVersion: "1.2.0",
+      processEnv: {},
+    });
+    expect(resolved.path.migrationRequired).toBe(true);
+    expect(resolved.path.composeTemplateUpdate).toBe(true);
+    expect(resolved.imageRef).toBe("ghcr.io/osva-ai/osva:1.2.0");
+  });
+
   it("dry-run reports plan without mutating installation", async () => {
     const installDir = await makeInstalledDir();
     const exitCode = await runPlatformCommand(

@@ -7,6 +7,8 @@ export interface ComposeDistributionManifest {
   readonly distributionSchemaVersion: number;
   readonly platformVersion: string;
   readonly imageRef: string;
+  /** SQL migration journal tag shipped with this platform release (release metadata). */
+  readonly migrationHead?: string;
 }
 
 export interface ComposeDistribution {

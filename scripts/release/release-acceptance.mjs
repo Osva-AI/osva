@@ -39,6 +39,7 @@ process.env.OSVA_DEPLOY_ACCEPTANCE = "true";
 console.log(`OSS 1.0 release candidate acceptance (${version})`);
 
 runNode("release/version-consistency.mjs");
+runNode("release/compose-distribution-consistency.mjs");
 runNode("release/docs-link-check.mjs");
 runNode("release/secrets-scan.mjs");
 runNode("release/generate-license-inventory.mjs");

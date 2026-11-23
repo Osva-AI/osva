@@ -37,6 +37,7 @@
     "db:migrations:status": "turbo run build --filter=@osva/db && pnpm --filter @osva/db migrations:status",
     "db:migrations:integrity": "turbo run build --filter=@osva/db && pnpm --filter @osva/db migrations:integrity",
     "release:version:check": "node scripts/release/version-consistency.mjs",
+    "release:distribution:check": "node scripts/release/compose-distribution-consistency.mjs",
     "release:licenses": "node scripts/release/generate-license-inventory.mjs",
     "release:acceptance": "node scripts/release/release-acceptance.mjs",
     "release:npm:artifacts": "node scripts/release/npm-pack-artifacts.mjs",

@@ -12,6 +12,7 @@ Supported upgrade path for self-hosted Compose and Kubernetes deployments.
 | M12–M14 Community line (**`1.1.0-rc.4`** / **`1.1.0`**) | Same line (no new migrations in M15) | Head **`0030_approval_operation_binding_slice`** (`0027`–`0030`; see below) |
 | Checkpoint & Resume V1 (this branch / upcoming release) | Schema carries **append-only** migrations after **`0030`** | Head **`0031_agent_checkpoint_resume_slice`** (`run_checkpoints`, `run_operation_journal`, `runs.recovery_metadata`, `INTERRUPTED` status); see below |
 | **`1.1.0-rc.4`** published artifacts | **`1.1.0`** stable | **Drop-in** image/npm/PyPI version bump when all aligned packages move together; schema already at **`0030`** |
+| Published platform **`1.1.1`** (schema **`0030`**) | **`1.2.0`** | Apply append-only migrations **`0031`–`0045`** (checkpoint/resume through inference budget); see § below |
 
 See [`../release/COMPATIBILITY.md`](../release/COMPATIBILITY.md) and [`CHANGELOG.md`](../../CHANGELOG.md).
 
@@ -163,6 +164,15 @@ osva platform upgrade --to 1.1.1 --backup-confirmed --yes
 ```
 
 **From platform `1.1.0` → `1.1.1` (M16):** no new SQL migrations; the CLI replaces the compose template to add Console and installation-status services. Requires npm **`@osva-ai/cli@1.1.2`** (or newer 1.1.x distribution) with bundled catalog paths.
+
+**From platform `1.1.1` → `1.2.0`:** SQL migrations required through **`0045_inference_budget_recovery`**. Requires npm **`@osva-ai/cli@1.2.0`** (or newer **`1.2.x`** distribution) with bundled upgrade catalog. Run migrate before rolling **web**, **worker**, and **workflow-orchestrator**. Take a PostgreSQL backup; use **`--backup-confirmed`** on upgrade.
+
+```bash
+osva platform upgrade --to 1.2.0 --dry-run
+osva platform upgrade --to 1.2.0 --backup-confirmed --yes
+```
+
+Operators on **`1.1.0`** must upgrade to **`1.1.1`** before **`1.2.0`** (no direct catalog path).
 
 - `--dry-run` is read-only and prints the planned image change, migration expectation, backup requirements, and blocking issues.
 - `--backup-confirmed` is operator attestation only; OSVA does not verify backups or restore them.
