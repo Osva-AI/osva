@@ -1,5 +1,6 @@
 {
   "distributionSchemaVersion": 1,
-  "platformVersion": "1.1.1",
-  "imageRef": "ghcr.io/osva-ai/osva:1.1.1"
+  "platformVersion": "1.2.0",
+  "imageRef": "ghcr.io/osva-ai/osva:1.2.0",
+  "migrationHead": "0045_inference_budget_recovery"
 }

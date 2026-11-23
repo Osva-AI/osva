@@ -54,7 +54,7 @@ describe("osva setup provisioning", () => {
     expect(result.wroteCompose).toBe(true);
     expect(result.wroteEnv).toBe(true);
     const envContents = await readFile(result.envPath, "utf8");
-    expect(envContents).toContain("ghcr.io/osva-ai/osva:1.1.1");
+    expect(envContents).toContain(distribution.manifest.imageRef);
     expect(envContents).toMatch(/POSTGRES_PASSWORD=[0-9a-f]{64}/);
     expect(envContents).toMatch(/OSVA_AUTH_SECRET=[0-9a-f]{64}/);
     const composeContents = await readFile(result.composePath, "utf8");
@@ -67,7 +67,7 @@ describe("osva setup provisioning", () => {
     const marker = JSON.parse(await readFile(result.markerPath, "utf8")) as {
       imageRef: string;
     };
-    expect(marker.imageRef).toBe("ghcr.io/osva-ai/osva:1.1.1");
+    expect(marker.imageRef).toBe(distribution.manifest.imageRef);
   });
 
   it("preserves secrets on repeated materialization", async () => {
@@ -98,6 +98,50 @@ describe("osva setup provisioning", () => {
     expect(second.preservedSecrets).toBe(true);
   });
 
+  it("preserves platform version marker on repeated setup without explicit upgrade", async () => {
+    const installDir = await makeTempDir("osva-setup-marker-");
+    const distribution = await loadComposeDistribution();
+    const baseOptions = readSetupOptions({}, {}, "linux");
+    await materializeInstallation({
+      options: { ...baseOptions, installDir },
+      distribution,
+      processEnv: {},
+    });
+    const markerPath = path.join(installDir, ".osva", "installation.json");
+    const markerBefore = JSON.parse(await readFile(markerPath, "utf8")) as {
+      platformVersion: string;
+      imageRef: string;
+    };
+    markerBefore.platformVersion = "1.1.0";
+    markerBefore.imageRef = "ghcr.io/osva-ai/osva:1.1.0";
+    await writeFile(
+      markerPath,
+      `${JSON.stringify(markerBefore, null, 2)}\n`,
+      "utf8",
+    );
+    const envPath = path.join(installDir, ".env");
+    const envBefore = await readFile(envPath, "utf8");
+    await writeFile(
+      envPath,
+      envBefore.replace(
+        /OSVA_IMAGE=.*/,
+        "OSVA_IMAGE=ghcr.io/osva-ai/osva:1.1.0",
+      ),
+      "utf8",
+    );
+    await materializeInstallation({
+      options: { ...baseOptions, installDir },
+      distribution,
+      processEnv: {},
+    });
+    const markerAfter = JSON.parse(await readFile(markerPath, "utf8")) as {
+      platformVersion: string;
+      imageRef: string;
+    };
+    expect(markerAfter.platformVersion).toBe("1.1.0");
+    expect(markerAfter.imageRef).toBe("ghcr.io/osva-ai/osva:1.1.0");
+  });
+
   it("refuses unrelated files in the install directory", async () => {
     const installDir = await makeTempDir("osva-setup-foreign-");
     await writeFile(
@@ -116,9 +160,10 @@ describe("osva setup provisioning", () => {
     ).rejects.toMatchObject({ code: "foreign_directory" });
   });
 
-  it("detects conflicting host environment overrides", () => {
+  it("detects conflicting host environment overrides", async () => {
+    const distribution = await loadComposeDistribution();
     const values = buildInstallEnvValues({
-      imageRef: "ghcr.io/osva-ai/osva:1.1.1",
+      imageRef: distribution.manifest.imageRef,
       composeProjectName: "osva-deadbeef0123",
       webPort: 8080,
       mcpPort: 3100,

@@ -99,8 +99,11 @@ export async function materializeInstallation(input: {
     input.distribution.remoteHttpDevComposeYaml,
   );
   const wroteEnv = await writeEnvIfNeeded(envPath, envValues, existingEnv);
+  const platformVersion =
+    assessment.marker?.platformVersion ??
+    input.distribution.manifest.platformVersion;
   const marker = renderInstallationMarker({
-    platformVersion: input.distribution.manifest.platformVersion,
+    platformVersion,
     imageRef: envValues.OSVA_IMAGE,
     cliVersion: CLI_VERSION,
     installDir,

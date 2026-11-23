@@ -59,6 +59,9 @@ jobs:
       - name: Version consistency
         run: node scripts/release/version-consistency.mjs
 
+      - name: Compose distribution consistency
+        run: node scripts/release/compose-distribution-consistency.mjs
+
       - name: Docs link check
         run: node scripts/release/docs-link-check.mjs
 

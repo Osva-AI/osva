@@ -1,8 +1,8 @@
 # OSVA Community compatibility and release policy
 
-**Current platform preparation target:** **`1.1.1`** (M16 installer, Console compose, lifecycle, upgrade). See [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md).
+**Current platform preparation target:** **`1.2.0`** (unified distribution RC; installer bundle, upgrade catalog, migration head **`0045_inference_budget_recovery`**). Prior M16 line: [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md).
 
-**Published platform line:** **`1.1.1`** on GHCR/PyPI (M16 registry-verified). **Published npm `latest` / `stable-candidate`:** **`1.1.4`** (five `@osva-ai/*` packages; M17.9). Current registry harness default: **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1** + npm **1.1.4**; live acceptance **38/38 PASS** at M19 closeout). Historical M16 Stage B evidence remains on target **`m16-111`** (npm **1.1.2**).
+**Last registry-verified platform line:** **`1.1.1`** on GHCR/PyPI (M16). **Published npm `latest` / `stable-candidate` (pre-1.2.0):** **`1.1.4`** (five `@osva-ai/*` packages; M17.9). Registry harness default for published artifacts: **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1** + npm **1.1.4**). Historical M16 Stage B evidence remains on target **`m16-111`** (npm **1.1.2**). **`1.2.0`** is **unpublished** until maintainer tag, GHCR/PyPI/npm publication, and registry-only acceptance.
 
 **M19 ecosystem npm (sibling repositories, verified 2026-11-06):** eleven additional public packages — three **osva-adapters** releases (`adapter-artifact-memory` / `adapter-artifact-azure` **0.1.2**, `runtime-cli-sidecar` **0.1.0**) and eight **osva-connectors** releases (Wave 1 + SDK **1.1.4** realignment). Inventory: [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY.md) §5 · [osva-connectors M19_PUBLICATION_RECORD](https://github.com/Osva-AI/osva-connectors/blob/main/docs/M19_PUBLICATION_RECORD.md) · [osva-adapters COMPATIBILITY](https://github.com/Osva-AI/osva-adapters/blob/main/COMPATIBILITY.md).
 
@@ -25,7 +25,7 @@ Historical OSS **1.0.0** policy remains in git tag **`v1.0.0`** and [`CHANGELOG.
 | **PostgreSQL** | Compose/Helm acceptance templates | Operator-managed; lifecycle authority |
 | **Valkey** | Compose/Helm acceptance templates | Required for BullMQ transport and rate limiting |
 | **Container arch** | **linux/amd64** GHCR manifest (RC.4) | Other arches not acceptance-tested |
-| **Migration head** | **`0030_approval_operation_binding_slice`** | Forward-only; see [`../operations/UPGRADE.md`](../operations/UPGRADE.md) |
+| **Migration head** | **`0045_inference_budget_recovery`** (in-repo **`1.2.0`** preparation) | Published **`1.1.1`** shipped through **`0030`**; forward-only; see [`../operations/UPGRADE.md`](../operations/UPGRADE.md) |
 
 ## Upgrade paths
 
@@ -35,13 +35,15 @@ Historical OSS **1.0.0** policy remains in git tag **`v1.0.0`** and [`CHANGELOG.
 | **`1.1.0-rc.4`** (published) | **`1.1.0`** (stable) | **Intended drop-in** for aligned npm/PyPI/GHCR pins when stable artifacts publish; **no new SQL** between RC.4 tag and stable preparation HEAD. Re-run migrate/integrity for operator hygiene; schema unchanged if already at **`0030`**. |
 | **`1.1.0-rc.2`** or older RC | **`1.1.0`** | Apply intermediate migrations and align all `@osva-ai/*` packages together. |
 | **`1.1.0`** (GHCR/PyPI) | **`1.1.1`** (M16) | **No new SQL** (head remains **`0030`**); **`osva platform upgrade --to 1.1.1`** refreshes compose template (Console + installation-status). Legacy **`deploy/compose`** installs are valid sources. |
+| **`1.1.1`** (published platform) | **`1.2.0`** (preparation / next RC) | **SQL required** through **`0045_inference_budget_recovery`** (**`0031`–`0045`**); use **`osva platform upgrade --to 1.2.0`** with bundled CLI ≥ **`1.2.0`**. Intermediate **`1.1.0` → `1.2.0`** is **not** cataloged — upgrade **`1.1.0` → `1.1.1`** first. |
 
 RC.4 registry acceptance **does not** prove stable **`1.1.0`** binaries. Stable qualification requires post-publication registry-only replay (`OSVA_REGISTRY_ACCEPTANCE_TARGET=stable`).
 
-M16/M17 external-consumer proof uses published artifacts:
+M16/M17 external-consumer proof uses **published** artifacts (unchanged historical coordinates):
 
-- **Current line:** **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1**, npm **1.1.4**).
+- **Published line:** **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1**, npm **1.1.4**).
 - **Historical M16 replay:** **`m16-111`** (npm **1.1.2**).
+- **`1.2.0`** requires a new registry target and post-publication acceptance (not yet defined).
 
 See [`M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](M16_EXTERNAL_CONSUMER_ACCEPTANCE.md).
 

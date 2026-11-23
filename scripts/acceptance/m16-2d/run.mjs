@@ -7,6 +7,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { runIsolatedNpmConsumerSmoke } from "../../release/lib/npm-consumer-smoke.mjs";
+import { packPublicNpmPackages } from "../../release/lib/npm-pack-public.mjs";
+import { readNpmDistributionVersion } from "../../release/read-version.mjs";
+import { readRepositoryMigrationHead } from "../../release/lib/read-migration-head.mjs";
+import { readReleaseVersion } from "../../release/read-version.mjs";
 import { verifyInstallationImageContents } from "../../deployment/verify-installation-image.mjs";
 import { CookieJar } from "./lib/cookie-jar.mjs";
 import { allocatePortTriple } from "./lib/ports.mjs";
@@ -111,7 +116,8 @@ Requires:
   Docker Compose v2 and a running engine
 
 Optional:
-  OSVA_M16_LOCAL_IMAGE (default ${DEFAULT_LOCAL_IMAGE})
+  OSVA_M16_LOCAL_IMAGE (default ${DEFAULT_LOCAL_IMAGE}; use osva:1.2.0 for release-equivalent tag)
+  OSVA_M16_ARTIFACT_SOURCE=local-pack  (npm-pack @osva-ai/cli; no monorepo bin at runtime)
   OSVA_M16_SKIP_IMAGE_BUILD=1
   OSVA_M16_SKIP_TEARDOWN=1  (keep install dir + compose project for inspection)
   OSVA_M16_GROUPS=fresh,security,recovery,idempotency,agent (default: all)
@@ -529,6 +535,123 @@ async function resolveWorkspaceIdFromApiKey(baseUrl, apiKey) {
     throw new Error("auth/context did not return workspaceId.");
   }
   return workspaceId;
+}
+
+export async function releaseEquivalencyChecks(ctx, report) {
+  const platformVersion = readReleaseVersion();
+  const expectedHead = readRepositoryMigrationHead();
+  const markerPath = path.join(ctx.installDir, ".osva", "installation.json");
+  const marker = JSON.parse(await readFile(markerPath, "utf8"));
+  report.record(
+    "release_platform_version",
+    `Installation marker platformVersion is ${platformVersion}`,
+    marker.platformVersion === platformVersion ? "PASS" : "FAIL",
+    {
+      detail: `marker=${String(marker.platformVersion)}`,
+    },
+  );
+  const envFile = parseDotEnv(
+    await readFile(path.join(ctx.installDir, ".env"), "utf8"),
+  );
+  const image = envFile.get("OSVA_IMAGE") ?? "";
+  const expectedImage = ctx.imageRef ?? "";
+  report.record(
+    "release_pinned_image",
+    "Installation .env pins the acceptance-local image override",
+    image === expectedImage ? "PASS" : "FAIL",
+    { detail: `OSVA_IMAGE=${redactSecrets(image)}` },
+  );
+
+  const password = envFile.get("POSTGRES_PASSWORD");
+  const composeEnv = {
+    ...process.env,
+    COMPOSE_PROJECT_NAME: envFile.get("COMPOSE_PROJECT_NAME") ?? "",
+    POSTGRES_PASSWORD: password,
+    OSVA_IMAGE: image,
+    OSVA_AUTH_SECRET: envFile.get("OSVA_AUTH_SECRET"),
+    OSVA_PUBLISH_WEB_PORT: envFile.get("OSVA_PUBLISH_WEB_PORT"),
+    OSVA_PUBLISH_MCP_PORT: envFile.get("OSVA_PUBLISH_MCP_PORT"),
+    OSVA_PUBLISH_CONSOLE_PORT: envFile.get("OSVA_PUBLISH_CONSOLE_PORT"),
+    OSVA_AUTH_BASE_URL: envFile.get("OSVA_AUTH_BASE_URL"),
+    OSVA_AUTH_TRUSTED_ORIGINS: envFile.get("OSVA_AUTH_TRUSTED_ORIGINS"),
+  };
+  const statusOutput = runCapture(
+    "docker",
+    [
+      "compose",
+      "--project-directory",
+      ctx.installDir,
+      "--env-file",
+      path.join(ctx.installDir, ".env"),
+      "run",
+      "--rm",
+      "--no-deps",
+      "--entrypoint",
+      "node",
+      "migrate",
+      "/app/packages/db/dist/migrations-status-cli.js",
+      `postgres://osva:${password}@postgres:5432/osva`,
+    ],
+    { cwd: ctx.installDir, env: composeEnv },
+  );
+  const migrationOk =
+    statusOutput.includes(`database head: ${expectedHead}`) &&
+    statusOutput.includes(`repository head: ${expectedHead}`) &&
+    statusOutput.includes("pending migrations: (none)");
+  report.record(
+    "release_migration_head",
+    `Database migration head is ${expectedHead}`,
+    migrationOk ? "PASS" : "FAIL",
+    { detail: redactSecrets(statusOutput).slice(0, 500) },
+  );
+
+  const webReady = await fetch(`http://127.0.0.1:${ctx.webPort}/ready`);
+  report.record(
+    "release_web_ready",
+    "Web /ready after install",
+    webReady.ok ? "PASS" : "FAIL",
+    { detail: `status=${String(webReady.status)}` },
+  );
+
+  const workerPs = runCapture(
+    "docker",
+    [
+      "compose",
+      "--project-directory",
+      ctx.installDir,
+      "--env-file",
+      path.join(ctx.installDir, ".env"),
+      "ps",
+      "--format",
+      "json",
+    ],
+    { cwd: ctx.installDir, env: composeEnv },
+  );
+  const running = workerPs
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line));
+  const worker = running.find((row) => row.Service === "worker");
+  report.record(
+    "release_worker_running",
+    "Worker service running after install",
+    worker?.State === "running" ? "PASS" : "FAIL",
+    { detail: worker ? `state=${String(worker.State)}` : "missing" },
+  );
+}
+
+export async function aioApiChecks(ctx, report) {
+  await readBootstrapKey(ctx);
+  const webBase = `http://127.0.0.1:${ctx.webPort}`;
+  const response = await fetch(`${webBase}/v1/inference-routing-policies`, {
+    headers: { Authorization: `Bearer ${ctx.bootstrapApiKey}` },
+  });
+  report.record(
+    "aio_inference_routing_list",
+    "Authenticated GET /v1/inference-routing-policies",
+    response.ok ? "PASS" : "FAIL",
+    { detail: `status=${String(response.status)}` },
+  );
 }
 
 export async function runHelloAgent(ctx, report) {
@@ -1013,14 +1136,13 @@ async function runIdentityRecoveryChecks(ctx, report) {
 
 async function idempotencyChecks(ctx, report) {
   const envBefore = await readFile(path.join(ctx.installDir, ".env"), "utf8");
-  const cliBin = path.join(
-    REPO_ROOT,
-    "packages",
-    "cli",
-    "dist",
-    "bin",
-    "osva.js",
+  const markerBefore = await readFile(
+    path.join(ctx.installDir, ".osva", "installation.json"),
+    "utf8",
   );
+  const cliBin =
+    ctx.cliBin ??
+    path.join(REPO_ROOT, "packages", "cli", "dist", "bin", "osva.js");
 
   const withoutYes = spawnSync(
     process.execPath,
@@ -1035,10 +1157,28 @@ async function idempotencyChecks(ctx, report) {
     },
   );
   const envAfterNo = await readFile(path.join(ctx.installDir, ".env"), "utf8");
+  const markerAfterNo = await readFile(
+    path.join(ctx.installDir, ".osva", "installation.json"),
+    "utf8",
+  );
   report.record(
     "idempotency_no_yes",
-    "Rerun setup without --yes preserves .env secrets",
+    "Rerun setup without --yes preserves .env",
     envBefore === envAfterNo ? "PASS" : "FAIL",
+  );
+  const markerParsedBefore = JSON.parse(markerBefore);
+  const markerParsedAfterNo = JSON.parse(markerAfterNo);
+  const markerStable =
+    markerParsedBefore.platformVersion ===
+      markerParsedAfterNo.platformVersion &&
+    markerParsedBefore.imageRef === markerParsedAfterNo.imageRef;
+  report.record(
+    "idempotency_no_yes_marker",
+    "Rerun setup without --yes preserves platform version and image in marker",
+    markerStable ? "PASS" : "FAIL",
+    {
+      detail: `before=${markerParsedBefore.platformVersion}/${redactSecrets(markerParsedBefore.imageRef)} after=${markerParsedAfterNo.platformVersion}/${redactSecrets(markerParsedAfterNo.imageRef)}`,
+    },
   );
 
   const withYes = spawnSync(
@@ -1145,6 +1285,33 @@ async function teardown(ctx) {
   await rm(ctx.installDir, { recursive: true, force: true });
 }
 
+async function resolveLocalPackCli() {
+  const npmVersion = readNpmDistributionVersion();
+  const packRoot = await mkdtemp(path.join(os.tmpdir(), "osva-m16-2d-pack-"));
+  const artifacts = packPublicNpmPackages({
+    repoRoot: REPO_ROOT,
+    version: npmVersion,
+    packDestination: packRoot,
+    runBuild: true,
+  });
+  const { consumerDir } = runIsolatedNpmConsumerSmoke(artifacts, npmVersion);
+  const cliBin = path.join(
+    consumerDir,
+    "node_modules",
+    "@osva-ai",
+    "cli",
+    "dist",
+    "bin",
+    "osva.js",
+  );
+  return {
+    cliBin,
+    dispose: async () => {
+      await rm(packRoot, { recursive: true, force: true });
+    },
+  };
+}
+
 async function main() {
   if (process.argv.includes("--help") || process.argv.includes("-h")) {
     printHelp();
@@ -1161,6 +1328,10 @@ async function main() {
   const report = new AcceptanceReport();
   const imageRef =
     process.env.OSVA_M16_LOCAL_IMAGE?.trim() || DEFAULT_LOCAL_IMAGE;
+  /** @type {(() => Promise<void>) | undefined} */
+  let packDispose;
+  /** @type {string | undefined} */
+  let cliBinFromPack;
   const groups = new Set(
     (process.env.OSVA_M16_GROUPS ?? "fresh,security,recovery,idempotency,agent")
       .split(",")
@@ -1168,7 +1339,30 @@ async function main() {
       .filter(Boolean),
   );
 
-  {
+  if (process.env.OSVA_M16_ARTIFACT_SOURCE === "local-pack") {
+    const started = Date.now();
+    logStage("cli_npm_pack", "start", {});
+    try {
+      const packed = await resolveLocalPackCli();
+      cliBinFromPack = packed.cliBin;
+      packDispose = packed.dispose;
+      logStage("cli_npm_pack", "ok", {
+        elapsedMs: Date.now() - started,
+        cliBin: cliBinFromPack,
+      });
+      report.record(
+        "cli_npm_pack",
+        "CLI invoked from isolated npm pack consumer",
+        "PASS",
+      );
+    } catch (error) {
+      logStage("cli_npm_pack", "fail", {
+        elapsedMs: Date.now() - started,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  } else {
     const started = Date.now();
     logStage("cli_build", "start", {});
     try {
@@ -1266,6 +1460,7 @@ async function main() {
     imageRef,
     installDir,
     skipImagePull: true,
+    cliBin: cliBinFromPack,
     ...ports,
   };
 
@@ -1323,6 +1518,7 @@ async function main() {
 
     if (groups.has("fresh")) {
       await completeAdminSetup(ctx, report);
+      await releaseEquivalencyChecks(ctx, report);
     }
 
     if (groups.has("recovery")) {
@@ -1334,9 +1530,13 @@ async function main() {
     }
 
     if (groups.has("agent")) {
+      await aioApiChecks(ctx, report);
       await runHelloAgent(ctx, report);
     }
   } finally {
+    if (packDispose) {
+      await packDispose().catch(() => {});
+    }
     if (ctx.bootstrapKeyPath) {
       await writeFile(ctx.bootstrapKeyPath, "", { mode: 0o600 }).catch(
         () => {},
