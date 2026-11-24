@@ -4,13 +4,26 @@ Proves the full M16 journey using **published** npm and GHCR artifacts (Stage B)
 
 ## Stage B (published artifacts)
 
-Prerequisites: maintainer publication of platform **1.1.1** and npm **`@osva-ai/*@1.1.4`**, digests recorded on target **`m17-114`**. Historical M16 npm **1.1.2** replay uses **`m16-111`**.
+Prerequisites:
+
+| Target | Line |
+|--------|------|
+| **`m12-120`** (current) | Platform **1.2.0**, npm/PyPI **`1.2.0`**, migration head **`0045_inference_budget_recovery`** |
+| **`m17-114`** | Platform **1.1.1**, npm **`1.1.4`** |
+| **`m16-111`** (historical) | M16 npm **1.1.2** replay |
 
 ```powershell
 $env:OSVA_M16_REGISTRY_ACCEPTANCE = "1"
-$env:OSVA_REGISTRY_ACCEPTANCE_TARGET = "m17-114"
+$env:OSVA_REGISTRY_ACCEPTANCE_TARGET = "m12-120"
 $env:OSVA_M16_ARTIFACT_SOURCE = "published"
 $env:OSVA_ACCEPTANCE_LIVE = "1"
+pnpm acceptance:m16-registry
+```
+
+Prior-line replay (`m17-114` / `m16-111`):
+
+```powershell
+$env:OSVA_REGISTRY_ACCEPTANCE_TARGET = "m17-114"
 pnpm acceptance:m16-registry
 ```
 
@@ -35,4 +48,7 @@ pnpm acceptance:m16-registry
 
 ## Upgrade path
 
-Cross-version acceptance bootstraps a **legacy 1.1.0** layout (`fixtures/compose-platform-1.1.0.yml`) with **`ghcr.io/osva-ai/osva:1.1.0`**, then runs **`osva platform upgrade --to 1.1.1`**. This is the supported adoption path for operators who deployed **`deploy/compose`** before M16 `osva setup`.
+| Target | Upgrade path |
+|--------|----------------|
+| **`m12-120`** | Bootstrap **`1.1.1`** (`fixtures/compose-platform-1.1.1.yml`) → **`osva platform upgrade --to 1.2.0`** (SQL through **`0045_inference_budget_recovery`**) |
+| **`m16-111`** / **`m17-114`** | Bootstrap **legacy 1.1.0** → **`osva platform upgrade --to 1.1.1`** |

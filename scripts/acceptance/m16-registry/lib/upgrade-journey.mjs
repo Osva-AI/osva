@@ -2,9 +2,11 @@ import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { readRepositoryMigrationHead } from "../../../release/lib/read-migration-head.mjs";
 import { redactSecrets } from "../../m16-2d/redact.mjs";
 import { runCli } from "../../m16-shared/cli-runner.mjs";
 import { bootstrapPlatform110Install } from "./bootstrap-platform-110.mjs";
+import { bootstrapPlatform111Install } from "./bootstrap-platform-111.mjs";
 
 /** @param {string} dryRunOutput */
 export function migrationRequiredFromDryRun(dryRunOutput) {
@@ -18,10 +20,12 @@ export function migrationRequiredFromDryRun(dryRunOutput) {
  * @param {string} input.cliBin
  * @param {string} input.installDir
  * @param {string} input.priorImageRef
+ * @param {"1.1.0" | "1.1.1"} input.priorPlatformVersion
  * @param {string} input.targetImageRef
  * @param {string} input.targetPlatformVersion
  * @param {number} input.webPort
  * @param {number} input.mcpPort
+ * @param {number} [input.consolePort]
  * @param {boolean} [input.useLocalUpgradeImage]
  */
 export async function runM16UpgradeJourney(report, input) {
@@ -30,12 +34,25 @@ export async function runM16UpgradeJourney(report, input) {
   if (input.useLocalUpgradeImage) {
     upgradeEnv.OSVA_UPGRADE_LOCAL_IMAGE = input.targetImageRef;
   }
-  await bootstrapPlatform110Install({
-    installDir: input.installDir,
-    imageRef: input.priorImageRef,
-    webPort: input.webPort,
-    mcpPort: input.mcpPort,
-  });
+  const priorLabel = input.priorPlatformVersion;
+  if (input.priorPlatformVersion === "1.1.1") {
+    await bootstrapPlatform111Install({
+      installDir: input.installDir,
+      imageRef: input.priorImageRef,
+      webPort: input.webPort,
+      mcpPort: input.mcpPort,
+      consolePort:
+        input.consolePort ??
+        (input.webPort + 2 <= 65535 ? input.webPort + 2 : input.webPort),
+    });
+  } else {
+    await bootstrapPlatform110Install({
+      installDir: input.installDir,
+      imageRef: input.priorImageRef,
+      webPort: input.webPort,
+      mcpPort: input.mcpPort,
+    });
+  }
 
   const envFile = path.join(input.installDir, ".env");
   const configCheck = spawnSync(
@@ -52,7 +69,7 @@ export async function runM16UpgradeJourney(report, input) {
   );
   report.record(
     "upgrade_bootstrap_compose_config",
-    "Legacy 1.1.0 compose config validates",
+    `Prior ${priorLabel} compose config validates`,
     configCheck.status === 0 ? "PASS" : "FAIL",
     {
       detail:
@@ -85,7 +102,7 @@ export async function runM16UpgradeJourney(report, input) {
   );
   report.record(
     "upgrade_bootstrap_compose",
-    "Legacy 1.1.0 compose stack starts",
+    `Prior ${priorLabel} compose stack starts`,
     up.status === 0 ? "PASS" : "FAIL",
   );
   if (up.status !== 0) {
@@ -229,4 +246,54 @@ export async function runM16UpgradeJourney(report, input) {
     "platform status after upgrade",
     status.status === 0 ? "PASS" : "WARN",
   );
+
+  if (input.targetPlatformVersion === "1.2.0") {
+    const expectedHead = readRepositoryMigrationHead();
+    const envRaw = await readFile(path.join(input.installDir, ".env"), "utf8");
+    const password =
+      envRaw.match(/^POSTGRES_PASSWORD=(.+)$/m)?.[1]?.trim() ?? "";
+    const composeProject =
+      envRaw.match(/^COMPOSE_PROJECT_NAME=(.+)$/m)?.[1]?.trim() ?? "";
+    const image = envRaw.match(/^OSVA_IMAGE=(.+)$/m)?.[1]?.trim() ?? "";
+    const statusOutput = spawnSync(
+      "docker",
+      [
+        "compose",
+        "--project-directory",
+        input.installDir,
+        "--env-file",
+        path.join(input.installDir, ".env"),
+        "run",
+        "--rm",
+        "--no-deps",
+        "--entrypoint",
+        "node",
+        "migrate",
+        "/app/packages/db/dist/migrations-status-cli.js",
+        `postgres://osva:${password}@postgres:5432/osva`,
+      ],
+      {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          COMPOSE_PROJECT_NAME: composeProject,
+          POSTGRES_PASSWORD: password,
+          OSVA_IMAGE: image,
+        },
+      },
+    );
+    const migrationText = redactSecrets(
+      statusOutput.stdout || statusOutput.stderr || "",
+    );
+    const migrationOk =
+      migrationText.includes(`database head: ${expectedHead}`) &&
+      migrationText.includes(`repository head: ${expectedHead}`) &&
+      migrationText.includes("pending migrations: (none)");
+    report.record(
+      "upgrade_migration_head",
+      `Database migration head is ${expectedHead} after upgrade`,
+      migrationOk ? "PASS" : "FAIL",
+      { detail: migrationText.slice(0, 500) },
+    );
+  }
 }

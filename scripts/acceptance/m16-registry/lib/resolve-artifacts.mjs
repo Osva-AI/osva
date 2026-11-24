@@ -33,6 +33,7 @@ const REPO_ROOT = path.resolve(
  * @property {string} cliBin
  * @property {string} imageRef
  * @property {string} priorImageRef
+ * @property {"1.1.0" | "1.1.1"} priorPlatformVersion
  * @property {() => Promise<void>} dispose
  */
 
@@ -88,6 +89,7 @@ export async function resolveM16Artifacts() {
       cliBin: consumer.cliBin,
       imageRef,
       priorImageRef: STABLE_110_TARGET.ghcrImageRef,
+      priorPlatformVersion: "1.1.0",
       dispose: consumer.dispose,
     };
   }
@@ -101,12 +103,22 @@ export async function resolveM16Artifacts() {
   const target = resolveAcceptanceTarget(
     process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET ?? "m17-114",
   );
-  const allowedM16RegistryTargets = new Set(["m16-111", "m17-114"]);
+  const allowedM16RegistryTargets = new Set(["m16-111", "m17-114", "m12-120"]);
   if (!allowedM16RegistryTargets.has(target.id)) {
     throw new Error(
-      `M16 registry acceptance requires OSVA_REGISTRY_ACCEPTANCE_TARGET=m16-111 or m17-114 (got ${target.id})`,
+      `M16 registry acceptance requires OSVA_REGISTRY_ACCEPTANCE_TARGET=m16-111, m17-114, or m12-120 (got ${target.id})`,
     );
   }
+  const prior =
+    target.id === "m12-120"
+      ? {
+          priorImageRef: M16_111_TARGET.ghcrImageRef,
+          priorPlatformVersion: /** @type {const} */ ("1.1.1"),
+        }
+      : {
+          priorImageRef: STABLE_110_TARGET.ghcrImageRef,
+          priorPlatformVersion: /** @type {const} */ ("1.1.0"),
+        };
   assertTargetEnvGate(target);
   const readiness = stableTargetReadiness(target);
   if (readiness.blocked) {
@@ -127,7 +139,8 @@ export async function resolveM16Artifacts() {
     target,
     cliBin: consumer.cliBin,
     imageRef: target.ghcrImageRef,
-    priorImageRef: STABLE_110_TARGET.ghcrImageRef,
+    priorImageRef: prior.priorImageRef,
+    priorPlatformVersion: prior.priorPlatformVersion,
     dispose: consumer.dispose,
   };
 }

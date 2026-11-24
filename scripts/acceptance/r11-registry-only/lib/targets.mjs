@@ -167,6 +167,42 @@ export const M16_111_TARGET = {
  *
  * @type {RegistryAcceptanceTarget}
  */
+/**
+ * OSVA 1.2.0 published registry acceptance (M12.1.2.0).
+ * Fresh install on 1.2.0 plus supported 1.1.1 → 1.2.0 upgrade with migrations.
+ *
+ * @type {RegistryAcceptanceTarget}
+ */
+export const M12_120_TARGET = {
+  id: "m12-120",
+  productVersion: "1.2.0",
+  npmPackageVersion: "1.2.0",
+  pythonPyprojectVersion: "1.2.0",
+  pythonPep440: "1.2.0",
+  pipInstallSpec: "osva-sdk==1.2.0",
+  ghcrImageRef: "ghcr.io/osva-ai/osva:1.2.0",
+  ghcrIndexDigest:
+    "sha256:5d5d970f12f5463e6946f17368cd6c0027e9d404a28ead520ecb418467c1ecae",
+  ghcrLinuxAmd64ManifestDigest:
+    "sha256:6357ad5c9cb73502a7c9b780c30619d543a346df7616527147f5973427d0ebad",
+  pypiWheelSha256:
+    "3635e52512c78261c7075330cfe57430163ec40f4fdf4c33e9667ac237b2c549",
+  pypiSdistSha256:
+    "5b4db7ba29304ca67b5e1373592bad9b4ef0c0cfaac0e9a1955ec6a0bd832454",
+  pypiWheelFilename: "osva_sdk-1.2.0-py3-none-any.whl",
+  pypiSdistFilename: "osva_sdk-1.2.0.tar.gz",
+  npmRegistryMode: "exact",
+  npmViewSelector: "1.2.0",
+  gitTag: "v1.2.0",
+  releaseCommit: "f1fcb2bae162e63c831eb140ade6d4a74c0fb70f",
+  composeProject: "osva-m12-registry-120",
+  evidenceReleaseKey: "1.2.0-m12",
+  registryArtifactsReady: true,
+  envGateVar: "OSVA_M16_REGISTRY_ACCEPTANCE",
+  notes:
+    "Platform 1.2.0 + npm/PyPI 1.2.0. Upgrade group: 1.1.1 → 1.2.0 (migration head 0045_inference_budget_recovery).",
+};
+
 export const M17_114_TARGET = {
   id: "m17-114",
   productVersion: "1.1.1",
@@ -203,6 +239,7 @@ const TARGETS = {
   "stable-npm-111": STABLE_NPM_111_TARGET,
   "m16-111": M16_111_TARGET,
   "m17-114": M17_114_TARGET,
+  "m12-120": M12_120_TARGET,
 };
 
 /**
@@ -216,7 +253,7 @@ export function resolveAcceptanceTarget(
   const target = TARGETS[key];
   if (!target) {
     throw new Error(
-      `Unknown OSVA_REGISTRY_ACCEPTANCE_TARGET=${JSON.stringify(raw)} (expected rc4, stable, stable-npm-111, m16-111, or m17-114)`,
+      `Unknown OSVA_REGISTRY_ACCEPTANCE_TARGET=${JSON.stringify(raw)} (expected rc4, stable, stable-npm-111, m16-111, m17-114, or m12-120)`,
     );
   }
   return target;

@@ -17,6 +17,16 @@ export const REGISTRY_INSTALL_JOURNEY_CHILD_IDS = [
   "first_agent_run_succeeded",
 ];
 
+/** Additional install checks for OSVA 1.2.0 registry target (`m12-120`). */
+export const M12_120_REGISTRY_INSTALL_EXTRA_CHILD_IDS = [
+  "release_platform_version",
+  "release_pinned_image",
+  "release_migration_head",
+  "release_web_ready",
+  "release_worker_running",
+  "aio_inference_routing_list",
+];
+
 /** Child check ids recorded during the registry lifecycle group. */
 export const REGISTRY_LIFECYCLE_JOURNEY_CHILD_IDS = [
   "platform_status",
@@ -34,10 +44,18 @@ export const REGISTRY_LIFECYCLE_JOURNEY_CHILD_IDS = [
 
 /**
  * @param {AcceptanceReport} report
+ * @param {string} [targetId]
  * @returns {"PASS" | "FAIL" | "NOT_RUN"}
  */
-export function registryInstallJourneyStatus(report) {
-  return report.journeyStatusFromChildIds(REGISTRY_INSTALL_JOURNEY_CHILD_IDS);
+export function registryInstallJourneyStatus(report, targetId) {
+  const childIds =
+    targetId === "m12-120"
+      ? [
+          ...REGISTRY_INSTALL_JOURNEY_CHILD_IDS,
+          ...M12_120_REGISTRY_INSTALL_EXTRA_CHILD_IDS,
+        ]
+      : REGISTRY_INSTALL_JOURNEY_CHILD_IDS;
+  return report.journeyStatusFromChildIds(childIds);
 }
 
 /**
