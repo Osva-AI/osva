@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  M12_120_TARGET,
   M16_111_TARGET,
   M17_114_TARGET,
   RC4_TARGET,
@@ -51,6 +52,32 @@ describe("registry acceptance targets", () => {
       assert.equal(resolveAcceptanceTarget().id, "m16-111");
       assert.equal(resolveAcceptanceTarget().npmPackageVersion, "1.1.2");
       assert.equal(resolveAcceptanceTarget().productVersion, "1.1.1");
+    } finally {
+      if (prev === undefined) {
+        delete process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET;
+      } else {
+        process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET = prev;
+      }
+    }
+  });
+
+  it("allows m12-120 when 1.2.0 publication digests are recorded", () => {
+    assert.equal(stableTargetReadiness(M12_120_TARGET).blocked, false);
+    assert.equal(M12_120_TARGET.productVersion, "1.2.0");
+    assert.equal(M12_120_TARGET.npmPackageVersion, "1.2.0");
+    assert.equal(M12_120_TARGET.gitTag, "v1.2.0");
+    assert.equal(
+      M12_120_TARGET.releaseCommit,
+      "f1fcb2bae162e63c831eb140ade6d4a74c0fb70f",
+    );
+  });
+
+  it("resolves m12-120 registry target id", () => {
+    const prev = process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET;
+    process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET = "m12-120";
+    try {
+      assert.equal(resolveAcceptanceTarget().id, "m12-120");
+      assert.equal(resolveAcceptanceTarget().pipInstallSpec, "osva-sdk==1.2.0");
     } finally {
       if (prev === undefined) {
         delete process.env.OSVA_REGISTRY_ACCEPTANCE_TARGET;

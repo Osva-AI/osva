@@ -7,10 +7,12 @@ import { fileURLToPath } from "node:url";
 import { verifyInstallationImageContents } from "../../deployment/verify-installation-image.mjs";
 import {
   ADMIN_EMAIL,
+  aioApiChecks,
   checkStatus,
   completeAdminSetup,
   composeValidate,
   consoleSecurityChecks,
+  releaseEquivalencyChecks,
   runHelloAgent,
   runInstaller,
 } from "../m16-2d/run.mjs";
@@ -40,7 +42,7 @@ M16 registry-only external-consumer acceptance (installation + lifecycle + upgra
 
 Stage B (published):
   OSVA_M16_REGISTRY_ACCEPTANCE=1
-  OSVA_REGISTRY_ACCEPTANCE_TARGET=m16-111
+  OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114|m12-120|m16-111
   OSVA_M16_ARTIFACT_SOURCE=published
   OSVA_ACCEPTANCE_LIVE=1
 
@@ -245,11 +247,15 @@ async function main() {
         }
         await consoleSecurityChecks(ctx, report);
         await completeAdminSetup(ctx, report);
+        if (artifacts.target.id === "m12-120") {
+          await releaseEquivalencyChecks(ctx, report);
+          await aioApiChecks(ctx, report);
+        }
         await runHelloAgent(ctx, report);
         report.record(
           "registry_install_journey",
           "Registry install + onboarding + agent run",
-          registryInstallJourneyStatus(report),
+          registryInstallJourneyStatus(report, artifacts.target.id),
         );
       }
 
@@ -278,10 +284,12 @@ async function main() {
             cliBin: artifacts.cliBin,
             installDir: upgradeDir,
             priorImageRef: artifacts.priorImageRef,
+            priorPlatformVersion: artifacts.priorPlatformVersion,
             targetImageRef: artifacts.imageRef,
             targetPlatformVersion: artifacts.target.productVersion,
             webPort: ports.webPort + 10,
             mcpPort: ports.mcpPort + 10,
+            consolePort: ports.consolePort + 10,
             useLocalUpgradeImage: artifacts.source === "local-pack",
           });
           report.record(
