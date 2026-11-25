@@ -6,7 +6,7 @@ OSVA is an open-source platform for building, running, controlling, observing, e
 
 The project is designed as an **agent operating layer** rather than only an agent framework.
 
-> **Status:** **OSVA Community `1.1.0-rc.2`** (release candidate — **not GA**). **`1.1.0-rc.2`** is **published** on npm (dist-tag **`rc`**), PyPI, GHCR, and GitHub Releases; npm/PyPI **`latest`** remains **`1.0.0`**. Builds on OSS 1.0 with M7–M10 developer experience work and **M11** human identity and Console sessions in this repository ([`docs/operations/M11_CLOSEOUT_SUMMARY.md`](docs/operations/M11_CLOSEOUT_SUMMARY.md)). Published **`1.1.0-rc.1`** artifacts remain on registries; **`@osva-ai/cli@1.1.0-rc.1`** lacks M10.2 agent commands — use **`1.1.0-rc.2`** from registries or build from this repository. First agent: [`examples/hello-agent/README.md`](examples/hello-agent/README.md) or `pnpm example:hello`. Start with [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md). Registry acceptance: [`docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](docs/release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md). Historical 1.0 guide: [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
+> **Status:** **OSVA Community `1.2.0`** (current stable). Published on npm (**`latest`**), PyPI, GHCR, Helm, and [GitHub Releases](https://github.com/Osva-AI/osva/releases/tag/v1.2.0). **Install:** `npm install -g @osva-ai/cli@latest` then `osva setup --yes` (Docker Desktop required). Full walkthrough: [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md). Compatibility and upgrade paths: [`docs/release/COMPATIBILITY.md`](docs/release/COMPATIBILITY.md). First agent: [`examples/hello-agent/README.md`](examples/hello-agent/README.md) or `pnpm example:hello`. Historical 1.0 guide: [`docs/OSS-1.0-QUICKSTART.md`](docs/OSS-1.0-QUICKSTART.md).
 > Community Edition includes authenticated `/v1`, workflows, scheduling, MCP client
 > and MCP server, knowledge/RAG, artifact storage, container/trusted/remote runtimes,
 > TypeScript/Python SDKs, CLI, self-hosted Compose, Helm/Kubernetes packaging, optional
@@ -92,7 +92,14 @@ AI Office
 
 See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
-## OSS 1.0 quickstart and installation
+## Installation and quickstart
+
+```powershell
+npm install -g @osva-ai/cli@latest
+osva setup --yes
+```
+
+Requires Docker with Compose v2. Console onboarding runs at the printed loopback URL. Details: [`docs/OSS-COMMUNITY-QUICKSTART.md`](docs/OSS-COMMUNITY-QUICKSTART.md).
 
 | Path | Document |
 |------|----------|
@@ -109,7 +116,7 @@ See [`docs/roadmap/STAGE_ROADMAP.md`](docs/roadmap/STAGE_ROADMAP.md).
 
 **Authentication:** all `/v1/*` routes require API keys. Run bootstrap once per environment to mint the initial key.
 
-**Public SDKs (aligned to root `VERSION`, currently `1.1.0-rc.2` on registries):** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`, and Python `osva-sdk`.
+**Public SDKs (aligned to root `VERSION`, currently `1.2.0` on registries):** `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`, and Python `osva-sdk`.
 
 Historical Beta docs: [`docs/COMMUNITY-BETA-QUICKSTART.md`](docs/COMMUNITY-BETA-QUICKSTART.md) (legacy local dev path).
 
@@ -167,7 +174,7 @@ Routine infrastructure shutdown preserves volumes: `pnpm infra:down` (contributo
 
 ### SDK and CLI
 
-Public packages at version **`1.1.0-rc.2`** on registries (read root `VERSION`; build from this repository for unreleased commits):
+Public packages at version **`1.2.0`** on registries (read root `VERSION`; build from this repository for unreleased commits):
 
 - `@osva-ai/contracts`, `@osva-ai/runtime-protocol` — shared types/schemas
 - `@osva-ai/sdk` — TypeScript client (`OsvaClient`) and `@osva-ai/sdk/runtime`
