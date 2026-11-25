@@ -1,38 +1,52 @@
-# OSVA Community quickstart (current release candidate)
+# OSVA Community quickstart
 
-Authoritative path for a **self-hosted OSVA Community Edition** deployment using Docker Compose, authenticated `/v1`, TypeScript and Python SDKs, optional MCP, and the loopback Product Console.
+Authoritative path for a **self-hosted OSVA Community Edition** deployment using Docker Compose, authenticated `/v1`, TypeScript and Python SDKs, optional MCP, and the Product Console.
 
-> **Current release candidate:** **`1.1.0-rc.2`** (**not GA**). **`1.1.0-rc.2`** is **published** on npm (dist-tag **`rc`**), PyPI, GHCR, and GitHub Releases (tag **`v1.1.0-rc.2`**). **`v1.0.0`** remains the default stable release line on npm/PyPI **`latest`**. Published **`1.1.0-rc.1`** registry artifacts remain available for early adopters who already pinned them; **`@osva-ai/cli@1.1.0-rc.1` does not include M10.2 agent commands** (`init`, `validate`, `deploy`, `run`, `status`, `doctor`, templates). Use **`1.1.0-rc.2`** from registries or build from this repository for unreleased commits. Registry acceptance summary: [`release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](release/M10_4_PUBLISHED_ARTIFACT_ACCEPTANCE.md).
+> **Current stable release:** **`1.2.0`** on npm (**`latest`**), PyPI, GHCR, and GitHub Releases ([`v1.2.0`](https://github.com/Osva-AI/osva/releases/tag/v1.2.0)). Registry acceptance target **`m12-120`**: 45 PASS (see [`release/COMPATIBILITY.md`](release/COMPATIBILITY.md)).
 >
-> **Upgrading from published `v1.0.0`?** Apply migration **`0023_execution_lease_slice`** and review [`operations/UPGRADE.md`](operations/UPGRADE.md) before rolling workers.
+> **Upgrading from platform `1.1.1`?** Apply SQL through migration **`0045_inference_budget_recovery`** and review [`operations/UPGRADE.md`](operations/UPGRADE.md) (`osva platform upgrade --to 1.2.0`).
 >
-> **Historical OSS 1.0 guide:** [`OSS-1.0-QUICKSTART.md`](OSS-1.0-QUICKSTART.md) (documents the **`v1.0.0`** tag baseline).
+> **Historical guides:** [`OSS-1.0-QUICKSTART.md`](OSS-1.0-QUICKSTART.md) (**`v1.0.0`**). Older release-candidate messaging and pinned **`1.1.0-rc.*`** installs are preserved in git history and milestone closeout docs under [`release/`](release/).
 
-## M16 one-command install (platform 1.1.1+, after publication)
+## Standard installation (recommended)
 
-External install without cloning this repository (requires published npm **`@osva-ai/cli@1.1.2`** and GHCR **`ghcr.io/osva-ai/osva:1.1.1`**):
+Requires **Docker Desktop** (or Docker Engine with Compose v2) and **Node.js 24+**. No repository clone is required.
 
 ```powershell
+npm install -g @osva-ai/cli@latest
+osva setup --yes
+```
+
+`osva setup` materializes a Compose project (registry-pinned **`ghcr.io/osva-ai/osva:1.2.0`**), starts PostgreSQL and Valkey, runs migrations, starts platform services and Console, and guides **human administrator onboarding** at the printed loopback URL. Create machine API keys in Console **Settings → API Keys** after sign-in (or use `--bootstrap-admin-api-key` for automation).
+
+Validated consumer path: **Windows 10**, Docker Desktop, **`linux/amd64`** GHCR image. Other host OSes and CPU architectures are not registry acceptance-tested.
+
+Registry-verified external consumer evidence (historical M16 line): [`release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md).
+
+### Historical: pinned CLI versions (pre-1.2.0)
+
+Before **`1.2.0`**, operators pinned specific npm versions, for example:
+
+```powershell
+# Historical — M16 line (platform 1.1.1); use @latest for new installs
 npm install -g @osva-ai/cli@1.1.2
 osva setup --yes
 ```
 
-Follow Console onboarding at the printed loopback URL. Registry-verified acceptance: [`release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](release/M16_EXTERNAL_CONSUMER_ACCEPTANCE.md).
-
-Until that release publishes, build the CLI from this repository or use **`deploy/compose`** below.
+**Do not use `@osva-ai/cli@1.1.0-rc.1`** — that tarball predates M10.2 agent commands (`init`, `validate`, `deploy`, `run`, `status`, `doctor`).
 
 ## Which local journey?
 
 | Journey | Use this guide | Also read |
 | --- | --- | --- |
-| **External agent developer** — run OSVA in Docker, build agents on the host | Sections below (`deploy/compose`) | [`../packages/cli/README.md`](../packages/cli/README.md) |
+| **External agent developer** — run OSVA in Docker, build agents on the host | Sections below (`deploy/compose`) or **Standard installation** above | [`../packages/cli/README.md`](../packages/cli/README.md) |
 | **OSVA contributor** — change OSVA source; infra in Docker, apps on the host | [`engineering/LOCAL_DEVELOPMENT.md`](engineering/LOCAL_DEVELOPMENT.md) (journey B) | Root [`README.md`](../README.md) |
 
 Compose `.env` is loaded by Docker Compose only. Host CLI, examples, and Console still need **`OSVA_BASE_URL`**, **`OSVA_API_KEY`**, and related variables exported in each shell ([`engineering/LOCAL_DEVELOPMENT.md`](engineering/LOCAL_DEVELOPMENT.md)).
 
 If you also develop against host Postgres/Valkey, keep **`OSVA_VALKEY_URL=redis://valkey:6379`** in `deploy/compose/.env` **and** unset host exports before `docker compose up` — shell variables override `--env-file` during Compose interpolation. Verification status: [`engineering/M10_3_SETUP_VERIFICATION.md`](engineering/M10_3_SETUP_VERIFICATION.md).
 
-## Prerequisites
+## Prerequisites (Compose from repository)
 
 - Docker with Compose v2
 - Node.js 24 + pnpm 12 (for SDK/CLI examples on your workstation)
@@ -40,13 +54,13 @@ If you also develop against host Postgres/Valkey, keep **`OSVA_VALKEY_URL=redis:
 
 ## 1. Start OSVA (Compose)
 
-**Pre-built GHCR image** (**`1.1.0-rc.2`** on GHCR):
+**Pre-built GHCR image** (**`1.2.0`**):
 
 ```bash
 cd deploy/compose
 cp .env.example .env
 # Set POSTGRES_PASSWORD in .env
-# OSVA_IMAGE=ghcr.io/osva-ai/osva:1.1.0-rc.2
+# OSVA_IMAGE=ghcr.io/osva-ai/osva:1.2.0
 docker compose pull
 docker compose up -d --wait
 ```
@@ -59,7 +73,7 @@ Do **not** pass **`--build`** when using a registry image — that triggers a lo
 docker compose up -d --build --wait
 ```
 
-Compose bundles **PostgreSQL (pgvector)** and **Valkey** for convenience, shares a filesystem artifact volume across app containers, and keeps **`OSVA_CONTAINER_ENABLED=false`** by default. The Product Console is **not** started by default Compose; run `pnpm dev:console` locally against the API when needed (loopback bind).
+Compose bundles **PostgreSQL (pgvector)** and **Valkey** for convenience, shares a filesystem artifact volume across app containers, and keeps **`OSVA_CONTAINER_ENABLED=false`** by default. The Product Console is **not** started by default Compose; run `pnpm dev:console` locally against the API when needed (loopback bind), or use **`osva setup`** which starts Console as part of the install bundle.
 
 ## 2. Migrate
 
@@ -69,7 +83,7 @@ Compose bundles **PostgreSQL (pgvector)** and **Valkey** for convenience, shares
 docker compose run --rm migrate
 ```
 
-After upgrading from **`v1.0.0`**, confirm migration **`0023_execution_lease_slice`** applied (`pnpm db:migrations:status` / `pnpm db:migrations:integrity` against your database URL).
+After upgrading from **`v1.0.0`**, confirm migration **`0023_execution_lease_slice`** applied (`pnpm db:migrations:status` / `pnpm db:migrations:integrity` against your database URL). Platform **`1.2.0`** requires head **`0045_inference_budget_recovery`**.
 
 ## 3. Bootstrap (initial API key)
 
@@ -86,7 +100,7 @@ Optional readiness check with the CLI (`OSVA_WORKSPACE_ID` not required):
 ```bash
 export OSVA_BASE_URL=http://127.0.0.1:8080
 export OSVA_API_KEY='osva_ak_…'
-osva doctor   # npm install -g @osva-ai/cli@1.1.0-rc.2, or build from this repo
+osva doctor   # npm install -g @osva-ai/cli@latest, or build from this repo
 ```
 
 ## 4. Run the Hello Agent (first execution)
@@ -119,12 +133,12 @@ pnpm example:hello
 
 Expect terminal Run status **`SUCCEEDED`** and output `{ "echoed": "Hello OSVA" }`. Details: [`../examples/hello-agent/README.md`](../examples/hello-agent/README.md).
 
-## 4b. Standalone agent with `@osva-ai/cli` (M10.2)
+## 4b. Standalone agent with `@osva-ai/cli`
 
-From any directory — install **`@osva-ai/cli@1.1.0-rc.2`** from npm, or build from this repository (**not** `@1.1.0-rc.1`):
+From any directory:
 
 ```powershell
-npm install -g @osva-ai/cli@1.1.0-rc.2
+npm install -g @osva-ai/cli@latest
 osva init my-first-agent
 cd my-first-agent
 npm install
@@ -171,12 +185,12 @@ node --input-type=module -e "
 "
 ```
 
-Install the matching RC from npm: `npm install @osva-ai/sdk@1.1.0-rc.2` (dist-tag **`rc`**), or build from this repository.
+From npm: `npm install @osva-ai/sdk@latest` (align all `@osva-ai/*` packages to the same version), or build from this repository.
 
 ## 7. Python SDK
 
 ```bash
-python -m pip install osva-sdk==1.1.0rc2   # or pip install ./sdks/python from a clone
+python -m pip install osva-sdk==1.2.0   # or pip install ./sdks/python from a clone
 export OSVA_BASE_URL=http://127.0.0.1:8080
 export OSVA_API_KEY='osva_ak_…'
 python -c "
@@ -186,8 +200,6 @@ client = OSVAClient(base_url=os.environ['OSVA_BASE_URL'], api_key=os.environ['OS
 print(client.agents.list())
 "
 ```
-
-PyPI prerelease versions use PEP 440 form (**`1.1.0rc2`**, not `1.1.0-rc.2`).
 
 ## 8. Optional MCP
 
@@ -220,7 +232,7 @@ docker compose down -v
 
 ## 10. Product Console (optional)
 
-Console is not started by Compose. Default mode uses **human sessions** (no Console API key). Ensure `apps/web` has **`OSVA_AUTH_SECRET`** (same as Compose `.env`) and trusted origins include the Console URL.
+When using repository Compose without `osva setup`, Console is not started by default. Default mode uses **human sessions** (no Console API key). Ensure `apps/web` has **`OSVA_AUTH_SECRET`** (same as Compose `.env`) and trusted origins include the Console URL.
 
 ```powershell
 $env:OSVA_BASE_URL = "http://127.0.0.1:8080"
@@ -230,6 +242,8 @@ pnpm dev:console
 ```
 
 Open **`http://127.0.0.1:5173`**, complete **`/setup`** with the bootstrap token, then sign in. After `pnpm --filter @osva/console build` and `start`, open **`http://127.0.0.1:4174`**.
+
+With **`osva setup`**, Console is started with the install bundle — follow the printed URL and complete onboarding there.
 
 Legacy API-key BFF (deprecated): `OSVA_CONSOLE_LEGACY_API_KEY_MODE=true` and `OSVA_CONSOLE_API_KEY`. See [`engineering/CONSOLE.md`](engineering/CONSOLE.md).
 

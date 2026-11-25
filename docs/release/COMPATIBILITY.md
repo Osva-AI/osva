@@ -1,18 +1,26 @@
 # OSVA Community compatibility and release policy
 
-**Current platform preparation target:** **`1.2.0`** (unified distribution RC; installer bundle, upgrade catalog, migration head **`0045_inference_budget_recovery`**). Prior M16 line: [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md).
+**Current stable platform line:** **`1.2.0`** — git tag **`v1.2.0`** → **`f1fcb2bae162e63c831eb140ade6d4a74c0fb70f`**. [GitHub Release](https://github.com/Osva-AI/osva/releases/tag/v1.2.0). Migration head **`0045_inference_budget_recovery`**.
 
-**Last registry-verified platform line:** **`1.1.1`** on GHCR/PyPI (M16). **Published npm `latest` / `stable-candidate` (pre-1.2.0):** **`1.1.4`** (five `@osva-ai/*` packages; M17.9). Registry harness default for published artifacts: **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1** + npm **1.1.4**). Historical M16 Stage B evidence remains on target **`m16-111`** (npm **1.1.2**). **`1.2.0`** is **unpublished** until maintainer tag, GHCR/PyPI/npm publication, and registry-only acceptance.
+**Registry-verified published artifacts (`1.2.0`):** five npm `@osva-ai/*` packages on dist-tag **`latest`**; PyPI **`osva-sdk==1.2.0`**; GHCR **`ghcr.io/osva-ai/osva:1.2.0`** (**linux/amd64**); Helm chart **`osva-1.2.0.tgz`** attached to the GitHub release. Acceptance harness: **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m12-120`** — **45 PASS**, 0 FAIL (consumer path validated on **Windows 10**, Docker Desktop; do not infer ARM, macOS, or native Linux host support from this evidence).
+
+**Historical registry-verified lines (preserved):** platform **`1.1.1`** (M16, target **`m16-111`** / npm **`1.1.2`**); npm **`1.1.4`** on **`latest`** before **`1.2.0`** (M17.9, target **`m17-114`**). Prior M16 matrix: [`M16_5B_RELEASE_VERSION_MATRIX.md`](M16_5B_RELEASE_VERSION_MATRIX.md).
 
 **M19 ecosystem npm (sibling repositories, verified 2026-11-06):** eleven additional public packages — three **osva-adapters** releases (`adapter-artifact-memory` / `adapter-artifact-azure` **0.1.2**, `runtime-cli-sidecar` **0.1.0**) and eight **osva-connectors** releases (Wave 1 + SDK **1.1.4** realignment). Inventory: [`../operations/M19_CLOSEOUT_SUMMARY.md`](../operations/M19_CLOSEOUT_SUMMARY.md) §5 · [osva-connectors M19_PUBLICATION_RECORD](https://github.com/Osva-AI/osva-connectors/blob/main/docs/M19_PUBLICATION_RECORD.md) · [osva-adapters COMPATIBILITY](https://github.com/Osva-AI/osva-adapters/blob/main/COMPATIBILITY.md).
 
 **Last registry-verified prerelease:** **`1.1.0-rc.4`** (git tag **`v1.1.0-rc.4`** → **`cd38eea46b8ee44bb099ccf307818cfcd348f50b`**). Evidence: [`M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md`](M10_4_RC4_PUBLISHED_ARTIFACT_ACCEPTANCE.md), [`R1_1_DISTRIBUTION_CLOSEOUT.md`](R1_1_DISTRIBUTION_CLOSEOUT.md).
 
-**npm (RC.4 verified):** all five public packages publish **`1.1.0-rc.4`** on dist-tag **`rc`**.
+**npm (`1.2.0`, registry-verified):** dist-tag **`latest`** → **1.2.0** on all five `@osva-ai/*` packages: `@osva-ai/contracts`, `@osva-ai/runtime-protocol`, `@osva-ai/sdk`, `@osva-ai/cli`, `@osva-ai/connector-sdk`.
 
-**npm (current stable, registry-verified):** dist-tags **`latest`** and **`stable-candidate`** → **1.1.4** on all five `@osva-ai/*` packages; **`rc`** → **1.1.0-rc.4**. Intermediate npm **1.1.1** / **1.1.2** / **1.1.3** tarballs remain on the registry for historical installs. Do not install defective **`@1.1.0`** npm tarballs — see [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md).
+**PyPI and GHCR (`1.2.0`, registry-verified):** **`pip install osva-sdk==1.2.0`**; **`ghcr.io/osva-ai/osva:1.2.0`** (**linux/amd64**).
 
-**PyPI and GHCR (RC.4 verified):** **`pip install osva-sdk==1.1.0rc4`**; **`ghcr.io/osva-ai/osva:1.1.0-rc.4`** (OCI index **`sha256:59148d75…`**, **linux/amd64**). Stable **`1.1.0`** coordinates are **declared** in source but **not registry-verified** until publication and [`acceptance:r11-registry`](../../scripts/acceptance/r11-registry-only/README.md) stable target readiness is updated.
+**Helm (`1.2.0`):** **`osva-1.2.0.tgz`** on the **`v1.2.0`** GitHub release (chart `version` / `appVersion` **1.2.0**).
+
+**npm (historical RC.4 verified):** all five public packages publish **`1.1.0-rc.4`** on dist-tag **`rc`**.
+
+**npm (historical pre-1.2.0 stable line, M17.9):** dist-tags **`latest`** / **`stable-candidate`** pointed at **1.1.4** before **`1.2.0`** publication. Intermediate npm **1.1.1** / **1.1.2** / **1.1.3** tarballs remain on the registry. Do not install defective **`@1.1.0`** npm tarballs — see [`NPM_1_1_1_RECOVERY.md`](NPM_1_1_1_RECOVERY.md).
+
+**PyPI and GHCR (historical RC.4 verified):** **`pip install osva-sdk==1.1.0rc4`**; **`ghcr.io/osva-ai/osva:1.1.0-rc.4`** (OCI index **`sha256:59148d75…`**, **linux/amd64**).
 
 Historical OSS **1.0.0** policy remains in git tag **`v1.0.0`** and [`CHANGELOG.md`](../../CHANGELOG.md).
 
@@ -24,8 +32,8 @@ Historical OSS **1.0.0** policy remains in git tag **`v1.0.0`** and [`CHANGELOG.
 | **Python** | **3.11+** (RC.4 registry Python journey) | `requires-python >= 3.11` in `osva-sdk` |
 | **PostgreSQL** | Compose/Helm acceptance templates | Operator-managed; lifecycle authority |
 | **Valkey** | Compose/Helm acceptance templates | Required for BullMQ transport and rate limiting |
-| **Container arch** | **linux/amd64** GHCR manifest (RC.4) | Other arches not acceptance-tested |
-| **Migration head** | **`0045_inference_budget_recovery`** (in-repo **`1.2.0`** preparation) | Published **`1.1.1`** shipped through **`0030`**; forward-only; see [`../operations/UPGRADE.md`](../operations/UPGRADE.md) |
+| **Container arch** | **linux/amd64** GHCR manifest (`1.2.0` / historical RC.4) | Other arches not acceptance-tested |
+| **Migration head** | **`0045_inference_budget_recovery`** (published **`1.2.0`**) | Published **`1.1.1`** shipped through **`0030`**; forward-only; see [`../operations/UPGRADE.md`](../operations/UPGRADE.md) |
 
 ## Upgrade paths
 
@@ -35,15 +43,15 @@ Historical OSS **1.0.0** policy remains in git tag **`v1.0.0`** and [`CHANGELOG.
 | **`1.1.0-rc.4`** (published) | **`1.1.0`** (stable) | **Intended drop-in** for aligned npm/PyPI/GHCR pins when stable artifacts publish; **no new SQL** between RC.4 tag and stable preparation HEAD. Re-run migrate/integrity for operator hygiene; schema unchanged if already at **`0030`**. |
 | **`1.1.0-rc.2`** or older RC | **`1.1.0`** | Apply intermediate migrations and align all `@osva-ai/*` packages together. |
 | **`1.1.0`** (GHCR/PyPI) | **`1.1.1`** (M16) | **No new SQL** (head remains **`0030`**); **`osva platform upgrade --to 1.1.1`** refreshes compose template (Console + installation-status). Legacy **`deploy/compose`** installs are valid sources. |
-| **`1.1.1`** (published platform) | **`1.2.0`** (preparation / next RC) | **SQL required** through **`0045_inference_budget_recovery`** (**`0031`–`0045`**); use **`osva platform upgrade --to 1.2.0`** with bundled CLI ≥ **`1.2.0`**. Intermediate **`1.1.0` → `1.2.0`** is **not** cataloged — upgrade **`1.1.0` → `1.1.1`** first. |
+| **`1.1.1`** (published platform) | **`1.2.0`** (stable) | **SQL required** through **`0045_inference_budget_recovery`** (**`0031`–`0045`**); use **`osva platform upgrade --to 1.2.0`** with **`@osva-ai/cli@1.2.0`** (or newer **`1.2.x`**). Take a PostgreSQL backup; use **`--backup-confirmed`**. Intermediate **`1.1.0` → `1.2.0`** is **not** cataloged — upgrade **`1.1.0` → `1.1.1`** first. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md). |
 
-RC.4 registry acceptance **does not** prove stable **`1.1.0`** binaries. Stable qualification requires post-publication registry-only replay (`OSVA_REGISTRY_ACCEPTANCE_TARGET=stable`).
+RC.4 registry acceptance **does not** prove stable **`1.1.0`** binaries (historical note). **`1.2.0`** registry qualification: **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m12-120`** (45 PASS).
 
-M16/M17 external-consumer proof uses **published** artifacts (unchanged historical coordinates):
+M16/M17/M12 external-consumer harness targets (historical and current):
 
-- **Published line:** **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m17-114`** (platform **1.1.1**, npm **1.1.4**).
+- **Current published line:** **`OSVA_REGISTRY_ACCEPTANCE_TARGET=m12-120`** (platform **1.2.0**, npm/PyPI **1.2.0**).
+- **Historical M17 line:** **`m17-114`** (platform **1.1.1**, npm **1.1.4**).
 - **Historical M16 replay:** **`m16-111`** (npm **1.1.2**).
-- **`1.2.0`** requires a new registry target and post-publication acceptance (not yet defined).
 
 See [`M16_EXTERNAL_CONSUMER_ACCEPTANCE.md`](M16_EXTERNAL_CONSUMER_ACCEPTANCE.md).
 
@@ -70,14 +78,14 @@ Versioned documents under `docs/contracts/` define manifests, runtime protocol m
 
 ## Public SDKs and CLI
 
-| Artifact | Package | Repository `VERSION` (stable prep) | Last registry-verified npm | PyPI / notes |
-|----------|---------|-----------------------------------|----------------------------|--------------|
-| Contracts | `@osva-ai/contracts` | 1.1.0 | 1.1.0-rc.4 (`@rc`) | Zod **4.6.7** in packed runtime deps |
-| Runtime protocol | `@osva-ai/runtime-protocol` | 1.1.0 | 1.1.0-rc.4 (`@rc`) | Capability collection bounds (V1) |
-| TypeScript SDK | `@osva-ai/sdk` | 1.1.0 | 1.1.0-rc.4 (`@rc`) | — |
-| CLI | `@osva-ai/cli` | 1.1.0 | 1.1.0-rc.4 (`@rc`) | M10.2 agent workflow |
-| Connector SDK | `@osva-ai/connector-sdk` | 1.1.0 | 1.1.0-rc.4 (`@rc`) | — |
-| Python SDK | `osva-sdk` | 1.1.0 | **1.1.0rc4** (PyPI) | Stable **`1.1.0`** not published |
+| Artifact | Package | Repository `VERSION` | Registry-verified (`1.2.0`) | Historical notes |
+|----------|---------|----------------------|------------------------------|------------------|
+| Contracts | `@osva-ai/contracts` | 1.2.0 | **1.2.0** (`@latest`) | RC.4 on **`@rc`**: 1.1.0-rc.4 |
+| Runtime protocol | `@osva-ai/runtime-protocol` | 1.2.0 | **1.2.0** (`@latest`) | — |
+| TypeScript SDK | `@osva-ai/sdk` | 1.2.0 | **1.2.0** (`@latest`) | — |
+| CLI | `@osva-ai/cli` | 1.2.0 | **1.2.0** (`@latest`) | M10.2 agent workflow |
+| Connector SDK | `@osva-ai/connector-sdk` | 1.2.0 | **1.2.0** (`@latest`) | — |
+| Python SDK | `osva-sdk` | 1.2.0 | **1.2.0** (PyPI) | Historical: **1.1.0rc4** on **`@rc`** line |
 
 Semver applies to published packages. **Minor** releases (1.0 → 1.1) may include additive `/v1` behavior, new optional fields, and documented adapter-interface changes below.
 
@@ -104,7 +112,7 @@ Root **`VERSION`**, all five public npm packages, Python **`osva-sdk`**, and Hel
 ## Database migrations
 
 - Migrations are forward-only.
-- Tag **`v1.0.0`** ends at **`0022_api_security_slice`**. **`1.1.0-rc.2`** requires **`0023_execution_lease_slice`**. Community **`1.1.0`** requires head **`0030_approval_operation_binding_slice`**. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md).
+- Tag **`v1.0.0`** ends at **`0022_api_security_slice`**. **`1.1.0-rc.2`** requires **`0023_execution_lease_slice`**. Community **`1.1.0`** / platform **`1.1.1`** require head **`0030_approval_operation_binding_slice`**. Published **`1.2.0`** requires head **`0045_inference_budget_recovery`**. See [`../operations/UPGRADE.md`](../operations/UPGRADE.md).
 - Downgrading application images without a matching schema is unsupported.
 
 ## Human identity and authentication (M11)
